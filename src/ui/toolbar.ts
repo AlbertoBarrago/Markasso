@@ -36,13 +36,15 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const zoomLabel = el('span', 'tb-zoom');
   zoomLabel.title = 'Ctrl+scroll to zoom • scroll to pan';
 
-  container.append(
-    toolGroup,
-    sep(),
-    histGroup,
-    // zoom pushed to right via flex gap in CSS
-    zoomLabel,
-  );
+  const left   = el('div', 'tb-left');
+  const center = el('div', 'tb-center');
+  const right  = el('div', 'tb-right');
+
+  left.append(histGroup);
+  center.append(toolGroup);
+  right.append(zoomLabel);
+
+  container.append(left, center, right);
 
   // ── Update ────────────────────────────────────────────────────────────────
   function sync(): void {

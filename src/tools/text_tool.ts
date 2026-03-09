@@ -2,6 +2,7 @@ import type { Tool, ToolContext } from './tool';
 import type { TextElement } from '../elements/element';
 import { worldToScreen } from '../core/viewport';
 
+
 export class TextTool implements Tool {
   private textarea: HTMLTextAreaElement | null = null;
   private commitFn: (() => void) | null = null;
@@ -135,4 +136,95 @@ export class TextTool implements Tool {
   }
 
   getCursor(): string { return 'text'; }
+
+  /** Opens a textarea pre-filled with an existing text element for editing. */
+  editExisting(el: TextElement, ctx: ToolContext): void {
+    this.commitSync(ctx);
+
+    const { viewport } = ctx.history.present;
+    const [screenX, screenY] = worldToScreen(viewport, el.x, el.y);
+    const canvasRect = ctx.canvas.getBoundingClientRect();
+
+    const ta = document.createElement('textarea');
+    ta.value = el.content;
+
+    ta.style.position   = 'fixed';
+    ta.style.left       = `${screenX + canvasRect.left}px`;
+    ta.style.top        = `${screenY + canvasRect.top}px`;
+    ta.style.minWidth   = '4px';
+    ta.style.minHeight  = `${el.fontSize * viewport.zoom}px`;
+    ta.style.width      = `${el.width * viewport.zoom}px`;
+    ta.style.height     = `${el.height * viewport.zoom}px`;
+    ta.style.font       = `${el.fontSize * viewport.zoom}px ${el.fontFamily}`;
+    ta.style.color      = el.strokeColor;
+    ta.style.caretColor = 'var(--accent, #7c63d4)';
+    ta.style.lineHeight = '1.2';
+    ta.style.padding    = '0';
+    ta.style.margin     = '0';
+    ta.style.border     = 'none';
+    ta.style.outline    = 'none';
+    ta.style.boxShadow  = 'none';
+    ta.style.resize     = 'none';
+    ta.style.overflow   = 'hidden';
+    ta.style.background = 'transparent';
+    ta.style.zIndex     = '1000';
+    ta.style.whiteSpace = 'pre';
+
+    const grow = (): void => {
+      ta.style.width  = '4px';
+      ta.style.width  = `${ta.scrollWidth}px`;
+      ta.style.height = '4px';
+      ta.style.height = `${ta.scrollHeight}px`;
+    };
+    ta.addEventListener('input', grow);
+
+    const doCommit = (): void => {
+      const content  = ta.value.trim();
+      const vp       = ctx.history.present.viewport;
+      const elWidth  = Math.max(ta.scrollWidth,  8) / vp.zoom;
+      const elHeight = Math.max(ta.scrollHeight, el.fontSize) / vp.zoom;
+      ta.remove();
+      if (this.textarea === ta) { this.textarea = null; this.commitFn = null; }
+
+      if (content) {
+        ctx.history.dispatch({ type: 'EDIT_TEXT', id: el.id, content });
+        ctx.history.dispatch({
+          type: 'RESIZE_ELEMENT', id: el.id,
+          x: el.x, y: el.y, width: elWidth, height: elHeight,
+        });
+      } else {
+        ctx.history.dispatch({ type: 'DELETE_ELEMENTS', ids: [el.id] });
+      }
+    };
+
+    const onBlur = (): void => {
+      if (this.commitFn === onBlur) { this.commitFn = null; this.textarea = null; }
+      doCommit();
+    };
+
+    ta.addEventListener('blur', onBlur, { once: true });
+
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        ta.removeEventListener('blur', onBlur);
+        ta.remove();
+        if (this.textarea === ta) { this.textarea = null; this.commitFn = null; }
+        return;
+      }
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        ta.removeEventListener('blur', onBlur);
+        if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
+        doCommit();
+      }
+    });
+
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+
+    this.textarea = ta;
+    this.commitFn = onBlur;
+  }
 }

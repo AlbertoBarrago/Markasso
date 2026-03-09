@@ -7,6 +7,7 @@ import { LineTool } from '../tools/line_tool';
 import { ArrowTool } from '../tools/arrow_tool';
 import { PenTool } from '../tools/pen_tool';
 import { TextTool } from '../tools/text_tool';
+import type { TextElement } from '../elements/element';
 import { render } from '../rendering/renderer';
 import { drawElement } from '../rendering/draw_element';
 import { drawMarquee } from '../rendering/draw_selection';
@@ -103,6 +104,23 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): voi
     const [wx, wy] = getWorldCoords(e);
     getActiveTool().onMouseUp(e, wx, wy, toolCtx);
     needsRender = true;
+  });
+
+  canvas.addEventListener('dblclick', (e) => {
+    const [wx, wy] = getWorldCoords(e);
+    const scene = history.present;
+    // Find a text element under the cursor (topmost first)
+    for (let i = scene.elements.length - 1; i >= 0; i--) {
+      const el = scene.elements[i];
+      if (el?.type === 'text') {
+        const x = el.x, y = el.y, w = el.width, h = el.height;
+        if (wx >= x - 4 && wx <= x + w + 4 && wy >= y - 4 && wy <= y + h + 4) {
+          (TOOLS.text as TextTool).editExisting(el as TextElement, toolCtx);
+          needsRender = true;
+          return;
+        }
+      }
+    }
   });
 
   canvas.addEventListener('wheel', (e) => {

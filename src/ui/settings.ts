@@ -1,7 +1,7 @@
 import type { History } from '../engine/history';
 import type { GridType } from '../core/app_state';
 
-export type ToolbarPosition = 'top' | 'bottom' | 'left' | 'right';
+export type ToolbarPosition = 'top' | 'left' | 'right';
 
 export interface UISettings {
   toolbarPosition: ToolbarPosition;
@@ -52,12 +52,13 @@ export function initSettings(
   let current = loadSettings();
   applySettings(appEl, current);
 
-  // ── Gear button ──────────────────────────────────────────────────────────
+  // ── Gear button (placed in the right section) ─────────────────────────
   const gearBtn = document.createElement('button');
-  gearBtn.className   = 'tb-btn tb-settings-btn';
+  gearBtn.className   = 'tb-btn';
   gearBtn.title       = 'Settings';
   gearBtn.textContent = '⚙';
-  toolbarEl.appendChild(gearBtn);
+  const rightSection = toolbarEl.querySelector<HTMLElement>('.tb-right');
+  (rightSection ?? toolbarEl).appendChild(gearBtn);
 
   // ── Panel ────────────────────────────────────────────────────────────────
   const panel = document.createElement('div');
@@ -75,10 +76,9 @@ export function initSettings(
       <div class="sp-section">
         <div class="sp-label">Toolbar position</div>
         <div class="sp-pos-grid">
-          <button class="sp-pos-btn" data-pos="top">Top</button>
-          <button class="sp-pos-btn" data-pos="bottom">Bottom</button>
-          <button class="sp-pos-btn" data-pos="left">Left</button>
-          <button class="sp-pos-btn" data-pos="right">Right</button>
+          <button class="sp-pos-btn" data-pos="top"   title="Top">⬆</button>
+          <button class="sp-pos-btn" data-pos="left"  title="Left">⬅</button>
+          <button class="sp-pos-btn" data-pos="right" title="Right">➡</button>
         </div>
       </div>
 
@@ -130,10 +130,9 @@ export function initSettings(
     panel.style.removeProperty('bottom');
     panel.style.removeProperty('left');
     panel.style.removeProperty('right');
-    if (pos === 'top')    { panel.style.top    = `${r.bottom + 6}px`; panel.style.right = `${window.innerWidth - r.right}px`; }
-    if (pos === 'bottom') { panel.style.bottom = `${window.innerHeight - r.top + 6}px`; panel.style.right = `${window.innerWidth - r.right}px`; }
-    if (pos === 'left')   { panel.style.top    = `${r.top}px`; panel.style.left  = `${r.right + 6}px`; }
-    if (pos === 'right')  { panel.style.top    = `${r.top}px`; panel.style.right = `${window.innerWidth - r.left + 6}px`; }
+    if (pos === 'top')   { panel.style.top   = `${r.bottom + 6}px`; panel.style.right = `${window.innerWidth - r.right}px`; }
+    if (pos === 'left')  { panel.style.top   = `${r.top}px`; panel.style.left  = `${r.right + 6}px`; }
+    if (pos === 'right') { panel.style.top   = `${r.top}px`; panel.style.right = `${window.innerWidth - r.left + 6}px`; }
   }
   function syncPanel(): void {
     panel.querySelectorAll<HTMLButtonElement>('.sp-pos-btn').forEach((b) => {

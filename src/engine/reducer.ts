@@ -51,8 +51,32 @@ export function reducer(scene: Scene, command: Command): Scene {
         ...scene,
         elements: scene.elements.map((el) => {
           if (el.id !== command.id) return el;
+          const { x, y, width, height, x2, y2, points } = command;
           if (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'text') {
-            return { ...el, width: command.width, height: command.height };
+            return {
+              ...el,
+              ...(x       !== undefined && { x }),
+              ...(y       !== undefined && { y }),
+              ...(width   !== undefined && { width }),
+              ...(height  !== undefined && { height }),
+            };
+          }
+          if (el.type === 'line' || el.type === 'arrow') {
+            return {
+              ...el,
+              ...(x  !== undefined && { x }),
+              ...(y  !== undefined && { y }),
+              ...(x2 !== undefined && { x2 }),
+              ...(y2 !== undefined && { y2 }),
+            };
+          }
+          if (el.type === 'freehand') {
+            return {
+              ...el,
+              ...(x      !== undefined && { x }),
+              ...(y      !== undefined && { y }),
+              ...(points !== undefined && { points }),
+            };
           }
           return el;
         }),

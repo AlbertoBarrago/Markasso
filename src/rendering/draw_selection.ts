@@ -132,6 +132,25 @@ function getHandlePositions(sx: number, sy: number, ex: number, ey: number): Han
   ];
 }
 
+/** Computes the 8 handle positions for the current selection in CSS-pixel screen space. */
+export function getSelectionHandles(
+  elements: ReadonlyArray<Element>,
+  viewport: Viewport,
+): Handle[] {
+  if (elements.length === 0) return [];
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const el of elements) {
+    const { x, y, w, h } = getElementBounds(el);
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x + w);
+    maxY = Math.max(maxY, y + h);
+  }
+  const [sx, sy] = worldToScreen(viewport, minX, minY);
+  const [ex, ey] = worldToScreen(viewport, maxX, maxY);
+  return getHandlePositions(sx, sy, ex, ey);
+}
+
 export function hitTestHandle(
   handles: Handle[],
   screenX: number,

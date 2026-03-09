@@ -5,7 +5,14 @@ export type Command =
   | { type: 'CREATE_ELEMENT';  element: Element }
   | { type: 'UPDATE_ELEMENT';  id: string; props: Partial<Element> }
   | { type: 'MOVE_ELEMENT';    id: string; dx: number; dy: number }
-  | { type: 'RESIZE_ELEMENT';  id: string; width: number; height: number }
+  | {
+      type: 'RESIZE_ELEMENT';
+      id: string;
+      x?: number; y?: number;
+      width?: number; height?: number;
+      x2?: number; y2?: number;
+      points?: ReadonlyArray<readonly [number, number]>;
+    }
   | { type: 'DELETE_ELEMENTS'; ids: string[] }
   | { type: 'EDIT_TEXT';       id: string; content: string }
   | { type: 'SELECT_ELEMENTS'; ids: string[] }
