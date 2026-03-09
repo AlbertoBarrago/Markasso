@@ -11,6 +11,7 @@ export type Command =
       x?: number; y?: number;
       width?: number; height?: number;
       x2?: number; y2?: number;
+      fontSize?: number;
       points?: ReadonlyArray<readonly [number, number]>;
     }
   | { type: 'DELETE_ELEMENTS'; ids: string[] }

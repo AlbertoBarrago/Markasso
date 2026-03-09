@@ -110,6 +110,7 @@ export class SelectTool implements Tool {
           worldX,
           worldY,
           this.resizeOrigBounds,
+          e.shiftKey,
         );
         if (resized) {
           ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: this.resizeOrigEl.id, ...resized });
@@ -119,7 +120,7 @@ export class SelectTool implements Tool {
         const selectedEls = scene.elements.filter((el) => scene.selectedIds.has(el.id));
         const ob = this.resizeOrigBounds;
         const newBounds = newBoundsFromHandle(
-          this.resizeHandle, this.resizeAnchorX, this.resizeAnchorY, worldX, worldY, ob
+          this.resizeHandle, this.resizeAnchorX, this.resizeAnchorY, worldX, worldY, ob, e.shiftKey
         );
         if (newBounds && ob.w > 0 && ob.h > 0) {
           const scaleX = newBounds.w / ob.w;
@@ -217,6 +218,7 @@ type ResizePayload = {
   x?: number; y?: number;
   width?: number; height?: number;
   x2?: number; y2?: number;
+  fontSize?: number;
   points?: ReadonlyArray<readonly [number, number]>;
 };
 
@@ -237,14 +239,31 @@ function newBoundsFromHandle(
   ax: number, ay: number,
   curX: number, curY: number,
   orig: { x: number; y: number; w: number; h: number },
+  shiftKey = false,
 ): { x: number; y: number; w: number; h: number } | null {
   const fixX = handle === 'n' || handle === 's';
   const fixY = handle === 'w' || handle === 'e';
 
-  const minX = fixX ? orig.x : Math.min(ax, curX);
-  const maxX = fixX ? orig.x + orig.w : Math.max(ax, curX);
-  const minY = fixY ? orig.y : Math.min(ay, curY);
-  const maxY = fixY ? orig.y + orig.h : Math.max(ay, curY);
+  let minX = fixX ? orig.x : Math.min(ax, curX);
+  let maxX = fixX ? orig.x + orig.w : Math.max(ax, curX);
+  let minY = fixY ? orig.y : Math.min(ay, curY);
+  let maxY = fixY ? orig.y + orig.h : Math.max(ay, curY);
+
+  // Shift + corner handle → constrain to original aspect ratio
+  if (shiftKey && !fixX && !fixY && orig.w > 0 && orig.h > 0) {
+    const ar = orig.w / orig.h;
+    const rawW = Math.abs(curX - ax);
+    const rawH = Math.abs(curY - ay);
+    const sx = Math.sign(curX - ax) || 1;
+    const sy = Math.sign(curY - ay) || 1;
+    let finalW: number, finalH: number;
+    if (rawW / rawH > ar) { finalH = rawH; finalW = rawH * ar; }
+    else                  { finalW = rawW; finalH = rawW / ar; }
+    minX = Math.min(ax, ax + sx * finalW);
+    maxX = Math.max(ax, ax + sx * finalW);
+    minY = Math.min(ay, ay + sy * finalH);
+    maxY = Math.max(ay, ay + sy * finalH);
+  }
 
   const w = maxX - minX;
   const h = maxY - minY;
@@ -260,8 +279,13 @@ function scaleElement(
   switch (el.type) {
     case 'rectangle':
     case 'ellipse':
-    case 'text':
       return { x: newX, y: newY, width: newW, height: newH };
+    case 'text': {
+      const origB = getElementBounds(el);
+      const fontScale = origB.h > 0 ? newH / origB.h : 1;
+      const fontSize = Math.max(1, Math.round(el.fontSize * fontScale));
+      return { x: newX, y: newY, width: newW, height: newH, fontSize };
+    }
     case 'line':
     case 'arrow': {
       const origB = getElementBounds(el);
@@ -293,8 +317,9 @@ function computeResize(
   ax: number, ay: number,
   curX: number, curY: number,
   origBounds: { x: number; y: number; w: number; h: number },
+  shiftKey = false,
 ): ResizePayload | null {
-  const nb = newBoundsFromHandle(handle, ax, ay, curX, curY, origBounds);
+  const nb = newBoundsFromHandle(handle, ax, ay, curX, curY, origBounds, shiftKey);
   if (!nb) return null;
   return scaleElement(el, nb.x, nb.y, nb.w, nb.h);
 }
