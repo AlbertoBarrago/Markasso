@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Markasso</title>
+  <style>
+    /* ── Reset & variables ─────────────────────────────────────────────── */
+    :root {
+      --accent:       #7c63d4;
+      --accent-light: rgba(124,99,212,0.15);
+
+      --bg-app:       #0f0f17;
+      --bg-surface:   #1a1a27;
+      --bg-hover:     #22223a;
+      --bg-active:    #2a2a44;
+      --border:       #2a2a3e;
+
+      --text:         #d4d4e8;
+      --text-muted:   #6e6e96;
+
+      --selection:    rgba(120,180,255,0.8);
+      --radius:       8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg-app);
+      color: var(--text);
+    }
+
+    /* ── App shell ─────────────────────────────────────────────────────── */
+    #app {
+      display: flex;
+      flex-direction: column;   /* default: toolbar top */
+      width: 100%; height: 100%;
+    }
+
+    /* Toolbar position variants */
+    #app[data-toolbar-pos="bottom"]      { flex-direction: column-reverse; }
+    #app[data-toolbar-pos="left"]        { flex-direction: row; }
+    #app[data-toolbar-pos="right"]       { flex-direction: row-reverse; }
+
+    /* ── Toolbar ───────────────────────────────────────────────────────── */
+    #toolbar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      z-index: 20;
+      user-select: none;
+    }
+    #app[data-toolbar-pos="bottom"] #toolbar { border-bottom: none; border-top: 1px solid var(--border); }
+    #app[data-toolbar-pos="left"]   #toolbar { flex-direction: column; align-items: stretch; padding: 8px 6px; border-bottom: none; border-right: 1px solid var(--border); overflow-y: auto; }
+    #app[data-toolbar-pos="right"]  #toolbar { flex-direction: column; align-items: stretch; padding: 8px 6px; border-bottom: none; border-left:  1px solid var(--border); overflow-y: auto; }
+
+    /* Zoom pushed to right end */
+    .tb-zoom {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+      min-width: 40px;
+      text-align: right;
+    }
+    #app[data-toolbar-pos="left"]  .tb-zoom,
+    #app[data-toolbar-pos="right"] .tb-zoom { margin-left: 0; margin-top: auto; text-align: center; }
+
+    /* Settings button pushed right of zoom */
+    .tb-settings-btn { margin-left: 6px; }
+    #app[data-toolbar-pos="left"]  .tb-settings-btn,
+    #app[data-toolbar-pos="right"] .tb-settings-btn { margin-left: 0; }
+
+    .tb-group { display: flex; align-items: center; gap: 2px; }
+    #app[data-toolbar-pos="left"]  .tb-group,
+    #app[data-toolbar-pos="right"] .tb-group { flex-direction: column; }
+
+    .tb-sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
+    #app[data-toolbar-pos="left"]  .tb-sep,
+    #app[data-toolbar-pos="right"] .tb-sep { width: 100%; height: 1px; margin: 4px 0; }
+
+    /* ── Toolbar buttons ───────────────────────────────────────────────── */
+    .tb-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      background: transparent;
+      cursor: pointer;
+      font-size: 15px;
+      color: var(--text-muted);
+      transition: background .1s, border-color .1s, color .1s;
+      flex-shrink: 0;
+    }
+    .tb-btn:hover   { background: var(--bg-hover); color: var(--text); }
+    .tb-btn.active  { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    .tb-btn:disabled{ opacity: .3; cursor: default; }
+    #app[data-toolbar-pos="left"]  .tb-btn,
+    #app[data-toolbar-pos="right"] .tb-btn { width: 38px; }
+
+    /* ── Workspace (canvas + floating panels) ──────────────────────────── */
+    #workspace {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      min-width: 0; min-height: 0;
+    }
+
+    #main {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      touch-action: none;
+      display: block;
+    }
+
+    /* ── Properties panel ──────────────────────────────────────────────── */
+    #props-panel {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 210px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 30;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(10px);
+      transition: opacity .15s, transform .15s;
+    }
+    #props-panel.open { opacity: 1; pointer-events: all; transform: translateX(0); }
+
+    .prop-section { display: flex; flex-direction: column; gap: 6px; }
+
+    .prop-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-muted);
+    }
+
+    .prop-swatches { display: flex; flex-wrap: wrap; gap: 4px; }
+
+    .swatch {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      outline: none;
+      font-size: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted);
+      transition: transform .1s, border-color .1s;
+    }
+    .swatch:hover    { transform: scale(1.2); }
+    .swatch.active   { border-color: var(--accent) !important; transform: scale(1.15); }
+    .swatch-transparent { background: repeating-conic-gradient(#555 0% 25%, #333 0% 50%) 0 0 / 10px 10px; border-color: var(--border); }
+
+    .prop-color-input {
+      width: 100%;
+      height: 28px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: var(--bg-hover);
+      cursor: pointer;
+      padding: 2px;
+    }
+
+    .prop-slider-row { display: flex; align-items: center; gap: 6px; }
+
+    .prop-slider {
+      flex: 1;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .prop-slider-val {
+      font-size: 11px;
+      color: var(--text-muted);
+      min-width: 28px;
+      text-align: right;
+    }
+
+    .prop-select {
+      width: 100%;
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text);
+      font-size: 12px;
+      padding: 4px 6px;
+      cursor: pointer;
+    }
+    .prop-select:focus { outline: none; border-color: var(--accent); }
+
+    .prop-number {
+      width: 60px;
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text);
+      font-size: 12px;
+      padding: 4px 6px;
+      text-align: center;
+    }
+    .prop-number:focus { outline: none; border-color: var(--accent); }
+
+    .prop-sep { border: none; border-top: 1px solid var(--border); }
+
+    .prop-delete-row { display: flex; justify-content: center; }
+
+    .prop-delete-btn {
+      width: 100%;
+      padding: 6px;
+      border: 1px solid #3a1a1a;
+      border-radius: 5px;
+      background: #2a1212;
+      color: #ff6b6b;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background .1s;
+    }
+    .prop-delete-btn:hover { background: #3a1a1a; }
+
+    /* ── Settings panel ────────────────────────────────────────────────── */
+    .settings-panel {
+      position: fixed;
+      z-index: 200;
+      width: 260px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(.97) translateY(-4px);
+      transition: opacity .15s, transform .15s;
+      transform-origin: top right;
+    }
+    .settings-panel.open { opacity: 1; pointer-events: all; transform: scale(1) translateY(0); }
+
+    .sp-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px 8px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px; font-weight: 600; color: var(--text);
+    }
+    .sp-close {
+      background: none; border: none; cursor: pointer; color: var(--text-muted);
+      font-size: 13px; padding: 2px 4px; border-radius: 4px;
+    }
+    .sp-close:hover { background: var(--bg-hover); }
+
+    .sp-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 14px; }
+
+    .sp-section { display: flex; flex-direction: column; gap: 7px; }
+
+    .sp-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-muted);
+    }
+
+    .sp-pos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+    .sp-pos-btn {
+      padding: 6px; border: 1.5px solid var(--border);
+      border-radius: 6px; background: var(--bg-hover);
+      cursor: pointer; font-size: 12px; color: var(--text); font-weight: 500;
+      transition: border-color .1s, color .1s, background .1s;
+    }
+    .sp-pos-btn:hover { border-color: var(--accent); }
+    .sp-pos-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+
+    .sp-row { display: flex; align-items: center; gap: 6px; }
+    .sp-check-label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text); cursor: pointer; }
+    .sp-check-label input { accent-color: var(--accent); cursor: pointer; }
+
+    .sp-grid-types { display: flex; gap: 5px; }
+    .sp-grid-btn {
+      flex: 1; padding: 5px 4px;
+      border: 1.5px solid var(--border); border-radius: 6px;
+      background: var(--bg-hover); cursor: pointer;
+      font-size: 11px; color: var(--text-muted); font-weight: 600;
+      transition: border-color .1s, color .1s, background .1s;
+    }
+    .sp-grid-btn:hover { border-color: var(--accent); color: var(--text); }
+    .sp-grid-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+
+    .sp-color-row { display: flex; flex-direction: column; gap: 7px; }
+    .sp-color-row input[type="color"] {
+      width: 100%; height: 32px;
+      border: 1px solid var(--border); border-radius: 5px;
+      background: var(--bg-hover); cursor: pointer; padding: 2px;
+    }
+    .sp-presets { display: flex; gap: 5px; flex-wrap: wrap; }
+    .sp-preset {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 2px solid transparent; cursor: pointer;
+      transition: transform .1s, border-color .1s;
+    }
+    .sp-preset:hover { transform: scale(1.25); border-color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="toolbar"></div>
+    <div id="workspace">
+      <canvas id="main"></canvas>
+    </div>
+  </div>
+  <script type="module" src="/main.ts"></script>
+</body>
+</html>
