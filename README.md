@@ -7,6 +7,7 @@
 ![Vite](https://img.shields.io/badge/Vite-5.x-646cff?logo=vite&logoColor=white)
 ![Vitest](https://img.shields.io/badge/Tested-Vitest-6e9f18?logo=vitest&logoColor=white)
 ![Zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
 ---
 
@@ -16,14 +17,16 @@
 |---|---|
 | **7 drawing tools** | Select, Rectangle, Ellipse, Line, Arrow, Pen (freehand), Text |
 | **Infinite canvas** | Pan with middle-click or Alt+drag · zoom with Ctrl+scroll |
+| **Resize handles** | 8-handle bounding box on every element type — drag to scale |
+| **Text scaling** | Dragging a text handle scales the font size, not just the box |
+| **Shift constraints** | Rectangle/Ellipse → square/circle · Line/Arrow → 45° snap · Resize → keep aspect ratio |
+| **Double-click to edit** | Open any existing text element for inline editing |
 | **Dark theme** | Deep `#13131f` canvas, carefully tuned contrast |
 | **Millimeter grid** | Dot · Line · Graph-paper (real mm at 96 DPI) |
 | **Properties panel** | Stroke color, fill color, stroke width, opacity, font — all per-selection |
 | **Undo / Redo** | Full command history with ephemeral-command filtering |
-| **Invisible text input** | Excalidraw-style transparent overlay textarea |
-| **Keyboard shortcuts** | Full set, no library |
-| **Persistent settings** | Toolbar position, accent color — saved to `localStorage` |
-| **Zero dependencies** | Browser Canvas 2D API only, no React, no D3 |
+| **Persistent settings** | Toolbar position (top/left/right), accent color — saved to `localStorage` |
+| **Zero dependencies** | Browser Canvas 2D API only — no React, no D3, no lodash |
 
 ---
 
@@ -37,7 +40,7 @@ npm run dev        # → http://localhost:5173
 ```bash
 npm run build      # type-check + Vite bundle → dist/
 npm run typecheck  # tsc --noEmit
-npm test           # Vitest (19 unit tests)
+npm test           # Vitest unit tests
 ```
 
 ---
@@ -62,6 +65,9 @@ npm test           # Vitest (19 unit tests)
 | `Ctrl+scroll` | Zoom to cursor |
 | `Scroll` | Pan |
 | `Middle-click drag` / `Alt+drag` | Pan |
+| `Shift` (while drawing) | Constrain proportions / snap angle |
+| `Shift` (while resizing) | Lock aspect ratio |
+| **Double-click** on text | Edit text in place |
 | **Text tool** | `Enter` = commit · `Shift+Enter` = newline · `Esc` = cancel |
 
 ---
@@ -103,36 +109,36 @@ render(ctx, scene, canvas)        ← called every requestAnimationFrame
 ```
 src/
 ├── core/
-│   ├── scene.ts          # Scene interface + factory
-│   ├── viewport.ts       # Pan/zoom math (screenToWorld, worldToScreen)
-│   └── app_state.ts      # AppState (activeTool, colors, grid, …)
+│   ├── scene.ts            # Scene interface + factory
+│   ├── viewport.ts         # Pan/zoom math (screenToWorld, worldToScreen)
+│   └── app_state.ts        # AppState (activeTool, colors, grid, …)
 ├── elements/
-│   └── element.ts        # Discriminated union for all element types
+│   └── element.ts          # Discriminated union for all element types
 ├── commands/
-│   └── commands.ts       # Full Command discriminated union
+│   └── commands.ts         # Full Command discriminated union
 ├── engine/
-│   ├── reducer.ts        # Pure (Scene, Command) → Scene
-│   └── history.ts        # Undo/redo stack + pub/sub
+│   ├── reducer.ts          # Pure (Scene, Command) → Scene
+│   └── history.ts          # Undo/redo stack + pub/sub
 ├── rendering/
-│   ├── renderer.ts       # rAF render loop entry point
-│   ├── draw_element.ts   # Per-type draw dispatch
-│   ├── draw_grid.ts      # Dot / line / mm graph-paper grids
-│   └── draw_selection.ts # Dashed box + 8 resize handles
+│   ├── renderer.ts         # rAF render loop entry point
+│   ├── draw_element.ts     # Per-type draw dispatch
+│   ├── draw_grid.ts        # Dot / line / mm graph-paper grids
+│   └── draw_selection.ts   # Dashed box + 8 resize handles + hit testing
 ├── tools/
-│   ├── tool.ts           # Tool interface
-│   ├── select_tool.ts    # Hit test, marquee, drag-move
+│   ├── tool.ts             # Tool interface
+│   ├── select_tool.ts      # Hit test, marquee, drag-move, resize
 │   ├── rectangle_tool.ts
 │   ├── ellipse_tool.ts
 │   ├── line_tool.ts
 │   ├── arrow_tool.ts
-│   ├── pen_tool.ts       # Freehand with Catmull-Rom smoothing
-│   └── text_tool.ts      # Invisible overlay textarea
+│   ├── pen_tool.ts         # Freehand with Catmull-Rom smoothing
+│   └── text_tool.ts        # Invisible overlay textarea + in-place editing
 └── ui/
-    ├── canvas_view.ts     # DOM event hub → world coords → tool
-    ├── toolbar.ts         # Minimal top bar
-    ├── properties_panel.ts# Floating right-side panel (selection-aware)
-    ├── settings.ts        # Gear panel: grid, position, accent color
-    └── shortcuts.ts       # Global keyboard map
+    ├── canvas_view.ts       # DOM event hub → world coords → tool
+    ├── toolbar.ts           # Three-section toolbar (undo · tools · zoom/gear)
+    ├── properties_panel.ts  # Floating right-side panel (selection-aware)
+    ├── settings.ts          # Gear panel: grid, toolbar position, accent color
+    └── shortcuts.ts         # Global keyboard map
 ```
 
 ---
@@ -141,7 +147,7 @@ src/
 
 | Mode | Description |
 |---|---|
-| **Dot** | Subtle white dots at configurable world-unit spacing |
+| **Dot** | Subtle dots at configurable world-unit spacing |
 | **Line** | Horizontal + vertical lines |
 | **mm** | Three-tier graph paper (1 mm / 5 mm / 10 mm) at physical scale assuming 96 DPI |
 
@@ -153,12 +159,20 @@ src/
 |---|---|---|
 | Language | TypeScript 5 | Exhaustive `switch` on discriminated unions catches unhandled commands at compile time |
 | Build | Vite | Zero-config, instant HMR, single-file output |
-| Rendering | Canvas 2D API | The spec says "Canvas is dumb. Canvas only renders." A virtual DOM fights a custom scene graph |
+| Rendering | Canvas 2D API | A virtual DOM fights a custom scene graph — canvas wins for direct pixel control |
 | Testing | Vitest | Runs in Node, no browser needed for pure reducer/viewport math |
 | Dependencies | **none** | `crypto.randomUUID()`, `requestAnimationFrame`, `ResizeObserver` — all native |
 
 ---
 
+## Contributing
+
+See [CONTRIBUTORS.md](./CONTRIBUTORS.md) for guidelines.
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for the full release history.
+
 ## License
 
-MIT
+MIT — © 2026 Alberto Barrago
