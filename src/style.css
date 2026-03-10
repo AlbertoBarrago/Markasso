@@ -69,7 +69,7 @@ html, body {
   z-index: 10;
 }
 
-/* Top-right: export + settings */
+/* Top-right: export */
 .tb-island-topright {
   position: fixed;
   top: 12px; right: 16px;
@@ -77,6 +77,14 @@ html, body {
   display: flex;
   align-items: center;
   gap: 6px;
+  pointer-events: all;
+}
+
+/* Top-left: settings */
+.tb-island-topleft {
+  position: fixed;
+  top: 12px; left: 16px;
+  z-index: 10;
   pointer-events: all;
 }
 

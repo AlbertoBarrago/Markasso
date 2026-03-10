@@ -50,11 +50,15 @@ export function initSettings(
 
   // ── Gear button (placed in the right section) ─────────────────────────
   const gearBtn = document.createElement('button');
-  gearBtn.className   = 'tb-btn';
-  gearBtn.title       = 'Settings';
-  gearBtn.textContent = '⚙';
-  const rightSection = toolbarEl.querySelector<HTMLElement>('.tb-right');
-  (rightSection ?? toolbarEl).appendChild(gearBtn);
+  gearBtn.className = 'tb-btn';
+  gearBtn.title     = 'Settings';
+  gearBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+    <line x1="3" y1="5" x2="17" y2="5"/>
+    <line x1="3" y1="10" x2="17" y2="10"/>
+    <line x1="3" y1="15" x2="17" y2="15"/>
+  </svg>`;
+  const leftSection = toolbarEl.querySelector<HTMLElement>('.tb-left');
+  (leftSection ?? toolbarEl).appendChild(gearBtn);
 
   // ── Panel ────────────────────────────────────────────────────────────────
   const panel = document.createElement('div');
@@ -112,8 +116,9 @@ export function initSettings(
   }
   function positionPanel(): void {
     const r = gearBtn.getBoundingClientRect();
-    panel.style.top   = `${r.bottom + 6}px`;
-    panel.style.right = `${window.innerWidth - r.right}px`;
+    panel.style.top  = `${r.bottom + 6}px`;
+    panel.style.left = `${r.left}px`;
+    panel.style.right = '';
   }
   function syncPanel(): void {
     const gridVis = panel.querySelector<HTMLInputElement>('#sp-grid-visible')!;

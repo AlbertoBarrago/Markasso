@@ -107,11 +107,14 @@ export function initToolbar(container: HTMLElement, history: History): void {
   });
   exportIsland.append(exportTrigger, exportPanel);
 
-  // .tb-right — settings.ts queries this to insert the gear button
-  const tbRight = div('tb-island tb-right');
-  topRight.append(exportIsland, tbRight);
+  topRight.append(exportIsland);
 
-  container.append(centerPill, bottomLeft, topRight);
+  // Top-left: settings placeholder
+  const topLeft = div('tb-island-topleft');
+  const tbLeft = div('tb-island tb-left');
+  topLeft.append(tbLeft);
+
+  container.append(centerPill, bottomLeft, topRight, topLeft);
 
   // ── Sync ──────────────────────────────────────────────────────────────────
   function sync(): void {
