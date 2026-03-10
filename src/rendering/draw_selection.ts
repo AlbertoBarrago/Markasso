@@ -5,6 +5,9 @@ import { worldToScreen } from '../core/viewport';
 const HANDLE_SIZE = 8;
 const HANDLE_HALF = HANDLE_SIZE / 2;
 
+export const ROTATION_HANDLE_R = 7;
+export const ROTATION_HANDLE_OFFSET = 34;
+
 export type HandlePosition =
   | 'nw' | 'n' | 'ne'
   | 'w'  |       'e'
@@ -48,6 +51,55 @@ export function getElementBounds(el: Element): { x: number; y: number; w: number
   }
 }
 
+/** Returns the world-space center of any element. */
+export function getElementCenter(el: Element): [number, number] {
+  const { x, y, w, h } = getElementBounds(el);
+  return [x + w / 2, y + h / 2];
+}
+
+/** Returns the screen-space position of the rotation handle for the given selection, or null. */
+export function getRotationHandleScreen(
+  elements: ReadonlyArray<Element>,
+  viewport: Viewport,
+): { screenX: number; screenY: number } | null {
+  if (elements.length === 0) return null;
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const el of elements) {
+    const { x, y, w, h } = getElementBounds(el);
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x + w);
+    maxY = Math.max(maxY, y + h);
+  }
+
+  const [, sy] = worldToScreen(viewport, minX, minY);
+  const mx = (worldToScreen(viewport, minX, minY)[0] + worldToScreen(viewport, maxX, maxY)[0]) / 2;
+
+  return { screenX: mx, screenY: sy - ROTATION_HANDLE_OFFSET };
+}
+
+/**
+ * Hit-test whether a screen point is on one of the endpoints of a line/arrow.
+ * Returns 'start', 'end', or null.
+ */
+export function hitTestEndpoint(
+  el: Element,
+  viewport: Viewport,
+  screenX: number,
+  screenY: number,
+): 'start' | 'end' | null {
+  if (el.type !== 'line' && el.type !== 'arrow') return null;
+  const R = 5 + 4; // handle radius + tolerance
+
+  const [sx1, sy1] = worldToScreen(viewport, el.x, el.y);
+  const [sx2, sy2] = worldToScreen(viewport, el.x2, el.y2);
+
+  if (Math.hypot(screenX - sx1, screenY - sy1) <= R) return 'start';
+  if (Math.hypot(screenX - sx2, screenY - sy2) <= R) return 'end';
+  return null;
+}
+
 export function drawSelection(
   ctx: CanvasRenderingContext2D,
   elements: ReadonlyArray<Element>,
@@ -88,6 +140,79 @@ export function drawSelection(
   for (const h of handles) {
     ctx.fillRect(h.screenX - HANDLE_HALF, h.screenY - HANDLE_HALF, HANDLE_SIZE, HANDLE_SIZE);
     ctx.strokeRect(h.screenX - HANDLE_HALF, h.screenY - HANDLE_HALF, HANDLE_SIZE, HANDLE_SIZE);
+  }
+
+  // Rotation handle — connector line + circle with ↻ arc indicator
+  const mx = (sx + ex) / 2;
+  const rotHandleY = sy - ROTATION_HANDLE_OFFSET;
+
+  // Connector line from top-center of box to rotation handle
+  ctx.strokeStyle = 'rgba(120,180,255,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(mx, sy - 1);
+  ctx.lineTo(mx, rotHandleY + ROTATION_HANDLE_R);
+  ctx.stroke();
+
+  // Rotation handle circle
+  ctx.strokeStyle = 'rgba(120,180,255,0.9)';
+  ctx.fillStyle = '#1c1c2a';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(mx, rotHandleY, ROTATION_HANDLE_R, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // ↻ arc indicator inside circle (partial arc with arrowhead)
+  const arcR = ROTATION_HANDLE_R - 2.5;
+  const arcStart = -0.7 * Math.PI;
+  const arcEnd = 0.5 * Math.PI;
+  ctx.strokeStyle = 'rgba(120,180,255,0.9)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(mx, rotHandleY, arcR, arcStart, arcEnd);
+  ctx.stroke();
+
+  // Small filled arrowhead at end of arc
+  const arrowAngle = arcEnd + Math.PI / 2;
+  const arrowTipX = mx + arcR * Math.cos(arcEnd);
+  const arrowTipY = rotHandleY + arcR * Math.sin(arcEnd);
+  const ah = 3;
+  ctx.fillStyle = 'rgba(120,180,255,0.9)';
+  ctx.beginPath();
+  ctx.moveTo(arrowTipX, arrowTipY);
+  ctx.lineTo(
+    arrowTipX - ah * Math.cos(arrowAngle - Math.PI / 6),
+    arrowTipY - ah * Math.sin(arrowAngle - Math.PI / 6),
+  );
+  ctx.lineTo(
+    arrowTipX - ah * Math.cos(arrowAngle + Math.PI / 6),
+    arrowTipY - ah * Math.sin(arrowAngle + Math.PI / 6),
+  );
+  ctx.closePath();
+  ctx.fill();
+
+  // Endpoint handles for single line/arrow selection (drawn on top of bounding box handles)
+  if (elements.length === 1) {
+    const el = elements[0]!;
+    if (el.type === 'line' || el.type === 'arrow') {
+      const [x1s, y1s] = worldToScreen(viewport, el.x, el.y);
+      const [x2s, y2s] = worldToScreen(viewport, el.x2, el.y2);
+
+      ctx.fillStyle = 'cyan';
+      ctx.strokeStyle = '#1c1c2a';
+      ctx.lineWidth = 1.5;
+
+      ctx.beginPath();
+      ctx.arc(x1s, y1s, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(x2s, y2s, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
   }
 
   ctx.restore();

@@ -3,12 +3,19 @@ import type { History } from '../engine/history';
 export function initShortcuts(history: History): void {
   const shortcuts = new Map<string, () => void>([
     ['v', () => history.dispatch({ type: 'SET_TOOL', tool: 'select' })],
+    ['1', () => history.dispatch({ type: 'SET_TOOL', tool: 'select' })],
     ['r', () => history.dispatch({ type: 'SET_TOOL', tool: 'rectangle' })],
+    ['2', () => history.dispatch({ type: 'SET_TOOL', tool: 'rectangle' })],
     ['e', () => history.dispatch({ type: 'SET_TOOL', tool: 'ellipse' })],
+    ['3', () => history.dispatch({ type: 'SET_TOOL', tool: 'ellipse' })],
     ['l', () => history.dispatch({ type: 'SET_TOOL', tool: 'line' })],
+    ['4', () => history.dispatch({ type: 'SET_TOOL', tool: 'line' })],
     ['a', () => history.dispatch({ type: 'SET_TOOL', tool: 'arrow' })],
+    ['5', () => history.dispatch({ type: 'SET_TOOL', tool: 'arrow' })],
     ['p', () => history.dispatch({ type: 'SET_TOOL', tool: 'freehand' })],
+    ['6', () => history.dispatch({ type: 'SET_TOOL', tool: 'freehand' })],
     ['t', () => history.dispatch({ type: 'SET_TOOL', tool: 'text' })],
+    ['7', () => history.dispatch({ type: 'SET_TOOL', tool: 'text' })],
     ['g', () => history.dispatch({ type: 'TOGGLE_GRID' })],
     ['Escape', () => {
       history.dispatch({ type: 'SET_TOOL', tool: 'select' });

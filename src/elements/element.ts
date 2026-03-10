@@ -16,18 +16,25 @@ export interface BaseElement {
   readonly strokeWidth: number;
   readonly opacity: number;
   readonly roughness: number;
+  readonly rotation?: number;
 }
 
 export interface RectangleElement extends BaseElement {
   readonly type: 'rectangle';
   readonly width: number;
   readonly height: number;
+  readonly label?: string;
+  readonly labelFontSize?: number;
+  readonly labelFontFamily?: string;
 }
 
 export interface EllipseElement extends BaseElement {
   readonly type: 'ellipse';
   readonly width: number;
   readonly height: number;
+  readonly label?: string;
+  readonly labelFontSize?: number;
+  readonly labelFontFamily?: string;
 }
 
 export interface LineElement extends BaseElement {

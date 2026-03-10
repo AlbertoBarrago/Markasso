@@ -1,10 +1,18 @@
 import type { Tool, ToolContext } from './tool';
 import type { Element } from '../elements/element';
 import type { HandlePosition } from '../rendering/draw_selection';
-import { getElementBounds, hitTestHandle, getSelectionHandles } from '../rendering/draw_selection';
+import {
+  getElementBounds,
+  hitTestHandle,
+  getSelectionHandles,
+  getRotationHandleScreen,
+  getElementCenter,
+  hitTestEndpoint,
+  ROTATION_HANDLE_R,
+} from '../rendering/draw_selection';
 import { worldToScreen } from '../core/viewport';
 
-type DragMode = 'none' | 'move' | 'marquee' | 'resize';
+type DragMode = 'none' | 'move' | 'marquee' | 'resize' | 'rotate' | 'endpoint';
 
 const HANDLE_CURSORS: Record<HandlePosition, string> = {
   nw: 'nw-resize', n: 'ns-resize', ne: 'ne-resize',
@@ -29,6 +37,16 @@ export class SelectTool implements Tool {
   private resizeAnchorX = 0;
   private resizeAnchorY = 0;
 
+  // Endpoint drag state
+  private endpointSide: 'start' | 'end' | null = null;
+  private endpointElId: string | null = null;
+
+  // Rotation state
+  private rotateCenter: [number, number] = [0, 0];
+  private rotateInitialAngle = 0;
+  private rotateInitialRotation = 0;
+  private rotateElId: string | null = null;
+
   // Exposed for renderer to draw marquee preview
   marqueeActive = false;
   getMarquee(): [number, number, number, number] {
@@ -41,12 +59,49 @@ export class SelectTool implements Tool {
 
     const scene = ctx.history.present;
     const selectedEls = scene.elements.filter((el) => scene.selectedIds.has(el.id));
+    const rect = ctx.canvas.getBoundingClientRect();
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
 
-    // 1. Check if a resize handle was clicked
+    // 1. Check endpoint handles (single line/arrow selected)
+    if (selectedEls.length === 1) {
+      const el = selectedEls[0]!;
+      if (el.type === 'line' || el.type === 'arrow') {
+        const endHit = hitTestEndpoint(el, scene.viewport, screenX, screenY);
+        if (endHit) {
+          this.dragMode = 'endpoint';
+          this.endpointSide = endHit;
+          this.endpointElId = el.id;
+          return;
+        }
+      }
+    }
+
+    // 2. Check rotation handle
     if (selectedEls.length > 0) {
-      const rect = ctx.canvas.getBoundingClientRect();
-      const screenX = e.clientX - rect.left;
-      const screenY = e.clientY - rect.top;
+      const rotHandlePos = getRotationHandleScreen(selectedEls, scene.viewport);
+      if (rotHandlePos) {
+        const dist = Math.hypot(screenX - rotHandlePos.screenX, screenY - rotHandlePos.screenY);
+        if (dist <= ROTATION_HANDLE_R + 4) {
+          // Only support rotation for single element
+          if (selectedEls.length === 1) {
+            const el = selectedEls[0]!;
+            this.dragMode = 'rotate';
+            this.rotateCenter = getElementCenter(el);
+            this.rotateInitialAngle = Math.atan2(
+              worldY - this.rotateCenter[1],
+              worldX - this.rotateCenter[0],
+            );
+            this.rotateInitialRotation = el.rotation ?? 0;
+            this.rotateElId = el.id;
+          }
+          return;
+        }
+      }
+    }
+
+    // 3. Check if a resize handle was clicked
+    if (selectedEls.length > 0) {
       const handles = getSelectionHandles(selectedEls, scene.viewport);
       const hitHandle = hitTestHandle(handles, screenX, screenY);
 
@@ -75,7 +130,7 @@ export class SelectTool implements Tool {
       }
     }
 
-    // 2. Hit-test elements
+    // 4. Hit-test elements
     const hit = hitTest(scene.elements, worldX, worldY);
     if (hit) {
       if (!scene.selectedIds.has(hit.id)) {
@@ -86,15 +141,39 @@ export class SelectTool implements Tool {
       ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
       this.dragMode = 'marquee';
       this.marqueeActive = true;
-      const rect = ctx.canvas.getBoundingClientRect();
-      this.marqueeX1 = e.clientX - rect.left;
-      this.marqueeY1 = e.clientY - rect.top;
-      this.marqueeX2 = this.marqueeX1;
-      this.marqueeY2 = this.marqueeY1;
+      this.marqueeX1 = screenX;
+      this.marqueeY1 = screenY;
+      this.marqueeX2 = screenX;
+      this.marqueeY2 = screenY;
     }
   }
 
   onMouseMove(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+    if (this.dragMode === 'endpoint') {
+      const scene = ctx.history.present;
+      const el = scene.elements.find((el) => el.id === this.endpointElId);
+      if (el && (el.type === 'line' || el.type === 'arrow') && this.endpointSide) {
+        if (this.endpointSide === 'start') {
+          ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: el.id, x: worldX, y: worldY });
+        } else {
+          ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: el.id, x2: worldX, y2: worldY });
+        }
+      }
+      ctx.onPreviewUpdate?.();
+      return;
+    }
+
+    if (this.dragMode === 'rotate') {
+      const [cx, cy] = this.rotateCenter;
+      const angle = Math.atan2(worldY - cy, worldX - cx);
+      const rotation = this.rotateInitialRotation + (angle - this.rotateInitialAngle);
+      if (this.rotateElId) {
+        ctx.history.dispatch({ type: 'SET_ROTATION', id: this.rotateElId, rotation });
+      }
+      ctx.onPreviewUpdate?.();
+      return;
+    }
+
     if (this.dragMode === 'resize') {
       const scene = ctx.history.present;
       if (
@@ -187,6 +266,9 @@ export class SelectTool implements Tool {
     this.resizeHandle = null;
     this.resizeOrigEl = null;
     this.resizeOrigBounds = null;
+    this.endpointSide = null;
+    this.endpointElId = null;
+    this.rotateElId = null;
   }
 
   onKeyDown(e: KeyboardEvent, ctx: ToolContext): void {
@@ -199,9 +281,26 @@ export class SelectTool implements Tool {
   getCursor(worldX: number, worldY: number, ctx: ToolContext): string {
     const scene = ctx.history.present;
     const selectedEls = scene.elements.filter((el) => scene.selectedIds.has(el.id));
+    const [screenX, screenY] = worldToScreen(scene.viewport, worldX, worldY);
 
     if (selectedEls.length > 0) {
-      const [screenX, screenY] = worldToScreen(scene.viewport, worldX, worldY);
+      // Check endpoint handles for single line/arrow
+      if (selectedEls.length === 1) {
+        const el = selectedEls[0]!;
+        if (el.type === 'line' || el.type === 'arrow') {
+          const endHit = hitTestEndpoint(el, scene.viewport, screenX, screenY);
+          if (endHit) return 'crosshair';
+        }
+      }
+
+      // Check rotation handle
+      const rotHandlePos = getRotationHandleScreen(selectedEls, scene.viewport);
+      if (rotHandlePos) {
+        const dist = Math.hypot(screenX - rotHandlePos.screenX, screenY - rotHandlePos.screenY);
+        if (dist <= ROTATION_HANDLE_R + 4) return 'grab';
+      }
+
+      // Check resize handles
       const handles = getSelectionHandles(selectedEls, scene.viewport);
       const hit = hitTestHandle(handles, screenX, screenY);
       if (hit) return HANDLE_CURSORS[hit];
@@ -338,6 +437,20 @@ function hitTest(elements: ReadonlyArray<Element>, wx: number, wy: number): Elem
 
 function hitTestElement(el: Element, wx: number, wy: number): boolean {
   const PAD = 4;
+
+  // For rotated elements, inverse-rotate the test point into element's local space
+  let lx = wx;
+  let ly = wy;
+  if (el.rotation) {
+    const [cx, cy] = getElementCenter(el);
+    const cos = Math.cos(-el.rotation);
+    const sin = Math.sin(-el.rotation);
+    const dx = wx - cx;
+    const dy = wy - cy;
+    lx = cx + dx * cos - dy * sin;
+    ly = cy + dx * sin + dy * cos;
+  }
+
   switch (el.type) {
     case 'rectangle':
     case 'text': {
@@ -345,23 +458,23 @@ function hitTestElement(el: Element, wx: number, wy: number): boolean {
       const y = el.height < 0 ? el.y + el.height : el.y;
       const w = Math.abs(el.width);
       const h = Math.abs(el.height);
-      return wx >= x - PAD && wx <= x + w + PAD && wy >= y - PAD && wy <= y + h + PAD;
+      return lx >= x - PAD && lx <= x + w + PAD && ly >= y - PAD && ly <= y + h + PAD;
     }
     case 'ellipse': {
       const cx = el.x + el.width / 2;
       const cy = el.y + el.height / 2;
       const rx = Math.abs(el.width / 2) + PAD;
       const ry = Math.abs(el.height / 2) + PAD;
-      return ((wx - cx) / rx) ** 2 + ((wy - cy) / ry) ** 2 <= 1;
+      return ((lx - cx) / rx) ** 2 + ((ly - cy) / ry) ** 2 <= 1;
     }
     case 'line':
     case 'arrow':
-      return distToSegment(wx, wy, el.x, el.y, el.x2, el.y2) < el.strokeWidth / 2 + PAD;
+      return distToSegment(lx, ly, el.x, el.y, el.x2, el.y2) < el.strokeWidth / 2 + PAD;
     case 'freehand': {
       for (let i = 1; i < el.points.length; i++) {
         const p1 = el.points[i - 1]!;
         const p2 = el.points[i]!;
-        if (distToSegment(wx, wy, p1[0], p1[1], p2[0], p2[1]) < el.strokeWidth / 2 + PAD) return true;
+        if (distToSegment(lx, ly, p1[0], p1[1], p2[0], p2[1]) < el.strokeWidth / 2 + PAD) return true;
       }
       return false;
     }
@@ -375,3 +488,4 @@ function distToSegment(px: number, py: number, x1: number, y1: number, x2: numbe
   const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
   return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
 }
+

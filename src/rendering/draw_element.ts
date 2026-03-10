@@ -1,4 +1,5 @@
 import type { Element } from '../elements/element';
+import { getElementCenter } from './draw_selection';
 
 export function drawElement(ctx: CanvasRenderingContext2D, el: Element): void {
   ctx.save();
@@ -9,13 +10,46 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element): void {
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
+  if (el.rotation) {
+    const [cx, cy] = getElementCenter(el);
+    ctx.translate(cx, cy);
+    ctx.rotate(el.rotation);
+    ctx.translate(-cx, -cy);
+  }
+
   switch (el.type) {
-    case 'rectangle':
+    case 'rectangle': {
       drawRectangle(ctx, el.x, el.y, el.width, el.height);
+      if (el.label) {
+        const rx = el.width < 0 ? el.x + el.width : el.x;
+        const ry = el.height < 0 ? el.y + el.height : el.y;
+        const rw = Math.abs(el.width);
+        const rh = Math.abs(el.height);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(rx, ry, rw, rh);
+        ctx.clip();
+        drawShapeLabel(ctx, rx + rw / 2, ry + rh / 2, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'sans-serif', el.strokeColor);
+        ctx.restore();
+      }
       break;
-    case 'ellipse':
+    }
+    case 'ellipse': {
       drawEllipse(ctx, el.x, el.y, el.width, el.height);
+      if (el.label) {
+        const cx = el.x + el.width / 2;
+        const cy = el.y + el.height / 2;
+        const erx = Math.abs(el.width / 2);
+        const ery = Math.abs(el.height / 2);
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, erx, ery, 0, 0, Math.PI * 2);
+        ctx.clip();
+        drawShapeLabel(ctx, cx, cy, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'sans-serif', el.strokeColor);
+        ctx.restore();
+      }
       break;
+    }
     case 'line':
       drawLine(ctx, el.x, el.y, el.x2, el.y2);
       break;
@@ -158,5 +192,26 @@ function drawText(
   const lines = content.split('\n');
   for (let i = 0; i < lines.length; i++) {
     ctx.fillText(lines[i] ?? '', x, y + i * fontSize * 1.2);
+  }
+}
+
+function drawShapeLabel(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  label: string,
+  fontSize: number,
+  fontFamily: string,
+  color: string,
+): void {
+  ctx.font = `${fontSize}px ${fontFamily}`;
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const lines = label.split('\n');
+  const lineHeight = fontSize * 1.2;
+  const totalHeight = lines.length * lineHeight;
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i] ?? '', cx, cy - totalHeight / 2 + i * lineHeight + lineHeight / 2);
   }
 }

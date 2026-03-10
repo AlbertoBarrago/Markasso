@@ -27,7 +27,7 @@ export function createAppState(): AppState {
     fontFamily:  'Virgil, cursive',
     opacity:     1,
     roughness:   1,
-    gridVisible: true,
+    gridVisible: false,
     gridSize:    20,
     gridType:    'dot',
   };

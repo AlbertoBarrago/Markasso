@@ -102,6 +102,16 @@ export function reducer(scene: Scene, command: Command): Scene {
         ),
       };
 
+    case 'SET_SHAPE_LABEL':
+      return {
+        ...scene,
+        elements: scene.elements.map((el) =>
+          el.id === command.id && (el.type === 'rectangle' || el.type === 'ellipse')
+            ? { ...el, label: command.label, labelFontSize: command.labelFontSize, labelFontFamily: command.labelFontFamily }
+            : el
+        ),
+      };
+
     case 'SELECT_ELEMENTS':
       return { ...scene, selectedIds: new Set(command.ids) };
 
@@ -151,6 +161,14 @@ export function reducer(scene: Scene, command: Command): Scene {
 
     case 'SET_GRID_TYPE':
       return { ...scene, appState: { ...scene.appState, gridType: command.gridType } };
+
+    case 'SET_ROTATION':
+      return {
+        ...scene,
+        elements: scene.elements.map((el) =>
+          el.id === command.id ? { ...el, rotation: command.rotation } : el
+        ),
+      };
 
     case 'APPLY_STYLE': {
       const { strokeColor, fillColor, strokeWidth, opacity } = command;

@@ -1,15 +1,12 @@
 import type { History } from '../engine/history';
 import type { GridType } from '../core/app_state';
 
-export type ToolbarPosition = 'top' | 'left' | 'right';
-
 export interface UISettings {
-  toolbarPosition: ToolbarPosition;
-  accentColor:     string;
+  accentColor: string;
 }
 
 const STORAGE_KEY = 'markasso-ui-settings';
-const DEFAULTS: UISettings = { toolbarPosition: 'top', accentColor: '#7c63d4' };
+const DEFAULTS: UISettings = { accentColor: '#7c63d4' };
 
 export function loadSettings(): UISettings {
   try {
@@ -23,10 +20,9 @@ export function saveSettings(s: UISettings): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
 }
 
-export function applySettings(appEl: HTMLElement, s: UISettings): void {
-  appEl.dataset['toolbarPos'] = s.toolbarPosition;
+export function applySettings(_appEl: HTMLElement, s: UISettings): void {
   document.documentElement.style.setProperty('--accent', s.accentColor);
-  document.documentElement.style.setProperty('--accent-light', hexAlpha(s.accentColor, 0.15));
+  document.documentElement.style.setProperty('--accent-light', hexAlpha(s.accentColor, 0.18));
 }
 
 function hexAlpha(hex: string, a: number): string {
@@ -74,15 +70,6 @@ export function initSettings(
     <div class="sp-body">
 
       <div class="sp-section">
-        <div class="sp-label">Toolbar position</div>
-        <div class="sp-pos-grid">
-          <button class="sp-pos-btn" data-pos="top"   title="Top">⬆</button>
-          <button class="sp-pos-btn" data-pos="left"  title="Left">⬅</button>
-          <button class="sp-pos-btn" data-pos="right" title="Right">➡</button>
-        </div>
-      </div>
-
-      <div class="sp-section">
         <div class="sp-label">Grid</div>
         <div class="sp-row">
           <label class="sp-check-label">
@@ -124,20 +111,11 @@ export function initSettings(
     panel.setAttribute('aria-hidden', 'true');
   }
   function positionPanel(): void {
-    const r   = gearBtn.getBoundingClientRect();
-    const pos = current.toolbarPosition;
-    panel.style.removeProperty('top');
-    panel.style.removeProperty('bottom');
-    panel.style.removeProperty('left');
-    panel.style.removeProperty('right');
-    if (pos === 'top')   { panel.style.top   = `${r.bottom + 6}px`; panel.style.right = `${window.innerWidth - r.right}px`; }
-    if (pos === 'left')  { panel.style.top   = `${r.top}px`; panel.style.left  = `${r.right + 6}px`; }
-    if (pos === 'right') { panel.style.top   = `${r.top}px`; panel.style.right = `${window.innerWidth - r.left + 6}px`; }
+    const r = gearBtn.getBoundingClientRect();
+    panel.style.top   = `${r.bottom + 6}px`;
+    panel.style.right = `${window.innerWidth - r.right}px`;
   }
   function syncPanel(): void {
-    panel.querySelectorAll<HTMLButtonElement>('.sp-pos-btn').forEach((b) => {
-      b.classList.toggle('active', b.dataset['pos'] === current.toolbarPosition);
-    });
     const gridVis = panel.querySelector<HTMLInputElement>('#sp-grid-visible')!;
     gridVis.checked = history.present.appState.gridVisible;
     panel.querySelectorAll<HTMLButtonElement>('.sp-grid-btn').forEach((b) => {
@@ -154,17 +132,6 @@ export function initSettings(
   panel.querySelector('.sp-close')!.addEventListener('click', close);
   document.addEventListener('click', (e) => {
     if (!panel.contains(e.target as Node) && e.target !== gearBtn) close();
-  });
-
-  // Toolbar position buttons
-  panel.querySelectorAll<HTMLButtonElement>('.sp-pos-btn').forEach((b) => {
-    b.addEventListener('click', () => {
-      current = { ...current, toolbarPosition: b.dataset['pos'] as ToolbarPosition };
-      saveSettings(current);
-      applySettings(appEl, current);
-      syncPanel();
-      requestAnimationFrame(positionPanel);
-    });
   });
 
   // Grid visible

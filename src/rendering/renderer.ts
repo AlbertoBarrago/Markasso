@@ -4,7 +4,7 @@ import { drawGrid } from './draw_grid';
 import { drawElement } from './draw_element';
 import { drawSelection } from './draw_selection';
 
-const CANVAS_BG = '#13131f';
+const CANVAS_BG = '#141414';
 
 export function render(
   ctx: CanvasRenderingContext2D,

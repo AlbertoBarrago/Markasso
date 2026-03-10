@@ -16,6 +16,7 @@ export type Command =
     }
   | { type: 'DELETE_ELEMENTS'; ids: string[] }
   | { type: 'EDIT_TEXT';       id: string; content: string }
+  | { type: 'SET_SHAPE_LABEL'; id: string; label: string; labelFontSize: number; labelFontFamily: string }
   | { type: 'SELECT_ELEMENTS'; ids: string[] }
   | { type: 'CLEAR_SELECTION' }
   | { type: 'PAN_VIEWPORT';   dx: number; dy: number }
@@ -28,6 +29,7 @@ export type Command =
   | { type: 'SET_FONT_SIZE';    size: number }    // appState + selected text
   | { type: 'TOGGLE_GRID' }
   | { type: 'SET_GRID_TYPE';   gridType: GridType }
+  | { type: 'SET_ROTATION';    id: string; rotation: number }
   /** Applies style to ALL selected elements AND updates appState defaults. Undoable. */
   | {
       type: 'APPLY_STYLE';

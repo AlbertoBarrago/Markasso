@@ -5,11 +5,56 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased]
+## [0.3.0] – 2026-03-10
+
+### Added
+
+#### UI — Floating Island Design
+- Complete UI redesign: all controls float over a pure black canvas (`#141414`) with no fixed bars
+- **Center-top tool pill** — blurred glass island with all tools, each showing an SVG icon and a subscript shortcut number (1–7)
+- **Bottom-left controls** — two separate glass pills: Undo/Redo and Zoom (−, %, +)
+- **Top-right island** — Export dropdown and Settings gear button
+- `backdrop-filter: blur` on all floating panels for a modern glass effect
+- Grid defaults to off for a clean blank canvas on first load
+
+#### Export
+- **Export PNG** — renders all elements on a white 2× resolution canvas, triggers browser download
+- **Export SVG** — generates clean SVG markup for all element types with correct stroke, fill, opacity, and rotation; triggers browser download
+- Both exports auto-fit to the bounding box of all elements with padding
+- Export actions hidden inside a dropdown menu (download icon button, top-right)
+
+#### Shape Labels
+- Double-click any **rectangle** or **ellipse** to type a label directly inside the shape
+- Label text is clipped to the shape bounds and rendered centered
+- Labels survive undo/redo and are included in SVG/PNG exports
+
+#### Rotation
+- Every element now has a **rotation handle** — a circle with a ↻ arc indicator connected by a dashed line, floating above the selection box
+- Drag the handle to rotate freely around the element's center
+- Rotation is fully undoable (Ctrl+Z)
+- Hit testing correctly inverse-rotates the cursor into element local space
+- Rotation is preserved in SVG export (`transform="rotate()"`) and PNG export
+
+#### Arrow / Line Endpoint Editing
+- When a single line or arrow is selected, **two filled cyan circles** appear at the endpoints
+- Drag either endpoint independently to reposition it (dispatches `RESIZE_ELEMENT` with only the moved point)
+- Cursor changes to `crosshair` on endpoint hover, `grab` on rotation handle hover
+
+### Changed
+- Settings panel no longer includes toolbar-position controls (toolbar is always floating)
+- Properties panel moved to the **left side** (`left: 12px`) to avoid overlap with the top-right island
+- Canvas background darkened from `#13131f` to `#141414` (pure near-black)
+- Accent color alpha updated to 0.18 for better contrast on the darker background
+
+---
+
+## [0.2.0] – 2026-03-09
 
 ### Fixed
 
 - **Text resize handle scaling** — Text element width now scales proportionally to font size when dragging resize handles, keeping text content properly contained within the dashed selection box
+
+---
 
 ## [0.1.0] – 2026-03-09
 
@@ -55,7 +100,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 #### Toolbar & Settings
 - Three-section toolbar layout (left: undo/redo · center: tools · right: zoom + gear)
-- Toolbar position: Top, Left, Right (Bottom removed)
+- Toolbar position: Top, Left, Right
 - Accent color picker with preset swatches
 - Settings persist across sessions via `localStorage`
 
@@ -71,5 +116,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-[Unreleased]: https://github.com/AlbertoBarrago/Markasso/compare/v0.1.0...HEAD
+[0.3.0]: https://github.com/AlbertoBarrago/Markasso/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/AlbertoBarrago/Markasso/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/AlbertoBarrago/Markasso/releases/tag/v0.1.0
