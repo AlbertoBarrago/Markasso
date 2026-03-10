@@ -175,7 +175,8 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): voi
       if (preview) {
         ctx2d.save();
         const { viewport } = scene;
-        ctx2d.setTransform(viewport.zoom, 0, 0, viewport.zoom, viewport.offsetX, viewport.offsetY);
+        const dpr = window.devicePixelRatio;
+        ctx2d.setTransform(viewport.zoom * dpr, 0, 0, viewport.zoom * dpr, viewport.offsetX * dpr, viewport.offsetY * dpr);
         ctx2d.globalAlpha = 0.7;
         drawElement(ctx2d, preview as Parameters<typeof drawElement>[1]);
         ctx2d.restore();
