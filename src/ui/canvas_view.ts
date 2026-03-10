@@ -156,6 +156,8 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): voi
   }, { passive: false });
 
   window.addEventListener('keydown', (e) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
     getActiveTool().onKeyDown?.(e, toolCtx);
     needsRender = true;
   });
