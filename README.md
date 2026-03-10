@@ -18,14 +18,20 @@
 | **7 drawing tools** | Select, Rectangle, Ellipse, Line, Arrow, Pen (freehand), Text |
 | **Infinite canvas** | Pan with middle-click or Alt+drag · zoom with Ctrl+scroll |
 | **Resize handles** | 8-handle bounding box on every element type — drag to scale |
+| **Rotation** | Rotate any element via a handle above the selection box; fully undoable |
+| **Endpoint editing** | Drag individual endpoints of lines and arrows independently |
+| **Shape labels** | Double-click any rectangle or ellipse to type a label, clipped inside the shape |
 | **Text scaling** | Dragging a text handle scales the font size, not just the box |
 | **Shift constraints** | Rectangle/Ellipse → square/circle · Line/Arrow → 45° snap · Resize → keep aspect ratio |
 | **Double-click to edit** | Open any existing text element for inline editing |
-| **Dark theme** | Deep `#13131f` canvas, carefully tuned contrast |
-| **Millimeter grid** | Dot · Line · Graph-paper (real mm at 96 DPI) |
+| **Floating glass UI** | Excalidraw-style islands: center-top tools, bottom-left undo/zoom, top-right export |
+| **Export PNG / SVG** | Download the canvas as a 2× PNG or a clean SVG — bounding-box auto-fit |
+| **Dark theme** | Pure `#141414` canvas, floating panels with `backdrop-filter: blur` |
+| **Millimeter grid** | Dot · Line · Graph-paper (real mm at 96 DPI) · off by default |
 | **Properties panel** | Stroke color, fill color, stroke width, opacity, font — all per-selection |
 | **Undo / Redo** | Full command history with ephemeral-command filtering |
-| **Persistent settings** | Toolbar position (top/left/right), accent color — saved to `localStorage` |
+| **Persistent settings** | Accent color saved to `localStorage`; version shown in the settings panel |
+| **Keyboard shortcuts** | Letter keys + numeric keys `1–7` for every tool |
 | **Zero dependencies** | Browser Canvas 2D API only — no React, no D3, no lodash |
 
 ---
@@ -49,13 +55,13 @@ npm test           # Vitest unit tests
 
 | Key | Action |
 |---|---|
-| `V` | Select tool |
-| `R` | Rectangle |
-| `E` | Ellipse |
-| `L` | Line |
-| `A` | Arrow |
-| `P` | Pen (freehand) |
-| `T` | Text |
+| `V` / `1` | Select tool |
+| `R` / `2` | Rectangle |
+| `E` / `3` | Ellipse |
+| `L` / `4` | Line |
+| `A` / `5` | Arrow |
+| `P` / `6` | Pen (freehand) |
+| `T` / `7` | Text |
 | `G` | Toggle grid |
 | `Esc` | Cancel / back to Select |
 | `Delete` / `Backspace` | Delete selected elements |
@@ -68,6 +74,7 @@ npm test           # Vitest unit tests
 | `Shift` (while drawing) | Constrain proportions / snap angle |
 | `Shift` (while resizing) | Lock aspect ratio |
 | **Double-click** on text | Edit text in place |
+| **Double-click** on rect / ellipse | Edit shape label |
 | **Text tool** | `Enter` = commit · `Shift+Enter` = newline · `Esc` = cancel |
 
 ---
@@ -97,7 +104,7 @@ render(ctx, scene, canvas)        ← called every requestAnimationFrame
 
 ### Key invariants
 
-- **All coordinates in CSS pixels.** The canvas buffer is `clientWidth × devicePixelRatio` for sharpness, but all viewport `offsetX/Y`, element positions, and mouse events live in CSS pixel space. The renderer applies DPR via `ctx.setTransform(zoom*dpr, ...)`.
+- **All coordinates in CSS pixels.** The canvas buffer is `clientWidth × devicePixelRatio` for sharpness (`#141414` background), but all viewport `offsetX/Y`, element positions, and mouse events live in CSS pixel space. The renderer applies DPR via `ctx.setTransform(zoom*dpr, ...)`.
 - **Immutable scene.** Every `Scene` object is never mutated. The reducer returns a new reference or the same reference if nothing changed (enabling cheap equality checks).
 - **Ephemeral commands** (pan, zoom, select, tool change) are excluded from the undo stack.
 - **`APPLY_STYLE`** is the single undoable command that updates both `appState` defaults and all currently selected elements in one atomic operation.
@@ -121,9 +128,10 @@ src/
 │   └── history.ts          # Undo/redo stack + pub/sub
 ├── rendering/
 │   ├── renderer.ts         # rAF render loop entry point
-│   ├── draw_element.ts     # Per-type draw dispatch
+│   ├── draw_element.ts     # Per-type draw dispatch (with rotation + shape labels)
 │   ├── draw_grid.ts        # Dot / line / mm graph-paper grids
-│   └── draw_selection.ts   # Dashed box + 8 resize handles + hit testing
+│   ├── draw_selection.ts   # Selection box, resize/rotation/endpoint handles + hit testing
+│   └── export.ts           # exportPNG / exportSVG (bounding-box auto-fit)
 ├── tools/
 │   ├── tool.ts             # Tool interface
 │   ├── select_tool.ts      # Hit test, marquee, drag-move, resize
@@ -135,10 +143,10 @@ src/
 │   └── text_tool.ts        # Invisible overlay textarea + in-place editing
 └── ui/
     ├── canvas_view.ts       # DOM event hub → world coords → tool
-    ├── toolbar.ts           # Three-section toolbar (undo · tools · zoom/gear)
-    ├── properties_panel.ts  # Floating right-side panel (selection-aware)
-    ├── settings.ts          # Gear panel: grid, toolbar position, accent color
-    └── shortcuts.ts         # Global keyboard map
+    ├── toolbar.ts           # Floating islands: tools · undo/zoom · export · settings
+    ├── properties_panel.ts  # Floating left-side panel (selection-aware)
+    ├── settings.ts          # Hamburger panel: grid, accent color, version
+    └── shortcuts.ts         # Global keyboard map (letters + numeric 1–7)
 ```
 
 ---

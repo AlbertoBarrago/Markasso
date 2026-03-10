@@ -5,6 +5,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.0.0] – 2026-03-10
+
+### Added
+- **Version badge** in the settings panel footer — displays `Markasso vX.Y.Z` pulled live from `package.json`
+- **Hamburger menu button** (☰) replaces the gear icon in the settings trigger; cleaner and more universally recognizable
+
+### Changed
+- Settings button moved from **top-right** to a dedicated **top-left** floating island, mirroring the Excalidraw convention
+- Settings panel now opens aligned to the left edge of the button (top-left origin) instead of the right
+- `transform-origin` corrected to `top left` for a natural open/close animation from the button
+
+---
+
 ## [0.3.0] – 2026-03-10
 
 ### Added
@@ -116,6 +129,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+[1.0.0]: https://github.com/AlbertoBarrago/Markasso/compare/v0.3.0...v1.0.0
 [0.3.0]: https://github.com/AlbertoBarrago/Markasso/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/AlbertoBarrago/Markasso/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/AlbertoBarrago/Markasso/releases/tag/v0.1.0
