@@ -1,5 +1,6 @@
 import type { History } from '../engine/history';
 import type { GridType } from '../core/app_state';
+import pkg from '../../package.json';
 
 export interface UISettings {
   accentColor: string;
@@ -100,6 +101,9 @@ export function initSettings(
         </div>
       </div>
 
+    </div>
+    <div class="sp-footer">
+      <span class="sp-version">Markasso v${pkg.version}</span>
     </div>
   `;
 

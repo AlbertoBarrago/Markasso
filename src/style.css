@@ -273,6 +273,7 @@ html, body {
   transform-origin: top right;
 }
 .settings-panel.open { opacity: 1; pointer-events: all; transform: scale(1) translateY(0); }
+.settings-panel { transform-origin: top left; }
 
 .sp-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -327,3 +328,16 @@ html, body {
   transition: transform .1s, border-color .1s;
 }
 .sp-preset:hover { transform: scale(1.25); border-color: var(--text-muted); }
+
+.sp-footer {
+  padding: 8px 14px 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: center;
+}
+.sp-version {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: .04em;
+  font-variant-numeric: tabular-nums;
+}
