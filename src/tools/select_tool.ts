@@ -284,7 +284,9 @@ function scaleElement(
       const origB = getElementBounds(el);
       const fontScale = origB.h > 0 ? newH / origB.h : 1;
       const fontSize = Math.max(1, Math.round(el.fontSize * fontScale));
-      return { x: newX, y: newY, width: newW, height: newH, fontSize };
+      // Text width scales with font size, not with dragged width
+      const scaledWidth = el.width * fontScale;
+      return { x: newX, y: newY, width: scaledWidth, height: newH, fontSize };
     }
     case 'line':
     case 'arrow': {

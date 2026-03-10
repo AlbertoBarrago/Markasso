@@ -7,6 +7,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Text resize handle scaling** — Text element width now scales proportionally to font size when dragging resize handles, keeping text content properly contained within the dashed selection box
+
 ## [0.1.0] – 2026-03-09
 
 ### Added
