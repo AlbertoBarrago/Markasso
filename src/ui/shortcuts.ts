@@ -1,4 +1,5 @@
 import type { History } from '../engine/history';
+import { fitToElements } from '../core/viewport';
 
 export function initShortcuts(history: History): void {
   const shortcuts = new Map<string, () => void>([
@@ -42,6 +43,16 @@ export function initShortcuts(history: History): void {
       e.preventDefault();
       const ids = history.present.elements.map((el) => el.id);
       if (ids.length > 0) history.dispatch({ type: 'SELECT_ELEMENTS', ids });
+      return;
+    }
+
+    if (e.key === 'f' || e.key === 'F') {
+      const vp = fitToElements(history.present.elements, window.innerWidth, window.innerHeight);
+      history.dispatch({ type: 'SET_VIEWPORT', offsetX: vp.offsetX, offsetY: vp.offsetY, zoom: vp.zoom });
+      return;
+    }
+    if (e.key === '0' && e.shiftKey) {
+      history.dispatch({ type: 'SET_VIEWPORT', offsetX: 0, offsetY: 0, zoom: 1 });
       return;
     }
 

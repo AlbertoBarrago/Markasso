@@ -124,6 +124,9 @@ export function reducer(scene: Scene, command: Command): Scene {
     case 'ZOOM_VIEWPORT':
       return { ...scene, viewport: zoom(scene.viewport, command.factor, command.originX, command.originY) };
 
+    case 'SET_VIEWPORT':
+      return { ...scene, viewport: { offsetX: command.offsetX, offsetY: command.offsetY, zoom: command.zoom } };
+
     case 'SET_TOOL':
       return { ...scene, appState: { ...scene.appState, activeTool: command.tool }, selectedIds: new Set() };
 

@@ -47,6 +47,7 @@ Have you ever wanted to sketch a quick diagram and ended up:
 | **Text scaling** | Dragging a text handle scales the font size, not just the box |
 | **Shift constraints** | Rectangle/Ellipse → square/circle · Line/Arrow → 45° snap · Resize → keep aspect ratio |
 | **Double-click to edit** | Open any existing text element for inline editing |
+| **Navigation recovery** | `F` fits all content into view · click the zoom % label to snap back to 100% · `Shift+0` resets to origin |
 | **Floating glass UI** | Excalidraw-style islands: center-top tools, bottom-left undo/zoom, top-right export |
 | **Export PNG / SVG** | Download the canvas as a 2× PNG or a clean SVG — bounding-box auto-fit |
 | **Dark theme** | Pure `#141414` canvas with floating panels and `backdrop-filter: blur` that makes it look like you know what you're doing |
@@ -106,6 +107,8 @@ That's it. No `.env` file. No API keys. No Docker. No Kubernetes. No cloud accou
 | `P` / `6` | Pen (freehand) |
 | `T` / `7` | Text |
 | `G` | Toggle grid |
+| `F` | Fit all content into view |
+| `Shift+0` | Reset viewport to origin (zoom 100%, offset 0,0) |
 | `Esc` | Cancel / back to Select |
 | `Delete` / `Backspace` | Delete selected elements |
 | `Ctrl+A` | Select all |
@@ -149,7 +152,7 @@ render(ctx, scene, canvas)        ← called every requestAnimationFrame
 
 - **All coordinates in CSS pixels.** The canvas buffer is `clientWidth × devicePixelRatio` for sharpness (`#141414` background), but all viewport `offsetX/Y`, element positions, and mouse events live in CSS pixel space. The renderer applies DPR via `ctx.setTransform(zoom*dpr, ...)`.
 - **Immutable scene.** Every `Scene` object is never mutated. The reducer returns a new reference or the same reference if nothing changed (enabling cheap equality checks).
-- **Ephemeral commands** (pan, zoom, select, tool change) are excluded from the undo stack.
+- **Ephemeral commands** (pan, zoom, set-viewport, select, tool change) are excluded from the undo stack.
 - **`APPLY_STYLE`** is the single undoable command that updates both `appState` defaults and all currently selected elements in one atomic operation.
 
 ---

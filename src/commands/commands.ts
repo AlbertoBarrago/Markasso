@@ -21,6 +21,7 @@ export type Command =
   | { type: 'CLEAR_SELECTION' }
   | { type: 'PAN_VIEWPORT';   dx: number; dy: number }
   | { type: 'ZOOM_VIEWPORT';  factor: number; originX: number; originY: number }
+  | { type: 'SET_VIEWPORT';   offsetX: number; offsetY: number; zoom: number }
   | { type: 'SET_TOOL';        tool: ActiveTool }
   | { type: 'SET_STROKE_COLOR'; color: string }   // appState only (default for next shape)
   | { type: 'SET_FILL_COLOR';   color: string }   // appState only

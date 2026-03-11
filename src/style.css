@@ -150,6 +150,14 @@ html, body {
   user-select: none;
 }
 
+.tb-zoom-btn {
+  width: auto;
+  min-width: 40px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Properties panel ──────────────────────────────────────────────── */
 #props-panel {
   position: absolute;

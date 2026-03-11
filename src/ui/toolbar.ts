@@ -1,6 +1,7 @@
 import type { History } from '../engine/history';
 import type { ActiveTool } from '../core/app_state';
 import { exportPNG, exportSVG } from '../rendering/export';
+import { fitToElements } from '../core/viewport';
 
 // ── SVG icons ──────────────────────────────────────────────────────────────────
 const IC = {
@@ -14,6 +15,7 @@ const IC = {
   undo:      `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h9a4 4 0 010 8H8"/><path d="M7 5L4 8l3 3"/></svg>`,
   redo:      `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8H7a4 4 0 000 8h5"/><path d="M13 5l3 3-3 3"/></svg>`,
   export:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M7 9l3 3 3-3"/><path d="M4 14v1.5A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5V14"/></svg>`,
+  fit:       `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="2.5"/><path d="M1 5V2h3M12 2h3v3M15 11v3h-3M4 14H1v-3"/></svg>`,
   imgPNG:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><rect x="2" y="3" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="8" r="1.5" fill="currentColor"/><path d="M2 14l4-4 3 3 3-3 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   imgSVG:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><circle cx="4" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 10C8 5 12 5 13.5 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
 };
@@ -58,19 +60,31 @@ export function initToolbar(container: HTMLElement, history: History): void {
 
   // Zoom
   const zoomPill = div('tb-island tb-island-zoom');
+  const fitBtn   = mkBtn(IC.fit, 'Fit to content (F)');
   const minusBtn = mkBtn('−', 'Zoom out');
   const plusBtn  = mkBtn('+', 'Zoom in');
   minusBtn.style.fontSize = plusBtn.style.fontSize = '18px';
-  const zoomLabel = document.createElement('span');
-  zoomLabel.className = 'tb-zoom';
-  zoomLabel.title = 'Ctrl+scroll to zoom';
+  const zoomLabel = document.createElement('button');
+  zoomLabel.className = 'tb-btn tb-zoom-btn';
+  zoomLabel.title = 'Reset zoom to 100% (Shift+0)';
+  fitBtn.addEventListener('click', () => {
+    const vp = fitToElements(history.present.elements, window.innerWidth, window.innerHeight);
+    history.dispatch({ type: 'SET_VIEWPORT', offsetX: vp.offsetX, offsetY: vp.offsetY, zoom: vp.zoom });
+  });
   minusBtn.addEventListener('click', () =>
     history.dispatch({ type: 'ZOOM_VIEWPORT', factor: 1 / 1.2, originX: window.innerWidth / 2, originY: window.innerHeight / 2 })
   );
   plusBtn.addEventListener('click', () =>
     history.dispatch({ type: 'ZOOM_VIEWPORT', factor: 1.2, originX: window.innerWidth / 2, originY: window.innerHeight / 2 })
   );
-  zoomPill.append(minusBtn, zoomLabel, plusBtn);
+  zoomLabel.addEventListener('click', () => {
+    const vp = history.present.viewport;
+    const w = window.innerWidth, h = window.innerHeight;
+    const worldCX = (w / 2 - vp.offsetX) / vp.zoom;
+    const worldCY = (h / 2 - vp.offsetY) / vp.zoom;
+    history.dispatch({ type: 'SET_VIEWPORT', zoom: 1, offsetX: w / 2 - worldCX, offsetY: h / 2 - worldCY });
+  });
+  zoomPill.append(fitBtn, minusBtn, zoomLabel, plusBtn);
 
   bottomLeft.append(undoPill, zoomPill);
 

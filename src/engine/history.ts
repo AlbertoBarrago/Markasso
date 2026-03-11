@@ -8,6 +8,7 @@ type Listener = (scene: Scene) => void;
 const EPHEMERAL_COMMANDS = new Set<Command['type']>([
   'PAN_VIEWPORT',
   'ZOOM_VIEWPORT',
+  'SET_VIEWPORT',
   'SELECT_ELEMENTS',
   'CLEAR_SELECTION',
   'SET_TOOL',

@@ -5,6 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.1.0] – 2026-03-11
+
+### Added
+- **Fit to content** — press `F` or click the new ⊙ button in the zoom pill to zoom and pan so all elements are visible with a 40 px margin; empty canvas resets to origin
+- **Zoom-to-100% button** — the zoom percentage label in the toolbar is now a clickable button; clicking it snaps zoom to 100% while keeping the screen center fixed on the same world point
+- **`Shift+0` shortcut** — resets the viewport to `{ offsetX: 0, offsetY: 0, zoom: 1 }` regardless of current pan/zoom
+- **`SET_VIEWPORT` command** — new atomic command that sets offsetX, offsetY, and zoom in one step; added to the ephemeral set so it never touches the undo stack
+
+---
+
 ## [1.0.2] – 2026-03-11
 
 ### Fixed
