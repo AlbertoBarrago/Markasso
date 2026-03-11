@@ -137,6 +137,131 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): voi
     }
   });
 
+  // ── Touch support ──────────────────────────────────────────────────────────
+  let touch1Id = -1, touch2Id = -1;
+  let lastTouchX = 0, lastTouchY = 0;
+  let lastPinchDist = 0, lastPinchMidX = 0, lastPinchMidY = 0;
+  let lastTapTime = 0, lastTapX = 0, lastTapY = 0;
+
+  function getWorldCoordsFromTouch(touch: Touch): [number, number] {
+    const rect = canvas.getBoundingClientRect();
+    return screenToWorld(history.present.viewport, touch.clientX - rect.left, touch.clientY - rect.top);
+  }
+
+  function syntheticMouse(type: string, clientX: number, clientY: number): MouseEvent {
+    return new MouseEvent(type, { clientX, clientY, bubbles: false });
+  }
+
+  function getTouchById(list: TouchList, id: number): Touch | null {
+    for (let i = 0; i < list.length; i++) if (list[i].identifier === id) return list[i];
+    return null;
+  }
+
+  canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      touch1Id = t.identifier;
+      touch2Id = -1;
+      lastTouchX = t.clientX;
+      lastTouchY = t.clientY;
+      const [wx, wy] = getWorldCoordsFromTouch(t);
+      getActiveTool().onMouseDown(syntheticMouse('mousedown', t.clientX, t.clientY), wx, wy, toolCtx);
+      needsRender = true;
+    } else if (e.touches.length === 2) {
+      // Cancel any in-progress single-touch draw
+      const t1prev = getTouchById(e.touches, touch1Id);
+      if (t1prev) {
+        const [wx, wy] = getWorldCoordsFromTouch(t1prev);
+        getActiveTool().onMouseUp(syntheticMouse('mouseup', t1prev.clientX, t1prev.clientY), wx, wy, toolCtx);
+      }
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      touch1Id = t1.identifier;
+      touch2Id = t2.identifier;
+      lastPinchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      lastPinchMidX = (t1.clientX + t2.clientX) / 2;
+      lastPinchMidY = (t1.clientY + t2.clientY) / 2;
+      needsRender = true;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (touch2Id === -1) {
+      // Single-finger: dispatch move to active tool
+      const t = getTouchById(e.touches, touch1Id);
+      if (!t) return;
+      lastTouchX = t.clientX;
+      lastTouchY = t.clientY;
+      const [wx, wy] = getWorldCoordsFromTouch(t);
+      getActiveTool().onMouseMove(syntheticMouse('mousemove', t.clientX, t.clientY), wx, wy, toolCtx);
+      needsRender = true;
+    } else {
+      // Two-finger: pan + pinch-zoom
+      const t1 = getTouchById(e.touches, touch1Id);
+      const t2 = getTouchById(e.touches, touch2Id);
+      if (!t1 || !t2) return;
+      const midX = (t1.clientX + t2.clientX) / 2;
+      const midY = (t1.clientY + t2.clientY) / 2;
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      // Pan
+      const dx = midX - lastPinchMidX;
+      const dy = midY - lastPinchMidY;
+      if (dx !== 0 || dy !== 0) {
+        history.dispatch({ type: 'PAN_VIEWPORT', dx, dy });
+      }
+      // Zoom
+      if (lastPinchDist > 0) {
+        const factor = dist / lastPinchDist;
+        const rect = canvas.getBoundingClientRect();
+        history.dispatch({ type: 'ZOOM_VIEWPORT', factor, originX: midX - rect.left, originY: midY - rect.top });
+      }
+      lastPinchDist = dist;
+      lastPinchMidX = midX;
+      lastPinchMidY = midY;
+      needsRender = true;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (touch2Id === -1) {
+      // Single-finger end
+      const changedTouch = e.changedTouches[0];
+      if (changedTouch) {
+        const [wx, wy] = getWorldCoordsFromTouch(changedTouch);
+        getActiveTool().onMouseUp(syntheticMouse('mouseup', changedTouch.clientX, changedTouch.clientY), wx, wy, toolCtx);
+        // Double-tap detection
+        const now = Date.now();
+        const dx = changedTouch.clientX - lastTapX;
+        const dy = changedTouch.clientY - lastTapY;
+        const dist = Math.hypot(dx, dy);
+        if (now - lastTapTime < 300 && dist < 20) {
+          canvas.dispatchEvent(new MouseEvent('dblclick', { clientX: changedTouch.clientX, clientY: changedTouch.clientY, bubbles: true }));
+          lastTapTime = 0;
+        } else {
+          lastTapTime = now;
+          lastTapX = changedTouch.clientX;
+          lastTapY = changedTouch.clientY;
+        }
+      }
+      touch1Id = -1;
+    } else if (e.touches.length < 2) {
+      // One finger lifted during two-finger gesture
+      touch2Id = -1;
+      if (e.touches.length === 1) {
+        const remaining = e.touches[0];
+        touch1Id = remaining.identifier;
+        lastTouchX = remaining.clientX;
+        lastTouchY = remaining.clientY;
+      } else {
+        touch1Id = -1;
+      }
+    }
+    needsRender = true;
+  }, { passive: false });
+
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();

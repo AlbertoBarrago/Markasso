@@ -49,7 +49,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const bottomLeft = div('tb-island-bottomleft');
 
   // Undo / Redo
-  const undoPill = div('tb-island');
+  const undoPill = div('tb-island tb-island-undo');
   const undoBtn = mkBtn(IC.undo, 'Undo (Ctrl+Z)');
   const redoBtn = mkBtn(IC.redo, 'Redo (Ctrl+Y)');
   undoBtn.addEventListener('click', () => history.undo());
@@ -57,7 +57,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   undoPill.append(undoBtn, redoBtn);
 
   // Zoom
-  const zoomPill = div('tb-island');
+  const zoomPill = div('tb-island tb-island-zoom');
   const minusBtn = mkBtn('−', 'Zoom out');
   const plusBtn  = mkBtn('+', 'Zoom in');
   minusBtn.style.fontSize = plusBtn.style.fontSize = '18px';

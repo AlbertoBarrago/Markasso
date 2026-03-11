@@ -47,6 +47,7 @@ html, body {
 /* ── Floating islands ──────────────────────────────────────────────── */
 .tb-island {
   pointer-events: all;
+  touch-action: none;
   background: var(--bg-island);
   border: 1px solid var(--island-border);
   border-radius: var(--island-radius);
@@ -340,4 +341,73 @@ html, body {
   color: var(--text-muted);
   letter-spacing: .04em;
   font-variant-numeric: tabular-nums;
+}
+
+@media (pointer: coarse) {
+  /* Hide keyboard shortcut badges — useless on touch */
+  .tb-btn-key { display: none; }
+
+  /* ── Full-width tools bar pinned to bottom (Excalidraw-style) ── */
+  .tb-island-tools {
+    top: unset;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transform: none;
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+    justify-content: space-around;
+    padding: 8px max(16px, env(safe-area-inset-right, 16px));
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+    gap: 0;
+  }
+
+  /* ── Undo/redo: bottom-right, sitting above the tools bar ── */
+  .tb-island-bottomleft {
+    left: unset;
+    right: max(16px, env(safe-area-inset-right, 16px));
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Hide zoom pill on mobile — pinch-to-zoom is available */
+  .tb-island-zoom { display: none; }
+
+  /* Undo/redo: separate buttons, not a joined pill */
+  .tb-island-undo {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    gap: 10px;
+    padding: 0;
+    opacity: 0.8;
+  }
+
+  .tb-island-undo .tb-btn {
+    width: 38px;
+    height: 38px;
+    background: var(--bg-island);
+    border: 1px solid var(--island-border);
+    box-shadow: var(--island-shadow);
+    border-radius: 10px;
+  }
+
+  /* ── Top islands with safe-area insets ── */
+  .tb-island-topright {
+    top: max(12px, env(safe-area-inset-top, 12px));
+    right: max(16px, env(safe-area-inset-right, 16px));
+  }
+  .tb-island-topleft {
+    top: max(12px, env(safe-area-inset-top, 12px));
+    left: max(16px, env(safe-area-inset-left, 16px));
+  }
+
+  #props-panel {
+    top: max(70px, calc(env(safe-area-inset-top, 0px) + 58px));
+    left: max(12px, env(safe-area-inset-left, 12px));
+  }
 }
