@@ -153,14 +153,14 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): voi
   }
 
   function getTouchById(list: TouchList, id: number): Touch | null {
-    for (let i = 0; i < list.length; i++) if (list[i].identifier === id) return list[i];
+    for (let i = 0; i < list.length; i++) if (list.item(i)!.identifier === id) return list.item(i)!;
     return null;
   }
 
   canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (e.touches.length === 1) {
-      const t = e.touches[0];
+      const t = e.touches.item(0)!;
       touch1Id = t.identifier;
       touch2Id = -1;
       lastTouchX = t.clientX;
@@ -175,8 +175,8 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): voi
         const [wx, wy] = getWorldCoordsFromTouch(t1prev);
         getActiveTool().onMouseUp(syntheticMouse('mouseup', t1prev.clientX, t1prev.clientY), wx, wy, toolCtx);
       }
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
+      const t1 = e.touches.item(0)!;
+      const t2 = e.touches.item(1)!;
       touch1Id = t1.identifier;
       touch2Id = t2.identifier;
       lastPinchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
@@ -251,7 +251,7 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): voi
       // One finger lifted during two-finger gesture
       touch2Id = -1;
       if (e.touches.length === 1) {
-        const remaining = e.touches[0];
+        const remaining = e.touches.item(0)!;
         touch1Id = remaining.identifier;
         lastTouchX = remaining.clientX;
         lastTouchY = remaining.clientY;
