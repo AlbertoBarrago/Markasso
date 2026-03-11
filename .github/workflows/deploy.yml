@@ -25,7 +25,7 @@ jobs:
           node-version: 20
 
       - name: Sync version from tag
-        run: npm version ${GITHUB_REF_NAME#v} --no-git-tag-version
+        run: npm version ${GITHUB_REF_NAME#v} --no-git-tag-version || true
 
       - name: Install dependencies
         run: npm install
