@@ -91,9 +91,11 @@ export function initToolbar(container: HTMLElement, history: History): void {
     'backdrop-filter:blur(16px)',
   ].join(';');
 
+  const askBackground = (): boolean => confirm('Include white background?');
+
   exportPanel.append(
-    menuItem('Export PNG', IC.imgPNG, () => exportPNG(history.present)),
-    menuItem('Export SVG', IC.imgSVG, () => exportSVG(history.present)),
+    menuItem('Export PNG', IC.imgPNG, () => exportPNG(history.present, askBackground())),
+    menuItem('Export SVG', IC.imgSVG, () => exportSVG(history.present, askBackground())),
   );
 
   let panelOpen = false;

@@ -9,7 +9,8 @@ const CANVAS_BG = '#141414';
 export function render(
   ctx: CanvasRenderingContext2D,
   scene: Scene,
-  canvas: HTMLCanvasElement
+  canvas: HTMLCanvasElement,
+  editingId?: string | null,
 ): void {
   const { viewport, appState } = scene;
   const { width, height } = canvas;
@@ -34,6 +35,7 @@ export function render(
   );
 
   for (const el of scene.elements) {
+    if (editingId && el.id === editingId) continue;
     drawElement(ctx, el);
   }
 

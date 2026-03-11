@@ -5,7 +5,7 @@ import { getElementBounds } from './draw_selection';
 
 // ── PNG export ─────────────────────────────────────────────────────────────────
 
-export function exportPNG(scene: Scene): void {
+export function exportPNG(scene: Scene, withBackground = true): void {
   const { elements } = scene;
   if (elements.length === 0) return;
 
@@ -20,8 +20,10 @@ export function exportPNG(scene: Scene): void {
   canvas.height = h * scale;
   const ctx = canvas.getContext('2d')!;
 
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  if (withBackground) {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
 
   ctx.scale(scale, scale);
   ctx.translate(PAD - minX, PAD - minY);
@@ -36,7 +38,7 @@ export function exportPNG(scene: Scene): void {
 
 // ── SVG export ─────────────────────────────────────────────────────────────────
 
-export function exportSVG(scene: Scene): void {
+export function exportSVG(scene: Scene, withBackground = true): void {
   const { elements } = scene;
   if (elements.length === 0) return;
 
@@ -49,8 +51,10 @@ export function exportSVG(scene: Scene): void {
 
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${round(w)}" height="${round(h)}" viewBox="0 0 ${round(w)} ${round(h)}">`,
-    `<rect width="${round(w)}" height="${round(h)}" fill="white"/>`,
   ];
+  if (withBackground) {
+    parts.push(`<rect width="${round(w)}" height="${round(h)}" fill="white"/>`);
+  }
 
   for (const el of elements) {
     parts.push(elementToSVG(el, ox, oy));

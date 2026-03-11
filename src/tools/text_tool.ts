@@ -6,6 +6,8 @@ import { worldToScreen } from '../core/viewport';
 export class TextTool implements Tool {
   private textarea: HTMLTextAreaElement | null = null;
   private commitFn: (() => void) | null = null;
+  /** ID of the text element currently being edited (to suppress canvas rendering). */
+  editingId: string | null = null;
 
   onMouseDown(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
     // Prevent browser from stealing focus away from the textarea
@@ -140,6 +142,7 @@ export class TextTool implements Tool {
   /** Opens a textarea pre-filled with an existing text element for editing. */
   editExisting(el: TextElement, ctx: ToolContext): void {
     this.commitSync(ctx);
+    this.editingId = el.id;
 
     const { viewport } = ctx.history.present;
     const [screenX, screenY] = worldToScreen(viewport, el.x, el.y);
@@ -185,6 +188,7 @@ export class TextTool implements Tool {
       const elHeight = Math.max(ta.scrollHeight, el.fontSize) / vp.zoom;
       ta.remove();
       if (this.textarea === ta) { this.textarea = null; this.commitFn = null; }
+      this.editingId = null;
 
       if (content) {
         ctx.history.dispatch({ type: 'EDIT_TEXT', id: el.id, content });
@@ -210,6 +214,7 @@ export class TextTool implements Tool {
         ta.removeEventListener('blur', onBlur);
         ta.remove();
         if (this.textarea === ta) { this.textarea = null; this.commitFn = null; }
+        this.editingId = null;
         return;
       }
       if (e.key === 'Enter' && !e.shiftKey) {

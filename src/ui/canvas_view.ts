@@ -180,7 +180,8 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): voi
   }
 
   function renderFrame(): void {
-    render(ctx2d, history.present, canvas);
+    const editingId = (TOOLS.text as TextTool).editingId;
+    render(ctx2d, history.present, canvas, editingId);
 
     // Draw preview element on top (in world transform)
     const activeTool = getActiveTool();
