@@ -5,6 +5,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.0.2] – 2026-03-11
+
+### Fixed
+- **Selection border follows rotation** — the dashed selection rectangle, resize handles, and rotation handle now rotate with the element instead of staying axis-aligned when an element is rotated
+
+---
+
 ## [1.0.0] – 2026-03-10
 
 ### Added
