@@ -1,13 +1,36 @@
 # Markasso
 
-> A fast, minimal, keyboard-first whiteboard engine for the browser.
-> Marker + Picasso. No framework. No runtime. Just canvas.
+> **Marker + Picasso. Zero dependencies. Zero excuses.**
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5.x-646cff?logo=vite&logoColor=white)
 ![Vitest](https://img.shields.io/badge/Tested-Vitest-6e9f18?logo=vitest&logoColor=white)
 ![Zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
+
+---
+
+## What is this?
+
+A fast, minimal, keyboard-first whiteboard engine that runs entirely in the browser.
+
+No React. No Vue. No Angular. No Svelte. No Solid. No Qwik. No Next. No Nuxt. No Remix. No Astro. No framework tax whatsoever. Just you, a canvas, and pure JavaScript doing exactly what it was invented to do.
+
+Excalidraw is great. Draw.io is powerful. **Markasso is neither of those things** — it's smaller, faster, and doesn't ask you to sign in, accept cookies, or create a workspace to draw a rectangle.
+
+---
+
+## Why does this exist?
+
+Have you ever wanted to sketch a quick diagram and ended up:
+
+1. Waiting 4 seconds for Excalidraw to load
+2. Accidentally closing 3 cookie banners
+3. Signing into a "free" account
+4. Losing your work because you forgot to export
+5. Opening Notepad instead and drawing with ASCII art
+
+**Markasso is for step 6.** The one where you just want to draw.
 
 ---
 
@@ -26,13 +49,31 @@
 | **Double-click to edit** | Open any existing text element for inline editing |
 | **Floating glass UI** | Excalidraw-style islands: center-top tools, bottom-left undo/zoom, top-right export |
 | **Export PNG / SVG** | Download the canvas as a 2× PNG or a clean SVG — bounding-box auto-fit |
-| **Dark theme** | Pure `#141414` canvas, floating panels with `backdrop-filter: blur` |
-| **Millimeter grid** | Dot · Line · Graph-paper (real mm at 96 DPI) · off by default |
+| **Dark theme** | Pure `#141414` canvas with floating panels and `backdrop-filter: blur` that makes it look like you know what you're doing |
+| **Millimeter grid** | Dot · Line · Graph-paper (real mm at 96 DPI) for when you need to feel precise |
 | **Properties panel** | Stroke color, fill color, stroke width, opacity, font — all per-selection |
-| **Undo / Redo** | Full command history with ephemeral-command filtering |
-| **Persistent settings** | Accent color saved to `localStorage`; version shown in the settings panel |
-| **Keyboard shortcuts** | Letter keys + numeric keys `1–7` for every tool |
-| **Zero dependencies** | Browser Canvas 2D API only — no React, no D3, no lodash |
+| **Undo / Redo** | Full command history. Make mistakes confidently. |
+| **Persistent settings** | Your accent color survives page refreshes (localStorage — no servers harmed) |
+| **Keyboard shortcuts** | Letter keys + numeric keys `1–7` for every tool because mice are slow |
+| **Zero dependencies** | Browser Canvas 2D API only. `package.json` has never been so empty. |
+
+---
+
+## Markasso vs the competition
+
+| | Markasso | Excalidraw | Draw.io |
+|---|:---:|:---:|:---:|
+| Zero dependencies | ✅ | ❌ (React + 50 friends) | ❌ |
+| No login required | ✅ | ✅ | sort of |
+| Cookie banners | 0 | varies | yes |
+| Bundle size | tiny | less tiny | 🐋 |
+| Infinite canvas | ✅ | ✅ | ✅ |
+| Keyboard-first | ✅ | partial | ❌ |
+| Pure Canvas 2D | ✅ | ✅ | SVG |
+| "Workspace" concept | ❌ | creeping in | all in |
+| Works offline | ✅ | mostly | yes |
+| Handwritten style | ❌ (it's a feature) | ✅ | ❌ |
+| Runs on a potato | ✅ | 🥔±🤔 | 🥔💀 |
 
 ---
 
@@ -48,6 +89,8 @@ npm run build      # type-check + Vite bundle → dist/
 npm run typecheck  # tsc --noEmit
 npm test           # Vitest unit tests
 ```
+
+That's it. No `.env` file. No API keys. No Docker. No Kubernetes. No cloud account. No vibes check required.
 
 ---
 
@@ -66,7 +109,7 @@ npm test           # Vitest unit tests
 | `Esc` | Cancel / back to Select |
 | `Delete` / `Backspace` | Delete selected elements |
 | `Ctrl+A` | Select all |
-| `Ctrl+Z` | Undo |
+| `Ctrl+Z` | Undo (use liberally) |
 | `Ctrl+Y` / `Ctrl+Shift+Z` | Redo |
 | `Ctrl+scroll` | Zoom to cursor |
 | `Scroll` | Pan |
@@ -81,7 +124,7 @@ npm test           # Vitest unit tests
 
 ## Architecture
 
-Markasso follows a **Redux-style unidirectional data flow** — no mutable state, no event spaghetti.
+Markasso follows a **Redux-style unidirectional data flow** — no mutable state, no event spaghetti, no surprises.
 
 ```
 User event
@@ -149,6 +192,8 @@ src/
     └── shortcuts.ts         # Global keyboard map (letters + numeric 1–7)
 ```
 
+No `node_modules` carrying the weight of a small nation. No 400MB `vendor.js`. The whole thing fits in your brain.
+
 ---
 
 ## Grid modes
@@ -157,7 +202,7 @@ src/
 |---|---|
 | **Dot** | Subtle dots at configurable world-unit spacing |
 | **Line** | Horizontal + vertical lines |
-| **mm** | Three-tier graph paper (1 mm / 5 mm / 10 mm) at physical scale assuming 96 DPI |
+| **mm** | Three-tier graph paper (1 mm / 5 mm / 10 mm) at physical scale assuming 96 DPI — for the diagrammers who also own a ruler |
 
 ---
 
@@ -184,3 +229,5 @@ See [CHANGELOG.md](./CHANGELOG.md) for the full release history.
 ## License
 
 MIT — © 2026 Alberto Barrago
+
+_Draw things. Ship things. Touch grass._
