@@ -76,6 +76,21 @@ export function getRotationHandleScreen(
   const [, sy] = worldToScreen(viewport, minX, minY);
   const mx = (worldToScreen(viewport, minX, minY)[0] + worldToScreen(viewport, maxX, maxY)[0]) / 2;
 
+  // For a single rotated element, rotate the handle position around the element center
+  const rotation = elements.length === 1 ? (elements[0]!.rotation ?? 0) : 0;
+  if (rotation) {
+    const [cx, cy] = getElementCenter(elements[0]!);
+    const [scx, scy] = worldToScreen(viewport, cx, cy);
+    const dx = mx - scx;
+    const dy = sy - ROTATION_HANDLE_OFFSET - scy;
+    const cos = Math.cos(rotation);
+    const sin = Math.sin(rotation);
+    return {
+      screenX: scx + dx * cos - dy * sin,
+      screenY: scy + dx * sin + dy * cos,
+    };
+  }
+
   return { screenX: mx, screenY: sy - ROTATION_HANDLE_OFFSET };
 }
 
@@ -119,6 +134,16 @@ export function drawSelection(
     minY = Math.min(minY, y);
     maxX = Math.max(maxX, x + w);
     maxY = Math.max(maxY, y + h);
+  }
+
+  // For a single rotated element, rotate the entire selection in screen space
+  const rotation = elements.length === 1 ? (elements[0]!.rotation ?? 0) : 0;
+  if (rotation) {
+    const [cx, cy] = getElementCenter(elements[0]!);
+    const [scx, scy] = worldToScreen(viewport, cx, cy);
+    ctx.translate(scx, scy);
+    ctx.rotate(rotation);
+    ctx.translate(-scx, -scy);
   }
 
   const [sx, sy] = worldToScreen(viewport, minX, minY);
@@ -273,7 +298,24 @@ export function getSelectionHandles(
   }
   const [sx, sy] = worldToScreen(viewport, minX, minY);
   const [ex, ey] = worldToScreen(viewport, maxX, maxY);
-  return getHandlePositions(sx, sy, ex, ey);
+  const handles = getHandlePositions(sx, sy, ex, ey);
+
+  // Rotate handle positions for a single rotated element
+  const rotation = elements.length === 1 ? (elements[0]!.rotation ?? 0) : 0;
+  if (rotation) {
+    const [cx, cy] = getElementCenter(elements[0]!);
+    const [scx, scy] = worldToScreen(viewport, cx, cy);
+    const cos = Math.cos(rotation);
+    const sin = Math.sin(rotation);
+    for (const h of handles) {
+      const dx = h.screenX - scx;
+      const dy = h.screenY - scy;
+      h.screenX = scx + dx * cos - dy * sin;
+      h.screenY = scy + dx * sin + dy * cos;
+    }
+  }
+
+  return handles;
 }
 
 export function hitTestHandle(
