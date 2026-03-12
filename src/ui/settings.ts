@@ -120,7 +120,7 @@ export function initSettings(
   }
   function positionPanel(): void {
     const r = gearBtn.getBoundingClientRect();
-    panel.style.top  = `${r.bottom + 6}px`;
+    panel.style.top  = `${r.bottom + 10}px`;
     panel.style.left = `${r.left}px`;
     panel.style.right = '';
   }
