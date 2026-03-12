@@ -164,7 +164,7 @@ function rectToSVG(el: RectangleElement, ox: number, oy: number): string {
   const h = Math.abs(el.height);
   let svg = `<rect x="${round(x)}" y="${round(y)}" width="${round(w)}" height="${round(h)}" ${shapeProps(el)}${rotateAttr(el, ox, oy)}/>`;
   if (el.label) {
-    svg += '\n' + shapeLabelToSVG(x + w / 2, y + h / 2, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'sans-serif', el.strokeColor, el.opacity);
+    svg += '\n' + shapeLabelToSVG(x + w / 2, y + h / 2, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', el.strokeColor, el.opacity);
   }
   return svg;
 }
@@ -176,7 +176,7 @@ function ellipseToSVG(el: EllipseElement, ox: number, oy: number): string {
   const ry = Math.abs(el.height / 2);
   let svg = `<ellipse cx="${round(cx)}" cy="${round(cy)}" rx="${round(rx)}" ry="${round(ry)}" ${shapeProps(el)}${rotateAttr(el, ox, oy)}/>`;
   if (el.label) {
-    svg += '\n' + shapeLabelToSVG(cx, cy, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'sans-serif', el.strokeColor, el.opacity);
+    svg += '\n' + shapeLabelToSVG(cx, cy, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', el.strokeColor, el.opacity);
   }
   return svg;
 }

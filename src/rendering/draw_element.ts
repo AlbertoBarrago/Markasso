@@ -44,7 +44,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element): void {
         ctx.beginPath();
         ctx.rect(rx, ry, rw, rh);
         ctx.clip();
-        drawShapeLabel(ctx, rx + rw / 2, ry + rh / 2, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'sans-serif', el.strokeColor);
+        drawShapeLabel(ctx, rx + rw / 2, ry + rh / 2, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', el.strokeColor);
         ctx.restore();
       }
       break;
@@ -63,7 +63,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element): void {
         ctx.beginPath();
         ctx.ellipse(cx, cy, erx, ery, 0, 0, Math.PI * 2);
         ctx.clip();
-        drawShapeLabel(ctx, cx, cy, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'sans-serif', el.strokeColor);
+        drawShapeLabel(ctx, cx, cy, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', el.strokeColor);
         ctx.restore();
       }
       break;

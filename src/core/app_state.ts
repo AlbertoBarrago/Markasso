@@ -26,7 +26,7 @@ export function createAppState(): AppState {
     fillColor:   'transparent',
     strokeWidth: 2,
     fontSize:    20,
-    fontFamily:  'Virgil, cursive',
+    fontFamily:  'Arial, sans-serif',
     opacity:     1,
     roughness:   0,
     gridVisible: true,
