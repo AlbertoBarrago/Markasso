@@ -43,7 +43,7 @@ Have you ever wanted to sketch a quick diagram and ended up:
 | **Resize handles** | 8-handle bounding box on every element type — drag to scale |
 | **Rotation** | Rotate any element via a handle above the selection box; fully undoable |
 | **Endpoint editing** | Drag individual endpoints of lines and arrows independently |
-| **Smart arrow links** | Connect arrows to shapes — move a shape and the arrow follows. Cyan snap ring shows when close |
+| **Smart arrow links** | Connect arrows to shapes — arrows attach to the border (not center), facing each other. Hover to preview the connection point before drawing |
 | **Lock elements** | Lock any element to prevent selection, movement or deletion |
 | **Groups** | `Ctrl+G` to group · click selects all members · click again enters the group to edit individually |
 | **Shape labels** | Double-click any rectangle or ellipse to type a label, clipped inside the shape |
@@ -241,6 +241,14 @@ No `node_modules` carrying the weight of a small nation. No 400MB `vendor.js`. T
 | Dependencies | **none** | `crypto.randomUUID()`, `requestAnimationFrame`, `ResizeObserver` — all native |
 
 ---
+
+## What's new in 2.3.0
+
+- **Border attachment** — smart links now attach to the element border (facing the other shape), not the center; live connections update dynamically as shapes move
+- **Perimeter snap** — arrow/line tools activate the magnetic snap when near the element's edge (not just within 20px of the center); works for both drawing and endpoint dragging
+- **Hover preview** — hovering over a shape with the arrow or line tool shows a highlight and snap indicator on the border before you start drawing
+- **Group entry fix** — clicking an element inside a group for the second time now correctly selects that single element, even after Ctrl+A + Ctrl+G
+- **Pen tool flow** — the pen tool stays active after drawing a stroke; no auto-selection interrupts drawing sessions
 
 ## What's new in 2.2.0
 

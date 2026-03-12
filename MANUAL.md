@@ -31,10 +31,10 @@ Click and drag to draw. Hold `Shift` while dragging to constrain to a square or 
 Click to set the start point, drag to the end point, release to confirm.
 Hold `Shift` to snap the angle to 45° increments.
 
-**Connecting arrows to shapes (Smart Links):** while drawing an arrow, move the start or end point within 20px of any shape — a cyan snap ring appears. Release to create a live connection. The arrow will follow the shape as it moves.
+**Connecting arrows to shapes (Smart Links):** hover the arrow tool over any shape — a highlight and cyan ring appear on the nearest border point. Click and drag to start from that point. Move the end near another shape to connect it. The arrow attaches to the border (not the center) and follows the shapes as they move.
 
 ### Pen (Freehand)
-Hold and drag to draw. The stroke is automatically smoothed when you release.
+Hold and drag to draw. The stroke is automatically smoothed when you release. The pen tool stays active so you can draw the next stroke immediately — no auto-selection interrupts the flow.
 
 ### Text
 Click anywhere to place a text box and start typing. Press `Enter` to confirm, `Escape` to cancel. Double-click existing text to edit it.
@@ -102,9 +102,9 @@ Arrows (and lines) can be permanently connected to shapes.
 
 **Creating a link:**
 1. Select the Arrow tool (`A`).
-2. Start drawing near a shape — it snaps to its center (cyan ring).
-3. End near another shape — it snaps there too.
-4. The arrow is now live: move either shape and the arrow follows.
+2. Hover over a shape — it highlights and shows a cyan ring on the border. Click to start from that border point.
+3. Drag to another shape — its border highlights too. Release to connect.
+4. The arrow is now live: move either shape and the arrow follows, always attaching at the correct border point facing the other shape.
 
 **Editing a link:**
 Select the arrow → drag either cyan endpoint handle. Drag near a shape to reconnect, or drag away from all shapes to disconnect.
