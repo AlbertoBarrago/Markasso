@@ -1,5 +1,6 @@
 import type { Element } from '../elements/element';
 import type { ActiveTool, GridType } from '../core/app_state';
+import type { Viewport } from '../core/viewport';
 
 export type Command =
   | { type: 'CREATE_ELEMENT';  element: Element }
@@ -35,6 +36,7 @@ export type Command =
   | { type: 'REORDER_ELEMENTS'; ids: string[]; targetIndex: number }
   | { type: 'TOGGLE_ELEMENT_VISIBILITY'; id: string }
   | { type: 'RENAME_LAYER'; id: string; name: string }
+  | { type: 'LOAD_SCENE'; elements: Element[]; viewport: Viewport }
   /** Applies style to ALL selected elements AND updates appState defaults. Undoable. */
   | {
       type: 'APPLY_STYLE';

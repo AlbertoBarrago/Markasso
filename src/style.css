@@ -161,7 +161,7 @@ html, body {
 /* ── Properties panel ──────────────────────────────────────────────── */
 #props-panel {
   position: fixed;
-  top: 72px; right: 16px;
+  top: 72px; left: 74px;
   width: 210px;
   background: var(--bg-island);
   border: 1px solid var(--island-border);
@@ -174,7 +174,7 @@ html, body {
   z-index: 30;
   opacity: 0;
   pointer-events: none;
-  transform: translateX(8px);
+  transform: translateX(-8px);
   transition: opacity .15s, transform .15s;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);

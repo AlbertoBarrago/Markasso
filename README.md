@@ -48,11 +48,13 @@ Have you ever wanted to sketch a quick diagram and ended up:
 | **Shift constraints** | Rectangle/Ellipse → square/circle · Line/Arrow → 45° snap · Resize → keep aspect ratio |
 | **Double-click to edit** | Open any existing text element for inline editing |
 | **Navigation recovery** | `F` fits all content into view · click the zoom % label to snap back to 100% · `Shift+0` resets to origin |
-| **Floating glass UI** | Excalidraw-style islands: center-top tools, bottom-left undo/zoom, top-right export |
+| **Floating glass UI** | Excalidraw-style islands: center-top tools, bottom-left undo/zoom, top-right import + export |
+| **`.markasso` format** | Save and reload your full scene as a `.markasso` file (JSON) — images included, fully undoable on open |
+| **Image import** | Drag-and-drop, file picker, or Ctrl+V paste; `.markasso` files can also be dropped directly onto the canvas |
 | **Export PNG / SVG** | Download the canvas as a 2× PNG or a clean SVG — bounding-box auto-fit |
 | **Dark theme** | Pure `#141414` canvas with floating panels and `backdrop-filter: blur` that makes it look like you know what you're doing |
 | **Millimeter grid** | Dot · Line · Graph-paper (real mm at 96 DPI) for when you need to feel precise |
-| **Properties panel** | Stroke color, fill color, stroke width, opacity, font — all per-selection |
+| **Properties panel** | Stroke color, fill color, stroke width, opacity, font — opens next to the context panel, not on the other side of the screen |
 | **Undo / Redo** | Full command history. Make mistakes confidently. |
 | **Persistent settings** | Your accent color survives page refreshes (localStorage — no servers harmed) |
 | **Keyboard shortcuts** | Letter keys + numeric keys `1–7` for every tool because mice are slow |
@@ -172,6 +174,8 @@ src/
 ├── engine/
 │   ├── reducer.ts          # Pure (Scene, Command) → Scene
 │   └── history.ts          # Undo/redo stack + pub/sub
+├── io/
+│   └── markasso.ts         # .markasso save / load (exportMarkasso, importMarkasso)
 ├── rendering/
 │   ├── renderer.ts         # rAF render loop entry point
 │   ├── draw_element.ts     # Per-type draw dispatch (with rotation + shape labels)
@@ -189,8 +193,10 @@ src/
 │   └── text_tool.ts        # Invisible overlay textarea + in-place editing
 └── ui/
     ├── canvas_view.ts       # DOM event hub → world coords → tool
-    ├── toolbar.ts           # Floating islands: tools · undo/zoom · export · settings
-    ├── properties_panel.ts  # Floating left-side panel (selection-aware)
+    ├── toolbar.ts           # Floating islands: tools · undo/zoom · import · export · settings
+    ├── properties_panel.ts  # Floating panel, anchored next to the context panel
+    ├── context_panel.ts     # Left-side action panel (layer order, style, import image)
+    ├── image_import.ts      # File picker, drag-and-drop, paste — images + .markasso
     ├── settings.ts          # Hamburger panel: grid, accent color, version
     └── shortcuts.ts         # Global keyboard map (letters + numeric 1–7)
 ```

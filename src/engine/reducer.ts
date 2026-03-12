@@ -207,6 +207,14 @@ export function reducer(scene: Scene, command: Command): Scene {
         ),
       };
 
+    case 'LOAD_SCENE':
+      return {
+        ...scene,
+        elements: command.elements,
+        selectedIds: new Set(),
+        viewport: command.viewport,
+      };
+
     case 'APPLY_STYLE': {
       const { strokeColor, fillColor, strokeWidth, opacity, roughness, strokeStyle } = command;
       const patch: Record<string, unknown> = {};

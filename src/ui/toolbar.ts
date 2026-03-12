@@ -1,6 +1,7 @@
 import type { History } from '../engine/history';
 import type { ActiveTool } from '../core/app_state';
 import { exportPNG, exportSVG } from '../rendering/export';
+import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { fitToElements } from '../core/viewport';
 
 
@@ -16,9 +17,11 @@ const IC = {
   undo:      `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h9a4 4 0 010 8H8"/><path d="M7 5L4 8l3 3"/></svg>`,
   redo:      `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8H7a4 4 0 000 8h5"/><path d="M13 5l3 3-3 3"/></svg>`,
   export:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M7 9l3 3 3-3"/><path d="M4 14v1.5A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5V14"/></svg>`,
+  import:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7a2 2 0 012-2h3l2 2h5a2 2 0 012 2v5a2 2 0 01-2 2H4a2 2 0 01-2-2V7z"/></svg>`,
   fit:       `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="2.5"/><path d="M1 5V2h3M12 2h3v3M15 11v3h-3M4 14H1v-3"/></svg>`,
   imgPNG:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><rect x="2" y="3" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="8" r="1.5" fill="currentColor"/><path d="M2 14l4-4 3 3 3-3 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   imgSVG:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><circle cx="4" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 10C8 5 12 5 13.5 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  markasso:  `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
   layers:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L2 6l8 4 8-4z"/><path d="M2 10l8 4 8-4"/><path d="M2 14l8 4 8-4"/></svg>`,
   hamburger: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/></svg>`,
   importImg: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="16" height="14" rx="2"/><circle cx="7" cy="8" r="1.5"/><path d="M2 14l4-4 3 3 3-3 4 4"/><path d="M13 7l2-2 2 2M15 5v5"/></svg>`,
@@ -92,8 +95,24 @@ export function initToolbar(container: HTMLElement, history: History): void {
 
   bottomLeft.append(undoPill, zoomPill);
 
-  // ── Top-right: export dropdown + settings placeholder ─────────────────────
+  // ── Top-right: import + export dropdown ───────────────────────────────────
   const topRight = div('tb-island-topright');
+
+  // Import .markasso
+  const importIsland = div('tb-island');
+  const importInput = document.createElement('input');
+  importInput.type = 'file';
+  importInput.accept = '.markasso,application/json';
+  importInput.style.display = 'none';
+  container.appendChild(importInput);
+  importInput.addEventListener('change', () => {
+    const file = importInput.files?.[0];
+    if (file) importMarkasso(file, history);
+    importInput.value = '';
+  });
+  const importTrigger = mkBtn(IC.import, 'Open .markasso');
+  importTrigger.addEventListener('click', () => importInput.click());
+  importIsland.append(importTrigger);
 
   // Export dropdown
   const exportIsland = div('tb-island');
@@ -111,10 +130,10 @@ export function initToolbar(container: HTMLElement, history: History): void {
 
   const askBackground = (): boolean => confirm('Include white background?');
 
-  exportPanel.append(
-    menuItem('Export PNG', IC.imgPNG, () => exportPNG(history.present, askBackground())),
-    menuItem('Export SVG', IC.imgSVG, () => exportSVG(history.present, askBackground())),
-  );
+  const exportPNGItem      = menuItem('Export PNG',      IC.imgPNG,   () => exportPNG(history.present, askBackground()));
+  const exportSVGItem      = menuItem('Export SVG',      IC.imgSVG,   () => exportSVG(history.present, askBackground()));
+  const exportMarkassoItem = menuItem('Save .markasso',  IC.markasso, () => exportMarkasso(history.present));
+  exportPanel.append(exportPNGItem, exportSVGItem, exportMarkassoItem);
 
   let panelOpen = false;
   exportTrigger.addEventListener('click', (e) => {
@@ -127,7 +146,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   });
   exportIsland.append(exportTrigger, exportPanel);
 
-  topRight.append(exportIsland);
+  topRight.append(importIsland, exportIsland);
 
   // Top-left: settings button injected by settings.ts
   const topLeft = div('tb-island-topleft');
@@ -143,6 +162,11 @@ export function initToolbar(container: HTMLElement, history: History): void {
     undoBtn.disabled = !history.canUndo();
     redoBtn.disabled = !history.canRedo();
     zoomLabel.textContent = `${Math.round(history.present.viewport.zoom * 100)}%`;
+    const hasElements = history.present.elements.length > 0;
+    exportTrigger.disabled = !hasElements;
+    exportPNGItem.disabled = !hasElements;
+    exportSVGItem.disabled = !hasElements;
+    exportMarkassoItem.disabled = !hasElements;
   }
 
   history.subscribe(sync);

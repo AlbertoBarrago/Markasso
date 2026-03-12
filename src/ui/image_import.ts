@@ -1,5 +1,6 @@
 import type { History } from '../engine/history';
 import type { ImageElement } from '../elements/element';
+import { importMarkasso } from '../io/markasso';
 
 export function initImageImport(workspace: HTMLElement, history: History): void {
   // Hidden file input
@@ -21,7 +22,7 @@ export function initImageImport(workspace: HTMLElement, history: History): void 
     const items = e.dataTransfer?.items;
     if (items) {
       for (const item of Array.from(items)) {
-        if (item.kind === 'file' && item.type.startsWith('image/')) {
+        if (item.kind === 'file' && (item.type.startsWith('image/') || item.type === 'application/json')) {
           e.dataTransfer!.dropEffect = 'copy';
           return;
         }
@@ -34,10 +35,8 @@ export function initImageImport(workspace: HTMLElement, history: History): void 
     const files = e.dataTransfer?.files;
     if (!files) return;
     for (const file of Array.from(files)) {
-      if (file.type.startsWith('image/')) {
-        loadFile(file);
-        break;
-      }
+      if (file.name.endsWith('.markasso')) { importMarkasso(file, history); break; }
+      if (file.type.startsWith('image/'))  { loadFile(file); break; }
     }
   });
 

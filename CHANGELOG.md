@@ -5,6 +5,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.1] – 2026-03-12
+
+### Added
+- **`.markasso` file format** — new native save/load format (JSON with `version`, `viewport`, `elements`); fully round-trips the scene including embedded images
+- **Save .markasso** — new entry in the export dropdown; disabled when canvas is empty
+- **Open .markasso** — new folder-icon button in the toolbar (top-right, next to export); opens a file picker for `.markasso` files
+- **Drag & drop `.markasso`** — dropping a `.markasso` file onto the canvas loads it directly
+- **`LOAD_SCENE` command** — atomic command that replaces elements + viewport while preserving `appState`; fully undoable via Ctrl+Z
+
+### Changed
+- **Properties panel** repositioned from `right: 16px` to `left: 74px` — now appears directly to the right of the context panel instead of on the opposite side of the screen; slide-in animation direction updated accordingly
+- **Export disabled when empty** — export button and all export menu items are now disabled when the canvas has no elements (previously the `confirm` background dialog would still appear)
+
+---
+
 ## [2.0.0] – 2026-03-12
 
 ### Added
