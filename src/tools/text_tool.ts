@@ -102,7 +102,6 @@ export class TextTool implements Tool {
           } satisfies TextElement,
         });
       }
-      ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select' });
     };
 
     const onBlur = (): void => {
@@ -118,7 +117,6 @@ export class TextTool implements Tool {
         ta.removeEventListener('blur', onBlur);
         ta.remove();
         if (this.textarea === ta) { this.textarea = null; this.commitFn = null; }
-        ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select' });
         return;
       }
       // Enter commits; Shift+Enter inserts newline

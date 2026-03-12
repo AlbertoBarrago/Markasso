@@ -162,7 +162,6 @@ export class LineTool implements Tool {
     ctx.history.dispatch({ type: 'CREATE_ELEMENT', element });
     this.startElementId = null;
     this.endElementId = null;
-    ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select' });
   }
 
   getCursor(): string {
