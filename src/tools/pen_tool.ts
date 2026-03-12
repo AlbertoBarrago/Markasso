@@ -73,6 +73,8 @@ export class PenTool implements Tool {
         strokeStyle: appState.strokeStyle,
       },
     });
+    // Stay in pen mode — don't auto-select the stroke
+    ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
   }
 
   getCursor(): string {
