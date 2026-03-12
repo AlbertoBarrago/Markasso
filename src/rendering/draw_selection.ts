@@ -3,8 +3,40 @@ import type { Viewport } from '../core/viewport';
 import { worldToScreen } from '../core/viewport';
 
 /**
+ * Returns the point on the border of an element in the direction from its center toward (targetX, targetY).
+ * For ellipses uses the true ellipse boundary; for all others uses the bounding rectangle.
+ */
+export function getElementBorderPoint(
+  el: Element,
+  targetX: number,
+  targetY: number,
+): [number, number] {
+  const b = getElementBounds(el);
+  const cx = b.x + b.w / 2;
+  const cy = b.y + b.h / 2;
+  const dx = targetX - cx;
+  const dy = targetY - cy;
+
+  if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) return [cx, b.y]; // fallback: top-center
+
+  if (el.type === 'ellipse') {
+    const angle = Math.atan2(dy, dx);
+    return [cx + (b.w / 2) * Math.cos(angle), cy + (b.h / 2) * Math.sin(angle)];
+  }
+
+  // Rectangle / text / image / freehand — axis-aligned border intersection
+  const hw = b.w / 2;
+  const hh = b.h / 2;
+  const t = Math.min(
+    Math.abs(dx) > 0.001 ? hw / Math.abs(dx) : Infinity,
+    Math.abs(dy) > 0.001 ? hh / Math.abs(dy) : Infinity,
+  );
+  return [cx + dx * t, cy + dy * t];
+}
+
+/**
  * Resolves the effective endpoints of a line/arrow element,
- * looking up connected element centers when startElementId/endElementId are set.
+ * snapping to the border of connected elements (facing each other).
  */
 export function resolveArrowEndpoints(
   el: { x: number; y: number; x2: number; y2: number; startElementId?: string; endElementId?: string },
@@ -12,22 +44,21 @@ export function resolveArrowEndpoints(
 ): { x: number; y: number; x2: number; y2: number } {
   let { x, y, x2, y2 } = el;
 
-  if (el.startElementId) {
-    const target = allElements.find((e) => e.id === el.startElementId);
-    if (target) {
-      const b = getElementBounds(target);
-      x = b.x + b.w / 2;
-      y = b.y + b.h / 2;
-    }
-  }
-  if (el.endElementId) {
-    const target = allElements.find((e) => e.id === el.endElementId);
-    if (target) {
-      const b = getElementBounds(target);
-      x2 = b.x + b.w / 2;
-      y2 = b.y + b.h / 2;
-    }
-  }
+  const startEl = el.startElementId ? (allElements.find((e) => e.id === el.startElementId) ?? null) : null;
+  const endEl   = el.endElementId   ? (allElements.find((e) => e.id === el.endElementId)   ?? null) : null;
+
+  // Effective centers used for direction computation
+  const startB = startEl ? getElementBounds(startEl) : null;
+  const endB   = endEl   ? getElementBounds(endEl)   : null;
+  const startCx = startB ? startB.x + startB.w / 2 : x;
+  const startCy = startB ? startB.y + startB.h / 2 : y;
+  const endCx   = endB   ? endB.x   + endB.w   / 2 : x2;
+  const endCy   = endB   ? endB.y   + endB.h   / 2 : y2;
+
+  // Border point of start element facing toward end
+  if (startEl) [x, y]   = getElementBorderPoint(startEl, endCx, endCy);
+  // Border point of end element facing toward start
+  if (endEl)   [x2, y2] = getElementBorderPoint(endEl, startCx, startCy);
 
   return { x, y, x2, y2 };
 }

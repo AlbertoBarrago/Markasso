@@ -342,6 +342,10 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
     if (selectTool.endpointSnapIndicator) {
       drawSnapIndicator(ctx2d, selectTool.endpointSnapIndicator.worldX, selectTool.endpointSnapIndicator.worldY, scene.viewport);
     }
+    if (selectTool.endpointSnapElementId) {
+      const snapEl = scene.elements.find((el) => el.id === selectTool.endpointSnapElementId);
+      if (snapEl) drawHoverHighlight(ctx2d, snapEl, scene.viewport);
+    }
 
     // Draw hover highlight when using select tool (unselected elements only)
     if (scene.appState.activeTool === 'select' && selectTool.hoveredId) {
@@ -349,6 +353,15 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
         (el) => el.id === selectTool.hoveredId && !scene.selectedIds.has(el.id),
       );
       if (hoveredEl) drawHoverHighlight(ctx2d, hoveredEl, scene.viewport);
+    }
+
+    // Draw hover highlight for arrow/line tool snap target (magnetic connection point)
+    if ('snapElementId' in activeTool) {
+      const snapElId = (activeTool as { snapElementId: string | null }).snapElementId;
+      if (snapElId) {
+        const snapEl = scene.elements.find((el) => el.id === snapElId);
+        if (snapEl) drawHoverHighlight(ctx2d, snapEl, scene.viewport);
+      }
     }
 
     // Draw marquee if select tool is in marquee mode
