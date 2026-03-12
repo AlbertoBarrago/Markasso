@@ -242,6 +242,14 @@ No `node_modules` carrying the weight of a small nation. No 400MB `vendor.js`. T
 
 ---
 
+## What's new in 2.4.0
+
+- **Smoother pen curves** — real-time exponential smoothing filters trackpad jitter while drawing
+- **Improved curve rendering** — cubic Bézier curves with Catmull-Rom splines eliminate stair-stepping
+- **High-quality anti-aliasing** — canvas smoothing enabled for crisp curves at any zoom level
+- **Finer point capture** — reduced from 3px to 2px threshold for more detailed strokes
+- **Cleaner default stroke** — 1px width with round line caps and joins
+
 ## What's new in 2.3.2
 
 - **Border-point snap fix** — corrected an edge case where the arrow/line endpoint did not snap to the exact border attachment point when connecting shapes
