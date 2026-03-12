@@ -14,6 +14,8 @@ export type Command =
       x2?: number; y2?: number;
       fontSize?: number;
       points?: ReadonlyArray<readonly [number, number]>;
+      startElementId?: string | null;
+      endElementId?: string | null;
     }
   | { type: 'DELETE_ELEMENTS'; ids: string[] }
   | { type: 'EDIT_TEXT';       id: string; content: string }
@@ -37,6 +39,10 @@ export type Command =
   | { type: 'TOGGLE_ELEMENT_VISIBILITY'; id: string }
   | { type: 'RENAME_LAYER'; id: string; name: string }
   | { type: 'LOAD_SCENE'; elements: Element[]; viewport: Viewport }
+  | { type: 'GROUP_ELEMENTS'; ids: string[]; groupId: string }
+  | { type: 'UNGROUP_ELEMENTS'; groupId: string }
+  | { type: 'LOCK_ELEMENTS'; ids: string[] }
+  | { type: 'UNLOCK_ELEMENTS'; ids: string[] }
   /** Applies style to ALL selected elements AND updates appState defaults. Undoable. */
   | {
       type: 'APPLY_STYLE';

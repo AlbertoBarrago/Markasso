@@ -21,6 +21,8 @@ export interface BaseElement {
   readonly strokeStyle?: 'solid' | 'dashed' | 'dotted';
   readonly visible?: boolean;
   readonly layerName?: string;
+  readonly locked?: boolean;
+  readonly groupId?: string;
 }
 
 export interface RectangleElement extends BaseElement {
@@ -45,12 +47,16 @@ export interface LineElement extends BaseElement {
   readonly type: 'line';
   readonly x2: number;
   readonly y2: number;
+  readonly startElementId?: string;
+  readonly endElementId?: string;
 }
 
 export interface ArrowElement extends BaseElement {
   readonly type: 'arrow';
   readonly x2: number;
   readonly y2: number;
+  readonly startElementId?: string;
+  readonly endElementId?: string;
 }
 
 export interface FreehandElement extends BaseElement {

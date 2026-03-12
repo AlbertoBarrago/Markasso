@@ -63,13 +63,34 @@ export function reducer(scene: Scene, command: Command): Scene {
             };
           }
           if (el.type === 'line' || el.type === 'arrow') {
-            return {
-              ...el,
-              ...(x  !== undefined && { x }),
-              ...(y  !== undefined && { y }),
-              ...(x2 !== undefined && { x2 }),
-              ...(y2 !== undefined && { y2 }),
-            };
+            const { startElementId, endElementId } = command;
+            // Build patch carefully to avoid exactOptionalPropertyTypes issues
+            const patch: Record<string, unknown> = {};
+            if (x  !== undefined) patch['x']  = x;
+            if (y  !== undefined) patch['y']  = y;
+            if (x2 !== undefined) patch['x2'] = x2;
+            if (y2 !== undefined) patch['y2'] = y2;
+            if (startElementId !== undefined) {
+              if (startElementId === null) { delete (patch as { startElementId?: string })['startElementId']; }
+              else { patch['startElementId'] = startElementId; }
+            }
+            if (endElementId !== undefined) {
+              if (endElementId === null) { delete (patch as { endElementId?: string })['endElementId']; }
+              else { patch['endElementId'] = endElementId; }
+            }
+            // When disconnecting (null), explicitly remove the property
+            const base = { ...el, ...patch } as Element;
+            if (startElementId === null) {
+              const { startElementId: _s, ...rest } = base as typeof el;
+              void _s;
+              return rest as Element;
+            }
+            if (endElementId === null) {
+              const { endElementId: _e, ...rest } = base as typeof el;
+              void _e;
+              return rest as Element;
+            }
+            return base;
           }
           if (el.type === 'freehand') {
             return {
@@ -214,6 +235,47 @@ export function reducer(scene: Scene, command: Command): Scene {
         selectedIds: new Set(),
         viewport: command.viewport,
       };
+
+    case 'GROUP_ELEMENTS': {
+      const groupSet = new Set(command.ids);
+      return {
+        ...scene,
+        elements: scene.elements.map((el) =>
+          groupSet.has(el.id) ? ({ ...el, groupId: command.groupId } as Element) : el
+        ),
+      };
+    }
+
+    case 'UNGROUP_ELEMENTS':
+      return {
+        ...scene,
+        elements: scene.elements.map((el) => {
+          if (el.groupId !== command.groupId) return el;
+          const { groupId: _g, ...rest } = el;
+          void _g;
+          return rest as Element;
+        }),
+      };
+
+    case 'LOCK_ELEMENTS': {
+      const lockSet = new Set(command.ids);
+      return {
+        ...scene,
+        elements: scene.elements.map((el) =>
+          lockSet.has(el.id) ? ({ ...el, locked: true } as Element) : el
+        ),
+      };
+    }
+
+    case 'UNLOCK_ELEMENTS': {
+      const unlockSet = new Set(command.ids);
+      return {
+        ...scene,
+        elements: scene.elements.map((el) =>
+          unlockSet.has(el.id) ? ({ ...el, locked: false } as Element) : el
+        ),
+      };
+    }
 
     case 'APPLY_STYLE': {
       const { strokeColor, fillColor, strokeWidth, opacity, roughness, strokeStyle } = command;
