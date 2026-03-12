@@ -49,7 +49,7 @@ export function initSettings(
   let current = loadSettings();
   applySettings(appEl, current);
 
-  // ── Gear button (placed in the right section) ─────────────────────────
+  // ── Settings button (placed in the top-left island) ───────────────────
   const gearBtn = document.createElement('button');
   gearBtn.className = 'tb-btn';
   gearBtn.title     = 'Settings';

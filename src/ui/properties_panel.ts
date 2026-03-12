@@ -26,7 +26,6 @@ export function initPropertiesPanel(workspace: HTMLElement, history: History): v
   const roughnessSection   = buildSlider('Roughness', 0, 100, 1);
   const opacitySection     = buildSlider('Opacity', 0, 100, 1);
   const fontSection        = buildFontSection();
-  const deleteRow          = buildDeleteButton();
 
   panel.append(
     strokeSection.root,
@@ -38,8 +37,6 @@ export function initPropertiesPanel(workspace: HTMLElement, history: History): v
     opacitySection.root,
     buildSep(),
     fontSection.root,
-    buildSep(),
-    deleteRow,
   );
 
   // ── Dispatch helpers ──────────────────────────────────────────────────────
@@ -61,11 +58,6 @@ export function initPropertiesPanel(workspace: HTMLElement, history: History): v
 
   fontSection.onFamilyChange((family) => history.dispatch({ type: 'SET_FONT_FAMILY', family }));
   fontSection.onSizeChange  ((size)   => history.dispatch({ type: 'SET_FONT_SIZE',   size  }));
-
-  deleteRow.querySelector('button')!.addEventListener('click', () => {
-    const ids = [...history.present.selectedIds];
-    if (ids.length > 0) history.dispatch({ type: 'DELETE_ELEMENTS', ids });
-  });
 
   // ── Sync panel to selection ───────────────────────────────────────────────
   function sync(): void {
@@ -314,16 +306,6 @@ function buildFontSection(): {
     setFamily: (f) => { select.value = f; },
     setSize:   (s) => { sizeInput.value = String(s); },
   };
-}
-
-function buildDeleteButton(): HTMLElement {
-  const row  = div('prop-delete-row');
-  const btn  = document.createElement('button');
-  btn.className   = 'prop-delete-btn';
-  btn.textContent = '🗑 Delete';
-  btn.title       = 'Delete selected (Del)';
-  row.appendChild(btn);
-  return row;
 }
 
 function buildSep(): HTMLElement {

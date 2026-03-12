@@ -160,8 +160,8 @@ html, body {
 
 /* ── Properties panel ──────────────────────────────────────────────── */
 #props-panel {
-  position: absolute;
-  top: 70px; left: 12px;
+  position: fixed;
+  top: 72px; right: 16px;
   width: 210px;
   background: var(--bg-island);
   border: 1px solid var(--island-border);
@@ -174,7 +174,7 @@ html, body {
   z-index: 30;
   opacity: 0;
   pointer-events: none;
-  transform: translateX(-8px);
+  transform: translateX(8px);
   transition: opacity .15s, transform .15s;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -291,69 +291,83 @@ html, body {
   color: var(--accent);
 }
 
-/* ── Layers panel ──────────────────────────────────────────────────── */
-#layers-panel {
+
+/* ── Context panel (vertical, below hamburger) ─────────────────────── */
+#context-panel {
   position: fixed;
-  top: 62px; left: 16px;
-  width: auto;
+  top: 72px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   background: var(--bg-island);
   border: 1px solid var(--island-border);
   border-radius: var(--island-radius);
   box-shadow: var(--island-shadow);
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 10px 12px 12px;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  padding: 6px;
+  z-index: 30;
   opacity: 0;
   pointer-events: none;
   transform: translateX(-8px);
   transition: opacity .15s, transform .15s;
 }
-#layers-panel.open {
+#context-panel.open {
   opacity: 1;
   pointer-events: all;
   transform: translateX(0);
 }
 
-.lp-section {
+.ctx-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-.lp-section + .lp-section {
-  margin-top: 12px;
-}
-
-.lp-label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--text-muted);
-}
-
-.lp-btn-row {
-  display: flex;
+  align-items: center;
   gap: 4px;
 }
 
-.lp-btn {
+.ctx-swatch {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--island-border);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform .1s;
+}
+.ctx-swatch:hover { transform: scale(1.08); }
+.ctx-swatch-transparent {
+  background: repeating-conic-gradient(#444 0% 25%, #2a2a2a 0% 50%) 0 0 / 12px 12px !important;
+}
+
+.ctx-sep {
+  width: 24px;
+  height: 1px;
+  background: var(--border);
+  margin: 2px 0;
+  flex-shrink: 0;
+}
+
+.ctx-btn {
   width: 36px; height: 36px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--island-border);
+  background: transparent;
+  border: none;
   border-radius: 8px;
-  color: var(--text);
+  color: var(--text-muted);
   cursor: pointer;
   transition: background .12s, color .12s;
   flex-shrink: 0;
 }
-.lp-btn:hover { background: var(--bg-hover); }
-.lp-btn:disabled { opacity: .25; cursor: default; }
-.lp-btn svg { pointer-events: none; }
+.ctx-btn:hover { background: var(--bg-hover); color: var(--text); }
+.ctx-btn.ctx-danger { color: rgba(255,107,107,0.7); }
+.ctx-btn.ctx-danger:hover { background: rgba(255,80,80,0.1); color: #ff6b6b; }
+.ctx-btn svg { pointer-events: none; }
+
+/* Hide context panel on mobile — replaced by mobile-actions bar */
+@media (pointer: coarse) {
+  #context-panel { display: none !important; }
+}
 
 /* ── Mobile action bar ─────────────────────────────────────────────── */
 #mobile-actions {
@@ -557,10 +571,4 @@ html, body {
   /* ── Hide desktop props panel on touch — replaced by mobile-actions ── */
   #props-panel { display: none !important; }
 
-  /* Layers panel: float above bottom bar on mobile */
-  #layers-panel {
-    top: unset;
-    left: max(16px, env(safe-area-inset-left, 16px));
-    bottom: calc(130px + env(safe-area-inset-bottom, 0px));
-  }
 }
