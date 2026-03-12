@@ -49,6 +49,7 @@ Have you ever wanted to sketch a quick diagram and ended up:
 | **Double-click to edit** | Open any existing text element for inline editing |
 | **Navigation recovery** | `F` fits all content into view · click the zoom % label to snap back to 100% · `Shift+0` resets to origin |
 | **Floating glass UI** | Excalidraw-style islands: center-top tools, bottom-left undo/zoom, top-right import + export |
+| **Session persistence** | Your work survives page refreshes — scene auto-saved to `localStorage` after every change; warns you if storage quota is exceeded |
 | **`.markasso` format** | Save and reload your full scene as a `.markasso` file (JSON) — images included, fully undoable on open |
 | **Image import** | Drag-and-drop, file picker, or Ctrl+V paste; `.markasso` files can also be dropped directly onto the canvas |
 | **Export PNG / SVG** | Download the canvas as a 2× PNG or a clean SVG — bounding-box auto-fit |
@@ -56,7 +57,7 @@ Have you ever wanted to sketch a quick diagram and ended up:
 | **Millimeter grid** | Dot · Line · Graph-paper (real mm at 96 DPI) for when you need to feel precise |
 | **Properties panel** | Stroke color, fill color, stroke width, opacity, font — opens next to the context panel, not on the other side of the screen |
 | **Undo / Redo** | Full command history. Make mistakes confidently. |
-| **Persistent settings** | Your accent color survives page refreshes (localStorage — no servers harmed) |
+| **Persistent settings** | Accent color and grid preferences survive page refreshes (localStorage — no servers harmed) |
 | **Keyboard shortcuts** | Letter keys + numeric keys `1–7` for every tool because mice are slow |
 | **Zero dependencies** | Browser Canvas 2D API only. `package.json` has never been so empty. |
 
@@ -175,7 +176,8 @@ src/
 │   ├── reducer.ts          # Pure (Scene, Command) → Scene
 │   └── history.ts          # Undo/redo stack + pub/sub
 ├── io/
-│   └── markasso.ts         # .markasso save / load (exportMarkasso, importMarkasso)
+│   ├── markasso.ts         # .markasso save / load (exportMarkasso, importMarkasso)
+│   └── session.ts          # localStorage auto-save / restore + quota warning toast
 ├── rendering/
 │   ├── renderer.ts         # rAF render loop entry point
 │   ├── draw_element.ts     # Per-type draw dispatch (with rotation + shape labels)
@@ -227,13 +229,19 @@ No `node_modules` carrying the weight of a small nation. No 400MB `vendor.js`. T
 
 ---
 
+## What's new in 2.1.5
+
+- **`.markasso` format** — save and reload your full scene (elements + viewport, images included) as a portable JSON file
+- **Open .markasso** — folder button in the toolbar to load a saved scene; drag & drop onto the canvas also works
+- **Session persistence** — your work survives page refreshes automatically via `localStorage`; quota warning toast if storage fills up
+- **Properties panel** now opens next to the context panel instead of on the opposite side of the screen
+- **Default font** changed to `Arial, sans-serif`
+
+---
+
 ## Contributing
 
 See [CONTRIBUTORS.md](./CONTRIBUTORS.md) for guidelines.
-
-## Changelog
-
-See [CHANGELOG.md](./CHANGELOG.md) for the full release history.
 
 ## License
 

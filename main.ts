@@ -1,5 +1,6 @@
 import { History } from './src/engine/history';
 import { createScene } from './src/core/scene';
+import { loadSession, initSession } from './src/io/session';
 import { initCanvasView } from './src/ui/canvas_view';
 import { initToolbar } from './src/ui/toolbar';
 import { initShortcuts } from './src/ui/shortcuts';
@@ -19,7 +20,11 @@ function bootstrap(): void {
     throw new Error('Missing required DOM elements');
   }
 
-  const history = new History(createScene());
+  const session = loadSession();
+  const initialScene = session
+    ? { ...createScene(), elements: session.elements, viewport: session.viewport }
+    : createScene();
+  const history = new History(initialScene);
 
   // Restore persisted UI settings before first paint
   applySettings(appEl, loadSettings());
@@ -32,6 +37,7 @@ function bootstrap(): void {
   initMobileActionBar(workspace, history);
   initContextPanel(workspace, history);
   initCanvasView(canvas, history);
+  initSession(history);
 }
 
 bootstrap();
