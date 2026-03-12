@@ -43,21 +43,26 @@ Have you ever wanted to sketch a quick diagram and ended up:
 | **Resize handles** | 8-handle bounding box on every element type — drag to scale |
 | **Rotation** | Rotate any element via a handle above the selection box; fully undoable |
 | **Endpoint editing** | Drag individual endpoints of lines and arrows independently |
+| **Smart arrow links** | Connect arrows to shapes — move a shape and the arrow follows. Cyan snap ring shows when close |
+| **Lock elements** | Lock any element to prevent selection, movement or deletion |
+| **Groups** | `Ctrl+G` to group · click selects all members · click again enters the group to edit individually |
 | **Shape labels** | Double-click any rectangle or ellipse to type a label, clipped inside the shape |
 | **Text scaling** | Dragging a text handle scales the font size, not just the box |
 | **Shift constraints** | Rectangle/Ellipse → square/circle · Line/Arrow → 45° snap · Resize → keep aspect ratio |
+| **Hover highlight** | Elements highlight on hover — you always know what you are about to select |
+| **Shift+click multi-select** | Add or remove elements from the selection without a marquee |
+| **Arrow key nudge** | Move selected elements 1px (or 10px with Shift) |
 | **Double-click to edit** | Open any existing text element for inline editing |
-| **Navigation recovery** | `F` fits all content into view · click the zoom % label to snap back to 100% · `Shift+0` resets to origin |
+| **Navigation recovery** | `F` fits all content into view · `Shift+0` resets to origin |
 | **Floating glass UI** | Excalidraw-style islands: center-top tools, bottom-left undo/zoom, top-right import + export |
-| **Session persistence** | Your work survives page refreshes — scene auto-saved to `localStorage` after every change; warns you if storage quota is exceeded |
-| **`.markasso` format** | Save and reload your full scene as a `.markasso` file (JSON) — images included, fully undoable on open |
-| **Image import** | Drag-and-drop, file picker, or Ctrl+V paste; `.markasso` files can also be dropped directly onto the canvas |
+| **Session persistence** | Your work survives page refreshes — scene auto-saved to `localStorage` |
+| **`.markasso` format** | Save and reload your full scene as a `.markasso` file (JSON) — images included |
+| **Image import** | Drag-and-drop, file picker, or Ctrl+V paste; `.markasso` files can also be dropped directly |
 | **Export PNG / SVG** | Download the canvas as a 2× PNG or a clean SVG — bounding-box auto-fit |
-| **Dark theme** | Pure `#141414` canvas with floating panels and `backdrop-filter: blur` that makes it look like you know what you're doing |
+| **Dark theme** | Pure `#141414` canvas with floating panels and `backdrop-filter: blur` |
 | **Millimeter grid** | Dot · Line · Graph-paper (real mm at 96 DPI) for when you need to feel precise |
-| **Properties panel** | Stroke color, fill color, stroke width, opacity, font — opens next to the context panel, not on the other side of the screen |
+| **Properties panel** | Stroke color, fill color, stroke width, opacity, roughness, font |
 | **Undo / Redo** | Full command history. Make mistakes confidently. |
-| **Persistent settings** | Accent color and grid preferences survive page refreshes (localStorage — no servers harmed) |
 | **Keyboard shortcuts** | Letter keys + numeric keys `1–7` for every tool because mice are slow |
 | **Zero dependencies** | Browser Canvas 2D API only. `package.json` has never been so empty. |
 
@@ -112,11 +117,19 @@ That's it. No `.env` file. No API keys. No Docker. No Kubernetes. No cloud accou
 | `G` | Toggle grid |
 | `F` | Fit all content into view |
 | `Shift+0` | Reset viewport to origin (zoom 100%, offset 0,0) |
-| `Esc` | Cancel / back to Select |
-| `Delete` / `Backspace` | Delete selected elements |
+| `Esc` | Cancel / back to Select / exit group / deselect |
+| `Delete` / `Backspace` | Delete selected elements (locked elements skipped) |
+| `Arrow keys` | Nudge selection 1px |
+| `Shift+Arrow` | Nudge selection 10px |
 | `Ctrl+A` | Select all |
+| `Ctrl+D` | Duplicate selection |
+| `Ctrl+G` | Group selected elements |
+| `Ctrl+Shift+G` | Ungroup |
+| `Ctrl+Shift+]` | Bring to front |
+| `Ctrl+Shift+[` | Send to back |
 | `Ctrl+Z` | Undo (use liberally) |
 | `Ctrl+Y` / `Ctrl+Shift+Z` | Redo |
+| `Shift+click` | Add / remove from selection |
 | `Ctrl+scroll` | Zoom to cursor |
 | `Scroll` | Pan |
 | `Middle-click drag` / `Alt+drag` | Pan |
@@ -228,6 +241,17 @@ No `node_modules` carrying the weight of a small nation. No 400MB `vendor.js`. T
 | Dependencies | **none** | `crypto.randomUUID()`, `requestAnimationFrame`, `ResizeObserver` — all native |
 
 ---
+
+## What's new in 2.2.0
+
+- **Smart arrow links** — drag an arrow endpoint near any shape to connect it; the arrow follows the shape as it moves
+- **Lock elements** — lock/unlock via the context toolbar; locked elements stay visible but can't be touched
+- **Groups** — `Ctrl+G` groups elements; click to select the whole group, click again to enter and edit individual members; `Escape` exits the group
+- **Hover highlight** — a soft glow around elements on hover before clicking
+- **Shift+click multi-select** — add or remove elements without drawing a marquee
+- **Arrow key nudge** — move selection 1px (10px with Shift) for pixel-perfect layout
+- **Duplicate** — `Ctrl+D` clones the selection with a 20px offset
+- **Pen tool smoothing** — strokes are filtered and simplified on release, no more jagged lines from hand tremor
 
 ## What's new in 2.1.5
 
