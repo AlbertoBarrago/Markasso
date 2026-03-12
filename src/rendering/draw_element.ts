@@ -291,6 +291,11 @@ function drawFreehand(
   if (points.length < 2) return;
   const p0 = points[0]!;
 
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
   ctx.beginPath();
   ctx.moveTo(p0[0], p0[1]);
 
@@ -298,19 +303,23 @@ function drawFreehand(
     const p1 = points[1]!;
     ctx.lineTo(p1[0], p1[1]);
   } else {
-    // Catmull-Rom to Bézier approximation
-    for (let i = 1; i < points.length - 1; i++) {
-      const [x0, y0] = points[i - 1]!;
-      const [x1, y1] = points[i]!;
-      const [x2, y2] = points[i + 1]!;
-      const cpx = (x0 + x1) / 2;
-      const cpy = (y0 + y1) / 2;
-      const cpx2 = (x1 + x2) / 2;
-      const cpy2 = (y1 + y2) / 2;
-      ctx.quadraticCurveTo(x1, y1, (cpx2 + cpx) / 2, (cpy2 + cpy) / 2);
+    // Use native cubic Bézier curves for smooth rendering
+    const tension = 0.5;
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1_curr = points[i]!;
+      const p2_curr = points[i + 1]!;
+      const p0_prev = points[Math.max(0, i - 1)]!;
+      const p3_next = points[Math.min(points.length - 1, i + 2)]!;
+
+      // Catmull-Rom control points
+      const cp1x = p1_curr[0] + (p2_curr[0] - p0_prev[0]) * tension / 3;
+      const cp1y = p1_curr[1] + (p2_curr[1] - p0_prev[1]) * tension / 3;
+      const cp2x = p2_curr[0] - (p3_next[0] - p1_curr[0]) * tension / 3;
+      const cp2y = p2_curr[1] - (p3_next[1] - p1_curr[1]) * tension / 3;
+
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2_curr[0], p2_curr[1]);
     }
-    const last = points[points.length - 1]!;
-    ctx.lineTo(last[0], last[1]);
   }
 
   ctx.stroke();

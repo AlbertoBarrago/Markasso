@@ -24,7 +24,7 @@ export function createAppState(): AppState {
     activeTool:  'select',
     strokeColor: '#e2e2ef',   // light stroke for dark canvas
     fillColor:   'transparent',
-    strokeWidth: 2,
+    strokeWidth: 1,
     fontSize:    20,
     fontFamily:  'Arial, sans-serif',
     opacity:     1,
