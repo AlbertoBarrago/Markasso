@@ -3,6 +3,8 @@ import type { Element } from '../elements/element';
 import type { HandlePosition } from '../rendering/draw_selection';
 import {
   getElementBounds,
+  getElementBorderPoint,
+  resolveArrowEndpoints,
   hitTestHandle,
   getSelectionHandles,
   getRotationHandleScreen,
@@ -52,6 +54,8 @@ export class SelectTool implements Tool {
 
   /** Exposed for canvas_view to draw a snap indicator */
   endpointSnapIndicator: { worldX: number; worldY: number } | null = null;
+  /** Exposed for canvas_view to draw a hover highlight on the snap target element */
+  endpointSnapElementId: string | null = null;
 
   // Rotation state
   private rotateCenter: [number, number] = [0, 0];
@@ -162,9 +166,7 @@ export class SelectTool implements Tool {
         if (hit.groupId) {
           if (this.activeGroupId === hit.groupId) {
             // Inside group: select just this element
-            if (!scene.selectedIds.has(hit.id)) {
-              ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
-            }
+            ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
             this.dragMode = 'move';
           } else {
             // Select whole group
@@ -200,22 +202,30 @@ export class SelectTool implements Tool {
       const scene = ctx.history.present;
       const el = scene.elements.find((el) => el.id === this.endpointElId);
       if (el && (el.type === 'line' || el.type === 'arrow') && this.endpointSide) {
-        // Check for snap to nearby element center
+        // Determine the "other end" position for computing border facing direction
+        const resolved = resolveArrowEndpoints(el, scene.elements);
+        const otherX = this.endpointSide === 'start' ? resolved.x2 : resolved.x;
+        const otherY = this.endpointSide === 'start' ? resolved.y2 : resolved.y;
+
+        // Check for snap to element perimeter
         const snapRadius = SNAP_RADIUS_PX / scene.viewport.zoom;
         let snapTarget: { worldX: number; worldY: number; elementId: string } | null = null;
         for (const candidate of scene.elements) {
           if (candidate.id === el.id) continue;
           if (candidate.type === 'line' || candidate.type === 'arrow') continue;
           const b = getElementBounds(candidate);
-          const cx = b.x + b.w / 2;
-          const cy = b.y + b.h / 2;
-          if (Math.hypot(worldX - cx, worldY - cy) <= snapRadius) {
-            snapTarget = { worldX: cx, worldY: cy, elementId: candidate.id };
+          const nearX = Math.max(b.x, Math.min(b.x + b.w, worldX));
+          const nearY = Math.max(b.y, Math.min(b.y + b.h, worldY));
+          if (Math.hypot(worldX - nearX, worldY - nearY) <= snapRadius) {
+            // Border point facing toward the other end of the arrow
+            const [bx, by] = getElementBorderPoint(candidate, otherX, otherY);
+            snapTarget = { worldX: bx, worldY: by, elementId: candidate.id };
             break;
           }
         }
         this.endpointSnapTarget = snapTarget;
         this.endpointSnapIndicator = snapTarget ? { worldX: snapTarget.worldX, worldY: snapTarget.worldY } : null;
+        this.endpointSnapElementId = snapTarget ? snapTarget.elementId : null;
 
         const resolvedX = snapTarget ? snapTarget.worldX : worldX;
         const resolvedY = snapTarget ? snapTarget.worldY : worldY;
@@ -361,6 +371,7 @@ export class SelectTool implements Tool {
 
     this.endpointSnapTarget = null;
     this.endpointSnapIndicator = null;
+    this.endpointSnapElementId = null;
     this.dragMode = 'none';
     this.resizeHandle = null;
     this.resizeOrigEl = null;
