@@ -22,6 +22,10 @@ export function render(
   ctx.fillStyle = CANVAS_BG;
   ctx.fillRect(0, 0, width, height);
 
+  // Enable anti-aliasing for smooth curves
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
   if (appState.gridVisible) {
     drawGrid(ctx, viewport, appState.gridSize, appState.gridType, width, height);
   }
