@@ -5,6 +5,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.0] – 2026-03-12
+
+### Added
+- **Stroke style** — solid, dashed, and dotted stroke options per element; persists in undo history
+- **Roughness rendering** — deterministic hand-drawn wobble effect on rectangles, ellipses, lines, and arrows; uses element ID as seed so wobble is stable across redraws
+- **Image import** — drag-and-drop, file picker, or Ctrl+V paste to place images on the canvas as resizable elements; images embedded as data URLs
+- **Image export (SVG)** — imported images included in SVG export as `<image href="data:...">` tags
+- **Context panel** — vertical floating island on the left, auto-shows on selection; contains stroke/fill swatches (stacked vertically), layer order buttons (send to back, move back one, move forward one, bring to front), element actions (properties, duplicate, delete), and import image button
+- **Mobile action bar** — bottom-left fixed bar on touch devices with send to back, bring to front, duplicate, visibility toggle, and delete; auto-shows on selection
+- **Element visibility** — toggle visibility per element; invisible elements are skipped during rendering but remain in the document
+
+### Changed
+- **Properties panel** moved to the **right side** (`right: 16px`) so it no longer overlaps the context panel
+- **Delete button** removed from properties panel — available exclusively in the context panel
+- Both floating panels start at `top: 72px` for better visual breathing room below the toolbar
+- Stroke/fill swatches in the context panel are now stacked vertically for a more compact single-column layout
+- `roughness` default changed from `1` to `0` (shapes are clean by default)
+- `ActiveTool` type narrowed to exclude `'image'` (images are imported, not drawn)
+
+### Fixed
+- Hit-testing, bounds calculation, and resize scaling now correctly handle `image` elements
+- Text elements show "Color" label (not "Stroke") in the properties panel
+
+---
+
 ## [1.1.0] – 2026-03-11
 
 ### Added
