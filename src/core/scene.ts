@@ -17,11 +17,6 @@ export function createScene(): Scene {
     appState: createAppState(),
   };
 }
-
-export function getElementById(scene: Scene, id: string): Element | undefined {
-  return scene.elements.find((el) => el.id === id);
-}
-
 export function getSelectedElements(scene: Scene): ReadonlyArray<Element> {
   return scene.elements.filter((el) => scene.selectedIds.has(el.id));
 }
