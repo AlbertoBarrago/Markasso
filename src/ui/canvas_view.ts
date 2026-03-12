@@ -10,7 +10,7 @@ import { TextTool } from '../tools/text_tool';
 import type { TextElement, RectangleElement, EllipseElement } from '../elements/element';
 import { render } from '../rendering/renderer';
 import { drawElement } from '../rendering/draw_element';
-import { drawMarquee, drawHoverHighlight } from '../rendering/draw_selection';
+import { drawMarquee, drawHoverHighlight, drawSnapIndicator } from '../rendering/draw_selection';
 import { screenToWorld, worldToScreen } from '../core/viewport';
 import type { ActiveTool } from '../core/app_state';
 
@@ -24,7 +24,7 @@ const TOOLS: Record<ActiveTool, Tool> = {
   text: new TextTool(),
 };
 
-export function initCanvasView(canvas: HTMLCanvasElement, history: History): void {
+export function initCanvasView(canvas: HTMLCanvasElement, history: History): { selectTool: SelectTool } {
   const ctx2d = canvas.getContext('2d')!;
 
   let isPanning = false;
@@ -326,13 +326,24 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): voi
         const dpr = window.devicePixelRatio;
         ctx2d.setTransform(viewport.zoom * dpr, 0, 0, viewport.zoom * dpr, viewport.offsetX * dpr, viewport.offsetY * dpr);
         ctx2d.globalAlpha = 0.7;
-        drawElement(ctx2d, preview as Parameters<typeof drawElement>[1]);
+        drawElement(ctx2d, preview as Parameters<typeof drawElement>[1], scene.elements);
         ctx2d.restore();
       }
     }
 
-    // Draw hover highlight when using select tool (unselected elements only)
+    // Draw snap indicators (arrow/line tool and select tool endpoint drag)
     const selectTool = TOOLS['select'] as SelectTool;
+    if ('snapIndicator' in activeTool) {
+      const indicator = (activeTool as { snapIndicator: { worldX: number; worldY: number } | null }).snapIndicator;
+      if (indicator) {
+        drawSnapIndicator(ctx2d, indicator.worldX, indicator.worldY, scene.viewport);
+      }
+    }
+    if (selectTool.endpointSnapIndicator) {
+      drawSnapIndicator(ctx2d, selectTool.endpointSnapIndicator.worldX, selectTool.endpointSnapIndicator.worldY, scene.viewport);
+    }
+
+    // Draw hover highlight when using select tool (unselected elements only)
     if (scene.appState.activeTool === 'select' && selectTool.hoveredId) {
       const hoveredEl = scene.elements.find(
         (el) => el.id === selectTool.hoveredId && !scene.selectedIds.has(el.id),
@@ -348,6 +359,8 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): voi
   }
 
   requestAnimationFrame(loop);
+
+  return { selectTool: TOOLS['select'] as SelectTool };
 }
 
 // ── Shape label editor ─────────────────────────────────────────────────────────

@@ -14,6 +14,8 @@ import { worldToScreen } from '../core/viewport';
 
 type DragMode = 'none' | 'move' | 'marquee' | 'resize' | 'rotate' | 'endpoint';
 
+const SNAP_RADIUS_PX = 20;
+
 const HANDLE_CURSORS: Record<HandlePosition, string> = {
   nw: 'nw-resize', n: 'ns-resize', ne: 'ne-resize',
   w:  'ew-resize',                  e: 'ew-resize',
@@ -27,6 +29,9 @@ export class SelectTool implements Tool {
 
   /** ID of the element currently under the cursor (for hover highlight), or null */
   hoveredId: string | null = null;
+
+  /** The groupId of the currently "whole-group selected" group, or null */
+  activeGroupId: string | null = null;
 
   private marqueeX1 = 0;
   private marqueeY1 = 0;
@@ -43,6 +48,10 @@ export class SelectTool implements Tool {
   // Endpoint drag state
   private endpointSide: 'start' | 'end' | null = null;
   private endpointElId: string | null = null;
+  private endpointSnapTarget: { worldX: number; worldY: number; elementId: string } | null = null;
+
+  /** Exposed for canvas_view to draw a snap indicator */
+  endpointSnapIndicator: { worldX: number; worldY: number } | null = null;
 
   // Rotation state
   private rotateCenter: [number, number] = [0, 0];
@@ -149,13 +158,34 @@ export class SelectTool implements Tool {
         }
         this.dragMode = 'none';
       } else {
-        if (!scene.selectedIds.has(hit.id)) {
-          ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
+        // Group-aware selection
+        if (hit.groupId) {
+          if (this.activeGroupId === hit.groupId) {
+            // Inside group: select just this element
+            if (!scene.selectedIds.has(hit.id)) {
+              ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
+            }
+            this.dragMode = 'move';
+          } else {
+            // Select whole group
+            const groupIds = scene.elements
+              .filter((el) => el.groupId === hit.groupId)
+              .map((el) => el.id);
+            ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: groupIds });
+            this.activeGroupId = hit.groupId;
+            this.dragMode = 'move';
+          }
+        } else {
+          if (!scene.selectedIds.has(hit.id)) {
+            ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
+          }
+          this.activeGroupId = null;
+          this.dragMode = 'move';
         }
-        this.dragMode = 'move';
       }
     } else {
       ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
+      this.activeGroupId = null;
       this.dragMode = 'marquee';
       this.marqueeActive = true;
       this.marqueeX1 = screenX;
@@ -170,10 +200,30 @@ export class SelectTool implements Tool {
       const scene = ctx.history.present;
       const el = scene.elements.find((el) => el.id === this.endpointElId);
       if (el && (el.type === 'line' || el.type === 'arrow') && this.endpointSide) {
+        // Check for snap to nearby element center
+        const snapRadius = SNAP_RADIUS_PX / scene.viewport.zoom;
+        let snapTarget: { worldX: number; worldY: number; elementId: string } | null = null;
+        for (const candidate of scene.elements) {
+          if (candidate.id === el.id) continue;
+          if (candidate.type === 'line' || candidate.type === 'arrow') continue;
+          const b = getElementBounds(candidate);
+          const cx = b.x + b.w / 2;
+          const cy = b.y + b.h / 2;
+          if (Math.hypot(worldX - cx, worldY - cy) <= snapRadius) {
+            snapTarget = { worldX: cx, worldY: cy, elementId: candidate.id };
+            break;
+          }
+        }
+        this.endpointSnapTarget = snapTarget;
+        this.endpointSnapIndicator = snapTarget ? { worldX: snapTarget.worldX, worldY: snapTarget.worldY } : null;
+
+        const resolvedX = snapTarget ? snapTarget.worldX : worldX;
+        const resolvedY = snapTarget ? snapTarget.worldY : worldY;
+
         if (this.endpointSide === 'start') {
-          ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: el.id, x: worldX, y: worldY });
+          ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: el.id, x: resolvedX, y: resolvedY });
         } else {
-          ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: el.id, x2: worldX, y2: worldY });
+          ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: el.id, x2: resolvedX, y2: resolvedY });
         }
       }
       ctx.onPreviewUpdate?.();
@@ -291,6 +341,26 @@ export class SelectTool implements Tool {
       if (ids.length > 0) ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids });
     }
 
+    // Commit endpoint connection on mouseup
+    if (this.dragMode === 'endpoint' && this.endpointElId && this.endpointSide) {
+      const snap = this.endpointSnapTarget;
+      if (this.endpointSide === 'start') {
+        ctx.history.dispatch({
+          type: 'RESIZE_ELEMENT',
+          id: this.endpointElId,
+          startElementId: snap ? snap.elementId : null,
+        });
+      } else {
+        ctx.history.dispatch({
+          type: 'RESIZE_ELEMENT',
+          id: this.endpointElId,
+          endElementId: snap ? snap.elementId : null,
+        });
+      }
+    }
+
+    this.endpointSnapTarget = null;
+    this.endpointSnapIndicator = null;
     this.dragMode = 'none';
     this.resizeHandle = null;
     this.resizeOrigEl = null;
@@ -301,9 +371,49 @@ export class SelectTool implements Tool {
   }
 
   onKeyDown(e: KeyboardEvent, ctx: ToolContext): void {
+    if (e.key === 'Escape') {
+      if (this.activeGroupId) {
+        // Exit entered group: re-select whole group
+        const scene = ctx.history.present;
+        const groupIds = scene.elements
+          .filter((el) => el.groupId === this.activeGroupId)
+          .map((el) => el.id);
+        if (groupIds.length > 0) {
+          ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: groupIds });
+        } else {
+          ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
+        }
+        this.activeGroupId = null;
+      } else {
+        ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
+      }
+      return;
+    }
+
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      const ids = [...ctx.history.present.selectedIds];
+      const scene = ctx.history.present;
+      // Don't delete locked elements
+      const ids = [...scene.selectedIds].filter((id) => {
+        const el = scene.elements.find((e) => e.id === id);
+        return el && !el.locked;
+      });
       if (ids.length > 0) ctx.history.dispatch({ type: 'DELETE_ELEMENTS', ids });
+      return;
+    }
+
+    // Arrow key nudge — 1px normally, 10px with Shift
+    const NUDGE = e.shiftKey ? 10 : 1;
+    let dx = 0, dy = 0;
+    if (e.key === 'ArrowLeft')  dx = -NUDGE;
+    if (e.key === 'ArrowRight') dx =  NUDGE;
+    if (e.key === 'ArrowUp')    dy = -NUDGE;
+    if (e.key === 'ArrowDown')  dy =  NUDGE;
+    if (dx !== 0 || dy !== 0) {
+      e.preventDefault();
+      const ids = [...ctx.history.present.selectedIds];
+      for (const id of ids) {
+        ctx.history.dispatch({ type: 'MOVE_ELEMENT', id, dx, dy });
+      }
     }
   }
 
@@ -461,7 +571,7 @@ function computeResize(
 function hitTest(elements: ReadonlyArray<Element>, wx: number, wy: number): Element | null {
   for (let i = elements.length - 1; i >= 0; i--) {
     const el = elements[i];
-    if (el && hitTestElement(el, wx, wy)) return el;
+    if (el && !el.locked && hitTestElement(el, wx, wy)) return el;
   }
   return null;
 }

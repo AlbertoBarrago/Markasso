@@ -29,14 +29,14 @@ function bootstrap(): void {
   // Restore persisted UI settings before first paint
   applySettings(appEl, loadSettings());
 
-  initShortcuts(history);
   initToolbar(toolbar, history);
   initSettings(appEl, toolbar, history);
   initPropertiesPanel(workspace, history);
   initImageImport(workspace, history);
   initMobileActionBar(workspace, history);
   initContextPanel(workspace, history);
-  initCanvasView(canvas, history);
+  const { selectTool } = initCanvasView(canvas, history);
+  initShortcuts(history, selectTool);
   initSession(history);
 }
 

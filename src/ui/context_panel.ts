@@ -65,9 +65,45 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   });
   deleteBtn.classList.add('ctx-danger');
 
+  // Lock/Unlock toggle button
+  const lockBtn = mkBtn(IC_LOCK, 'Lock', () => {
+    const scene = history.present;
+    const selected = [...scene.selectedIds]
+      .map((id) => scene.elements.find((el) => el.id === id))
+      .filter((el): el is Element => el !== undefined);
+    const allLocked = selected.length > 0 && selected.every((el) => el.locked);
+    const ids = [...scene.selectedIds];
+    if (allLocked) {
+      history.dispatch({ type: 'UNLOCK_ELEMENTS', ids });
+    } else {
+      history.dispatch({ type: 'LOCK_ELEMENTS', ids });
+    }
+  });
+
+  // Group button
+  const groupBtn = mkBtn(IC_GROUP, 'Group (Ctrl+G)', () => {
+    const ids = [...history.present.selectedIds];
+    if (ids.length > 1) {
+      history.dispatch({ type: 'GROUP_ELEMENTS', ids, groupId: crypto.randomUUID() });
+    }
+  });
+
+  // Ungroup button
+  const ungroupBtn = mkBtn(IC_UNGROUP, 'Ungroup (Ctrl+Shift+G)', () => {
+    const scene = history.present;
+    const groupIds = new Set(
+      [...scene.selectedIds]
+        .map((id) => scene.elements.find((el) => el.id === id)?.groupId)
+        .filter((gid): gid is string => gid !== undefined)
+    );
+    for (const groupId of groupIds) {
+      history.dispatch({ type: 'UNGROUP_ELEMENTS', groupId });
+    }
+  });
+
   const actionGroup = document.createElement('div');
   actionGroup.className = 'ctx-group';
-  actionGroup.append(propsBtn, duplicateBtn, deleteBtn);
+  actionGroup.append(propsBtn, duplicateBtn, lockBtn, groupBtn, ungroupBtn, deleteBtn);
 
   // ── App actions (always shown) ───────────────────────────────────────
   const importBtn = mkBtn(IC_IMPORT, 'Import image', () => {
@@ -118,6 +154,21 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     moveForwardBtn.disabled = !hasSelection || idx >= total - 1;
     bringFrontBtn.disabled  = !hasSelection || idx >= total - 1;
 
+    // Lock button: show when selection exists; update label
+    lockBtn.style.display = hasSelection ? '' : 'none';
+    if (hasSelection) {
+      const allLocked = selected.every((el) => el.locked);
+      lockBtn.title = allLocked ? 'Unlock' : 'Lock';
+      lockBtn.innerHTML = allLocked ? IC_UNLOCK : IC_LOCK;
+    }
+
+    // Group button: show only when 2+ elements selected and not all grouped
+    groupBtn.style.display = (selected.length >= 2) ? '' : 'none';
+
+    // Ungroup button: show when selected elements have groupIds
+    const hasGroups = selected.some((el) => el.groupId);
+    ungroupBtn.style.display = (hasSelection && hasGroups) ? '' : 'none';
+
     // Update swatches
     if (hasSelection && !isImage) {
       const first = selected[0]!;
@@ -138,6 +189,10 @@ function applySwatchColor(btn: HTMLButtonElement, color: string): void {
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
+const IC_LOCK         = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="9" width="10" height="8" rx="1.5"/><path d="M7 9V6a3 3 0 0 1 6 0v3"/></svg>`;
+const IC_UNLOCK       = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="9" width="10" height="8" rx="1.5"/><path d="M7 9V6a3 3 0 0 1 6 0"/></svg>`;
+const IC_GROUP        = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="6" height="6" rx="1"/><rect x="12" y="2" width="6" height="6" rx="1"/><rect x="2" y="12" width="6" height="6" rx="1"/><rect x="12" y="12" width="6" height="6" rx="1"/></svg>`;
+const IC_UNGROUP      = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="6" height="6" rx="1"/><rect x="12" y="2" width="6" height="6" rx="1"/><rect x="2" y="12" width="6" height="6" rx="1"/><rect x="12" y="12" width="6" height="6" rx="1"/><line x1="1" y1="1" x2="19" y2="19" stroke-width="2"/></svg>`;
 const IC_SEND_BACK    = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="17" x2="17" y2="17"/><path d="M10 13V5M6 9l4-4 4 4"/></svg>`;
 const IC_MOVE_BACK    = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14V6M6 10l4-4 4 4"/></svg>`;
 const IC_MOVE_FORWARD = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6v8M6 10l4 4 4-4"/></svg>`;
