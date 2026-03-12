@@ -37,7 +37,7 @@ export function render(
   for (const el of scene.elements) {
     if (editingId && el.id === editingId) continue;
     if (el.visible === false) continue;
-    drawElement(ctx, el);
+    drawElement(ctx, el, scene.elements);
   }
 
   const selected = getSelectedElements(scene);

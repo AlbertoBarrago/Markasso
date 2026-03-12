@@ -2,6 +2,59 @@ import type { Element } from '../elements/element';
 import type { Viewport } from '../core/viewport';
 import { worldToScreen } from '../core/viewport';
 
+/**
+ * Resolves the effective endpoints of a line/arrow element,
+ * looking up connected element centers when startElementId/endElementId are set.
+ */
+export function resolveArrowEndpoints(
+  el: { x: number; y: number; x2: number; y2: number; startElementId?: string; endElementId?: string },
+  allElements: ReadonlyArray<Element>,
+): { x: number; y: number; x2: number; y2: number } {
+  let { x, y, x2, y2 } = el;
+
+  if (el.startElementId) {
+    const target = allElements.find((e) => e.id === el.startElementId);
+    if (target) {
+      const b = getElementBounds(target);
+      x = b.x + b.w / 2;
+      y = b.y + b.h / 2;
+    }
+  }
+  if (el.endElementId) {
+    const target = allElements.find((e) => e.id === el.endElementId);
+    if (target) {
+      const b = getElementBounds(target);
+      x2 = b.x + b.w / 2;
+      y2 = b.y + b.h / 2;
+    }
+  }
+
+  return { x, y, x2, y2 };
+}
+
+/** Draws a cyan snap indicator circle at the given world-space position. */
+export function drawSnapIndicator(
+  ctx: CanvasRenderingContext2D,
+  worldX: number,
+  worldY: number,
+  viewport: Viewport,
+): void {
+  ctx.save();
+  ctx.resetTransform();
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+  const [sx, sy] = worldToScreen(viewport, worldX, worldY);
+  ctx.strokeStyle = 'cyan';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.arc(sx, sy, 16, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.restore();
+}
+
 const HANDLE_SIZE = 8;
 const HANDLE_HALF = HANDLE_SIZE / 2;
 
@@ -19,7 +72,7 @@ export interface Handle {
   screenY: number;
 }
 
-export function getElementBounds(el: Element): { x: number; y: number; w: number; h: number } {
+export function getElementBounds(el: Element, allElements?: ReadonlyArray<Element>): { x: number; y: number; w: number; h: number } {
   switch (el.type) {
     case 'rectangle':
     case 'ellipse':
@@ -31,11 +84,12 @@ export function getElementBounds(el: Element): { x: number; y: number; w: number
     }
     case 'line':
     case 'arrow': {
+      const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
       return {
-        x: Math.min(el.x, el.x2),
-        y: Math.min(el.y, el.y2),
-        w: Math.abs(el.x2 - el.x),
-        h: Math.abs(el.y2 - el.y),
+        x: Math.min(pts.x, pts.x2),
+        y: Math.min(pts.y, pts.y2),
+        w: Math.abs(pts.x2 - pts.x),
+        h: Math.abs(pts.y2 - pts.y),
       };
     }
     case 'freehand': {
@@ -104,12 +158,14 @@ export function hitTestEndpoint(
   viewport: Viewport,
   screenX: number,
   screenY: number,
+  allElements?: ReadonlyArray<Element>,
 ): 'start' | 'end' | null {
   if (el.type !== 'line' && el.type !== 'arrow') return null;
   const R = 5 + 4; // handle radius + tolerance
 
-  const [sx1, sy1] = worldToScreen(viewport, el.x, el.y);
-  const [sx2, sy2] = worldToScreen(viewport, el.x2, el.y2);
+  const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
+  const [sx1, sy1] = worldToScreen(viewport, pts.x, pts.y);
+  const [sx2, sy2] = worldToScreen(viewport, pts.x2, pts.y2);
 
   if (Math.hypot(screenX - sx1, screenY - sy1) <= R) return 'start';
   if (Math.hypot(screenX - sx2, screenY - sy2) <= R) return 'end';
@@ -222,8 +278,9 @@ export function drawSelection(
   if (elements.length === 1) {
     const el = elements[0]!;
     if (el.type === 'line' || el.type === 'arrow') {
-      const [x1s, y1s] = worldToScreen(viewport, el.x, el.y);
-      const [x2s, y2s] = worldToScreen(viewport, el.x2, el.y2);
+      const pts = resolveArrowEndpoints(el, elements);
+      const [x1s, y1s] = worldToScreen(viewport, pts.x, pts.y);
+      const [x2s, y2s] = worldToScreen(viewport, pts.x2, pts.y2);
 
       ctx.fillStyle = 'cyan';
       ctx.strokeStyle = '#1c1c2a';

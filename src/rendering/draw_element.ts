@@ -1,8 +1,8 @@
 import type { Element } from '../elements/element';
-import { getElementCenter } from './draw_selection';
+import { getElementCenter, resolveArrowEndpoints } from './draw_selection';
 import { getCachedImage } from './image_cache';
 
-export function drawElement(ctx: CanvasRenderingContext2D, el: Element): void {
+export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allElements?: ReadonlyArray<Element>): void {
   ctx.save();
   ctx.globalAlpha = el.opacity;
   ctx.strokeStyle = el.strokeColor;
@@ -71,13 +71,15 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element): void {
     case 'line': {
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
-      drawLine(ctx, el.x, el.y, el.x2, el.y2, roughness, seed);
+      const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
+      drawLine(ctx, pts.x, pts.y, pts.x2, pts.y2, roughness, seed);
       break;
     }
     case 'arrow': {
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
-      drawArrow(ctx, el.x, el.y, el.x2, el.y2, el.strokeWidth, roughness, seed);
+      const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
+      drawArrow(ctx, pts.x, pts.y, pts.x2, pts.y2, el.strokeWidth, roughness, seed);
       break;
     }
     case 'freehand':
