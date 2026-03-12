@@ -2,6 +2,7 @@ import type { History } from '../engine/history';
 import type { ActiveTool } from '../core/app_state';
 import { exportPNG, exportSVG } from '../rendering/export';
 import { fitToElements } from '../core/viewport';
+import { openImageFilePicker } from './image_import';
 
 // ── SVG icons ──────────────────────────────────────────────────────────────────
 const IC = {
@@ -18,6 +19,8 @@ const IC = {
   fit:       `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="2.5"/><path d="M1 5V2h3M12 2h3v3M15 11v3h-3M4 14H1v-3"/></svg>`,
   imgPNG:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><rect x="2" y="3" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="8" r="1.5" fill="currentColor"/><path d="M2 14l4-4 3 3 3-3 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   imgSVG:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><circle cx="4" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 10C8 5 12 5 13.5 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  layers:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L2 6l8 4 8-4z"/><path d="M2 10l8 4 8-4"/><path d="M2 14l8 4 8-4"/></svg>`,
+  importImg: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="16" height="14" rx="2"/><circle cx="7" cy="8" r="1.5"/><path d="M2 14l4-4 3 3 3-3 4 4"/><path d="M13 7l2-2 2 2M15 5v5"/></svg>`,
 };
 
 const TOOLS: { tool: ActiveTool; icon: string; label: string; key: string; num: string }[] = [
@@ -125,9 +128,25 @@ export function initToolbar(container: HTMLElement, history: History): void {
 
   topRight.append(exportIsland);
 
-  // Top-left: settings placeholder
+  // Top-left: layers toggle + import image
   const topLeft = div('tb-island-topleft');
   const tbLeft = div('tb-island tb-left');
+
+  const layersBtn = mkBtn(IC.layers, 'Layers (layers panel)');
+  layersBtn.addEventListener('click', () => {
+    const layersPanel = document.getElementById('layers-panel');
+    if (layersPanel) {
+      layersPanel.classList.toggle('open');
+    }
+  });
+
+  const importBtn = mkBtn(IC.importImg, 'Import image');
+  importBtn.addEventListener('click', () => {
+    const workspace = document.getElementById('workspace');
+    if (workspace) openImageFilePicker(workspace);
+  });
+
+  tbLeft.append(layersBtn, importBtn);
   topLeft.append(tbLeft);
 
   container.append(centerPill, bottomLeft, topRight, topLeft);

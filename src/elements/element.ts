@@ -4,7 +4,8 @@ export type ElementType =
   | 'line'
   | 'arrow'
   | 'freehand'
-  | 'text';
+  | 'text'
+  | 'image';
 
 export interface BaseElement {
   readonly id: string;
@@ -17,6 +18,9 @@ export interface BaseElement {
   readonly opacity: number;
   readonly roughness: number;
   readonly rotation?: number;
+  readonly strokeStyle?: 'solid' | 'dashed' | 'dotted';
+  readonly visible?: boolean;
+  readonly layerName?: string;
 }
 
 export interface RectangleElement extends BaseElement {
@@ -63,11 +67,20 @@ export interface TextElement extends BaseElement {
   readonly height: number;
 }
 
+export interface ImageElement extends BaseElement {
+  readonly type: 'image';
+  readonly src: string;
+  readonly width: number;
+  readonly height: number;
+  readonly naturalWidth: number;
+  readonly naturalHeight: number;
+}
+
 export type Element =
   | RectangleElement
   | EllipseElement
   | LineElement
   | ArrowElement
   | FreehandElement
-  | TextElement;
-
+  | TextElement
+  | ImageElement;

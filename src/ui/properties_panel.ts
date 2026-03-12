@@ -19,18 +19,22 @@ export function initPropertiesPanel(workspace: HTMLElement, history: History): v
   workspace.appendChild(panel);
 
   // ── Build sections ────────────────────────────────────────────────────────
-  const strokeSection = buildColorSection('Stroke',     STROKE_PRESETS, false);
-  const fillSection   = buildColorSection('Fill',       FILL_PRESETS,   true);
-  const widthSection  = buildSlider('Stroke width', 1, 30, 1);
-  const opacitySection= buildSlider('Opacity', 0, 100, 1);
-  const fontSection   = buildFontSection();
-  const deleteRow     = buildDeleteButton();
+  const strokeSection      = buildColorSection('Stroke',     STROKE_PRESETS, false);
+  const fillSection        = buildColorSection('Fill',       FILL_PRESETS,   true);
+  const strokeStyleSection = buildStrokeStyleSection();
+  const widthSection       = buildSlider('Stroke width', 1, 30, 1);
+  const roughnessSection   = buildSlider('Roughness', 0, 100, 1);
+  const opacitySection     = buildSlider('Opacity', 0, 100, 1);
+  const fontSection        = buildFontSection();
+  const deleteRow          = buildDeleteButton();
 
   panel.append(
     strokeSection.root,
     fillSection.root,
     buildSep(),
+    strokeStyleSection.root,
     widthSection.root,
+    roughnessSection.root,
     opacitySection.root,
     buildSep(),
     fontSection.root,
@@ -47,7 +51,11 @@ export function initPropertiesPanel(workspace: HTMLElement, history: History): v
 
   fillSection.onChange((color) => applyStyle({ type: 'APPLY_STYLE', fillColor: color }));
 
+  strokeStyleSection.onChange((style) => applyStyle({ type: 'APPLY_STYLE', strokeStyle: style as 'solid' | 'dashed' | 'dotted' }));
+
   widthSection.onChange((v) => applyStyle({ type: 'APPLY_STYLE', strokeWidth: v }));
+
+  roughnessSection.onChange((v) => applyStyle({ type: 'APPLY_STYLE', roughness: v / 100 }));
 
   opacitySection.onChange((v) => applyStyle({ type: 'APPLY_STYLE', opacity: v / 100 }));
 
@@ -73,11 +81,25 @@ export function initPropertiesPanel(workspace: HTMLElement, history: History): v
     const first     = selected[0]!;
     const hasText   = selected.some((el) => el.type === 'text');
     const allText   = selected.every((el) => el.type === 'text');
+    const allImage  = selected.every((el) => el.type === 'image');
 
-    strokeSection.setValue(first.strokeColor);
-    fillSection.setValue(first.fillColor);
-    widthSection.setValue(first.strokeWidth);
+    if (!allImage) {
+      strokeSection.setValue(first.strokeColor);
+      fillSection.setValue(first.fillColor);
+      strokeStyleSection.setValue((first.strokeStyle ?? 'solid') as 'solid' | 'dashed' | 'dotted');
+      widthSection.setValue(first.strokeWidth);
+      roughnessSection.setValue(Math.round((first.roughness ?? 0) * 100));
+    }
     opacitySection.setValue(Math.round(first.opacity * 100));
+
+    // For text: show only "Color" (strokeColor is the text color), hide fill/style/width/roughness
+    // For image: hide all stroke/fill controls
+    strokeSection.root.style.display      = allImage ? 'none' : '';
+    strokeSection.setLabel(allText ? 'Color' : 'Stroke');
+    fillSection.root.style.display        = (allText || allImage) ? 'none' : '';
+    strokeStyleSection.root.style.display = (allText || allImage) ? 'none' : '';
+    widthSection.root.style.display       = (allText || allImage) ? 'none' : '';
+    roughnessSection.root.style.display   = (allText || allImage) ? 'none' : '';
 
     fontSection.root.style.display = hasText ? '' : 'none';
     if (hasText) {
@@ -87,9 +109,6 @@ export function initPropertiesPanel(workspace: HTMLElement, history: History): v
         fontSection.setSize(textEl.fontSize);
       }
     }
-
-    // Hide stroke width for pure text selections (text has no stroke)
-    widthSection.root.style.display = allText ? 'none' : '';
   }
 
   history.subscribe(sync);
@@ -106,12 +125,17 @@ function buildColorSection(
   root: HTMLElement;
   onChange: (cb: (color: string) => void) => void;
   setValue: (color: string) => void;
+  setLabel: (l: string) => void;
 } {
+  void allowTransparent;
   let _cb: ((c: string) => void) | null = null;
   const emit = (c: string): void => { _cb?.(c); };
 
   const root = div('prop-section');
-  root.innerHTML = `<div class="prop-label">${label}</div>`;
+  const labelEl = document.createElement('div');
+  labelEl.className = 'prop-label';
+  labelEl.textContent = label;
+  root.appendChild(labelEl);
 
   // Preset swatches
   const swatches = div('prop-swatches');
@@ -148,6 +172,54 @@ function buildColorSection(
       swatches.querySelectorAll<HTMLButtonElement>('.swatch').forEach((sw) => {
         sw.classList.toggle('active', sw.dataset['color'] === color);
       });
+    },
+    setLabel: (l) => { labelEl.textContent = l; },
+  };
+}
+
+function buildStrokeStyleSection(): {
+  root: HTMLElement;
+  onChange: (cb: (style: string) => void) => void;
+  setValue: (style: 'solid' | 'dashed' | 'dotted') => void;
+} {
+  let _cb: ((s: string) => void) | null = null;
+
+  const root = div('prop-section');
+  const lbl  = div('prop-label');
+  lbl.textContent = 'Stroke style';
+  root.appendChild(lbl);
+
+  const row = div('prop-stroke-style-row');
+
+  const styles: { value: 'solid' | 'dashed' | 'dotted'; label: string; title: string }[] = [
+    { value: 'solid',  label: '—',    title: 'Solid' },
+    { value: 'dashed', label: '- -',  title: 'Dashed' },
+    { value: 'dotted', label: '···',  title: 'Dotted' },
+  ];
+
+  const btns = new Map<string, HTMLButtonElement>();
+  for (const s of styles) {
+    const b = document.createElement('button');
+    b.className = 'prop-style-btn';
+    b.title = s.title;
+    b.textContent = s.label;
+    b.dataset['style'] = s.value;
+    b.addEventListener('click', () => {
+      btns.forEach((btn) => btn.classList.remove('active'));
+      b.classList.add('active');
+      _cb?.(s.value);
+    });
+    btns.set(s.value, b);
+    row.appendChild(b);
+  }
+
+  root.appendChild(row);
+
+  return {
+    root,
+    onChange: (cb) => { _cb = cb; },
+    setValue: (style) => {
+      btns.forEach((b, k) => b.classList.toggle('active', k === style));
     },
   };
 }

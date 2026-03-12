@@ -1,5 +1,5 @@
 import type { Scene } from '../core/scene';
-import type { Element, RectangleElement, EllipseElement, LineElement, ArrowElement, FreehandElement, TextElement } from '../elements/element';
+import type { Element, RectangleElement, EllipseElement, LineElement, ArrowElement, FreehandElement, TextElement, ImageElement } from '../elements/element';
 import { drawElement } from './draw_element';
 import { getElementBounds } from './draw_selection';
 
@@ -101,6 +101,15 @@ function computeBounds(elements: ReadonlyArray<Element>): { minX: number; minY: 
           maxY = Math.max(maxY, py);
         }
         break;
+      case 'image': {
+        const ix = el.width < 0 ? el.x + el.width : el.x;
+        const iy = el.height < 0 ? el.y + el.height : el.y;
+        minX = Math.min(minX, ix);
+        minY = Math.min(minY, iy);
+        maxX = Math.max(maxX, ix + Math.abs(el.width));
+        maxY = Math.max(maxY, iy + Math.abs(el.height));
+        break;
+      }
     }
   }
 
@@ -117,12 +126,26 @@ function elementToSVG(el: Element, ox: number, oy: number): string {
     case 'arrow':     return arrowToSVG(el, ox, oy);
     case 'freehand':  return freehandToSVG(el, ox, oy);
     case 'text':      return textToSVG(el, ox, oy);
+    case 'image':     return imageToSVG(el, ox, oy);
   }
 }
 
-function shapeProps(el: { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number }): string {
+function strokeDashAttr(el: { strokeStyle?: string; strokeWidth: number }): string {
+  const style = el.strokeStyle ?? 'solid';
+  if (style === 'dashed') {
+    const on = el.strokeWidth * 4 + 4, off = el.strokeWidth * 2 + 2;
+    return ` stroke-dasharray="${on} ${off}"`;
+  }
+  if (style === 'dotted') {
+    const gap = el.strokeWidth * 3;
+    return ` stroke-dasharray="${el.strokeWidth} ${gap}" stroke-linecap="round"`;
+  }
+  return '';
+}
+
+function shapeProps(el: { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; strokeStyle?: string }): string {
   const fill = el.fillColor === 'transparent' ? 'none' : el.fillColor;
-  return `fill="${fill}" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" opacity="${el.opacity}"`;
+  return `fill="${fill}" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" opacity="${el.opacity}"${strokeDashAttr(el)}`;
 }
 
 function rotateAttr(el: Element, ox: number, oy: number): string {
@@ -159,7 +182,7 @@ function ellipseToSVG(el: EllipseElement, ox: number, oy: number): string {
 }
 
 function lineToSVG(el: LineElement, ox: number, oy: number): string {
-  return `<line x1="${round(el.x + ox)}" y1="${round(el.y + oy)}" x2="${round(el.x2 + ox)}" y2="${round(el.y2 + oy)}" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" opacity="${el.opacity}"${rotateAttr(el, ox, oy)}/>`;
+  return `<line x1="${round(el.x + ox)}" y1="${round(el.y + oy)}" x2="${round(el.x2 + ox)}" y2="${round(el.y2 + oy)}" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" opacity="${el.opacity}"${strokeDashAttr(el)}${rotateAttr(el, ox, oy)}/>`;
 }
 
 function arrowToSVG(el: ArrowElement, ox: number, oy: number): string {
@@ -232,6 +255,14 @@ function shapeLabelToSVG(
     .map((line, i) => `<tspan x="${round(cx)}" y="${round(startY + i * lineHeight + lineHeight / 2)}">${escapeXml(line)}</tspan>`)
     .join('');
   return `<text font-family="${fontFamily}" font-size="${fontSize}" fill="${color}" opacity="${opacity}" text-anchor="middle">${tspans}</text>`;
+}
+
+function imageToSVG(el: ImageElement, ox: number, oy: number): string {
+  const x = (el.width < 0 ? el.x + el.width : el.x) + ox;
+  const y = (el.height < 0 ? el.y + el.height : el.y) + oy;
+  const w = Math.abs(el.width);
+  const h = Math.abs(el.height);
+  return `<image href="${el.src}" x="${round(x)}" y="${round(y)}" width="${round(w)}" height="${round(h)}" opacity="${el.opacity}"${rotateAttr(el, ox, oy)} preserveAspectRatio="none"/>`;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

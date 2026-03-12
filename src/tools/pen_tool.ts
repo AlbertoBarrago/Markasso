@@ -28,6 +28,7 @@ export class PenTool implements Tool {
       strokeWidth: appState.strokeWidth,
       opacity: appState.opacity,
       roughness: appState.roughness,
+      strokeStyle: appState.strokeStyle,
     };
     ctx.onPreviewUpdate?.();
   }
@@ -54,6 +55,7 @@ export class PenTool implements Tool {
         strokeWidth: appState.strokeWidth,
         opacity: appState.opacity,
         roughness: appState.roughness,
+        strokeStyle: appState.strokeStyle,
       },
     });
   }

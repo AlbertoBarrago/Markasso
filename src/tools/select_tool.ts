@@ -409,6 +409,8 @@ function scaleElement(
       ] as const);
       return { x: newX, y: newY, points };
     }
+    case 'image':
+      return { x: newX, y: newY, width: newW, height: newH };
   }
 }
 
@@ -453,7 +455,8 @@ function hitTestElement(el: Element, wx: number, wy: number): boolean {
 
   switch (el.type) {
     case 'rectangle':
-    case 'text': {
+    case 'text':
+    case 'image': {
       const x = el.width < 0 ? el.x + el.width : el.x;
       const y = el.height < 0 ? el.y + el.height : el.y;
       const w = Math.abs(el.width);

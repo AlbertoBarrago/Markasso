@@ -52,7 +52,7 @@ export function reducer(scene: Scene, command: Command): Scene {
         elements: scene.elements.map((el) => {
           if (el.id !== command.id) return el;
           const { x, y, width, height, x2, y2, fontSize, points } = command;
-          if (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'text') {
+          if (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'text' || el.type === 'image') {
             return {
               ...el,
               ...(x        !== undefined && { x }),
@@ -173,16 +173,62 @@ export function reducer(scene: Scene, command: Command): Scene {
         ),
       };
 
-    case 'APPLY_STYLE': {
-      const { strokeColor, fillColor, strokeWidth, opacity } = command;
-      const patch: Record<string, unknown> = {};
-      if (strokeColor !== undefined) patch['strokeColor'] = strokeColor;
-      if (fillColor   !== undefined) patch['fillColor']   = fillColor;
-      if (strokeWidth !== undefined) patch['strokeWidth'] = strokeWidth;
-      if (opacity     !== undefined) patch['opacity']     = opacity;
+    case 'SET_STROKE_STYLE':
+      return { ...scene, appState: { ...scene.appState, strokeStyle: command.style } };
+
+    case 'REORDER_ELEMENTS': {
+      const idSet = new Set(command.ids);
+      const moving = command.ids
+        .map((id) => scene.elements.find((el) => el.id === id))
+        .filter((el): el is Element => el !== undefined);
+      const rest = scene.elements.filter((el) => !idSet.has(el.id));
+      const clampedIdx = Math.max(0, Math.min(command.targetIndex, rest.length));
+      const reordered = [
+        ...rest.slice(0, clampedIdx),
+        ...moving,
+        ...rest.slice(clampedIdx),
+      ];
+      return { ...scene, elements: reordered };
+    }
+
+    case 'TOGGLE_ELEMENT_VISIBILITY':
       return {
         ...scene,
-        appState: { ...scene.appState, ...patch },
+        elements: scene.elements.map((el) =>
+          el.id === command.id ? { ...el, visible: el.visible === false ? true : false } : el
+        ),
+      };
+
+    case 'RENAME_LAYER':
+      return {
+        ...scene,
+        elements: scene.elements.map((el) =>
+          el.id === command.id ? { ...el, layerName: command.name } : el
+        ),
+      };
+
+    case 'APPLY_STYLE': {
+      const { strokeColor, fillColor, strokeWidth, opacity, roughness, strokeStyle } = command;
+      const patch: Record<string, unknown> = {};
+      if (strokeColor  !== undefined) patch['strokeColor']  = strokeColor;
+      if (fillColor    !== undefined) patch['fillColor']    = fillColor;
+      if (strokeWidth  !== undefined) patch['strokeWidth']  = strokeWidth;
+      if (opacity      !== undefined) patch['opacity']      = opacity;
+      if (roughness    !== undefined) patch['roughness']    = roughness;
+      if (strokeStyle  !== undefined) patch['strokeStyle']  = strokeStyle;
+
+      // appState patch (only properties that belong to appState)
+      const statePatch: Record<string, unknown> = {};
+      if (strokeColor  !== undefined) statePatch['strokeColor']  = strokeColor;
+      if (fillColor    !== undefined) statePatch['fillColor']    = fillColor;
+      if (strokeWidth  !== undefined) statePatch['strokeWidth']  = strokeWidth;
+      if (opacity      !== undefined) statePatch['opacity']      = opacity;
+      if (roughness    !== undefined) statePatch['roughness']    = roughness;
+      if (strokeStyle  !== undefined) statePatch['strokeStyle']  = strokeStyle;
+
+      return {
+        ...scene,
+        appState: { ...scene.appState, ...statePatch },
         elements: scene.elements.map((el) =>
           scene.selectedIds.has(el.id)
             ? ({ ...el, ...patch } as Element)

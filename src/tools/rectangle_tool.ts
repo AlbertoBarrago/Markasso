@@ -31,6 +31,7 @@ export class RectangleTool implements Tool {
       strokeWidth: appState.strokeWidth,
       opacity: appState.opacity,
       roughness: appState.roughness,
+      strokeStyle: appState.strokeStyle,
     };
     ctx.onPreviewUpdate?.();
   }
@@ -59,6 +60,7 @@ export class RectangleTool implements Tool {
         strokeWidth: appState.strokeWidth,
         opacity: appState.opacity,
         roughness: appState.roughness,
+        strokeStyle: appState.strokeStyle,
       },
     });
     ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select' });

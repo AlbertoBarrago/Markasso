@@ -31,6 +31,10 @@ export type Command =
   | { type: 'TOGGLE_GRID' }
   | { type: 'SET_GRID_TYPE';   gridType: GridType }
   | { type: 'SET_ROTATION';    id: string; rotation: number }
+  | { type: 'SET_STROKE_STYLE'; style: 'solid' | 'dashed' | 'dotted' }
+  | { type: 'REORDER_ELEMENTS'; ids: string[]; targetIndex: number }
+  | { type: 'TOGGLE_ELEMENT_VISIBILITY'; id: string }
+  | { type: 'RENAME_LAYER'; id: string; name: string }
   /** Applies style to ALL selected elements AND updates appState defaults. Undoable. */
   | {
       type: 'APPLY_STYLE';
@@ -38,4 +42,6 @@ export type Command =
       fillColor?:   string;
       strokeWidth?: number;
       opacity?:     number;
+      roughness?:   number;
+      strokeStyle?: 'solid' | 'dashed' | 'dotted';
     };

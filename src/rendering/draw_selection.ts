@@ -23,7 +23,8 @@ export function getElementBounds(el: Element): { x: number; y: number; w: number
   switch (el.type) {
     case 'rectangle':
     case 'ellipse':
-    case 'text': {
+    case 'text':
+    case 'image': {
       const x = el.width < 0 ? el.x + el.width : el.x;
       const y = el.height < 0 ? el.y + el.height : el.y;
       return { x, y, w: Math.abs(el.width), h: Math.abs(el.height) };
