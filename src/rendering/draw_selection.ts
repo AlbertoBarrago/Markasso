@@ -244,6 +244,37 @@ export function drawSelection(
   ctx.restore();
 }
 
+/** Draws a faint highlight border around a hovered (but not selected) element. */
+export function drawHoverHighlight(
+  ctx: CanvasRenderingContext2D,
+  element: Element,
+  viewport: Viewport,
+): void {
+  ctx.save();
+  ctx.resetTransform();
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+  const { x, y, w, h } = getElementBounds(element);
+  const [sx, sy] = worldToScreen(viewport, x, y);
+  const [ex, ey] = worldToScreen(viewport, x + w, y + h);
+
+  const rotation = element.rotation ?? 0;
+  if (rotation) {
+    const [cx, cy] = getElementCenter(element);
+    const [scx, scy] = worldToScreen(viewport, cx, cy);
+    ctx.translate(scx, scy);
+    ctx.rotate(rotation);
+    ctx.translate(-scx, -scy);
+  }
+
+  ctx.strokeStyle = 'rgba(120, 180, 255, 0.45)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([]);
+  ctx.strokeRect(sx - 2, sy - 2, ex - sx + 4, ey - sy + 4);
+
+  ctx.restore();
+}
+
 export function drawMarquee(
   ctx: CanvasRenderingContext2D,
   x1: number,

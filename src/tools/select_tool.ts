@@ -25,6 +25,9 @@ export class SelectTool implements Tool {
   private lastWorldX = 0;
   private lastWorldY = 0;
 
+  /** ID of the element currently under the cursor (for hover highlight), or null */
+  hoveredId: string | null = null;
+
   private marqueeX1 = 0;
   private marqueeY1 = 0;
   private marqueeX2 = 0;
@@ -133,10 +136,24 @@ export class SelectTool implements Tool {
     // 4. Hit-test elements
     const hit = hitTest(scene.elements, worldX, worldY);
     if (hit) {
-      if (!scene.selectedIds.has(hit.id)) {
-        ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
+      if (e.shiftKey) {
+        // Shift+click: toggle element in/out of selection
+        const currentIds = [...scene.selectedIds];
+        const newIds = scene.selectedIds.has(hit.id)
+          ? currentIds.filter((id) => id !== hit.id)
+          : [...currentIds, hit.id];
+        if (newIds.length > 0) {
+          ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
+        } else {
+          ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
+        }
+        this.dragMode = 'none';
+      } else {
+        if (!scene.selectedIds.has(hit.id)) {
+          ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
+        }
+        this.dragMode = 'move';
       }
-      this.dragMode = 'move';
     } else {
       ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
       this.dragMode = 'marquee';
@@ -234,7 +251,19 @@ export class SelectTool implements Tool {
       this.marqueeX2 = e.clientX - rect.left;
       this.marqueeY2 = e.clientY - rect.top;
       ctx.onPreviewUpdate?.();
+      return;
     }
+
+    // dragMode === 'none': update hover highlight
+    if (this.dragMode === 'none') {
+      const scene = ctx.history.present;
+      const hit = hitTest(scene.elements, worldX, worldY);
+      this.hoveredId = hit ? hit.id : null;
+    }
+  }
+
+  onMouseLeave(): void {
+    this.hoveredId = null;
   }
 
   onMouseUp(_e: MouseEvent, _worldX: number, _worldY: number, ctx: ToolContext): void {

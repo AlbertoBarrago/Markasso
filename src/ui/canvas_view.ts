@@ -10,7 +10,7 @@ import { TextTool } from '../tools/text_tool';
 import type { TextElement, RectangleElement, EllipseElement } from '../elements/element';
 import { render } from '../rendering/renderer';
 import { drawElement } from '../rendering/draw_element';
-import { drawMarquee } from '../rendering/draw_selection';
+import { drawMarquee, drawHoverHighlight } from '../rendering/draw_selection';
 import { screenToWorld, worldToScreen } from '../core/viewport';
 import type { ActiveTool } from '../core/app_state';
 
@@ -262,6 +262,12 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): voi
     needsRender = true;
   }, { passive: false });
 
+  canvas.addEventListener('mouseleave', () => {
+    const tool = getActiveTool();
+    if ('onMouseLeave' in tool) (tool as SelectTool).onMouseLeave();
+    needsRender = true;
+  });
+
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
@@ -325,8 +331,16 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): voi
       }
     }
 
-    // Draw marquee if select tool is in marquee mode
+    // Draw hover highlight when using select tool (unselected elements only)
     const selectTool = TOOLS['select'] as SelectTool;
+    if (scene.appState.activeTool === 'select' && selectTool.hoveredId) {
+      const hoveredEl = scene.elements.find(
+        (el) => el.id === selectTool.hoveredId && !scene.selectedIds.has(el.id),
+      );
+      if (hoveredEl) drawHoverHighlight(ctx2d, hoveredEl, scene.viewport);
+    }
+
+    // Draw marquee if select tool is in marquee mode
     if (selectTool.marqueeActive) {
       const [x1, y1, x2, y2] = selectTool.getMarquee();
       drawMarquee(ctx2d, x1, y1, x2, y2);
