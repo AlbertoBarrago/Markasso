@@ -242,6 +242,10 @@ No `node_modules` carrying the weight of a small nation. No 400MB `vendor.js`. T
 
 ---
 
+## What's new in 2.3.2
+
+- **Border-point snap fix** — corrected an edge case where the arrow/line endpoint did not snap to the exact border attachment point when connecting shapes
+
 ## What's new in 2.3.0
 
 - **Border attachment** — smart links now attach to the element border (facing the other shape), not the center; live connections update dynamically as shapes move
