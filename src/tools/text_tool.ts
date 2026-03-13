@@ -101,6 +101,7 @@ export class TextTool implements Tool {
             roughness:   0,
           } satisfies TextElement,
         });
+        ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select' });
       }
     };
 

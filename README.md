@@ -242,6 +242,10 @@ No `node_modules` carrying the weight of a small nation. No 400MB `vendor.js`. T
 
 ---
 
+## What's new in 2.4.3
+
+- **Text tool auto-resets** — after confirming a text element the tool returns to Select automatically
+
 ## What's new in 2.4.2
 
 - **Lock icon fixed** — the padlock icon now shows the current state (closed = locked, open = unlocked)
