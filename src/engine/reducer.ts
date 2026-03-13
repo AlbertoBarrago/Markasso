@@ -106,6 +106,16 @@ export function reducer(scene: Scene, command: Command): Scene {
 
     case 'DELETE_ELEMENTS': {
       const del = new Set(command.ids);
+      // Also delete arrows/lines connected to deleted elements
+      for (const el of scene.elements) {
+        if (el.type !== 'arrow' && el.type !== 'line') continue;
+        if (
+          (el.startElementId && del.has(el.startElementId)) ||
+          (el.endElementId   && del.has(el.endElementId))
+        ) {
+          del.add(el.id);
+        }
+      }
       return {
         ...scene,
         elements:    scene.elements.filter((el) => !del.has(el.id)),

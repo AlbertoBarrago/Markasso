@@ -165,6 +165,7 @@ export class ArrowTool implements Tool {
     };
 
     ctx.history.dispatch({ type: 'CREATE_ELEMENT', element });
+    ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select' });
     this.startElementId = null;
     this.endElementId = null;
   }
