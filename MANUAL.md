@@ -105,11 +105,14 @@ Arrows (and lines) can be permanently connected to shapes.
 2. Hover over a shape — it highlights and shows a cyan ring on the border. Click to start from that border point.
 3. Drag to another shape — its border highlights too. Release to connect.
 4. The arrow is now live: move either shape and the arrow follows, always attaching at the correct border point facing the other shape.
+5. After the arrow is placed the tool automatically returns to Select — no need to press `Escape`.
 
 **Editing a link:**
 Select the arrow → drag either cyan endpoint handle. Drag near a shape to reconnect, or drag away from all shapes to disconnect.
 
 **Disconnecting:** drag an endpoint handle away from the connected shape and release in empty space.
+
+**Deleting a linked shape:** deleting a shape automatically removes all arrows and lines connected to it.
 
 ---
 

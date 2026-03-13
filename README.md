@@ -242,6 +242,11 @@ No `node_modules` carrying the weight of a small nation. No 400MB `vendor.js`. T
 
 ---
 
+## What's new in 2.4.1
+
+- **Arrow tool auto-resets** — after drawing a linked arrow the tool returns to Select automatically, preventing accidental multi-arrow chains
+- **Cascade delete** — deleting a shape now removes all arrows and lines connected to it
+
 ## What's new in 2.4.0
 
 - **Smoother pen curves** — real-time exponential smoothing filters trackpad jitter while drawing
