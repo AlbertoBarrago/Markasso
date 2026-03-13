@@ -88,11 +88,12 @@ Group elements so they behave as a unit.
 Lock elements to protect them from accidental edits.
 
 - **Lock:** select elements → click the lock button in the context toolbar.
-- **Unlock:** select (via layers panel if fully locked) → click the unlock button.
+- **Unlock:** select the locked element → click the unlock button (tooltip says "Unlock").
 
 Locked elements:
 - Remain fully visible
-- Cannot be selected, moved, resized, deleted, or connected to
+- Can be clicked to select (useful for inspecting style or unlocking)
+- Cannot be moved, resized, deleted, or connected to
 
 ---
 
