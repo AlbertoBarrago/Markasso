@@ -167,7 +167,7 @@ export class SelectTool implements Tool {
           if (this.activeGroupId === hit.groupId) {
             // Inside group: select just this element
             ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
-            this.dragMode = 'move';
+            this.dragMode = hit.locked ? 'none' : 'move';
           } else {
             // Select whole group
             const groupIds = scene.elements
@@ -175,14 +175,14 @@ export class SelectTool implements Tool {
               .map((el) => el.id);
             ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: groupIds });
             this.activeGroupId = hit.groupId;
-            this.dragMode = 'move';
+            this.dragMode = hit.locked ? 'none' : 'move';
           }
         } else {
           if (!scene.selectedIds.has(hit.id)) {
             ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
           }
           this.activeGroupId = null;
-          this.dragMode = 'move';
+          this.dragMode = hit.locked ? 'none' : 'move';
         }
       }
     } else {
@@ -297,7 +297,11 @@ export class SelectTool implements Tool {
     if (this.dragMode === 'move') {
       const dx = worldX - this.lastWorldX;
       const dy = worldY - this.lastWorldY;
-      const ids = [...ctx.history.present.selectedIds];
+      const { elements, selectedIds } = ctx.history.present;
+      const ids = [...selectedIds].filter((id) => {
+        const el = elements.find((e) => e.id === id);
+        return el && !el.locked;
+      });
       for (const id of ids) {
         ctx.history.dispatch({ type: 'MOVE_ELEMENT', id, dx, dy });
       }
@@ -582,7 +586,7 @@ function computeResize(
 function hitTest(elements: ReadonlyArray<Element>, wx: number, wy: number): Element | null {
   for (let i = elements.length - 1; i >= 0; i--) {
     const el = elements[i];
-    if (el && !el.locked && hitTestElement(el, wx, wy)) return el;
+    if (el && hitTestElement(el, wx, wy)) return el;
   }
   return null;
 }

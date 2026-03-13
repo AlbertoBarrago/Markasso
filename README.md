@@ -242,6 +242,11 @@ No `node_modules` carrying the weight of a small nation. No 400MB `vendor.js`. T
 
 ---
 
+## What's new in 2.4.2
+
+- **Lock icon fixed** — the padlock icon now shows the current state (closed = locked, open = unlocked)
+- **Select locked elements** — locked elements can now be click-selected; they still cannot be moved, resized, or deleted
+
 ## What's new in 2.4.1
 
 - **Arrow tool auto-resets** — after drawing a linked arrow the tool returns to Select automatically, preventing accidental multi-arrow chains

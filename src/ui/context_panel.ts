@@ -159,7 +159,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     if (hasSelection) {
       const allLocked = selected.every((el) => el.locked);
       lockBtn.title = allLocked ? 'Unlock' : 'Lock';
-      lockBtn.innerHTML = allLocked ? IC_UNLOCK : IC_LOCK;
+      lockBtn.innerHTML = allLocked ? IC_LOCK : IC_UNLOCK;
     }
 
     // Group button: show only when 2+ elements selected and not all grouped
