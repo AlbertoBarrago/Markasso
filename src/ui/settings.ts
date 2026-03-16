@@ -1,5 +1,6 @@
 import type { History } from '../engine/history';
 import type { GridType } from '../core/app_state';
+import { fitToElements } from '../core/viewport';
 import pkg from '../../package.json';
 
 export interface UISettings {
@@ -34,12 +35,10 @@ function hexAlpha(hex: string, a: number): string {
 }
 
 const GRID_TYPES: { type: GridType; label: string; desc: string }[] = [
-  { type: 'dot',  label: 'Dots',     desc: 'Dot grid'         },
-  { type: 'line', label: 'Lines',    desc: 'Line grid'        },
-  { type: 'mm',   label: 'mm',       desc: 'Graph paper (mm)' },
+  { type: 'dot',  label: '•', desc: 'Dot grid' },
+  { type: 'line', label: '≡', desc: 'Line grid' },
+  { type: 'mm',   label: '▦', desc: 'Graph paper' },
 ];
-
-const ACCENT_PRESETS = ['#7c63d4', '#4d96ff', '#ff6b6b', '#6bcb77', '#ffd93d', '#ff9f43', '#c77dff'];
 
 export function initSettings(
   appEl: HTMLElement,
@@ -54,9 +53,8 @@ export function initSettings(
   gearBtn.className = 'tb-btn';
   gearBtn.title     = 'Settings';
   gearBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-    <line x1="3" y1="5" x2="17" y2="5"/>
-    <line x1="3" y1="10" x2="17" y2="10"/>
-    <line x1="3" y1="15" x2="17" y2="15"/>
+    <circle cx="10" cy="10" r="3"/>
+    <path d="M10 2v2M10 16v2M2 10h2M16 10h2"/>
   </svg>`;
   const leftSection = toolbarEl.querySelector<HTMLElement>('.tb-left');
   (leftSection ?? toolbarEl).appendChild(gearBtn);
@@ -75,7 +73,7 @@ export function initSettings(
     <div class="sp-body">
 
       <div class="sp-section">
-        <div class="sp-label">Grid</div>
+        <div class="sp-label">View</div>
         <div class="sp-row">
           <label class="sp-check-label">
             <input type="checkbox" id="sp-grid-visible" />
@@ -90,11 +88,21 @@ export function initSettings(
       </div>
 
       <div class="sp-section">
-        <div class="sp-label">Accent color</div>
+        <div class="sp-label">Canvas</div>
+        <div class="sp-row">
+          <button class="sp-action-btn" id="sp-fit-to-content">Fit to content</button>
+        </div>
+        <div class="sp-row">
+          <button class="sp-action-btn" id="sp-reset-zoom">Reset zoom (100%)</button>
+        </div>
+      </div>
+
+      <div class="sp-section">
+        <div class="sp-label">Theme</div>
         <div class="sp-color-row">
           <input type="color" id="sp-accent" />
           <div class="sp-presets">
-            ${ACCENT_PRESETS.map((c) =>
+            ${['#7c63d4', '#4d96ff', '#ff6b6b', '#6bcb77', '#ffd93d', '#ff9f43', '#c77dff'].map((c) =>
               `<button class="sp-preset" data-color="${c}" style="background:${c}" title="${c}"></button>`
             ).join('')}
           </div>
@@ -145,9 +153,6 @@ export function initSettings(
 
   // Grid visible
   panel.querySelector<HTMLInputElement>('#sp-grid-visible')!.addEventListener('change', (e) => {
-    if ((e.target as HTMLInputElement).checked) {
-      // If grid was off and we turn it on, make sure gridVisible = true
-    }
     history.dispatch({ type: 'TOGGLE_GRID' });
   });
 
@@ -155,12 +160,24 @@ export function initSettings(
   panel.querySelectorAll<HTMLButtonElement>('.sp-grid-btn').forEach((b) => {
     b.addEventListener('click', () => {
       history.dispatch({ type: 'SET_GRID_TYPE', gridType: b.dataset['grid'] as GridType });
-      // Also ensure grid is visible when changing type
       if (!history.present.appState.gridVisible) {
         history.dispatch({ type: 'TOGGLE_GRID' });
       }
       syncPanel();
     });
+  });
+
+  // Fit to content
+  panel.querySelector<HTMLButtonElement>('#sp-fit-to-content')!.addEventListener('click', () => {
+    const vp = fitToElements(history.present.elements, window.innerWidth, window.innerHeight);
+    history.dispatch({ type: 'SET_VIEWPORT', offsetX: vp.offsetX, offsetY: vp.offsetY, zoom: vp.zoom });
+    close();
+  });
+
+  // Reset zoom
+  panel.querySelector<HTMLButtonElement>('#sp-reset-zoom')!.addEventListener('click', () => {
+    history.dispatch({ type: 'SET_VIEWPORT', offsetX: 0, offsetY: 0, zoom: 1 });
+    close();
   });
 
   // Accent color
