@@ -618,9 +618,8 @@ html, body {
     gap: 0;
   }
 
-  .tb-island-bottomleft {
-    bottom: 88px;
-  }
+  /* Hide undo/redo/zoom island — handled by mobile-actions bar */
+  .tb-island-bottomleft { display: none; }
 
   .tb-island-topright {
     top: 12px;
@@ -635,8 +634,17 @@ html, body {
   /* Hide separator on mobile */
   .tb-separator { display: none; }
 
-  /* ── Hide desktop props panel on touch — replaced by mobile-actions ── */
+  /* ── Hide desktop props panel on touch ── */
   #props-panel { display: none !important; }
+
+  /* Context panel: full-width on mobile, below top-left settings */
+  #context-panel {
+    top: 62px;
+    left: 16px;
+    width: calc(100vw - 32px);
+    max-width: 320px;
+    max-height: calc(100vh - 160px);
+  }
 
 }
 
@@ -669,16 +677,17 @@ html, body {
   transform: translateX(-50%) translateY(0);
 }
 
-/* ── Mobile action bar (bottom, for touch devices) ───────────────────────── */
+/* ── Mobile action bar (bottom-right, always visible on touch) ───────────── */
+#mobile-actions { display: none; }
+
 @media (pointer: coarse) {
   #mobile-actions {
-    position: fixed;
-    bottom: 80px;
-    left: 50%;
-    transform: translateX(-50%) translateY(12px);
     display: flex;
+    position: fixed;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    right: 16px;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     background: var(--bg-island);
     border: 1px solid var(--island-border);
     border-radius: var(--island-radius);
@@ -687,14 +696,7 @@ html, body {
     -webkit-backdrop-filter: blur(16px);
     padding: 4px;
     z-index: 40;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .15s, transform .15s;
-  }
-  #mobile-actions.open {
-    opacity: 1;
     pointer-events: all;
-    transform: translateX(-50%) translateY(0);
   }
 }
 
@@ -714,3 +716,10 @@ html, body {
 .mobile-action-btn.mobile-action-danger { color: #ff6b6b; }
 .mobile-action-btn.mobile-action-danger:active { background: rgba(255,80,80,0.15); color: #ff6b6b; }
 .mobile-action-btn svg { pointer-events: none; }
+.mobile-action-btn:disabled { opacity: .3; cursor: default; }
+.mobile-action-sep {
+  width: 1px; height: 20px;
+  background: var(--island-border);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
