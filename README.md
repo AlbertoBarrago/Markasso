@@ -10,100 +10,163 @@
 
 ---
 
-## What is this?
+## Overview
 
-A fast, minimal, keyboard-first whiteboard engine that runs entirely in the browser.
+Markasso is a fast, minimal, keyboard-first whiteboard engine that runs entirely in the browser.
 
-No React. No Vue. No Angular. No Svelte. No Solid. No Qwik. No Next. No Nuxt. No Remix. No Astro. No framework tax whatsoever. Just you, a canvas, and pure JavaScript doing exactly what it was invented to do.
+Built with vanilla TypeScript and the Canvas 2D API—no framework dependencies. Just you, a canvas, and JavaScript doing exactly what it was invented to do.
 
-Excalidraw is great. Draw.io is powerful. **Markasso is neither of those things** — it's smaller, faster, and doesn't ask you to sign in, accept cookies, or create a workspace to draw a rectangle.
+While Excalidraw excels at freehand sketching and Draw.io offers comprehensive diagramming, **Markasso occupies a different niche**: smaller, faster, and requiring no sign-in, cookies, or workspace creation.
 
 ---
 
-## Why does this exist?
+## Motivation
 
-Have you ever wanted to sketch a quick diagram and ended up:
+Markasso was born from a simple frustration: wanting to sketch a quick diagram shouldn't require:
 
-1. Waiting 4 seconds for Excalidraw to load
-2. Accidentally closing 3 cookie banners
-3. Signing into a "free" account
-4. Losing your work because you forgot to export
-5. Opening Notepad instead and drawing with ASCII art
+1. Waiting for a heavy application to load
+2. Dismissing cookie consent banners
+3. Creating an account for "free" features
+4. Risking lost work due to forgotten exports
 
-**Markasso is for step 6.** The one where you just want to draw.
+**Markasso is the alternative.** Open, draw, export, done.
 
 ---
 
 ## Features
 
-| | |
+### Drawing Tools
+
+| Tool | Shortcut |
 |---|---|
-| **7 drawing tools** | Select, Rectangle, Ellipse, Line, Arrow, Pen (freehand), Text |
-| **Infinite canvas** | Pan with middle-click or Alt+drag · zoom with Ctrl+scroll |
-| **Resize handles** | 8-handle bounding box on every element type — drag to scale |
-| **Rotation** | Rotate any element via a handle above the selection box; fully undoable |
+| Select | `V` / `1` |
+| Rectangle | `R` / `2` |
+| Ellipse | `E` / `3` |
+| Line | `L` / `4` |
+| Arrow | `A` / `5` |
+| Pen (freehand) | `P` / `6` |
+| Text | `T` / `7` |
+
+### Canvas & Navigation
+
+| Feature | Description |
+|---|---|
+| **Infinite canvas** | Pan with middle-click or `Alt+drag`; zoom with `Ctrl+scroll` |
+| **Millimeter grid** | Dot · Line · Graph-paper modes (real mm at 96 DPI) |
+| **Navigation recovery** | `F` fits all content into view · `Shift+0` resets to origin |
+| **Dark theme** | Pure `#141414` canvas with floating panels and `backdrop-filter: blur` |
+
+### Selection & Manipulation
+
+| Feature | Description |
+|---|---|
+| **Resize handles** | 8-handle bounding box on every element type |
+| **Rotation** | Rotate any element via a handle above the selection box (fully undoable) |
 | **Endpoint editing** | Drag individual endpoints of lines and arrows independently |
-| **Smart arrow links** | Connect arrows to shapes — arrows attach to the border (not center), facing each other. Hover to preview the connection point before drawing |
-| **Lock elements** | Lock any element to prevent selection, movement or deletion |
-| **Groups** | `Ctrl+G` to group · click selects all members · click again enters the group to edit individually |
+| **Shift+click multi-select** | Add or remove elements from selection without a marquee |
+| **Arrow key nudge** | Move selected elements 1px (or 10px with `Shift`) |
+| **Lock elements** | Lock any element to prevent selection, movement, or deletion |
+
+### Smart Connections
+
+| Feature | Description |
+|---|---|
+| **Smart arrow links** | Connect arrows to shapes—arrows attach to the border (not center), facing each other |
+| **Hover preview** | Hover to preview connection points before drawing |
+| **Cascade delete** | Deleting a shape removes all connected arrows and lines |
+
+### Groups & Labels
+
+| Feature | Description |
+|---|---|
+| **Groups** | `Ctrl+G` to group · click selects all members · click again enters group for individual editing |
 | **Shape labels** | Double-click any rectangle or ellipse to type a label, clipped inside the shape |
 | **Text scaling** | Dragging a text handle scales the font size, not just the box |
-| **Shift constraints** | Rectangle/Ellipse → square/circle · Line/Arrow → 45° snap · Resize → keep aspect ratio |
-| **Hover highlight** | Elements highlight on hover — you always know what you are about to select |
-| **Shift+click multi-select** | Add or remove elements from the selection without a marquee |
-| **Arrow key nudge** | Move selected elements 1px (or 10px with Shift) |
 | **Double-click to edit** | Open any existing text element for inline editing |
-| **Navigation recovery** | `F` fits all content into view · `Shift+0` resets to origin |
+
+### Constraints & Precision
+
+| Feature | Description |
+|---|---|
+| **Shift constraints** | Rectangle/Ellipse → square/circle · Line/Arrow → 45° snap · Resize → keep aspect ratio |
+| **Hover highlight** | Elements highlight on hover—always know what you're about to select |
+
+### UI & Interface
+
+| Feature | Description |
+|---|---|
 | **Floating glass UI** | Excalidraw-style islands: center-top tools, bottom-left undo/zoom, top-right import + export |
-| **Session persistence** | Your work survives page refreshes — scene auto-saved to `localStorage` |
-| **`.markasso` format** | Save and reload your full scene as a `.markasso` file (JSON) — images included |
-| **Image import** | Drag-and-drop, file picker, or Ctrl+V paste; `.markasso` files can also be dropped directly |
-| **Export PNG / SVG** | Download the canvas as a 2× PNG or a clean SVG — bounding-box auto-fit |
-| **Dark theme** | Pure `#141414` canvas with floating panels and `backdrop-filter: blur` |
-| **Millimeter grid** | Dot · Line · Graph-paper (real mm at 96 DPI) for when you need to feel precise |
 | **Properties panel** | Stroke color, fill color, stroke width, opacity, roughness, font |
-| **Undo / Redo** | Full command history. Make mistakes confidently. |
-| **Keyboard shortcuts** | Letter keys + numeric keys `1–7` for every tool because mice are slow |
-| **Zero dependencies** | Browser Canvas 2D API only. `package.json` has never been so empty. |
+| **Keyboard shortcuts** | Letter keys + numeric keys `1–7` for every tool |
+
+### Persistence & Export
+
+| Feature | Description |
+|---|---|
+| **Session persistence** | Auto-saved to `localStorage`—your work survives page refreshes |
+| **`.markasso` format** | Save and reload your full scene as a `.markasso` file (JSON)—images included |
+| **Image import** | Drag-and-drop, file picker, or `Ctrl+V` paste; `.markasso` files can also be dropped directly |
+| **Export PNG / SVG** | Download the canvas as a 2× PNG or a clean SVG—bounding-box auto-fit |
+
+### History & Undo
+
+| Feature | Description |
+|---|---|
+| **Undo / Redo** | Full command history with `Ctrl+Z` / `Ctrl+Y` or `Ctrl+Shift+Z` |
+
+### Performance
+
+| Feature | Description |
+|---|---|
+| **Zero dependencies** | Browser Canvas 2D API only |
 
 ---
 
-## Markasso vs the competition
+## Comparison
 
-| | Markasso | Excalidraw | Draw.io |
+| Feature | Markasso | Excalidraw | Draw.io |
 |---|:---:|:---:|:---:|
-| Zero dependencies | ✅ | ❌ (React + 50 friends) | ❌ |
-| No login required | ✅ | ✅ | sort of |
-| Cookie banners | 0 | varies | yes |
-| Bundle size | tiny | less tiny | 🐋 |
+| Zero dependencies | ✅ | ❌ | ❌ |
+| No login required | ✅ | ✅ | ✅ |
+| Cookie banners | None | Varies | Yes |
+| Bundle size | Minimal | Moderate | Large |
 | Infinite canvas | ✅ | ✅ | ✅ |
-| Keyboard-first | ✅ | partial | ❌ |
-| Pure Canvas 2D | ✅ | ✅ | SVG |
-| "Workspace" concept | ❌ | creeping in | all in |
-| Works offline | ✅ | mostly | yes |
-| Handwritten style | ❌ (it's a feature) | ✅ | ❌ |
-| Runs on a potato | ✅ | 🥔±🤔 | 🥔💀 |
+| Keyboard-first design | ✅ | Partial | ❌ |
+| Pure Canvas 2D | ✅ | ✅ | SVG-based |
+| Offline support | ✅ | ✅ | ✅ |
+| Handwritten style | ❌ | ✅ | ❌ |
 
 ---
 
-## Getting started
+## Getting Started
+
+### Installation
 
 ```bash
 npm install
-npm run dev        # → http://localhost:5173
 ```
+
+### Development
 
 ```bash
-npm run build      # type-check + Vite bundle → dist/
-npm run typecheck  # tsc --noEmit
-npm test           # Vitest unit tests
+npm run dev        # Start dev server at http://localhost:5173
 ```
 
-That's it. No `.env` file. No API keys. No Docker. No Kubernetes. No cloud account. No vibes check required.
+### Build & Test
+
+```bash
+npm run build      # Type-check and bundle → dist/
+npm run typecheck  # TypeScript validation
+npm test           # Run Vitest unit tests
+```
+
+No `.env` files. No API keys. No containerization required.
 
 ---
 
-## Keyboard shortcuts
+## Keyboard Shortcuts
+
+### Tools
 
 | Key | Action |
 |---|---|
@@ -114,11 +177,24 @@ That's it. No `.env` file. No API keys. No Docker. No Kubernetes. No cloud accou
 | `A` / `5` | Arrow |
 | `P` / `6` | Pen (freehand) |
 | `T` / `7` | Text |
+
+### Navigation
+
+| Key | Action |
+|---|---|
 | `G` | Toggle grid |
 | `F` | Fit all content into view |
-| `Shift+0` | Reset viewport to origin (zoom 100%, offset 0,0) |
-| `Esc` | Cancel / back to Select / exit group / deselect |
-| `Delete` / `Backspace` | Delete selected elements (locked elements skipped) |
+| `Shift+0` | Reset viewport to origin |
+| `Scroll` | Pan |
+| `Middle-click drag` / `Alt+drag` | Pan |
+| `Ctrl+scroll` | Zoom to cursor |
+
+### Editing
+
+| Key | Action |
+|---|---|
+| `Esc` | Cancel / exit group / deselect |
+| `Delete` / `Backspace` | Delete selected elements |
 | `Arrow keys` | Nudge selection 1px |
 | `Shift+Arrow` | Nudge selection 10px |
 | `Ctrl+A` | Select all |
@@ -127,12 +203,14 @@ That's it. No `.env` file. No API keys. No Docker. No Kubernetes. No cloud accou
 | `Ctrl+Shift+G` | Ungroup |
 | `Ctrl+Shift+]` | Bring to front |
 | `Ctrl+Shift+[` | Send to back |
-| `Ctrl+Z` | Undo (use liberally) |
+| `Ctrl+Z` | Undo |
 | `Ctrl+Y` / `Ctrl+Shift+Z` | Redo |
 | `Shift+click` | Add / remove from selection |
-| `Ctrl+scroll` | Zoom to cursor |
-| `Scroll` | Pan |
-| `Middle-click drag` / `Alt+drag` | Pan |
+
+### Modifiers
+
+| Key | Action |
+|---|---|
 | `Shift` (while drawing) | Constrain proportions / snap angle |
 | `Shift` (while resizing) | Lock aspect ratio |
 | **Double-click** on text | Edit text in place |
@@ -143,7 +221,7 @@ That's it. No `.env` file. No API keys. No Docker. No Kubernetes. No cloud accou
 
 ## Architecture
 
-Markasso follows a **Redux-style unidirectional data flow** — no mutable state, no event spaghetti, no surprises.
+Markasso follows a **Redux-style unidirectional data flow**—no mutable state, no event spaghetti, no surprises.
 
 ```
 User event
@@ -164,7 +242,7 @@ Subscribers (toolbar, properties panel, canvas view)
 render(ctx, scene, canvas)        ← called every requestAnimationFrame
 ```
 
-### Key invariants
+### Key Invariants
 
 - **All coordinates in CSS pixels.** The canvas buffer is `clientWidth × devicePixelRatio` for sharpness (`#141414` background), but all viewport `offsetX/Y`, element positions, and mouse events live in CSS pixel space. The renderer applies DPR via `ctx.setTransform(zoom*dpr, ...)`.
 - **Immutable scene.** Every `Scene` object is never mutated. The reducer returns a new reference or the same reference if nothing changed (enabling cheap equality checks).
@@ -173,7 +251,7 @@ render(ctx, scene, canvas)        ← called every requestAnimationFrame
 
 ---
 
-## Project structure
+## Project Structure
 
 ```
 src/
@@ -216,84 +294,76 @@ src/
     └── shortcuts.ts         # Global keyboard map (letters + numeric 1–7)
 ```
 
-No `node_modules` carrying the weight of a small nation. No 400MB `vendor.js`. The whole thing fits in your brain.
-
 ---
 
-## Grid modes
+## Grid Modes
 
 | Mode | Description |
 |---|---|
 | **Dot** | Subtle dots at configurable world-unit spacing |
 | **Line** | Horizontal + vertical lines |
-| **mm** | Three-tier graph paper (1 mm / 5 mm / 10 mm) at physical scale assuming 96 DPI — for the diagrammers who also own a ruler |
+| **mm** | Three-tier graph paper (1 mm / 5 mm / 10 mm) at physical scale assuming 96 DPI |
 
 ---
 
-## Stack decisions
+## Technology Stack
 
-| Concern | Choice | Why |
+| Concern | Choice | Rationale |
 |---|---|---|
 | Language | TypeScript 5 | Exhaustive `switch` on discriminated unions catches unhandled commands at compile time |
 | Build | Vite | Zero-config, instant HMR, single-file output |
-| Rendering | Canvas 2D API | A virtual DOM fights a custom scene graph — canvas wins for direct pixel control |
-| Testing | Vitest | Runs in Node, no browser needed for pure reducer/viewport math |
-| Dependencies | **none** | `crypto.randomUUID()`, `requestAnimationFrame`, `ResizeObserver` — all native |
+| Rendering | Canvas 2D API | Direct pixel control without virtual DOM overhead |
+| Testing | Vitest | Runs in Node—no browser needed for reducer/viewport math |
+| Dependencies | None | `crypto.randomUUID()`, `requestAnimationFrame`, `ResizeObserver` — all native |
 
 ---
 
-## What's new in 2.4.3
+## Changelog
 
+### v2.4.3
 - **Text tool auto-resets** — after confirming a text element the tool returns to Select automatically
 
-## What's new in 2.4.2
-
+### v2.4.2
 - **Lock icon fixed** — the padlock icon now shows the current state (closed = locked, open = unlocked)
 - **Select locked elements** — locked elements can now be click-selected; they still cannot be moved, resized, or deleted
 
-## What's new in 2.4.1
-
-- **Arrow tool auto-resets** — after drawing a linked arrow the tool returns to Select automatically, preventing accidental multi-arrow chains
+### v2.4.1
+- **Arrow tool auto-resets** — after drawing a linked arrow the tool returns to Select automatically
 - **Cascade delete** — deleting a shape now removes all arrows and lines connected to it
 
-## What's new in 2.4.0
-
-- **Smoother pen curves** — real-time exponential smoothing filters trackpad jitter while drawing
-- **Improved curve rendering** — cubic Bézier curves with Catmull-Rom splines eliminate stair-stepping
+### v2.4.0
+- **Smoother pen curves** — real-time exponential smoothing filters trackpad jitter
+- **Improved curve rendering** — cubic Bézier curves with Catmull-Rom splines
 - **High-quality anti-aliasing** — canvas smoothing enabled for crisp curves at any zoom level
 - **Finer point capture** — reduced from 3px to 2px threshold for more detailed strokes
 - **Cleaner default stroke** — 1px width with round line caps and joins
 
-## What's new in 2.3.2
+### v2.3.2
+- **Border-point snap fix** — corrected edge case where arrow/line endpoints did not snap to exact border attachment points
 
-- **Border-point snap fix** — corrected an edge case where the arrow/line endpoint did not snap to the exact border attachment point when connecting shapes
+### v2.3.0
+- **Border attachment** — smart links attach to element borders (facing the other shape), not the center
+- **Perimeter snap** — arrow/line tools activate magnetic snap near element edges
+- **Hover preview** — connection point preview when hovering over shapes
+- **Group entry fix** — clicking an element inside a group correctly selects that individual element
+- **Pen tool flow** — pen tool stays active after drawing a stroke
 
-## What's new in 2.3.0
+### v2.2.0
+- **Smart arrow links** — drag arrow endpoints near shapes to connect them
+- **Lock elements** — lock/unlock via the context toolbar
+- **Groups** — `Ctrl+G` to group elements with nested editing support
+- **Hover highlight** — soft glow around elements on hover
+- **Shift+click multi-select** — add or remove elements without a marquee
+- **Arrow key nudge** — move selection 1px (10px with Shift)
+- **Duplicate** — `Ctrl+D` clones selection with 20px offset
+- **Pen tool smoothing** — strokes filtered and simplified on release
 
-- **Border attachment** — smart links now attach to the element border (facing the other shape), not the center; live connections update dynamically as shapes move
-- **Perimeter snap** — arrow/line tools activate the magnetic snap when near the element's edge (not just within 20px of the center); works for both drawing and endpoint dragging
-- **Hover preview** — hovering over a shape with the arrow or line tool shows a highlight and snap indicator on the border before you start drawing
-- **Group entry fix** — clicking an element inside a group for the second time now correctly selects that single element, even after Ctrl+A + Ctrl+G
-- **Pen tool flow** — the pen tool stays active after drawing a stroke; no auto-selection interrupts drawing sessions
-
-## What's new in 2.2.0
-
-- **Smart arrow links** — drag an arrow endpoint near any shape to connect it; the arrow follows the shape as it moves
-- **Lock elements** — lock/unlock via the context toolbar; locked elements stay visible but can't be touched
-- **Groups** — `Ctrl+G` groups elements; click to select the whole group, click again to enter and edit individual members; `Escape` exits the group
-- **Hover highlight** — a soft glow around elements on hover before clicking
-- **Shift+click multi-select** — add or remove elements without drawing a marquee
-- **Arrow key nudge** — move selection 1px (10px with Shift) for pixel-perfect layout
-- **Duplicate** — `Ctrl+D` clones the selection with a 20px offset
-- **Pen tool smoothing** — strokes are filtered and simplified on release, no more jagged lines from hand tremor
-
-## What's new in 2.1.5
-
-- **`.markasso` format** — save and reload your full scene (elements + viewport, images included) as a portable JSON file
-- **Open .markasso** — folder button in the toolbar to load a saved scene; drag & drop onto the canvas also works
-- **Session persistence** — your work survives page refreshes automatically via `localStorage`; quota warning toast if storage fills up
-- **Properties panel** now opens next to the context panel instead of on the opposite side of the screen
-- **Default font** changed to `Arial, sans-serif`
+### v2.1.5
+- **`.markasso` format** — save and reload full scenes as portable JSON files
+- **Open .markasso** — toolbar button and drag & drop support for loading saved scenes
+- **Session persistence** — auto-save to `localStorage` with quota warnings
+- **Properties panel** — now opens adjacent to the context panel
+- **Default font** — changed to `Arial, sans-serif`
 
 ---
 
