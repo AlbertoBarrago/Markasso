@@ -1,14 +1,16 @@
 import type { History } from '../engine/history';
 import type { GridType } from '../core/app_state';
 import { fitToElements } from '../core/viewport';
+import { exportPNG, exportSVG } from '../rendering/export';
+import { exportMarkasso, importMarkasso } from '../io/markasso';
 import pkg from '../../package.json';
 
 export interface UISettings {
-  accentColor: string;
+  bgColor: string;
 }
 
 const STORAGE_KEY = 'markasso-ui-settings';
-const DEFAULTS: UISettings = { accentColor: '#7c63d4' };
+const DEFAULTS: UISettings = { bgColor: '#141414' };
 
 export function loadSettings(): UISettings {
   try {
@@ -23,15 +25,7 @@ export function saveSettings(s: UISettings): void {
 }
 
 export function applySettings(_appEl: HTMLElement, s: UISettings): void {
-  document.documentElement.style.setProperty('--accent', s.accentColor);
-  document.documentElement.style.setProperty('--accent-light', hexAlpha(s.accentColor, 0.18));
-}
-
-function hexAlpha(hex: string, a: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r},${g},${b},${a})`;
+  document.documentElement.style.setProperty('--canvas-bg', s.bgColor);
 }
 
 const GRID_TYPES: { type: GridType; label: string; desc: string }[] = [
@@ -39,6 +33,24 @@ const GRID_TYPES: { type: GridType; label: string; desc: string }[] = [
   { type: 'line', label: '≡', desc: 'Line grid' },
   { type: 'mm',   label: '▦', desc: 'Graph paper' },
 ];
+
+const BG_COLORS = ['#141414', '#1a1a2e', '#0d1117', '#1e1e1e', '#12100e', '#0f1923'];
+
+function svg(inner: string, size = 16): string {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+}
+function p(d: string): string { return `<path d="${d}"/>`; }
+
+const ICONS = {
+  hamburger: svg(p('M3 5h14M3 10h14M3 15h14'), 18),
+  open:    svg(p('M2 9a2 2 0 012-2h4l2-2h6a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2z')),
+  save:    svg(p('M10 3v8M7 8l3 3 3-3M4 15v1a1 1 0 001 1h10a1 1 0 001-1v-1')),
+  png:     svg(`<rect x="3" y="3" width="14" height="14" rx="2"/>${p('M3 13l4-4 3 3 2-2 5 5')}<circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/>`),
+  svg:     svg(p('M6 7l-4 3 4 3M14 7l4 3-4 3M11 5l-2 10')),
+  trash:   svg(p('M4 6h12M9 3h2M16 6l-1 11H5L4 6M9 10v4M11 10v4')),
+  prefs:   svg(p('M3 5h14M3 10h14M3 15h14M7 3v4M13 8v4M10 13v4')),
+  chevron: svg(p('M8 5l5 5-5 5')),
+};
 
 export function initSettings(
   appEl: HTMLElement,
@@ -48,16 +60,26 @@ export function initSettings(
   let current = loadSettings();
   applySettings(appEl, current);
 
-  // ── Settings button (placed in the top-left island) ───────────────────
-  const gearBtn = document.createElement('button');
-  gearBtn.className = 'tb-btn';
-  gearBtn.title     = 'Settings';
-  gearBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-    <circle cx="10" cy="10" r="3"/>
-    <path d="M10 2v2M10 16v2M2 10h2M16 10h2"/>
-  </svg>`;
+  // ── Menu button ─────────────────────────────────────────────────────────
+  const menuBtn = document.createElement('button');
+  menuBtn.className = 'tb-btn';
+  menuBtn.title = 'Menu';
+  menuBtn.innerHTML = ICONS.hamburger;
   const leftSection = toolbarEl.querySelector<HTMLElement>('.tb-left');
-  (leftSection ?? toolbarEl).appendChild(gearBtn);
+  (leftSection ?? toolbarEl).appendChild(menuBtn);
+
+  // ── File input (hidden) ─────────────────────────────────────────────────
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.markasso,application/json';
+  fileInput.style.display = 'none';
+  document.body.appendChild(fileInput);
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files?.[0];
+    if (f) importMarkasso(f, history);
+    fileInput.value = '';
+    close();
+  });
 
   // ── Panel ────────────────────────────────────────────────────────────────
   const panel = document.createElement('div');
@@ -66,56 +88,68 @@ export function initSettings(
   document.body.appendChild(panel);
 
   panel.innerHTML = `
-    <div class="sp-header">
-      <span>Settings</span>
-      <button class="sp-close">✕</button>
-    </div>
-    <div class="sp-body">
+    <div class="menu-body">
 
-      <div class="sp-section">
-        <div class="sp-label">View</div>
-        <div class="sp-row">
-          <label class="sp-check-label">
+      <button class="menu-item" id="menu-open">
+        ${ICONS.open}<span class="menu-item-label">Open</span>
+      </button>
+      <button class="menu-item" id="menu-save">
+        ${ICONS.save}<span class="menu-item-label">Save</span>
+      </button>
+      <button class="menu-item" id="menu-export-png">
+        ${ICONS.png}<span class="menu-item-label">Export PNG</span>
+      </button>
+      <button class="menu-item" id="menu-export-svg">
+        ${ICONS.svg}<span class="menu-item-label">Export SVG</span>
+      </button>
+
+      <div class="menu-divider"></div>
+
+      <button class="menu-item menu-item--danger" id="menu-clear">
+        ${ICONS.trash}<span class="menu-item-label">Clear canvas</span>
+      </button>
+
+      <div class="menu-divider"></div>
+
+      <button class="menu-item menu-item--prefs" id="menu-prefs-toggle">
+        ${ICONS.prefs}
+        <span class="menu-item-label">Preferences</span>
+        <span class="menu-arrow">${ICONS.chevron}</span>
+      </button>
+      <div class="menu-prefs" id="menu-prefs-body" aria-hidden="true">
+        <div class="pref-check-row">
+          <label class="pref-check-label">
             <input type="checkbox" id="sp-grid-visible" />
-            Show grid
+            Grid
           </label>
-        </div>
-        <div class="sp-grid-types">
-          ${GRID_TYPES.map((g) =>
-            `<button class="sp-grid-btn" data-grid="${g.type}" title="${g.desc}">${g.label}</button>`
-          ).join('')}
-        </div>
-      </div>
-
-      <div class="sp-section">
-        <div class="sp-label">Canvas</div>
-        <div class="sp-row">
-          <button class="sp-action-btn" id="sp-fit-to-content">Fit to content</button>
-        </div>
-        <div class="sp-row">
-          <button class="sp-action-btn" id="sp-reset-zoom">Reset zoom (100%)</button>
-        </div>
-      </div>
-
-      <div class="sp-section">
-        <div class="sp-label">Theme</div>
-        <div class="sp-color-row">
-          <input type="color" id="sp-accent" />
-          <div class="sp-presets">
-            ${['#7c63d4', '#4d96ff', '#ff6b6b', '#6bcb77', '#ffd93d', '#ff9f43', '#c77dff'].map((c) =>
-              `<button class="sp-preset" data-color="${c}" style="background:${c}" title="${c}"></button>`
+          <div class="pref-grid-types">
+            ${GRID_TYPES.map((g) =>
+              `<button class="sp-grid-btn" data-grid="${g.type}" title="${g.desc}">${g.label}</button>`
             ).join('')}
           </div>
         </div>
+        <button class="pref-btn" id="sp-fit-to-content">Fit to content</button>
+        <button class="pref-btn" id="sp-reset-zoom">Reset zoom (100%)</button>
+      </div>
+
+      <div class="menu-divider"></div>
+
+      <div class="menu-section-label">Sfondo tela</div>
+      <div class="menu-bg-swatches">
+        ${BG_COLORS.map((c) =>
+          `<button class="sp-preset" data-color="${c}" style="background:${c}" title="${c}"></button>`
+        ).join('')}
       </div>
 
     </div>
-    <div class="sp-footer">
+    <div class="menu-footer">
       <span class="sp-version">Markasso v${pkg.version}</span>
     </div>
   `;
 
-  // ── Panel logic ──────────────────────────────────────────────────────────
+  // ── Panel state ──────────────────────────────────────────────────────────
+  let prefsOpen = false;
+
   function open(): void {
     panel.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
@@ -127,36 +161,74 @@ export function initSettings(
     panel.setAttribute('aria-hidden', 'true');
   }
   function positionPanel(): void {
-    const r = gearBtn.getBoundingClientRect();
+    const r = menuBtn.getBoundingClientRect();
     panel.style.top  = `${r.bottom + 10}px`;
     panel.style.left = `${r.left}px`;
-    panel.style.right = '';
   }
   function syncPanel(): void {
     const gridVis = panel.querySelector<HTMLInputElement>('#sp-grid-visible')!;
     gridVis.checked = history.present.appState.gridVisible;
+
     panel.querySelectorAll<HTMLButtonElement>('.sp-grid-btn').forEach((b) => {
       b.classList.toggle('active', b.dataset['grid'] === history.present.appState.gridType);
     });
-    const accentInput = panel.querySelector<HTMLInputElement>('#sp-accent')!;
-    accentInput.value = current.accentColor;
+
+    panel.querySelectorAll<HTMLButtonElement>('.sp-preset').forEach((b) => {
+      b.classList.toggle('active', b.dataset['color'] === current.bgColor);
+    });
+
+    const hasElements = history.present.elements.length > 0;
+    panel.querySelector<HTMLButtonElement>('#menu-save')!.disabled        = !hasElements;
+    panel.querySelector<HTMLButtonElement>('#menu-export-png')!.disabled  = !hasElements;
+    panel.querySelector<HTMLButtonElement>('#menu-export-svg')!.disabled  = !hasElements;
+    panel.querySelector<HTMLButtonElement>('#menu-clear')!.disabled       = !hasElements;
+
+    const prefsBody   = panel.querySelector<HTMLElement>('#menu-prefs-body')!;
+    const prefsToggle = panel.querySelector<HTMLButtonElement>('#menu-prefs-toggle')!;
+    prefsBody.setAttribute('aria-hidden', prefsOpen ? 'false' : 'true');
+    prefsToggle.classList.toggle('prefs-open', prefsOpen);
   }
 
-  gearBtn.addEventListener('click', (e) => {
+  // ── Toggle ───────────────────────────────────────────────────────────────
+  menuBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     panel.classList.contains('open') ? close() : open();
   });
-  panel.querySelector('.sp-close')!.addEventListener('click', close);
   document.addEventListener('click', (e) => {
-    if (!panel.contains(e.target as Node) && e.target !== gearBtn) close();
+    if (!panel.contains(e.target as Node) && e.target !== menuBtn) close();
   });
 
-  // Grid visible
-  panel.querySelector<HTMLInputElement>('#sp-grid-visible')!.addEventListener('change', (e) => {
+  // ── File actions ─────────────────────────────────────────────────────────
+  panel.querySelector<HTMLButtonElement>('#menu-open')!.addEventListener('click', () => {
+    fileInput.click();
+  });
+  panel.querySelector<HTMLButtonElement>('#menu-save')!.addEventListener('click', () => {
+    exportMarkasso(history.present);
+    close();
+  });
+  panel.querySelector<HTMLButtonElement>('#menu-export-png')!.addEventListener('click', () => {
+    exportPNG(history.present, true);
+    close();
+  });
+  panel.querySelector<HTMLButtonElement>('#menu-export-svg')!.addEventListener('click', () => {
+    exportSVG(history.present, true);
+    close();
+  });
+  panel.querySelector<HTMLButtonElement>('#menu-clear')!.addEventListener('click', () => {
+    if (confirm('Clear the canvas? This cannot be undone.')) {
+      history.dispatch({ type: 'LOAD_SCENE', elements: [], viewport: history.present.viewport });
+      close();
+    }
+  });
+
+  // ── Preferences ──────────────────────────────────────────────────────────
+  panel.querySelector<HTMLButtonElement>('#menu-prefs-toggle')!.addEventListener('click', () => {
+    prefsOpen = !prefsOpen;
+    syncPanel();
+  });
+  panel.querySelector<HTMLInputElement>('#sp-grid-visible')!.addEventListener('change', () => {
     history.dispatch({ type: 'TOGGLE_GRID' });
   });
-
-  // Grid type buttons
   panel.querySelectorAll<HTMLButtonElement>('.sp-grid-btn').forEach((b) => {
     b.addEventListener('click', () => {
       history.dispatch({ type: 'SET_GRID_TYPE', gridType: b.dataset['grid'] as GridType });
@@ -166,34 +238,24 @@ export function initSettings(
       syncPanel();
     });
   });
-
-  // Fit to content
   panel.querySelector<HTMLButtonElement>('#sp-fit-to-content')!.addEventListener('click', () => {
     const vp = fitToElements(history.present.elements, window.innerWidth, window.innerHeight);
     history.dispatch({ type: 'SET_VIEWPORT', offsetX: vp.offsetX, offsetY: vp.offsetY, zoom: vp.zoom });
     close();
   });
-
-  // Reset zoom
   panel.querySelector<HTMLButtonElement>('#sp-reset-zoom')!.addEventListener('click', () => {
     history.dispatch({ type: 'SET_VIEWPORT', offsetX: 0, offsetY: 0, zoom: 1 });
     close();
   });
 
-  // Accent color
-  const accentInput = panel.querySelector<HTMLInputElement>('#sp-accent')!;
-  accentInput.addEventListener('input', () => {
-    current = { ...current, accentColor: accentInput.value };
-    saveSettings(current);
-    applySettings(appEl, current);
-  });
+  // ── Background swatches ──────────────────────────────────────────────────
   panel.querySelectorAll<HTMLButtonElement>('.sp-preset').forEach((b) => {
     b.addEventListener('click', () => {
       const color = b.dataset['color']!;
-      accentInput.value = color;
-      current = { ...current, accentColor: color };
+      current = { ...current, bgColor: color };
       saveSettings(current);
       applySettings(appEl, current);
+      syncPanel();
     });
   });
 

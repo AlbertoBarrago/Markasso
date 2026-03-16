@@ -4,8 +4,6 @@ import { drawGrid } from './draw_grid';
 import { drawElement } from './draw_element';
 import { drawSelection } from './draw_selection';
 
-const CANVAS_BG = '#141414';
-
 export function render(
   ctx: CanvasRenderingContext2D,
   scene: Scene,
@@ -19,7 +17,8 @@ export function render(
   ctx.resetTransform();
   ctx.clearRect(0, 0, width, height);
 
-  ctx.fillStyle = CANVAS_BG;
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg').trim() || '#141414';
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, width, height);
 
   // Enable anti-aliasing for smooth curves

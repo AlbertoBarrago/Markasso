@@ -31,7 +31,7 @@ export function createAppState(): AppState {
     fontFamily:  'Arial, sans-serif',
     opacity:     1,
     roughness:   0,
-    gridVisible: true,
+    gridVisible: false,
     gridSize:    20,
     gridType:    'dot',
     strokeStyle: 'solid',
