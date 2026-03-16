@@ -39,6 +39,7 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 
 | Tool | Shortcut |
 |---|---|
+| Hand | `H` / `Space` |
 | Select | `V` / `1` |
 | Rectangle | `R` / `2` |
 | Ellipse | `E` / `3` |
@@ -46,6 +47,7 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 | Arrow | `A` / `5` |
 | Pen (freehand) | `P` / `6` |
 | Text | `T` / `7` |
+| Eraser | `0` |
 
 ### Canvas & Navigation
 
@@ -95,9 +97,10 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 
 | Feature | Description |
 |---|---|
-| **Floating glass UI** | Excalidraw-style islands: center-top tools, bottom-left undo/zoom, top-right import + export |
-| **Properties panel** | Stroke color, fill color, stroke width, opacity, roughness; font size + family for text elements |
-| **Keyboard shortcuts** | Letter keys + numeric keys `1–7` for every tool |
+| **Floating glass UI** | Excalidraw-style islands: lock · hand · tools · eraser, bottom-left undo/zoom, top-right import + export |
+| **Properties panel** | Stroke color, fill color, stroke width, stroke style, opacity, roughness, rounded corners; font size + family for text |
+| **Tool lock** | Lock button keeps the active drawing tool after placing a shape instead of reverting to Select |
+| **Keyboard shortcuts** | Letter keys + numeric keys `1–7`, `0` for eraser |
 
 ### Persistence & Export
 
@@ -170,13 +173,15 @@ No `.env` files. No API keys. No containerization required.
 
 | Key | Action |
 |---|---|
-| `V` / `1` | Select tool |
+| `H` / `Space` | Hand (pan) |
+| `V` / `1` | Select |
 | `R` / `2` | Rectangle |
 | `E` / `3` | Ellipse |
 | `L` / `4` | Line |
 | `A` / `5` | Arrow |
 | `P` / `6` | Pen (freehand) |
 | `T` / `7` | Text |
+| `0` | Eraser |
 
 ### Navigation
 
@@ -291,7 +296,8 @@ src/
     ├── context_panel.ts     # Left-side action panel (layer order, style, import image)
     ├── image_import.ts      # File picker, drag-and-drop, paste — images + .markasso
     ├── settings.ts          # Hamburger panel: grid, accent color, version
-    └── shortcuts.ts         # Global keyboard map (letters + numeric 1–7)
+    ├── eraser_tool.ts       # Eraser: hit-test + delete on drag, sword-slash trail effect
+    └── shortcuts.ts         # Global keyboard map (letters + numeric 1–7, 0 for eraser)
 ```
 
 ---
@@ -319,6 +325,17 @@ src/
 ---
 
 ## Changelog
+
+### v2.4.9
+- **Auto-select after drawing** — when tool lock is off, placing a shape reverts to Select and keeps the new element selected so the properties panel opens automatically
+- **Rounded corners** — rectangle elements now support a corner radius toggle (Sharp / Arrotondato) in the properties panel, fully undoable via `APPLY_STYLE`
+
+### v2.4.8
+- **Eraser tool** — new tool (`0`) erases elements on click or drag; locked elements are skipped
+- **Sword-slash trail** — a glowing white trail fades out over 350 ms as you erase, for satisfying visual feedback
+- **Tool lock button** — lock icon in the toolbar keeps the active drawing tool after placing a shape instead of reverting to Select; unlocked is the new default
+- **Toolbar layout** — restructured to match Excalidraw style: lock · hand · select–text · eraser
+- **Properties panel auto-opens** — after drawing a shape the panel opens immediately showing the new element's style controls
 
 ### v2.4.7
 - **Font size & family in context panel** — when a text element is selected, the panel now shows a font size input (click to auto-select the value) and font family preset buttons (Arial, Georgia, Monospace, Comic Sans)

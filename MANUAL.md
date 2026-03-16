@@ -10,6 +10,7 @@ Select a tool from the toolbar or press its keyboard shortcut.
 
 | Tool       | Key | Description |
 |------------|-----|-------------|
+| Hand       | `H` or `Space` | Pan the canvas |
 | Select     | `V` or `1` | Select, move, resize, rotate elements |
 | Rectangle  | `R` or `2` | Draw rectangles |
 | Ellipse    | `E` or `3` | Draw ellipses and circles |
@@ -17,8 +18,16 @@ Select a tool from the toolbar or press its keyboard shortcut.
 | Arrow      | `A` or `5` | Draw arrows |
 | Pen        | `P` or `6` | Freehand drawing |
 | Text       | `T` or `7` | Add text |
+| Eraser     | `0` | Erase elements by clicking or dragging over them |
 
 Press `Escape` to return to the Select tool at any time.
+
+### Tool Lock
+
+The **lock button** (🔒) at the far left of the toolbar controls what happens after you finish drawing a shape:
+
+- **Unlocked (default):** the tool reverts to Select and the new element is selected — the properties panel opens automatically so you can style it immediately.
+- **Locked:** the drawing tool stays active so you can place the next shape without re-selecting the tool. Useful for drawing many shapes of the same type in a row.
 
 ---
 
@@ -34,7 +43,10 @@ Hold `Shift` to snap the angle to 45° increments.
 **Connecting arrows to shapes (Smart Links):** hover the arrow tool over any shape — a highlight and cyan ring appear on the nearest border point. Click and drag to start from that point. Move the end near another shape to connect it. The arrow attaches to the border (not the center) and follows the shapes as they move.
 
 ### Pen (Freehand)
-Hold and drag to draw. The stroke is automatically smoothed when you release. The pen tool stays active so you can draw the next stroke immediately — no auto-selection interrupts the flow.
+Hold and drag to draw. The stroke is automatically smoothed when you release.
+
+### Eraser
+Select the Eraser tool (`0`) then click or drag over elements to delete them. The topmost element under the cursor is erased first. Locked elements are skipped. A glowing slash trail follows the cursor for visual feedback.
 
 ### Text
 Click anywhere to place a text box and start typing. Press `Enter` to confirm, `Escape` to cancel. Double-click existing text to edit it.
@@ -151,6 +163,7 @@ With an element selected, the **Properties panel** (slider icon in the context t
 - **Stroke style:** solid, dashed, dotted
 - **Opacity** (0–100%)
 - **Roughness** — 0 = crisp, higher = hand-drawn / sketchy look
+- **Corners** — Sharp or Rounded (rectangles only)
 - **Font** and **font size** (text elements)
 
 ---
@@ -187,6 +200,7 @@ With an element selected, the **Properties panel** (slider icon in the context t
 
 | Shortcut | Action |
 |----------|--------|
+| `H` / `Space` | Hand (pan) |
 | `V` / `1` | Select tool |
 | `R` / `2` | Rectangle |
 | `E` / `3` | Ellipse |
@@ -194,6 +208,7 @@ With an element selected, the **Properties panel** (slider icon in the context t
 | `A` / `5` | Arrow |
 | `P` / `6` | Pen |
 | `T` / `7` | Text |
+| `0` | Eraser |
 | `Escape` | Back to Select / exit group / deselect |
 | `G` | Toggle grid |
 | `F` | Fit canvas to elements |

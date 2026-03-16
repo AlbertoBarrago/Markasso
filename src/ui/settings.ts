@@ -50,6 +50,7 @@ const ICONS = {
   trash:   svg(p('M4 6h12M9 3h2M16 6l-1 11H5L4 6M9 10v4M11 10v4')),
   prefs:   svg(p('M3 5h14M3 10h14M3 15h14M7 3v4M13 8v4M10 13v4')),
   chevron: svg(p('M8 5l5 5-5 5')),
+  guide:   svg(p('M10 2a8 8 0 100 16A8 8 0 0010 2zM10 7v4M10 13h.01')),
 };
 
 export function initSettings(
@@ -101,6 +102,12 @@ export function initSettings(
       </button>
       <button class="menu-item" id="menu-export-svg">
         ${ICONS.svg}<span class="menu-item-label">Export SVG</span>
+      </button>
+
+      <div class="menu-divider"></div>
+
+      <button class="menu-item" id="menu-guide">
+        ${ICONS.guide}<span class="menu-item-label">Guide</span>
       </button>
 
       <div class="menu-divider"></div>
@@ -212,6 +219,10 @@ export function initSettings(
   });
   panel.querySelector<HTMLButtonElement>('#menu-export-svg')!.addEventListener('click', () => {
     exportSVG(history.present, true);
+    close();
+  });
+  panel.querySelector<HTMLButtonElement>('#menu-guide')!.addEventListener('click', () => {
+    window.open('./MANUAL.md', '_blank');
     close();
   });
   panel.querySelector<HTMLButtonElement>('#menu-clear')!.addEventListener('click', () => {
