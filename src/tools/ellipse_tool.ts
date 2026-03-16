@@ -63,6 +63,9 @@ export class EllipseTool implements Tool {
         strokeStyle: appState.strokeStyle,
       },
     });
+    if (!ctx.history.present.appState.toolLocked) {
+      ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
+    }
   }
 
   getCursor(): string {

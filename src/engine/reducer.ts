@@ -159,7 +159,11 @@ export function reducer(scene: Scene, command: Command): Scene {
       return { ...scene, viewport: { offsetX: command.offsetX, offsetY: command.offsetY, zoom: command.zoom } };
 
     case 'SET_TOOL':
-      return { ...scene, appState: { ...scene.appState, activeTool: command.tool }, selectedIds: new Set() };
+      return {
+        ...scene,
+        appState: { ...scene.appState, activeTool: command.tool },
+        selectedIds: command.keepSelection ? scene.selectedIds : new Set(),
+      };
 
     case 'SET_STROKE_COLOR':
       return { ...scene, appState: { ...scene.appState, strokeColor: command.color } };
@@ -292,6 +296,9 @@ export function reducer(scene: Scene, command: Command): Scene {
 
     case 'SET_JUST_CREATED_TEXT':
       return { ...scene, appState: { ...scene.appState, justCreatedText: true } };
+
+    case 'SET_TOOL_LOCK':
+      return { ...scene, appState: { ...scene.appState, toolLocked: command.locked } };
 
     case 'APPLY_STYLE': {
       const { strokeColor, fillColor, strokeWidth, opacity, roughness, strokeStyle } = command;

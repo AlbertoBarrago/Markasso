@@ -17,6 +17,9 @@ const EPHEMERAL_COMMANDS = new Set<Command['type']>([
   'SET_STROKE_WIDTH',
   'TOGGLE_GRID',
   'SET_GRID_TYPE',      // view setting only
+  'SET_TOOL_LOCK',
+  'CLEAR_JUST_CREATED_TEXT',
+  'SET_JUST_CREATED_TEXT',
 ]);
 
 export class History {

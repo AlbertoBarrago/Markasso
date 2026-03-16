@@ -5,7 +5,6 @@ import { fitToElements } from '../core/viewport';
 export function initShortcuts(history: History, selectTool: SelectTool): void {
   const shortcuts = new Map<string, () => void>([
     ['h', () => history.dispatch({ type: 'SET_TOOL', tool: 'hand' })],
-    ['0', () => history.dispatch({ type: 'SET_TOOL', tool: 'hand' })],
     ['v', () => history.dispatch({ type: 'SET_TOOL', tool: 'select' })],
     ['1', () => history.dispatch({ type: 'SET_TOOL', tool: 'select' })],
     ['r', () => history.dispatch({ type: 'SET_TOOL', tool: 'rectangle' })],
@@ -20,6 +19,7 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     ['6', () => history.dispatch({ type: 'SET_TOOL', tool: 'freehand' })],
     ['t', () => history.dispatch({ type: 'SET_TOOL', tool: 'text' })],
     ['7', () => history.dispatch({ type: 'SET_TOOL', tool: 'text' })],
+    ['0', () => history.dispatch({ type: 'SET_TOOL', tool: 'eraser' })],
     ['g', () => history.dispatch({ type: 'TOGGLE_GRID' })],
   ]);
 

@@ -160,6 +160,9 @@ export class LineTool implements Tool {
     };
 
     ctx.history.dispatch({ type: 'CREATE_ELEMENT', element });
+    if (!ctx.history.present.appState.toolLocked) {
+      ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
+    }
     this.startElementId = null;
     this.endElementId = null;
   }

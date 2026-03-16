@@ -25,7 +25,7 @@ export type Command =
   | { type: 'PAN_VIEWPORT';   dx: number; dy: number }
   | { type: 'ZOOM_VIEWPORT';  factor: number; originX: number; originY: number }
   | { type: 'SET_VIEWPORT';   offsetX: number; offsetY: number; zoom: number }
-  | { type: 'SET_TOOL';        tool: ActiveTool }
+  | { type: 'SET_TOOL'; tool: ActiveTool; keepSelection?: boolean }
   | { type: 'SET_STROKE_COLOR'; color: string }   // appState only (default for next shape)
   | { type: 'SET_FILL_COLOR';   color: string }   // appState only
   | { type: 'SET_STROKE_WIDTH'; width: number }   // appState only
@@ -45,6 +45,7 @@ export type Command =
   | { type: 'UNLOCK_ELEMENTS'; ids: string[] }
   | { type: 'CLEAR_JUST_CREATED_TEXT' }
   | { type: 'SET_JUST_CREATED_TEXT' }
+  | { type: 'SET_TOOL_LOCK'; locked: boolean }
   /** Applies style to ALL selected elements AND updates appState defaults. Undoable. */
   | {
       type: 'APPLY_STYLE';

@@ -8,6 +8,7 @@ import { LineTool } from '../tools/line_tool';
 import { ArrowTool } from '../tools/arrow_tool';
 import { PenTool } from '../tools/pen_tool';
 import { TextTool } from '../tools/text_tool';
+import { EraserTool, type SlashPoint } from '../tools/eraser_tool';
 import type { TextElement, RectangleElement, EllipseElement } from '../elements/element';
 import { render } from '../rendering/renderer';
 import { drawElement } from '../rendering/draw_element';
@@ -18,6 +19,7 @@ import type { ActiveTool } from '../core/app_state';
 const TOOLS: Record<ActiveTool, Tool> = {
   select: new SelectTool(),
   hand: new HandTool(),
+  eraser: new EraserTool(),
   rectangle: new RectangleTool(),
   ellipse: new EllipseTool(),
   line: new LineTool(),
@@ -305,6 +307,8 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
 
   // rAF render loop
   function loop(): void {
+    // Keep rendering while eraser slash trail is fading out
+    if ((TOOLS['eraser'] as EraserTool).pruneTrail()) needsRender = true;
     if (needsRender) {
       needsRender = false;
       renderFrame();
@@ -386,6 +390,12 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
       }
     }
 
+    // Draw eraser slash trail
+    const eraserTool = TOOLS['eraser'] as EraserTool;
+    if (eraserTool.slashTrail.length > 1) {
+      drawSlashTrail(ctx2d, eraserTool.slashTrail, scene.viewport);
+    }
+
     // Draw marquee if select tool is in marquee mode
     if (selectTool.marqueeActive) {
       const [x1, y1, x2, y2] = selectTool.getMarquee();
@@ -396,6 +406,38 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
   requestAnimationFrame(loop);
 
   return { selectTool: TOOLS['select'] as SelectTool };
+}
+
+function drawSlashTrail(
+  ctx2d: CanvasRenderingContext2D,
+  trail: SlashPoint[],
+  viewport: { offsetX: number; offsetY: number; zoom: number },
+): void {
+  const now = Date.now();
+  const dpr = window.devicePixelRatio;
+  ctx2d.save();
+  ctx2d.setTransform(viewport.zoom * dpr, 0, 0, viewport.zoom * dpr, viewport.offsetX * dpr, viewport.offsetY * dpr);
+  ctx2d.lineCap = 'round';
+  ctx2d.lineJoin = 'round';
+
+  for (let i = 1; i < trail.length; i++) {
+    const p0 = trail[i - 1]!;
+    const p1 = trail[i]!;
+    const age = now - p1.time;
+    const t = Math.max(0, 1 - age / 350);
+    if (t <= 0) continue;
+
+    // Glow layer
+    ctx2d.shadowBlur = 12 / viewport.zoom;
+    ctx2d.shadowColor = `rgba(255,255,255,${t * 0.8})`;
+    ctx2d.strokeStyle = `rgba(255,255,255,${t})`;
+    ctx2d.lineWidth = (3 + t * 2) / viewport.zoom;
+    ctx2d.beginPath();
+    ctx2d.moveTo(p0.worldX, p0.worldY);
+    ctx2d.lineTo(p1.worldX, p1.worldY);
+    ctx2d.stroke();
+  }
+  ctx2d.restore();
 }
 
 // ── Shape label editor ─────────────────────────────────────────────────────────

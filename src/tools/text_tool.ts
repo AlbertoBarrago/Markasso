@@ -141,7 +141,9 @@ export class TextTool implements Tool {
           } satisfies TextElement,
         });
         // Set flag to enable marquee drag on next select tool interaction
-        ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select' });
+        if (!ctx.history.present.appState.toolLocked) {
+          ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
+        }
         ctx.history.dispatch({ type: 'SET_JUST_CREATED_TEXT' });
       }
     };
