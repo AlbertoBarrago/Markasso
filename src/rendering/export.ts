@@ -230,8 +230,31 @@ function freehandToSVG(el: FreehandElement, ox: number, oy: number): string {
   return `<path d="${parts.join(' ')}" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"${rotateAttr(el, ox, oy)}/>`;
 }
 
+function wrapTextApprox(content: string, maxWidth: number, avgCharWidth: number): string[] {
+  const result: string[] = [];
+  for (const line of content.split('\n')) {
+    if (!line || line.length * avgCharWidth <= maxWidth) {
+      result.push(line);
+      continue;
+    }
+    const words = line.split(' ');
+    let current = '';
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (current && candidate.length * avgCharWidth > maxWidth) {
+        result.push(current);
+        current = word;
+      } else {
+        current = candidate;
+      }
+    }
+    if (current) result.push(current);
+  }
+  return result;
+}
+
 function textToSVG(el: TextElement, ox: number, oy: number): string {
-  const lines = el.content.split('\n');
+  const lines = wrapTextApprox(el.content, el.width - 8, el.fontSize * 0.55);
   const lineHeight = el.fontSize * 1.2;
   const tspans = lines
     .map((line, i) => `<tspan x="${round(el.x + ox)}" dy="${i === 0 ? 0 : round(lineHeight)}">${escapeXml(line)}</tspan>`)

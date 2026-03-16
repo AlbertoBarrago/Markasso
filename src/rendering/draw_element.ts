@@ -87,7 +87,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       break;
     case 'text':
       ctx.setLineDash([]);
-      drawText(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, el.strokeColor);
+      drawText(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, el.strokeColor, el.width - 8);
       break;
     case 'image':
       drawImage(ctx, el.src, el.x, el.y, el.width, el.height);
@@ -346,6 +346,33 @@ function drawFreehand(
   ctx.stroke();
 }
 
+function buildWrappedLines(
+  ctx: CanvasRenderingContext2D,
+  content: string,
+  maxWidth: number,
+): string[] {
+  const result: string[] = [];
+  for (const line of content.split('\n')) {
+    if (!line || ctx.measureText(line).width <= maxWidth) {
+      result.push(line);
+      continue;
+    }
+    const words = line.split(' ');
+    let current = '';
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (current && ctx.measureText(candidate).width > maxWidth) {
+        result.push(current);
+        current = word;
+      } else {
+        current = candidate;
+      }
+    }
+    if (current) result.push(current);
+  }
+  return result;
+}
+
 function drawText(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -353,12 +380,13 @@ function drawText(
   content: string,
   fontSize: number,
   fontFamily: string,
-  color: string
+  color: string,
+  maxWidth: number,
 ): void {
   ctx.font = `${fontSize}px ${fontFamily}`;
   ctx.fillStyle = color;
   ctx.textBaseline = 'top';
-  const lines = content.split('\n');
+  const lines = buildWrappedLines(ctx, content, maxWidth);
   for (let i = 0; i < lines.length; i++) {
     ctx.fillText(lines[i] ?? '', x, y + i * fontSize * 1.2);
   }

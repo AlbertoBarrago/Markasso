@@ -47,6 +47,15 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       <div class="cp-btn-row" id="cp-border-presets"></div>
     </div>
 
+    <div class="cp-section" id="cp-text-props">
+      <div class="cp-label">Dimensione</div>
+      <div class="cp-font-size-row">
+        <input type="number" id="cp-font-size" min="6" max="400" step="1" class="cp-font-size-input" />
+      </div>
+      <div class="cp-label" style="margin-top:4px">Famiglia</div>
+      <div class="cp-btn-row" id="cp-font-family-presets"></div>
+    </div>
+
     <div class="cp-section">
       <div class="cp-label">Opacità</div>
       <div class="cp-slider-row">
@@ -196,6 +205,40 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     borderPresets.appendChild(btn);
   }
 
+  // ── Font size input ────────────────────────────────────────────────────────
+  const fontSizeInput = panel.querySelector<HTMLInputElement>('#cp-font-size')!;
+  fontSizeInput.addEventListener('focus', () => fontSizeInput.select());
+  fontSizeInput.addEventListener('change', () => {
+    const size = parseInt(fontSizeInput.value, 10);
+    if (!isNaN(size) && size >= 6 && size <= 400) {
+      history.dispatch({ type: 'SET_FONT_SIZE', size });
+    }
+  });
+  fontSizeInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') fontSizeInput.blur();
+  });
+
+  // ── Font family presets ────────────────────────────────────────────────────
+  const fontFamilyPresets = panel.querySelector('#cp-font-family-presets')!;
+  const FONT_FAMILIES = [
+    { label: 'Aa', family: 'Arial, sans-serif',         title: 'Arial' },
+    { label: 'Ss', family: 'Georgia, serif',            title: 'Georgia' },
+    { label: 'M_', family: '"Courier New", monospace',  title: 'Monospace' },
+    { label: 'Ff', family: '"Comic Sans MS", cursive',  title: 'Comic Sans' },
+  ];
+  for (const f of FONT_FAMILIES) {
+    const btn = document.createElement('button');
+    btn.className = 'cp-btn cp-font-family-btn';
+    btn.title = f.title;
+    btn.textContent = f.label;
+    btn.style.fontFamily = f.family;
+    btn.dataset['family'] = f.family;
+    btn.addEventListener('click', () => {
+      history.dispatch({ type: 'SET_FONT_FAMILY', family: f.family });
+    });
+    fontFamilyPresets.appendChild(btn);
+  }
+
   // ── Opacity slider ─────────────────────────────────────────────────────────
   const opacitySlider = panel.querySelector<HTMLInputElement>('#cp-opacity')!;
   const opacityVal = panel.querySelector('#cp-opacity-val')!;
@@ -338,6 +381,16 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     panel.querySelector('#cp-style-presets')!.parentElement!.style.display = (allText || allImage) ? 'none' : '';
     panel.querySelector('#cp-roughness-presets')!.parentElement!.style.display = (allText || allImage) ? 'none' : '';
     panel.querySelector('#cp-border-presets')!.parentElement!.style.display = (allText || allImage) ? 'none' : '';
+
+    // Show/sync text-specific controls
+    const textPropsSection = panel.querySelector<HTMLElement>('#cp-text-props')!;
+    textPropsSection.style.display = allText ? '' : 'none';
+    if (allText && first.type === 'text') {
+      fontSizeInput.value = String(first.fontSize);
+      panel.querySelectorAll<HTMLButtonElement>('#cp-font-family-presets .cp-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset['family'] === first.fontFamily);
+      });
+    }
   }
 
   history.subscribe(sync);

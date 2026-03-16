@@ -425,6 +425,47 @@ html, body {
   color: rgba(255,255,255,0.8);
 }
 
+/* Font size input */
+.cp-font-size-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cp-font-size-input {
+  width: 72px;
+  height: 32px;
+  background: rgba(255,255,255,0.07);
+  border: 2px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.9);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  outline: none;
+  padding: 0 4px;
+  transition: border-color .12s, background .12s;
+}
+.cp-font-size-input:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.25);
+}
+.cp-font-size-input:focus {
+  border-color: #7c63d4;
+  background: rgba(124,99,212,0.12);
+}
+/* remove spinners */
+.cp-font-size-input::-webkit-inner-spin-button,
+.cp-font-size-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.cp-font-size-input[type=number] { -moz-appearance: textfield; }
+
+/* Font family buttons */
+.cp-font-family-btn {
+  font-size: 13px;
+  font-weight: 600;
+  width: 36px;
+  height: 36px;
+}
+
 /* Layer and action buttons */
 .cp-layer-btn, .cp-action-btn {
   font-size: 16px;

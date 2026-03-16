@@ -39,16 +39,22 @@ export class TextTool implements Tool {
   onMouseUp(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
     if (this.isDragging) {
       this.isDragging = false;
-      
+
       // Calculate bounds from drag
       const x = Math.min(this.startX, this.currentX);
       const y = Math.min(this.startY, this.currentY);
       const width = Math.abs(this.currentX - this.startX);
       const height = Math.abs(this.currentY - this.startY);
-      
-      // Only create if minimum size
+
       if (width > 5 && height > 5) {
+        // Drag: use defined area
         this.createTextarea(x, y, width, height, ctx);
+      } else {
+        // Single click: use default size based on current font
+        const { appState } = ctx.history.present;
+        const defaultWidth = 240;
+        const defaultHeight = appState.fontSize * 1.5;
+        this.createTextarea(this.startX, this.startY, defaultWidth, defaultHeight, ctx);
       }
     }
   }
