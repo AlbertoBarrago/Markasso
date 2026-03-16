@@ -96,7 +96,7 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 | Feature | Description |
 |---|---|
 | **Floating glass UI** | Excalidraw-style islands: center-top tools, bottom-left undo/zoom, top-right import + export |
-| **Properties panel** | Stroke color, fill color, stroke width, opacity, roughness, font |
+| **Properties panel** | Stroke color, fill color, stroke width, opacity, roughness; font size + family for text elements |
 | **Keyboard shortcuts** | Letter keys + numeric keys `1–7` for every tool |
 
 ### Persistence & Export
@@ -215,7 +215,7 @@ No `.env` files. No API keys. No containerization required.
 | `Shift` (while resizing) | Lock aspect ratio |
 | **Double-click** on text | Edit text in place |
 | **Double-click** on rect / ellipse | Edit shape label |
-| **Text tool** | `Enter` = commit · `Shift+Enter` = newline · `Esc` = cancel |
+| **Text tool** | Click to place · drag to define area · `Enter` = commit · `Shift+Enter` = newline · `Esc` = cancel |
 
 ---
 
@@ -319,6 +319,11 @@ src/
 ---
 
 ## Changelog
+
+### v2.4.7
+- **Font size & family in context panel** — when a text element is selected, the panel now shows a font size input (click to auto-select the value) and font family preset buttons (Arial, Georgia, Monospace, Comic Sans)
+- **Single-click text placement** — clicking the canvas with the text tool now opens a textarea immediately, without requiring a drag; drag still works to define a custom area
+- **Text word-wrap fix** — text now wraps on the canvas exactly as it did inside the textarea, using real glyph metrics (`measureText`); the SVG export also respects the element width
 
 ### v2.4.6
 - **Global menu** — hamburger button replaces the gear icon; file actions (Open, Save, Export PNG/SVG, Clear canvas) are now in the menu alongside Preferences and theme
