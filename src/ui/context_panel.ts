@@ -329,7 +329,8 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       .filter((el): el is Element => el !== undefined);
 
     const hasSelection = selected.length > 0;
-    panel.classList.toggle('open', hasSelection);
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    panel.classList.toggle('open', hasSelection && !isTouch);
 
     if (!hasSelection) return;
 
