@@ -326,9 +326,10 @@ src/
 
 ## Changelog
 
-### v2.4.11
+### v2.5.0
 - **Mobile action bar** — compact Excalidraw-style bottom-right island always visible on touch devices: undo and redo are always shown; duplicate and delete appear when an element is selected
-- **Mobile layout cleanup** — removed the floating undo/redo/zoom island on touch (replaced by the action bar); context panel repositioned below the settings button and sized to the viewport width
+- **Mobile style sheet** — tapping the sliders button opens a bottom sheet with stroke color, fill color, stroke width, stroke style, roughness, borders, and opacity; sections auto-hide based on element type; closes on outside tap
+- **Mobile layout cleanup** — desktop context panel suppressed on touch; floating undo/redo/zoom island replaced by the action bar; context panel repositioned and viewport-sized for touch
 
 ### v2.4.9
 - **Auto-select after drawing** — when tool lock is off, placing a shape reverts to Select and keeps the new element selected so the properties panel opens automatically
