@@ -104,11 +104,11 @@ describe('reducer', () => {
 
   it('TOGGLE_GRID flips gridVisible', () => {
     const scene = createScene();
-    expect(scene.appState.gridVisible).toBe(true);
-    const off = reducer(scene, { type: 'TOGGLE_GRID' });
-    expect(off.appState.gridVisible).toBe(false);
-    const on = reducer(off, { type: 'TOGGLE_GRID' });
+    expect(scene.appState.gridVisible).toBe(false);
+    const on = reducer(scene, { type: 'TOGGLE_GRID' });
     expect(on.appState.gridVisible).toBe(true);
+    const off = reducer(on, { type: 'TOGGLE_GRID' });
+    expect(off.appState.gridVisible).toBe(false);
   });
 
   it('PAN_VIEWPORT adjusts offset', () => {
