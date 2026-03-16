@@ -1,6 +1,7 @@
 import type { History } from '../engine/history';
 import type { Tool, ToolContext } from '../tools/tool';
 import { SelectTool } from '../tools/select_tool';
+import { HandTool } from '../tools/hand_tool';
 import { RectangleTool } from '../tools/rectangle_tool';
 import { EllipseTool } from '../tools/ellipse_tool';
 import { LineTool } from '../tools/line_tool';
@@ -16,6 +17,7 @@ import type { ActiveTool } from '../core/app_state';
 
 const TOOLS: Record<ActiveTool, Tool> = {
   select: new SelectTool(),
+  hand: new HandTool(),
   rectangle: new RectangleTool(),
   ellipse: new EllipseTool(),
   line: new LineTool(),
@@ -317,6 +319,26 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
     // Draw preview element on top (in world transform)
     const activeTool = getActiveTool();
     const scene = history.present;
+
+    // Draw text tool drag preview
+    if (scene.appState.activeTool === 'text') {
+      const textTool = TOOLS['text'] as TextTool;
+      const preview = textTool.getPreview();
+      if (preview) {
+        ctx2d.save();
+        const { viewport } = scene;
+        const dpr = window.devicePixelRatio;
+        ctx2d.setTransform(viewport.zoom * dpr, 0, 0, viewport.zoom * dpr, viewport.offsetX * dpr, viewport.offsetY * dpr);
+        ctx2d.globalAlpha = 0.5;
+        ctx2d.fillStyle = 'rgba(124, 99, 212, 0.3)';
+        ctx2d.strokeStyle = scene.appState.strokeColor;
+        ctx2d.lineWidth = 1;
+        ctx2d.setLineDash([5, 5]);
+        ctx2d.fillRect(preview.x, preview.y, preview.width, preview.height);
+        ctx2d.strokeRect(preview.x, preview.y, preview.width, preview.height);
+        ctx2d.restore();
+      }
+    }
 
     if ('preview' in activeTool) {
       const preview = (activeTool as { preview: unknown }).preview;

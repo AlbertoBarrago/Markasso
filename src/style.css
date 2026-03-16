@@ -127,6 +127,22 @@ html, body {
 .tb-btn:disabled{ opacity: .3; cursor: default; }
 .tb-btn svg     { pointer-events: none; }
 
+/* Separator between hand tool and other tools */
+.tb-separator {
+  width: 1px;
+  height: 24px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  margin: 0 6px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
 /* Subscript shortcut number */
 .tb-btn-key {
   position: absolute;

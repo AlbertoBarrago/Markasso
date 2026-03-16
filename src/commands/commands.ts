@@ -43,6 +43,8 @@ export type Command =
   | { type: 'UNGROUP_ELEMENTS'; groupId: string }
   | { type: 'LOCK_ELEMENTS'; ids: string[] }
   | { type: 'UNLOCK_ELEMENTS'; ids: string[] }
+  | { type: 'CLEAR_JUST_CREATED_TEXT' }
+  | { type: 'SET_JUST_CREATED_TEXT' }
   /** Applies style to ALL selected elements AND updates appState defaults. Undoable. */
   | {
       type: 'APPLY_STYLE';

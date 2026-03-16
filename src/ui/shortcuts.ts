@@ -4,6 +4,8 @@ import { fitToElements } from '../core/viewport';
 
 export function initShortcuts(history: History, selectTool: SelectTool): void {
   const shortcuts = new Map<string, () => void>([
+    ['h', () => history.dispatch({ type: 'SET_TOOL', tool: 'hand' })],
+    ['0', () => history.dispatch({ type: 'SET_TOOL', tool: 'hand' })],
     ['v', () => history.dispatch({ type: 'SET_TOOL', tool: 'select' })],
     ['1', () => history.dispatch({ type: 'SET_TOOL', tool: 'select' })],
     ['r', () => history.dispatch({ type: 'SET_TOOL', tool: 'rectangle' })],
@@ -21,10 +23,25 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     ['g', () => history.dispatch({ type: 'TOGGLE_GRID' })],
   ]);
 
+  // Space bar handling: hold to activate hand tool temporarily
+  let spacePressed = false;
+  let previousTool: string | null = null;
+
   window.addEventListener('keydown', (e) => {
     // Don't capture shortcuts when typing in an input/textarea
     const target = e.target as HTMLElement;
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+    // Space bar: activate hand tool while pressed
+    if (e.key === ' ' && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      if (!spacePressed) {
+        spacePressed = true;
+        previousTool = history.present.appState.activeTool;
+        history.dispatch({ type: 'SET_TOOL', tool: 'hand' });
+      }
+      return;
+    }
 
     // Escape: tool switch or delegate group exit to SelectTool
     if (e.key === 'Escape') {
@@ -129,5 +146,16 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
 
     const fn = shortcuts.get(e.key.toLowerCase());
     if (fn) fn();
+  });
+
+  // Release space bar: restore previous tool
+  window.addEventListener('keyup', (e) => {
+    if (e.key === ' ' && spacePressed) {
+      spacePressed = false;
+      if (previousTool && previousTool !== 'hand') {
+        history.dispatch({ type: 'SET_TOOL', tool: previousTool as any });
+        previousTool = null;
+      }
+    }
   });
 }

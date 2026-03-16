@@ -7,6 +7,7 @@ import { fitToElements } from '../core/viewport';
 
 // ── SVG icons ──────────────────────────────────────────────────────────────────
 const IC = {
+  hand:       `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11V5a1 1 0 011-1h0a1 1 0 011 1v5"/><path d="M9 11V4a1 1 0 011-1h0a1 1 0 011 1v7"/><path d="M11 11V3a1 1 0 011-1h0a1 1 0 011 1v8"/><path d="M13 11V5a1 1 0 011-1h0a1 1 0 011 1v6a5 5 0 01-5 5H9a5 5 0 01-5-5v-2a1 1 0 011-1h0a1 1 0 011 1v2"/></svg>`,
   select:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M5.5 3v12.8l2.9-2.9 2.4 5.4 2.1-.95-2.4-5.4 3.8.001z"/></svg>`,
   rectangle: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="14" height="10" rx="1.5"/></svg>`,
   ellipse:   `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="10" cy="10" rx="7.5" ry="5.5"/></svg>`,
@@ -28,6 +29,7 @@ const IC = {
 };
 
 const TOOLS: { tool: ActiveTool; icon: string; label: string; key: string; num: string }[] = [
+  { tool: 'hand',      icon: IC.hand,      label: 'Hand',      key: 'H / Space', num: '0' },
   { tool: 'select',    icon: IC.select,    label: 'Select',    key: 'V / 1', num: '1' },
   { tool: 'rectangle', icon: IC.rectangle, label: 'Rectangle', key: 'R / 2', num: '2' },
   { tool: 'ellipse',   icon: IC.ellipse,   label: 'Ellipse',   key: 'E / 3', num: '3' },
@@ -44,7 +46,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const centerPill = div('tb-island tb-island-tools');
   const toolBtns = new Map<ActiveTool, HTMLButtonElement>();
 
-  for (const t of TOOLS) {
+  TOOLS.forEach((t, index) => {
     const b = document.createElement('button');
     b.className = 'tb-btn';
     b.title = `${t.label} (${t.key})`;
@@ -52,7 +54,14 @@ export function initToolbar(container: HTMLElement, history: History): void {
     b.addEventListener('click', () => history.dispatch({ type: 'SET_TOOL', tool: t.tool }));
     toolBtns.set(t.tool, b);
     centerPill.appendChild(b);
-  }
+
+    // Add separator after hand tool (index 0)
+    if (index === 0) {
+      const separator = document.createElement('span');
+      separator.className = 'tb-separator';
+      centerPill.appendChild(separator);
+    }
+  });
 
   // ── Bottom-left: undo/redo + zoom ─────────────────────────────────────────
   const bottomLeft = div('tb-island-bottomleft');

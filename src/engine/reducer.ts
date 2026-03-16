@@ -287,6 +287,12 @@ export function reducer(scene: Scene, command: Command): Scene {
       };
     }
 
+    case 'CLEAR_JUST_CREATED_TEXT':
+      return { ...scene, appState: { ...scene.appState, justCreatedText: false } };
+
+    case 'SET_JUST_CREATED_TEXT':
+      return { ...scene, appState: { ...scene.appState, justCreatedText: true } };
+
     case 'APPLY_STYLE': {
       const { strokeColor, fillColor, strokeWidth, opacity, roughness, strokeStyle } = command;
       const patch: Record<string, unknown> = {};

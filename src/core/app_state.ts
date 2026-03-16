@@ -1,7 +1,7 @@
 import type { ElementType } from '../elements/element';
 
 export type DrawableTool = Exclude<ElementType, 'image'>;
-export type ActiveTool = 'select' | DrawableTool;
+export type ActiveTool = 'select' | 'hand' | DrawableTool;
 export type GridType   = 'dot' | 'line' | 'mm';
 
 export interface AppState {
@@ -17,6 +17,8 @@ export interface AppState {
   readonly gridSize:    number;
   readonly gridType:    GridType;
   readonly strokeStyle: 'solid' | 'dashed' | 'dotted';
+  /** Flag: text was just created, next drag should create marquee */
+  readonly justCreatedText: boolean;
 }
 
 export function createAppState(): AppState {
@@ -33,5 +35,6 @@ export function createAppState(): AppState {
     gridSize:    20,
     gridType:    'dot',
     strokeStyle: 'solid',
+    justCreatedText: false,
   };
 }
