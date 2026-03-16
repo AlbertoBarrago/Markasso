@@ -222,7 +222,7 @@ export function initSettings(
     close();
   });
   panel.querySelector<HTMLButtonElement>('#menu-guide')!.addEventListener('click', () => {
-    window.open('./MANUAL.md', '_blank');
+    window.open('https://github.com/AlbertoBarrago/Markasso/blob/main/MANUAL.md', '_blank');
     close();
   });
   panel.querySelector<HTMLButtonElement>('#menu-clear')!.addEventListener('click', () => {
