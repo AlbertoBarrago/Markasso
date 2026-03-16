@@ -199,8 +199,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     btn.title = b.label;
     btn.dataset['border'] = b.value;
     btn.addEventListener('click', () => {
-      // Border radius not yet implemented - placeholder for future
-      console.log('Border style:', b.value);
+      history.dispatch({ type: 'APPLY_STYLE', cornerRadius: b.value === 'rounded' ? 8 : 0 });
     });
     borderPresets.appendChild(btn);
   }
@@ -367,6 +366,12 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     // Update roughness presets
     panel.querySelectorAll<HTMLButtonElement>('#cp-roughness-presets .cp-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['roughness'] === String(first.roughness ?? 0));
+    });
+
+    // Update border presets
+    const cr = first.type === 'rectangle' ? (first.cornerRadius ?? 0) : 0;
+    panel.querySelectorAll<HTMLButtonElement>('#cp-border-presets .cp-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset['border'] === (cr > 0 ? 'rounded' : 'sharp'));
     });
 
     // Update opacity slider

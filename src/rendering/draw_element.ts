@@ -33,7 +33,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
     case 'rectangle': {
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
-      drawRectangle(ctx, el.x, el.y, el.width, el.height, roughness, seed);
+      drawRectangle(ctx, el.x, el.y, el.width, el.height, roughness, seed, el.cornerRadius ?? 0);
       if (el.label) {
         const rx = el.width < 0 ? el.x + el.width : el.x;
         const ry = el.height < 0 ? el.y + el.height : el.y;
@@ -121,15 +121,18 @@ function drawRectangle(
   height: number,
   roughness: number,
   seed: number,
+  cornerRadius = 0,
 ): void {
   const rx = width < 0 ? x + width : x;
   const ry = height < 0 ? y + height : y;
   const rw = Math.abs(width);
   const rh = Math.abs(height);
+  const cr = cornerRadius > 0 ? Math.min(cornerRadius, rw / 2, rh / 2) : 0;
 
   if (roughness < 0.05) {
     ctx.beginPath();
-    ctx.rect(rx, ry, rw, rh);
+    if (cr > 0) ctx.roundRect(rx, ry, rw, rh, cr);
+    else ctx.rect(rx, ry, rw, rh);
     ctx.fill();
     ctx.stroke();
     return;
@@ -137,7 +140,8 @@ function drawRectangle(
 
   // Draw fill with plain rect first
   ctx.beginPath();
-  ctx.rect(rx, ry, rw, rh);
+  if (cr > 0) ctx.roundRect(rx, ry, rw, rh, cr);
+  else ctx.rect(rx, ry, rw, rh);
   ctx.fill();
 
   // Draw wobbly stroke along 4 edges

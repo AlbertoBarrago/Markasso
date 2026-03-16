@@ -29,6 +29,7 @@ export interface RectangleElement extends BaseElement {
   readonly type: 'rectangle';
   readonly width: number;
   readonly height: number;
+  readonly cornerRadius?: number;
   readonly label?: string;
   readonly labelFontSize?: number;
   readonly labelFontFamily?: string;

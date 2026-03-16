@@ -301,23 +301,24 @@ export function reducer(scene: Scene, command: Command): Scene {
       return { ...scene, appState: { ...scene.appState, toolLocked: command.locked } };
 
     case 'APPLY_STYLE': {
-      const { strokeColor, fillColor, strokeWidth, opacity, roughness, strokeStyle } = command;
+      const { strokeColor, fillColor, strokeWidth, opacity, roughness, strokeStyle, cornerRadius } = command;
       const patch: Record<string, unknown> = {};
-      if (strokeColor  !== undefined) patch['strokeColor']  = strokeColor;
-      if (fillColor    !== undefined) patch['fillColor']    = fillColor;
-      if (strokeWidth  !== undefined) patch['strokeWidth']  = strokeWidth;
-      if (opacity      !== undefined) patch['opacity']      = opacity;
-      if (roughness    !== undefined) patch['roughness']    = roughness;
-      if (strokeStyle  !== undefined) patch['strokeStyle']  = strokeStyle;
+      if (strokeColor   !== undefined) patch['strokeColor']   = strokeColor;
+      if (fillColor     !== undefined) patch['fillColor']     = fillColor;
+      if (strokeWidth   !== undefined) patch['strokeWidth']   = strokeWidth;
+      if (opacity       !== undefined) patch['opacity']       = opacity;
+      if (roughness     !== undefined) patch['roughness']     = roughness;
+      if (strokeStyle   !== undefined) patch['strokeStyle']   = strokeStyle;
+      if (cornerRadius  !== undefined) patch['cornerRadius']  = cornerRadius;
 
       // appState patch (only properties that belong to appState)
       const statePatch: Record<string, unknown> = {};
-      if (strokeColor  !== undefined) statePatch['strokeColor']  = strokeColor;
-      if (fillColor    !== undefined) statePatch['fillColor']    = fillColor;
-      if (strokeWidth  !== undefined) statePatch['strokeWidth']  = strokeWidth;
-      if (opacity      !== undefined) statePatch['opacity']      = opacity;
-      if (roughness    !== undefined) statePatch['roughness']    = roughness;
-      if (strokeStyle  !== undefined) statePatch['strokeStyle']  = strokeStyle;
+      if (strokeColor   !== undefined) statePatch['strokeColor']   = strokeColor;
+      if (fillColor     !== undefined) statePatch['fillColor']     = fillColor;
+      if (strokeWidth   !== undefined) statePatch['strokeWidth']   = strokeWidth;
+      if (opacity       !== undefined) statePatch['opacity']       = opacity;
+      if (roughness     !== undefined) statePatch['roughness']     = roughness;
+      if (strokeStyle   !== undefined) statePatch['strokeStyle']   = strokeStyle;
 
       return {
         ...scene,

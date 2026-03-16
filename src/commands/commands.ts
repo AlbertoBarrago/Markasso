@@ -49,10 +49,11 @@ export type Command =
   /** Applies style to ALL selected elements AND updates appState defaults. Undoable. */
   | {
       type: 'APPLY_STYLE';
-      strokeColor?: string;
-      fillColor?:   string;
-      strokeWidth?: number;
-      opacity?:     number;
-      roughness?:   number;
-      strokeStyle?: 'solid' | 'dashed' | 'dotted';
+      strokeColor?:   string;
+      fillColor?:     string;
+      strokeWidth?:   number;
+      opacity?:       number;
+      roughness?:     number;
+      strokeStyle?:   'solid' | 'dashed' | 'dotted';
+      cornerRadius?:  number;
     };
