@@ -320,6 +320,18 @@ src/
 
 ## Changelog
 
+### v2.4.6
+- **Global menu** — hamburger button replaces the gear icon; file actions (Open, Save, Export PNG/SVG, Clear canvas) are now in the menu alongside Preferences and theme
+- **Custom canvas background** — choose from dark background presets directly in the menu; the background colour is persisted across sessions
+- **Grid off by default** — new canvases start with a clean, grid-free background
+
+### v2.4.5
+- **Improved tools panel UX** — consolidated context and properties panels for a cleaner, less cluttered interface
+
+### v2.4.4
+- **Hand tool** — pan the canvas by holding `H` or `Space`, or selecting the hand from the toolbar
+- **Improved text tool** — click to place, type, confirm with `Enter`/`Escape`; tool auto-returns to Select after confirming
+
 ### v2.4.3
 - **Text tool auto-resets** — after confirming a text element the tool returns to Select automatically
 
