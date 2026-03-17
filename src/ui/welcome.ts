@@ -1,13 +1,14 @@
 import type { History } from '../engine/history';
+import { t } from '../i18n';
 
 const isMac = navigator.platform.toUpperCase().includes('MAC');
 const mod   = isMac ? '⌘' : 'Ctrl+';
 
 const SHORTCUTS: { icon: string; label: string; key: string }[] = [
-  { icon: '📂', label: 'Apri file',   key: `${mod}O` },
-  { icon: '💾', label: 'Salva file',  key: `${mod}S` },
-  { icon: '↩',  label: 'Annulla',     key: `${mod}Z` },
-  { icon: '↪',  label: 'Ripristina',  key: `${mod}Y` },
+  { icon: '📂', label: t('openFile'),  key: `${mod}O` },
+  { icon: '💾', label: t('saveFile'),  key: `${mod}S` },
+  { icon: '↩',  label: t('undoLabel'), key: `${mod}Z` },
+  { icon: '↪',  label: t('redoLabel'), key: `${mod}Y` },
 ];
 
 export function initWelcome(appEl: HTMLElement, history: History): void {
@@ -17,13 +18,12 @@ export function initWelcome(appEl: HTMLElement, history: History): void {
   overlay.id = 'welcome-overlay';
 
   overlay.innerHTML = `
-    <div class="wl-card" role="dialog" aria-label="Benvenuto in Markasso">
+    <div class="wl-card" role="dialog" aria-label="${t('welcomeAria')}">
       <div class="wl-brand">
         <span class="wl-name">Markasso</span>
       </div>
       <p class="wl-tagline">
-        I tuoi disegni sono salvati nel browser.<br>
-        Salva su file regolarmente per non perderli.
+        ${t('welcomeTagline').replace('\n', '<br>')}
       </p>
       <ul class="wl-shortcuts">
         ${SHORTCUTS.map(s => `
@@ -34,7 +34,7 @@ export function initWelcome(appEl: HTMLElement, history: History): void {
           </li>
         `).join('')}
       </ul>
-      <button class="wl-cta">Inizia a disegnare</button>
+      <button class="wl-cta">${t('startDrawing')}</button>
     </div>
   `;
 

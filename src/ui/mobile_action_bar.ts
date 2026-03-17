@@ -1,5 +1,6 @@
 import type { History } from '../engine/history';
 import type { Element } from '../elements/element';
+import { t } from '../i18n';
 
 const STROKE_PRESETS = ['#e2e2ef', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
 const FILL_PRESETS   = ['transparent', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
@@ -15,41 +16,41 @@ export function initMobileActionBar(workspace: HTMLElement, history: History): v
     <div class="mss-handle"></div>
 
     <div class="cp-section">
-      <div class="cp-label">Tratto</div>
+      <div class="cp-label">${t('stroke')}</div>
       <div class="cp-color-row">
         <div class="cp-color-swatches" id="mss-stroke-swatches"></div>
       </div>
     </div>
 
     <div class="cp-section">
-      <div class="cp-label">Sfondo</div>
+      <div class="cp-label">${t('fill')}</div>
       <div class="cp-color-row">
         <div class="cp-color-swatches" id="mss-fill-swatches"></div>
       </div>
     </div>
 
     <div class="cp-section">
-      <div class="cp-label">Spessore del tratto</div>
+      <div class="cp-label">${t('strokeWidth')}</div>
       <div class="cp-btn-row" id="mss-width-presets"></div>
     </div>
 
     <div class="cp-section">
-      <div class="cp-label">Stile del tratto</div>
+      <div class="cp-label">${t('strokeStyle')}</div>
       <div class="cp-btn-row" id="mss-style-presets"></div>
     </div>
 
     <div class="cp-section">
-      <div class="cp-label">Imprecisione</div>
+      <div class="cp-label">${t('roughness')}</div>
       <div class="cp-btn-row" id="mss-roughness-presets"></div>
     </div>
 
     <div class="cp-section">
-      <div class="cp-label">Bordi</div>
+      <div class="cp-label">${t('corners')}</div>
       <div class="cp-btn-row" id="mss-border-presets"></div>
     </div>
 
     <div class="cp-section">
-      <div class="cp-label">Opacità</div>
+      <div class="cp-label">${t('opacity')}</div>
       <div class="cp-slider-row">
         <input type="range" min="0" max="100" step="1" class="cp-slider" id="mss-opacity" />
       </div>
@@ -77,7 +78,7 @@ export function initMobileActionBar(workspace: HTMLElement, history: History): v
   for (const color of FILL_PRESETS) {
     const sw = document.createElement('button');
     sw.className = 'cp-color-swatch';
-    sw.title = color === 'transparent' ? 'Trasparente' : color;
+    sw.title = color === 'transparent' ? t('transparent') : color;
     if (color === 'transparent') sw.classList.add('cp-color-swatch-transparent');
     else sw.style.background = color;
     sw.addEventListener('click', () => history.dispatch({ type: 'APPLY_STYLE', fillColor: color }));
@@ -149,15 +150,15 @@ export function initMobileActionBar(workspace: HTMLElement, history: History): v
   bar.id = 'mobile-actions';
   workspace.appendChild(bar);
 
-  const undoBtn  = mkBtn(IC_UNDO,  'Undo');
-  const redoBtn  = mkBtn(IC_REDO,  'Redo');
+  const undoBtn  = mkBtn(IC_UNDO,  t('undoLabel'));
+  const redoBtn  = mkBtn(IC_REDO,  t('redoLabel'));
 
   const sep = document.createElement('span');
   sep.className = 'mobile-action-sep';
 
-  const propsBtn     = mkBtn(IC_PROPS,     'Stile');
-  const duplicateBtn = mkBtn(IC_DUPLICATE, 'Duplica');
-  const deleteBtn    = mkBtn(IC_DELETE,    'Elimina');
+  const propsBtn     = mkBtn(IC_PROPS,     t('style'));
+  const duplicateBtn = mkBtn(IC_DUPLICATE, t('duplicate'));
+  const deleteBtn    = mkBtn(IC_DELETE,    t('delete'));
   deleteBtn.classList.add('mobile-action-danger');
 
   bar.append(undoBtn, redoBtn, sep, propsBtn, duplicateBtn, deleteBtn);

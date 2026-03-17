@@ -587,17 +587,37 @@ html, body {
 .sp-preset:hover { border-color: var(--text-muted); transform: scale(1.1); }
 .sp-preset.active { border-color: var(--accent); }
 
-.menu-footer {
-  padding: 7px 12px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: center;
+.menu-footer { display: flex; justify-content: center; padding: 4px 8px 6px; }
+.sp-lang-wrapper {
+  position: relative;
+  width: 140px;
 }
-.sp-version {
-  font-size: 10px;
+.sp-lang-wrapper::after {
+  content: '▲\A▼';
+  white-space: pre;
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 7px;
+  line-height: 1.3;
+  text-align: center;
   color: var(--text-muted);
-  letter-spacing: .04em;
+  pointer-events: none;
 }
+.sp-lang-select {
+  width: 100%;
+  appearance: none;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 5px 32px 5px 10px;
+  cursor: pointer;
+  outline: none;
+}
+.sp-lang-select:focus { background: rgba(255,255,255,0.08); }
 
 @media (pointer: coarse) {
   /* Hide keyboard shortcut badges — useless on touch */

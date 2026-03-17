@@ -3,6 +3,7 @@ import type { ActiveTool } from '../core/app_state';
 import { exportPNG, exportSVG } from '../rendering/export';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { fitToElements } from '../core/viewport';
+import { t } from '../i18n';
 
 
 // ── SVG icons ──────────────────────────────────────────────────────────────────
@@ -33,15 +34,15 @@ const IC = {
 };
 
 const TOOLS: { tool: ActiveTool; icon: string; label: string; key: string; num: string }[] = [
-  { tool: 'hand',      icon: IC.hand,      label: 'Hand',      key: 'H / Space', num: '' },
-  { tool: 'select',    icon: IC.select,    label: 'Select',    key: 'V / 1',     num: '1' },
-  { tool: 'rectangle', icon: IC.rectangle, label: 'Rectangle', key: 'R / 2',     num: '2' },
-  { tool: 'ellipse',   icon: IC.ellipse,   label: 'Ellipse',   key: 'E / 3',     num: '3' },
-  { tool: 'line',      icon: IC.line,      label: 'Line',      key: 'L / 4',     num: '4' },
-  { tool: 'arrow',     icon: IC.arrow,     label: 'Arrow',     key: 'A / 5',     num: '5' },
-  { tool: 'freehand',  icon: IC.freehand,  label: 'Pen',       key: 'P / 6',     num: '6' },
-  { tool: 'text',      icon: IC.text,      label: 'Text',      key: 'T / 7',     num: '7' },
-  { tool: 'eraser',    icon: IC.eraser,    label: 'Eraser',    key: '0',          num: '0' },
+  { tool: 'hand',      icon: IC.hand,      label: t('hand'),      key: 'H / Space', num: '' },
+  { tool: 'select',    icon: IC.select,    label: t('select'),    key: 'V / 1',     num: '1' },
+  { tool: 'rectangle', icon: IC.rectangle, label: t('rectangle'), key: 'R / 2',     num: '2' },
+  { tool: 'ellipse',   icon: IC.ellipse,   label: t('ellipse'),   key: 'E / 3',     num: '3' },
+  { tool: 'line',      icon: IC.line,      label: t('line'),      key: 'L / 4',     num: '4' },
+  { tool: 'arrow',     icon: IC.arrow,     label: t('arrow'),     key: 'A / 5',     num: '5' },
+  { tool: 'freehand',  icon: IC.freehand,  label: t('pen'),       key: 'P / 6',     num: '6' },
+  { tool: 'text',      icon: IC.text,      label: t('textTool'),  key: 'T / 7',     num: '7' },
+  { tool: 'eraser',    icon: IC.eraser,    label: t('eraser'),    key: '0',          num: '0' },
 ];
 
 export function initToolbar(container: HTMLElement, history: History): void {
@@ -54,7 +55,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   // Lock button (first, no shortcut badge)
   const lockBtn = document.createElement('button');
   lockBtn.className = 'tb-btn';
-  lockBtn.title = 'Lock tool (keep active after drawing)';
+  lockBtn.title = t('lockTool');
   lockBtn.innerHTML = IC.lockOpen;
   lockBtn.addEventListener('click', () => {
     const locked = history.present.appState.toolLocked;
@@ -67,7 +68,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   lockSep.className = 'tb-separator';
   centerPill.appendChild(lockSep);
 
-  TOOLS.forEach((t, index) => {
+  TOOLS.forEach((t) => {
     const b = document.createElement('button');
     b.className = 'tb-btn';
     b.title = `${t.label} (${t.key})`;
@@ -83,21 +84,21 @@ export function initToolbar(container: HTMLElement, history: History): void {
 
   // Undo / Redo
   const undoPill = div('tb-island tb-island-undo');
-  const undoBtn = mkBtn(IC.undo, 'Undo (Ctrl+Z)');
-  const redoBtn = mkBtn(IC.redo, 'Redo (Ctrl+Y)');
+  const undoBtn = mkBtn(IC.undo, t('undo'));
+  const redoBtn = mkBtn(IC.redo, t('redo'));
   undoBtn.addEventListener('click', () => history.undo());
   redoBtn.addEventListener('click', () => history.redo());
   undoPill.append(undoBtn, redoBtn);
 
   // Zoom
   const zoomPill = div('tb-island tb-island-zoom');
-  const fitBtn   = mkBtn(IC.fit, 'Fit to content (F)');
-  const minusBtn = mkBtn('−', 'Zoom out');
-  const plusBtn  = mkBtn('+', 'Zoom in');
+  const fitBtn   = mkBtn(IC.fit, t('fitContent'));
+  const minusBtn = mkBtn('−', t('zoomOut'));
+  const plusBtn  = mkBtn('+', t('zoomIn'));
   minusBtn.style.fontSize = plusBtn.style.fontSize = '18px';
   const zoomLabel = document.createElement('button');
   zoomLabel.className = 'tb-btn tb-zoom-btn';
-  zoomLabel.title = 'Reset zoom to 100% (Shift+0)';
+  zoomLabel.title = t('resetZoom');
   fitBtn.addEventListener('click', () => {
     const vp = fitToElements(history.present.elements, window.innerWidth, window.innerHeight);
     history.dispatch({ type: 'SET_VIEWPORT', offsetX: vp.offsetX, offsetY: vp.offsetY, zoom: vp.zoom });
@@ -134,14 +135,14 @@ export function initToolbar(container: HTMLElement, history: History): void {
     if (file) importMarkasso(file, history);
     importInput.value = '';
   });
-  const importTrigger = mkBtn(IC.import, 'Open .markasso');
+  const importTrigger = mkBtn(IC.import, t('openMarkasso'));
   importTrigger.addEventListener('click', () => importInput.click());
   importIsland.append(importTrigger);
 
   // Export dropdown
   const exportIsland = div('tb-island');
   exportIsland.style.position = 'relative';
-  const exportTrigger = mkBtn(IC.export, 'Export');
+  const exportTrigger = mkBtn(IC.export, t('export'));
   const exportPanel = document.createElement('div');
   exportPanel.style.cssText = [
     'position:absolute', 'right:0', 'top:calc(100% + 6px)',
@@ -154,9 +155,9 @@ export function initToolbar(container: HTMLElement, history: History): void {
 
   const askBackground = (): boolean => confirm('Include white background?');
 
-  const exportPNGItem      = menuItem('Export PNG',      IC.imgPNG,   () => exportPNG(history.present, askBackground()));
-  const exportSVGItem      = menuItem('Export SVG',      IC.imgSVG,   () => exportSVG(history.present, askBackground()));
-  const exportMarkassoItem = menuItem('Save .markasso',  IC.markasso, () => exportMarkasso(history.present));
+  const exportPNGItem      = menuItem(t('exportPNG'),      IC.imgPNG,   () => exportPNG(history.present, askBackground()));
+  const exportSVGItem      = menuItem(t('exportSVG'),      IC.imgSVG,   () => exportSVG(history.present, askBackground()));
+  const exportMarkassoItem = menuItem(t('saveMarkasso'),   IC.markasso, () => exportMarkasso(history.present));
   exportPanel.append(exportPNGItem, exportSVGItem, exportMarkassoItem);
 
   let panelOpen = false;

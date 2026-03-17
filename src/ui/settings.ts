@@ -3,7 +3,7 @@ import type { GridType } from '../core/app_state';
 import { fitToElements } from '../core/viewport';
 import { exportPNG, exportSVG } from '../rendering/export';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
-import pkg from '../../package.json';
+import { t, setLocale, getLocale, LOCALES, type Locale } from '../i18n';
 
 export interface UISettings {
   bgColor: string;
@@ -29,9 +29,9 @@ export function applySettings(_appEl: HTMLElement, s: UISettings): void {
 }
 
 const GRID_TYPES: { type: GridType; label: string; desc: string }[] = [
-  { type: 'dot',  label: '•', desc: 'Dot grid' },
-  { type: 'line', label: '≡', desc: 'Line grid' },
-  { type: 'mm',   label: '▦', desc: 'Graph paper' },
+  { type: 'dot',  label: '•', desc: t('dotGrid') },
+  { type: 'line', label: '≡', desc: t('lineGrid') },
+  { type: 'mm',   label: '▦', desc: t('graphPaper') },
 ];
 
 const BG_COLORS = ['#141414', '#1a1a2e', '#0d1117', '#1e1e1e', '#12100e', '#0f1923'];
@@ -51,6 +51,7 @@ const ICONS = {
   prefs:   svg(p('M3 5h14M3 10h14M3 15h14M7 3v4M13 8v4M10 13v4')),
   chevron: svg(p('M8 5l5 5-5 5')),
   guide:   svg(p('M10 2a8 8 0 100 16A8 8 0 0010 2zM10 7v4M10 13h.01')),
+  lang:    svg(p('M10 2a8 8 0 100 16A8 8 0 0010 2zM2 10h16M10 2c-2 4-2 10 0 16M10 2c2 4 2 10 0 16')),
 };
 
 export function initSettings(
@@ -92,42 +93,36 @@ export function initSettings(
     <div class="menu-body">
 
       <button class="menu-item" id="menu-open">
-        ${ICONS.open}<span class="menu-item-label">Open</span>
+        ${ICONS.open}<span class="menu-item-label">${t('menuOpen')}</span>
       </button>
       <button class="menu-item" id="menu-save">
-        ${ICONS.save}<span class="menu-item-label">Save</span>
+        ${ICONS.save}<span class="menu-item-label">${t('menuSave')}</span>
       </button>
       <button class="menu-item" id="menu-export-png">
-        ${ICONS.png}<span class="menu-item-label">Export PNG</span>
+        ${ICONS.png}<span class="menu-item-label">${t('exportPNG')}</span>
       </button>
       <button class="menu-item" id="menu-export-svg">
-        ${ICONS.svg}<span class="menu-item-label">Export SVG</span>
+        ${ICONS.svg}<span class="menu-item-label">${t('exportSVG')}</span>
       </button>
 
       <div class="menu-divider"></div>
 
       <button class="menu-item" id="menu-guide">
-        ${ICONS.guide}<span class="menu-item-label">Guide</span>
-      </button>
-
-      <div class="menu-divider"></div>
-
-      <button class="menu-item menu-item--danger" id="menu-clear">
-        ${ICONS.trash}<span class="menu-item-label">Clear canvas</span>
+        ${ICONS.guide}<span class="menu-item-label">${t('guide')}</span>
       </button>
 
       <div class="menu-divider"></div>
 
       <button class="menu-item menu-item--prefs" id="menu-prefs-toggle">
         ${ICONS.prefs}
-        <span class="menu-item-label">Preferences</span>
+        <span class="menu-item-label">${t('preferences')}</span>
         <span class="menu-arrow">${ICONS.chevron}</span>
       </button>
       <div class="menu-prefs" id="menu-prefs-body" aria-hidden="true">
         <div class="pref-check-row">
           <label class="pref-check-label">
             <input type="checkbox" id="sp-grid-visible" />
-            Grid
+            ${t('grid')}
           </label>
           <div class="pref-grid-types">
             ${GRID_TYPES.map((g) =>
@@ -135,13 +130,19 @@ export function initSettings(
             ).join('')}
           </div>
         </div>
-        <button class="pref-btn" id="sp-fit-to-content">Fit to content</button>
-        <button class="pref-btn" id="sp-reset-zoom">Reset zoom (100%)</button>
+        <button class="pref-btn" id="sp-fit-to-content">${t('fitToContent')}</button>
+        <button class="pref-btn" id="sp-reset-zoom">${t('resetZoom100')}</button>
       </div>
 
       <div class="menu-divider"></div>
 
-      <div class="menu-section-label">Sfondo tela</div>
+      <button class="menu-item menu-item--danger" id="menu-clear">
+        ${ICONS.trash}<span class="menu-item-label">${t('clearCanvas')}</span>
+      </button>
+
+      <div class="menu-divider"></div>
+
+      <div class="menu-section-label">${t('canvasBg')}</div>
       <div class="menu-bg-swatches">
         ${BG_COLORS.map((c) =>
           `<button class="sp-preset" data-color="${c}" style="background:${c}" title="${c}"></button>`
@@ -150,7 +151,13 @@ export function initSettings(
 
     </div>
     <div class="menu-footer">
-      <span class="sp-version">Markasso v${pkg.version}</span>
+      <div class="sp-lang-wrapper">
+        <select class="sp-lang-select" id="sp-lang-select">
+          ${(Object.entries(LOCALES) as [Locale, string][]).map(([code, name]) =>
+            `<option value="${code}"${getLocale() === code ? ' selected' : ''}>${name}</option>`
+          ).join('')}
+        </select>
+      </div>
     </div>
   `;
 
@@ -194,6 +201,7 @@ export function initSettings(
     const prefsToggle = panel.querySelector<HTMLButtonElement>('#menu-prefs-toggle')!;
     prefsBody.setAttribute('aria-hidden', prefsOpen ? 'false' : 'true');
     prefsToggle.classList.toggle('prefs-open', prefsOpen);
+
   }
 
   // ── Toggle ───────────────────────────────────────────────────────────────
@@ -268,6 +276,11 @@ export function initSettings(
       applySettings(appEl, current);
       syncPanel();
     });
+  });
+
+  // ── Language selector ────────────────────────────────────────────────────
+  panel.querySelector<HTMLSelectElement>('#sp-lang-select')!.addEventListener('change', (e) => {
+    setLocale((e.target as HTMLSelectElement).value as Locale);
   });
 
   history.subscribe(syncPanel);

@@ -1,5 +1,6 @@
 import type { History } from '../engine/history';
 import type { Element } from '../elements/element';
+import { t } from '../i18n';
 
 const STROKE_PRESETS = ['#e2e2ef', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
 const FILL_PRESETS = ['transparent', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
@@ -12,56 +13,56 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
 
   panel.innerHTML = `
     <div class="cp-section">
-      <div class="cp-label">Tratto</div>
+      <div class="cp-label">${t('stroke')}</div>
       <div class="cp-color-row">
         <div class="cp-color-swatches" id="cp-stroke-swatches"></div>
-        <button class="cp-color-more" id="cp-stroke-more" title="Altri colori">+</button>
+        <button class="cp-color-more" id="cp-stroke-more" title="${t('moreColors')}">+</button>
       </div>
     </div>
 
     <div class="cp-section">
-      <div class="cp-label">Sfondo</div>
+      <div class="cp-label">${t('fill')}</div>
       <div class="cp-color-row">
         <div class="cp-color-swatches" id="cp-fill-swatches"></div>
-        <button class="cp-color-more" id="cp-fill-more" title="Altri colori">+</button>
+        <button class="cp-color-more" id="cp-fill-more" title="${t('moreColors')}">+</button>
       </div>
     </div>
 
     <div class="cp-section">
-      <div class="cp-label">Spessore del tratto</div>
+      <div class="cp-label">${t('strokeWidth')}</div>
       <div class="cp-btn-row" id="cp-width-presets"></div>
     </div>
 
     <div class="cp-section">
-      <div class="cp-label">Stile del tratto</div>
+      <div class="cp-label">${t('strokeStyle')}</div>
       <div class="cp-btn-row" id="cp-style-presets"></div>
     </div>
 
     <div class="cp-section">
-      <div class="cp-label">Imprecisione</div>
+      <div class="cp-label">${t('roughness')}</div>
       <div class="cp-btn-row" id="cp-roughness-presets"></div>
     </div>
 
     <div class="cp-section">
-      <div class="cp-label">Bordi</div>
+      <div class="cp-label">${t('corners')}</div>
       <div class="cp-btn-row" id="cp-border-presets"></div>
     </div>
 
     <div class="cp-section" id="cp-text-props">
-      <div class="cp-label">Modalità</div>
+      <div class="cp-label">${t('mode')}</div>
       <div class="cp-btn-row" id="cp-textmode-presets"></div>
-      <div class="cp-label" style="margin-top:4px">Dimensione</div>
+      <div class="cp-label" style="margin-top:4px">${t('fontSize')}</div>
       <div class="cp-font-size-row">
         <input type="number" id="cp-font-size" min="6" max="400" step="1" class="cp-font-size-input" />
       </div>
-      <div class="cp-label" style="margin-top:4px">Famiglia</div>
+      <div class="cp-label" style="margin-top:4px">${t('fontFamily')}</div>
       <div class="cp-btn-row" id="cp-font-family-presets"></div>
-      <div class="cp-label" style="margin-top:4px">Allineamento</div>
+      <div class="cp-label" style="margin-top:4px">${t('alignment')}</div>
       <div class="cp-btn-row" id="cp-align-presets"></div>
     </div>
 
     <div class="cp-section">
-      <div class="cp-label">Opacità</div>
+      <div class="cp-label">${t('opacity')}</div>
       <div class="cp-slider-row">
         <input type="range" min="0" max="100" step="1" class="cp-slider" id="cp-opacity" />
       </div>
@@ -73,12 +74,12 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     </div>
 
     <div class="cp-section">
-      <div class="cp-label">Livelli</div>
+      <div class="cp-label">${t('layers')}</div>
       <div class="cp-btn-row" id="cp-layer-actions"></div>
     </div>
 
     <div class="cp-section">
-      <div class="cp-label">Azioni</div>
+      <div class="cp-label">${t('actions')}</div>
       <div class="cp-btn-row" id="cp-actions"></div>
     </div>
   `;
@@ -113,7 +114,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   for (const color of FILL_PRESETS) {
     const sw = document.createElement('button');
     sw.className = 'cp-color-swatch';
-    sw.title = color === 'transparent' ? 'Trasparente' : color;
+    sw.title = color === 'transparent' ? t('transparent') : color;
     if (color === 'transparent') {
       sw.classList.add('cp-color-swatch-transparent');
     } else {
@@ -140,9 +141,9 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   // ── Width presets ──────────────────────────────────────────────────────────
   const widthPresets = panel.querySelector('#cp-width-presets')!;
   const WIDTHS = [
-    { value: 1, label: 'Sottile' },
-    { value: 3, label: 'Medio' },
-    { value: 8, label: 'Spesso' },
+    { value: 1, label: t('thin') },
+    { value: 3, label: t('medium') },
+    { value: 8, label: t('thick') },
   ];
   for (const w of WIDTHS) {
     const btn = document.createElement('button');
@@ -158,9 +159,9 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   // ── Style presets ──────────────────────────────────────────────────────────
   const stylePresets = panel.querySelector('#cp-style-presets')!;
   const STYLES = [
-    { value: 'solid', label: 'Solido' },
-    { value: 'dashed', label: 'Tratteggio' },
-    { value: 'dotted', label: 'Punti' },
+    { value: 'solid', label: t('solid') },
+    { value: 'dashed', label: t('dashed') },
+    { value: 'dotted', label: t('dotted') },
   ];
   for (const s of STYLES) {
     const btn = document.createElement('button');
@@ -176,9 +177,9 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   // ── Roughness presets ──────────────────────────────────────────────────────
   const roughnessPresets = panel.querySelector('#cp-roughness-presets')!;
   const ROUGHNESS = [
-    { value: 0, label: 'Liscio' },
-    { value: 0.5, label: 'Medio' },
-    { value: 1, label: 'Ruvido' },
+    { value: 0, label: t('smooth') },
+    { value: 0.5, label: t('medium') },
+    { value: 1, label: t('rough') },
   ];
   for (const r of ROUGHNESS) {
     const btn = document.createElement('button');
@@ -194,8 +195,8 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   // ── Border presets ─────────────────────────────────────────────────────────
   const borderPresets = panel.querySelector('#cp-border-presets')!;
   const BORDERS = [
-    { value: 'sharp', label: 'Spigoloso' },
-    { value: 'rounded', label: 'Arrotondato' },
+    { value: 'sharp', label: t('sharp') },
+    { value: 'rounded', label: t('rounded') },
   ];
   for (const b of BORDERS) {
     const btn = document.createElement('button');
@@ -245,8 +246,8 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   // ── Text mode toggle ───────────────────────────────────────────────────────
   const textModePresets = panel.querySelector('#cp-textmode-presets')!;
   const TEXT_MODES: { value: 'text' | 'code'; label: string; icon: string }[] = [
-    { value: 'text', label: 'Testo', icon: `<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4h14v2.5H12v9.5H8V6.5H3z"/></svg>` },
-    { value: 'code', label: 'Codice', icon: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6L3 10l4 4"/><path d="M13 6l4 4-4 4"/></svg>` },
+    { value: 'text', label: t('text'), icon: `<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4h14v2.5H12v9.5H8V6.5H3z"/></svg>` },
+    { value: 'code', label: t('code'), icon: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6L3 10l4 4"/><path d="M13 6l4 4-4 4"/></svg>` },
   ];
   for (const m of TEXT_MODES) {
     const btn = document.createElement('button');
@@ -263,9 +264,9 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   // ── Align presets ──────────────────────────────────────────────────────────
   const alignPresets = panel.querySelector('#cp-align-presets')!;
   const ALIGNS: { value: 'left' | 'center' | 'right'; label: string; icon: string }[] = [
-    { value: 'left',   label: 'Sinistra', icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="9" x2="13" y2="9"/><line x1="3" y1="13" x2="17" y2="13"/><line x1="3" y1="17" x2="11" y2="17"/></svg>` },
-    { value: 'center', label: 'Centro',   icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="3" y1="5" x2="17" y2="5"/><line x1="5" y1="9" x2="15" y2="9"/><line x1="3" y1="13" x2="17" y2="13"/><line x1="6" y1="17" x2="14" y2="17"/></svg>` },
-    { value: 'right',  label: 'Destra',   icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="3" y1="5" x2="17" y2="5"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="3" y1="13" x2="17" y2="13"/><line x1="9" y1="17" x2="17" y2="17"/></svg>` },
+    { value: 'left',   label: t('left'),   icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="9" x2="13" y2="9"/><line x1="3" y1="13" x2="17" y2="13"/><line x1="3" y1="17" x2="11" y2="17"/></svg>` },
+    { value: 'center', label: t('center'), icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="3" y1="5" x2="17" y2="5"/><line x1="5" y1="9" x2="15" y2="9"/><line x1="3" y1="13" x2="17" y2="13"/><line x1="6" y1="17" x2="14" y2="17"/></svg>` },
+    { value: 'right',  label: t('right'),  icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="3" y1="5" x2="17" y2="5"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="3" y1="13" x2="17" y2="13"/><line x1="9" y1="17" x2="17" y2="17"/></svg>` },
   ];
   for (const a of ALIGNS) {
     const btn = document.createElement('button');
@@ -290,10 +291,10 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   // ── Layer actions ──────────────────────────────────────────────────────────
   const layerActions = panel.querySelector('#cp-layer-actions')!;
   const LAYERS = [
-    { icon: '⤓', label: 'Porta in fondo', action: 'back' },
-    { icon: '↓', label: 'Indietro', action: 'backward' },
-    { icon: '↑', label: 'Avanti', action: 'forward' },
-    { icon: '⤒', label: 'Porta in cima', action: 'front' },
+    { icon: '⤓', label: t('toBack'),   action: 'back' },
+    { icon: '↓', label: t('backward'), action: 'backward' },
+    { icon: '↑', label: t('forward'),  action: 'forward' },
+    { icon: '⤒', label: t('toFront'),  action: 'front' },
   ];
   for (const l of LAYERS) {
     const btn = document.createElement('button');
@@ -324,9 +325,9 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   // ── Actions ────────────────────────────────────────────────────────────────
   const actions = panel.querySelector('#cp-actions')!;
   const ACTIONS = [
-    { icon: '📋', label: 'Duplica', action: 'duplicate' },
-    { icon: '🗑', label: 'Elimina', action: 'delete' },
-    { icon: '🔗', label: 'Link', action: 'link' },
+    { icon: '📋', label: t('duplicate'), action: 'duplicate' },
+    { icon: '🗑', label: t('delete'),    action: 'delete' },
+    { icon: '🔗', label: t('link'),      action: 'link' },
   ];
   for (const a of ACTIONS) {
     const btn = document.createElement('button');
@@ -353,7 +354,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       } else if (a.action === 'delete') {
         history.dispatch({ type: 'DELETE_ELEMENTS', ids });
       } else if (a.action === 'link') {
-        const url = prompt('Inserisci URL:');
+        const url = prompt(t('insertUrl'));
         if (url) {
           console.log('Link:', url);
         }
@@ -388,7 +389,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
         sw.classList.toggle('active', sw.title === strokeColor);
       });
       panel.querySelectorAll<HTMLButtonElement>('#cp-fill-swatches .cp-color-swatch').forEach((sw) => {
-        sw.classList.toggle('active', sw.title === fillColor || (sw.title === 'Trasparente' && fillColor === 'transparent'));
+        sw.classList.toggle('active', sw.title === fillColor || (sw.classList.contains('cp-color-swatch-transparent') && fillColor === 'transparent'));
       });
       panel.querySelectorAll<HTMLButtonElement>('#cp-width-presets .cp-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset['value'] === String(strokeWidth));
@@ -404,7 +405,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
 
       const strokeSection = panel.querySelector('#cp-stroke-swatches')!.parentElement!.parentElement!;
       strokeSection.style.display = '';
-      (strokeSection.querySelector('.cp-label') as HTMLElement).textContent = isText ? 'Colore' : 'Tratto';
+      (strokeSection.querySelector('.cp-label') as HTMLElement).textContent = isText ? t('color') : t('stroke');
       panel.querySelector('#cp-fill-swatches')!.parentElement!.parentElement!.style.display = hasFill ? '' : 'none';
       panel.querySelector('#cp-width-presets')!.parentElement!.style.display = isText ? 'none' : '';
       panel.querySelector('#cp-style-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
@@ -481,7 +482,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
 
     // Hide sections for text/images
     panel.querySelector('#cp-stroke-swatches')!.parentElement!.parentElement!.style.display = allImage ? 'none' : '';
-    (panel.querySelector('#cp-stroke-swatches')!.parentElement!.parentElement!.querySelector('.cp-label') as HTMLElement).textContent = allText ? 'Colore' : 'Tratto';
+    (panel.querySelector('#cp-stroke-swatches')!.parentElement!.parentElement!.querySelector('.cp-label') as HTMLElement).textContent = allText ? t('color') : t('stroke');
     panel.querySelector('#cp-fill-swatches')!.parentElement!.parentElement!.style.display = (allText || allImage) ? 'none' : '';
     panel.querySelector('#cp-width-presets')!.parentElement!.style.display = (allText || allImage) ? 'none' : '';
     panel.querySelector('#cp-style-presets')!.parentElement!.style.display = (allText || allImage) ? 'none' : '';
