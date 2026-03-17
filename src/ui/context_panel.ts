@@ -322,6 +322,8 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   }
 
   // ── Sync panel ─────────────────────────────────────────────────────────────
+  const DRAWING_TOOLS = new Set<string>(['rectangle', 'ellipse', 'line', 'arrow', 'freehand', 'text']);
+
   function sync(): void {
     const scene = history.present;
     const selected = [...scene.selectedIds]
@@ -330,9 +332,61 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
 
     const hasSelection = selected.length > 0;
     const isTouch = window.matchMedia('(pointer: coarse)').matches;
-    panel.classList.toggle('open', hasSelection && !isTouch);
+    const isDrawingTool = DRAWING_TOOLS.has(scene.appState.activeTool);
+    panel.classList.toggle('open', !isTouch && (hasSelection || isDrawingTool));
 
-    if (!hasSelection) return;
+    if (!hasSelection) {
+      if (!isDrawingTool) return;
+      // ── Tool mode: sync appState defaults, show only relevant sections ──────
+      const { activeTool, strokeColor, fillColor, strokeWidth, strokeStyle, roughness, opacity, fontSize, fontFamily } = scene.appState;
+      const isText = activeTool === 'text';
+      const hasFill = activeTool === 'rectangle' || activeTool === 'ellipse';
+      const hasStyle = activeTool !== 'text' && activeTool !== 'freehand';
+
+      panel.querySelectorAll<HTMLButtonElement>('#cp-stroke-swatches .cp-color-swatch').forEach((sw) => {
+        sw.classList.toggle('active', sw.title === strokeColor);
+      });
+      panel.querySelectorAll<HTMLButtonElement>('#cp-fill-swatches .cp-color-swatch').forEach((sw) => {
+        sw.classList.toggle('active', sw.title === fillColor || (sw.title === 'Trasparente' && fillColor === 'transparent'));
+      });
+      panel.querySelectorAll<HTMLButtonElement>('#cp-width-presets .cp-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset['value'] === String(strokeWidth));
+      });
+      panel.querySelectorAll<HTMLButtonElement>('#cp-style-presets .cp-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset['style'] === strokeStyle);
+      });
+      panel.querySelectorAll<HTMLButtonElement>('#cp-roughness-presets .cp-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset['roughness'] === String(roughness));
+      });
+      opacitySlider.value = String(Math.round(opacity * 100));
+      opacityVal.textContent = String(Math.round(opacity * 100));
+
+      const strokeSection = panel.querySelector('#cp-stroke-swatches')!.parentElement!.parentElement!;
+      strokeSection.style.display = '';
+      (strokeSection.querySelector('.cp-label') as HTMLElement).textContent = isText ? 'Colore' : 'Tratto';
+      panel.querySelector('#cp-fill-swatches')!.parentElement!.parentElement!.style.display = hasFill ? '' : 'none';
+      panel.querySelector('#cp-width-presets')!.parentElement!.style.display = isText ? 'none' : '';
+      panel.querySelector('#cp-style-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
+      panel.querySelector('#cp-roughness-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
+      panel.querySelector('#cp-border-presets')!.parentElement!.style.display = activeTool === 'rectangle' ? '' : 'none';
+
+      const textPropsSection = panel.querySelector<HTMLElement>('#cp-text-props')!;
+      textPropsSection.style.display = isText ? '' : 'none';
+      if (isText) {
+        fontSizeInput.value = String(fontSize);
+        panel.querySelectorAll<HTMLButtonElement>('#cp-font-family-presets .cp-btn').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset['family'] === fontFamily);
+        });
+      }
+
+      panel.querySelector<HTMLElement>('#cp-layer-actions')!.parentElement!.style.display = 'none';
+      panel.querySelector<HTMLElement>('#cp-actions')!.parentElement!.style.display = 'none';
+      return;
+    }
+
+    // ── Restore sections visibility for selection mode ───────────────────────
+    panel.querySelector<HTMLElement>('#cp-layer-actions')!.parentElement!.style.display = '';
+    panel.querySelector<HTMLElement>('#cp-actions')!.parentElement!.style.display = '';
 
     const first = selected[0]!;
     const allText = selected.every((el) => el.type === 'text');

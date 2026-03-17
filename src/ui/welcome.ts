@@ -40,7 +40,7 @@ export function initWelcome(appEl: HTMLElement, history: History): void {
 
   const dismiss = (): void => {
     overlay.classList.add('wl-out');
-    overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+    overlay.addEventListener('animationend', () => overlay.remove(), { once: true });
     unsubscribe();
     document.removeEventListener('keydown', onKey);
   };
