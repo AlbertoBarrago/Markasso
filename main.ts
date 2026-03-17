@@ -8,6 +8,7 @@ import { initSettings, loadSettings, applySettings } from './src/ui/settings';
 import { initContextPanel } from './src/ui/context_panel';
 import { initImageImport } from './src/ui/image_import';
 import { initMobileActionBar } from './src/ui/mobile_action_bar';
+import { initWelcome } from './src/ui/welcome';
 
 function bootstrap(): void {
   const appEl    = document.getElementById('app')       as HTMLElement;
@@ -36,6 +37,7 @@ function bootstrap(): void {
   const { selectTool } = initCanvasView(canvas, history);
   initShortcuts(history, selectTool);
   initSession(history);
+  if (!session) initWelcome(appEl, history);
 }
 
 bootstrap();

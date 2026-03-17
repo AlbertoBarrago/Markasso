@@ -1,17 +1,17 @@
 /* ── Reset & variables ─────────────────────────────────────────────── */
 :root {
-  --accent:        #7c63d4;
-  --accent-light:  rgba(124,99,212,0.18);
+  --accent:        #c42020;
+  --accent-light:  rgba(196,32,32,0.18);
 
-  --bg-island:     rgba(26, 26, 40, 0.97);
+  --bg-island:     rgba(22, 12, 12, 0.97);
   --island-border: rgba(255,255,255,0.08);
   --island-shadow: 0 2px 24px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04);
   --island-radius: 12px;
 
   --bg-hover:   rgba(255,255,255,0.07);
   --border:     rgba(255,255,255,0.08);
-  --text:       #d4d4e8;
-  --text-muted: rgba(212,212,232,0.45);
+  --text:       #e8d4d4;
+  --text-muted: rgba(232,212,212,0.45);
   --radius:     8px;
 }
 
@@ -647,6 +647,121 @@ html, body {
   }
 
 }
+
+/* ── Welcome overlay ───────────────────────────────────────────────────────── */
+#welcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: all;
+  animation: wl-in .25s ease both;
+}
+#welcome-overlay.wl-out {
+  animation: wl-out .2s ease both;
+}
+
+@keyframes wl-in {
+  from { opacity: 0; transform: scale(.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes wl-out {
+  to { opacity: 0; transform: scale(.97); }
+}
+
+.wl-card {
+  background: var(--bg-island);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  box-shadow: 0 8px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  padding: 32px 36px 28px;
+  width: min(400px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.wl-brand {
+  display: flex;
+  align-items: center;
+}
+
+.wl-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 22px;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.wl-tagline {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.wl-shortcuts {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.wl-shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 4px;
+  border-radius: 7px;
+  transition: background .1s;
+}
+.wl-shortcut-row:hover { background: var(--bg-hover); }
+
+.wl-shortcut-icon {
+  font-size: 15px;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.wl-shortcut-label {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.wl-kbd {
+  font-size: 11px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 5px;
+  padding: 2px 7px;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.wl-cta {
+  width: 100%;
+  padding: 10px 16px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity .12s;
+}
+.wl-cta:hover { opacity: .88; }
 
 /* ── Quota warning toast ───────────────────────────────────────────────────── */
 .quota-toast {
