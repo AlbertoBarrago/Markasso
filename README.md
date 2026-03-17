@@ -326,6 +326,16 @@ src/
 
 ## Changelog
 
+### v2.6.2
+- **Tool panel auto-open** — selecting a drawing tool on desktop automatically opens the properties panel showing relevant options for that tool; hand, select and eraser leave it closed
+- **Context-aware panel sections** — each tool shows only its relevant controls: rectangle shows fill + borders; line/arrow hide fill; freehand hides style + roughness; text shows its own section
+- **Layer order in tool panel** — layer reorder buttons (front/back/forward/backward) are now visible in the tool panel, not only when using the Select tool
+- **Text tool: code mode** — toggle between Text and Code mode in the panel; code mode creates auto-sized monospace blocks with dark background, Tab indentation, Shift+Enter to commit
+- **Text tool: alignment** — left / center / right alignment buttons in the text panel; alignment is stored per-element and applied in the renderer
+- **Text tool: auto-size on click** — single click no longer creates a fixed 240 px box; the textarea expands with the text and the element dimensions match the content width exactly
+- **Cursor polish** — text tool cursor is always crosshair; switches to text cursor while a textarea is open for editing
+- **Welcome screen fix** — dismissed overlay was blocking all mouse events due to `transitionend` never firing on a CSS animation; fixed by switching to `animationend`
+
 ### v2.6.0
 - **Picasso theme** — UI palette inspired by Picasso's *Le Rêve* (1932): crimson `#c42020` accent, warm near-black island backgrounds, warm off-white text; replaces the previous blue-violet theme
 - **Favicon** — custom logo added as browser tab icon
