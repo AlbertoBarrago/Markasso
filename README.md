@@ -326,6 +326,9 @@ src/
 
 ## Changelog
 
+### v2.7.0
+- **Multi-language i18n** — UI fully localised in 8 languages: Italiano, English, Español, Français, Deutsch, Português, 中文, 日本語; language persists in `localStorage` and is selectable from the hamburger menu
+
 ### v2.6.2
 - **Tool panel auto-open** — selecting a drawing tool on desktop automatically opens the properties panel showing relevant options for that tool; hand, select and eraser leave it closed
 - **Context-aware panel sections** — each tool shows only its relevant controls: rectangle shows fill + borders; line/arrow hide fill; freehand hides style + roughness; text shows its own section
