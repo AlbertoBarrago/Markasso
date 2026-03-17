@@ -1,6 +1,6 @@
 {
   "name": "markasso",
-  "version": "2.6.2",
+  "version": "2.7.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prepare": "husky",
-    "deploy":"gh workflow run deploy.yml"
+    "deploy": "gh workflow run deploy.yml"
   },
   "devDependencies": {
     "husky": "^9.1.7",
