@@ -72,6 +72,8 @@ export interface TextElement extends BaseElement {
   readonly fontFamily: string;
   readonly width: number;
   readonly height: number;
+  readonly textAlign?: 'left' | 'center' | 'right';
+  readonly isCode?: boolean;
 }
 
 export interface ImageElement extends BaseElement {

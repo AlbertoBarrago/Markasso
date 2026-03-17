@@ -11,6 +11,8 @@ export interface AppState {
   readonly strokeWidth: number;
   readonly fontSize:    number;
   readonly fontFamily:  string;
+  readonly textAlign:   'left' | 'center' | 'right';
+  readonly textMode:    'text' | 'code';
   readonly opacity:     number;
   readonly roughness:   number;
   readonly gridVisible: boolean;
@@ -30,6 +32,8 @@ export function createAppState(): AppState {
     strokeWidth: 1,
     fontSize:    20,
     fontFamily:  'Arial, sans-serif',
+    textAlign:   'left',
+    textMode:    'text',
     opacity:     1,
     roughness:   0,
     gridVisible: false,

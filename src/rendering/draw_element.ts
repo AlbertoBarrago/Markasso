@@ -87,7 +87,11 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       break;
     case 'text':
       ctx.setLineDash([]);
-      drawText(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, el.strokeColor, el.width - 8);
+      if (el.isCode) {
+        drawCode(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, el.strokeColor, el.width, el.height);
+      } else {
+        drawText(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, el.strokeColor, el.width, el.textAlign ?? 'left');
+      }
       break;
     case 'image':
       drawImage(ctx, el.src, el.x, el.y, el.width, el.height);
@@ -385,14 +389,49 @@ function drawText(
   fontSize: number,
   fontFamily: string,
   color: string,
-  maxWidth: number,
+  elWidth: number,
+  textAlign: 'left' | 'center' | 'right' = 'left',
 ): void {
   ctx.font = `${fontSize}px ${fontFamily}`;
   ctx.fillStyle = color;
   ctx.textBaseline = 'top';
-  const lines = buildWrappedLines(ctx, content, maxWidth);
+  ctx.textAlign = textAlign;
+  const drawX = textAlign === 'center' ? x + elWidth / 2
+    : textAlign === 'right'  ? x + elWidth
+    : x;
+  const lines = buildWrappedLines(ctx, content, elWidth - 8);
   for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i] ?? '', x, y + i * fontSize * 1.2);
+    ctx.fillText(lines[i] ?? '', drawX, y + i * fontSize * 1.2);
+  }
+  ctx.textAlign = 'left';
+}
+
+function drawCode(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  content: string,
+  fontSize: number,
+  fontFamily: string,
+  color: string,
+  width: number,
+  height: number,
+): void {
+  const PAD = 10;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.beginPath();
+  (ctx as CanvasRenderingContext2D & { roundRect: (...a: unknown[]) => void }).roundRect(x, y, width, height, 6);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.font = `${fontSize}px ${fontFamily}`;
+  ctx.fillStyle = color;
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  const lines = content.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i] ?? '', x + PAD, y + PAD + i * fontSize * 1.3);
   }
 }
 

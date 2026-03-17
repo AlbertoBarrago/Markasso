@@ -300,8 +300,19 @@ export function reducer(scene: Scene, command: Command): Scene {
     case 'SET_TOOL_LOCK':
       return { ...scene, appState: { ...scene.appState, toolLocked: command.locked } };
 
+    case 'SET_TEXT_MODE':
+      return {
+        ...scene,
+        appState: { ...scene.appState, textMode: command.mode },
+        elements: scene.elements.map((el) =>
+          scene.selectedIds.has(el.id) && el.type === 'text'
+            ? { ...el, isCode: command.mode === 'code' }
+            : el
+        ),
+      };
+
     case 'APPLY_STYLE': {
-      const { strokeColor, fillColor, strokeWidth, opacity, roughness, strokeStyle, cornerRadius } = command;
+      const { strokeColor, fillColor, strokeWidth, opacity, roughness, strokeStyle, cornerRadius, textAlign } = command;
       const patch: Record<string, unknown> = {};
       if (strokeColor   !== undefined) patch['strokeColor']   = strokeColor;
       if (fillColor     !== undefined) patch['fillColor']     = fillColor;
@@ -310,6 +321,7 @@ export function reducer(scene: Scene, command: Command): Scene {
       if (roughness     !== undefined) patch['roughness']     = roughness;
       if (strokeStyle   !== undefined) patch['strokeStyle']   = strokeStyle;
       if (cornerRadius  !== undefined) patch['cornerRadius']  = cornerRadius;
+      if (textAlign     !== undefined) patch['textAlign']     = textAlign;
 
       // appState patch (only properties that belong to appState)
       const statePatch: Record<string, unknown> = {};
@@ -319,6 +331,7 @@ export function reducer(scene: Scene, command: Command): Scene {
       if (opacity       !== undefined) statePatch['opacity']       = opacity;
       if (roughness     !== undefined) statePatch['roughness']     = roughness;
       if (strokeStyle   !== undefined) statePatch['strokeStyle']   = strokeStyle;
+      if (textAlign     !== undefined) statePatch['textAlign']     = textAlign;
 
       return {
         ...scene,

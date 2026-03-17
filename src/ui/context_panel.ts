@@ -48,12 +48,16 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     </div>
 
     <div class="cp-section" id="cp-text-props">
-      <div class="cp-label">Dimensione</div>
+      <div class="cp-label">Modalità</div>
+      <div class="cp-btn-row" id="cp-textmode-presets"></div>
+      <div class="cp-label" style="margin-top:4px">Dimensione</div>
       <div class="cp-font-size-row">
         <input type="number" id="cp-font-size" min="6" max="400" step="1" class="cp-font-size-input" />
       </div>
       <div class="cp-label" style="margin-top:4px">Famiglia</div>
       <div class="cp-btn-row" id="cp-font-family-presets"></div>
+      <div class="cp-label" style="margin-top:4px">Allineamento</div>
+      <div class="cp-btn-row" id="cp-align-presets"></div>
     </div>
 
     <div class="cp-section">
@@ -238,6 +242,43 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     fontFamilyPresets.appendChild(btn);
   }
 
+  // ── Text mode toggle ───────────────────────────────────────────────────────
+  const textModePresets = panel.querySelector('#cp-textmode-presets')!;
+  const TEXT_MODES: { value: 'text' | 'code'; label: string; icon: string }[] = [
+    { value: 'text', label: 'Testo', icon: `<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4h14v2.5H12v9.5H8V6.5H3z"/></svg>` },
+    { value: 'code', label: 'Codice', icon: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6L3 10l4 4"/><path d="M13 6l4 4-4 4"/></svg>` },
+  ];
+  for (const m of TEXT_MODES) {
+    const btn = document.createElement('button');
+    btn.className = 'cp-btn';
+    btn.title = m.label;
+    btn.innerHTML = m.icon;
+    btn.dataset['mode'] = m.value;
+    btn.addEventListener('click', () => {
+      history.dispatch({ type: 'SET_TEXT_MODE', mode: m.value });
+    });
+    textModePresets.appendChild(btn);
+  }
+
+  // ── Align presets ──────────────────────────────────────────────────────────
+  const alignPresets = panel.querySelector('#cp-align-presets')!;
+  const ALIGNS: { value: 'left' | 'center' | 'right'; label: string; icon: string }[] = [
+    { value: 'left',   label: 'Sinistra', icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="9" x2="13" y2="9"/><line x1="3" y1="13" x2="17" y2="13"/><line x1="3" y1="17" x2="11" y2="17"/></svg>` },
+    { value: 'center', label: 'Centro',   icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="3" y1="5" x2="17" y2="5"/><line x1="5" y1="9" x2="15" y2="9"/><line x1="3" y1="13" x2="17" y2="13"/><line x1="6" y1="17" x2="14" y2="17"/></svg>` },
+    { value: 'right',  label: 'Destra',   icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="3" y1="5" x2="17" y2="5"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="3" y1="13" x2="17" y2="13"/><line x1="9" y1="17" x2="17" y2="17"/></svg>` },
+  ];
+  for (const a of ALIGNS) {
+    const btn = document.createElement('button');
+    btn.className = 'cp-btn cp-align-btn';
+    btn.title = a.label;
+    btn.innerHTML = a.icon;
+    btn.dataset['align'] = a.value;
+    btn.addEventListener('click', () => {
+      history.dispatch({ type: 'APPLY_STYLE', textAlign: a.value });
+    });
+    alignPresets.appendChild(btn);
+  }
+
   // ── Opacity slider ─────────────────────────────────────────────────────────
   const opacitySlider = panel.querySelector<HTMLInputElement>('#cp-opacity')!;
   const opacityVal = panel.querySelector('#cp-opacity-val')!;
@@ -322,7 +363,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   }
 
   // ── Sync panel ─────────────────────────────────────────────────────────────
-  const DRAWING_TOOLS = new Set<string>(['rectangle', 'ellipse', 'line', 'arrow', 'freehand', 'text']);
+  const DRAWING_TOOLS = new Set<string>(['rectangle', 'ellipse', 'line', 'arrow', 'freehand', 'text', 'code']);
 
   function sync(): void {
     const scene = history.present;
@@ -377,9 +418,14 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
         panel.querySelectorAll<HTMLButtonElement>('#cp-font-family-presets .cp-btn').forEach((btn) => {
           btn.classList.toggle('active', btn.dataset['family'] === fontFamily);
         });
+        panel.querySelectorAll<HTMLButtonElement>('#cp-textmode-presets .cp-btn').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset['mode'] === scene.appState.textMode);
+        });
+        panel.querySelectorAll<HTMLButtonElement>('#cp-align-presets .cp-btn').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset['align'] === scene.appState.textAlign);
+        });
       }
 
-      panel.querySelector<HTMLElement>('#cp-layer-actions')!.parentElement!.style.display = 'none';
       panel.querySelector<HTMLElement>('#cp-actions')!.parentElement!.style.display = 'none';
       return;
     }
@@ -449,6 +495,12 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       fontSizeInput.value = String(first.fontSize);
       panel.querySelectorAll<HTMLButtonElement>('#cp-font-family-presets .cp-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset['family'] === first.fontFamily);
+      });
+      panel.querySelectorAll<HTMLButtonElement>('#cp-textmode-presets .cp-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset['mode'] === (first.isCode ? 'code' : 'text'));
+      });
+      panel.querySelectorAll<HTMLButtonElement>('#cp-align-presets .cp-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset['align'] === (first.textAlign ?? 'left'));
       });
     }
   }

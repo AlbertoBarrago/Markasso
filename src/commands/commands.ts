@@ -46,6 +46,7 @@ export type Command =
   | { type: 'CLEAR_JUST_CREATED_TEXT' }
   | { type: 'SET_JUST_CREATED_TEXT' }
   | { type: 'SET_TOOL_LOCK'; locked: boolean }
+  | { type: 'SET_TEXT_MODE'; mode: 'text' | 'code' }
   /** Applies style to ALL selected elements AND updates appState defaults. Undoable. */
   | {
       type: 'APPLY_STYLE';
@@ -56,4 +57,5 @@ export type Command =
       roughness?:     number;
       strokeStyle?:   'solid' | 'dashed' | 'dotted';
       cornerRadius?:  number;
+      textAlign?:     'left' | 'center' | 'right';
     };
