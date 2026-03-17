@@ -326,6 +326,11 @@ src/
 
 ## Changelog
 
+### v2.6.0
+- **Picasso theme** — UI palette inspired by Picasso's *Le Rêve* (1932): crimson `#c42020` accent, warm near-black island backgrounds, warm off-white text; replaces the previous blue-violet theme
+- **Favicon** — custom logo added as browser tab icon
+- **Welcome screen** — first-visit overlay with the Markasso wordmark in a pixel/retro font, a browser-storage reminder, and key shortcuts; auto-dismisses as soon as the user draws the first element
+
 ### v2.5.0
 - **Mobile action bar** — compact Excalidraw-style bottom-right island always visible on touch devices: undo and redo are always shown; duplicate and delete appear when an element is selected
 - **Mobile style sheet** — tapping the sliders button opens a bottom sheet with stroke color, fill color, stroke width, stroke style, roughness, borders, and opacity; sections auto-hide based on element type; closes on outside tap
