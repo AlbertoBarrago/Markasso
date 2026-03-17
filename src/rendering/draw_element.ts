@@ -88,7 +88,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
     case 'text':
       ctx.setLineDash([]);
       if (el.isCode) {
-        drawCode(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, el.strokeColor, el.width, el.height);
+        drawCode(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, el.strokeColor, el.width, el.height, el.textAlign ?? 'left');
       } else {
         drawText(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, el.strokeColor, el.width, el.textAlign ?? 'left');
       }
@@ -416,6 +416,7 @@ function drawCode(
   color: string,
   width: number,
   height: number,
+  textAlign: 'left' | 'center' | 'right' = 'left',
 ): void {
   const PAD = 10;
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
@@ -428,11 +429,15 @@ function drawCode(
   ctx.font = `${fontSize}px ${fontFamily}`;
   ctx.fillStyle = color;
   ctx.textBaseline = 'top';
-  ctx.textAlign = 'left';
+  ctx.textAlign = textAlign;
+  const drawX = textAlign === 'center' ? x + width / 2
+    : textAlign === 'right'  ? x + width - PAD
+    : x + PAD;
   const lines = content.split('\n');
   for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i] ?? '', x + PAD, y + PAD + i * fontSize * 1.3);
+    ctx.fillText(lines[i] ?? '', drawX, y + PAD + i * fontSize * 1.3);
   }
+  ctx.textAlign = 'left';
 }
 
 function drawShapeLabel(
