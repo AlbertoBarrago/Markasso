@@ -78,5 +78,9 @@
   "undoLabel": "Annulla",
   "redoLabel": "Ripristina",
   "startDrawing": "Inizia a disegnare",
-  "style": "Stile"
+  "style": "Stile",
+  "theme": "Tema",
+  "themeLight": "Chiaro",
+  "themeDark": "Scuro",
+  "themeDevice": "Sistema"
 }

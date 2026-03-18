@@ -4,20 +4,46 @@ import { fitToElements } from '../core/viewport';
 import { exportPNG, exportSVG } from '../rendering/export';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { t, setLocale, getLocale, LOCALES, type Locale } from '../i18n';
+import pkg from '../../package.json';
+
+// ── Theme ─────────────────────────────────────────────────────────────────
+export type ThemeMode = 'light' | 'dark' | 'device';
+
+const THEME_KEY = 'markasso-theme';
+
+export function getThemeMode(): ThemeMode {
+  const s = localStorage.getItem(THEME_KEY);
+  return s === 'light' || s === 'dark' || s === 'device' ? s : 'dark';
+}
+
+export function applyTheme(mode: ThemeMode): void {
+  localStorage.setItem(THEME_KEY, mode);
+  const resolved = mode === 'device'
+    ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    : mode;
+  document.documentElement.setAttribute('data-theme', resolved);
+}
+
+// Apply at module load to avoid flash of wrong theme
+applyTheme(getThemeMode());
 
 export interface UISettings {
   bgColor: string;
 }
 
 const STORAGE_KEY = 'markasso-ui-settings';
-const DEFAULTS: UISettings = { bgColor: '#141414' };
+
+function isResolvedLight(): boolean {
+  return document.documentElement.getAttribute('data-theme') === 'light';
+}
 
 export function loadSettings(): UISettings {
+  const defaultBg = isResolvedLight() ? '#ffffff' : '#141414';
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...DEFAULTS, ...(JSON.parse(raw) as Partial<UISettings>) };
+    if (raw) return { bgColor: defaultBg, ...(JSON.parse(raw) as Partial<UISettings>) };
   } catch { /* ignore */ }
-  return { ...DEFAULTS };
+  return { bgColor: defaultBg };
 }
 
 export function saveSettings(s: UISettings): void {
@@ -34,7 +60,8 @@ const GRID_TYPES: { type: GridType; label: string; desc: string }[] = [
   { type: 'mm',   label: '▦', desc: t('graphPaper') },
 ];
 
-const BG_COLORS = ['#141414', '#1a1a2e', '#0d1117', '#1e1e1e', '#12100e', '#0f1923'];
+const DARK_BG_COLORS  = ['#141414', '#1a1a2e', '#0d1117', '#1e1e1e', '#12100e', '#0f1923'];
+const LIGHT_BG_COLORS = ['#ffffff', '#fef5ef', '#fde8d8', '#f8dfd4', '#f5d5c8', '#f0cfc0'];
 
 function svg(inner: string, size = 16): string {
   return `<svg width="${size}" height="${size}" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
@@ -52,6 +79,9 @@ const ICONS = {
   chevron: svg(p('M8 5l5 5-5 5')),
   guide:   svg(p('M10 2a8 8 0 100 16A8 8 0 0010 2zM10 7v4M10 13h.01')),
   lang:    svg(p('M10 2a8 8 0 100 16A8 8 0 0010 2zM2 10h16M10 2c-2 4-2 10 0 16M10 2c2 4 2 10 0 16')),
+  sun:     svg(`<circle cx="10" cy="10" r="3"/>${p('M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.41 1.41M13.37 13.37l1.41 1.41M4.22 15.78l1.41-1.41M13.37 6.63l1.41-1.41')}`),
+  moon:    svg(p('M15 10a6 6 0 01-6 6 6 6 0 010-12c.34 0 .67.03 1 .08A5 5 0 1014.92 9c.05.33.08.66.08 1z')),
+  device:  svg(`<rect x="2" y="3" width="16" height="11" rx="2"/>${p('M7 18h6M10 14v4')}`),
 };
 
 export function initSettings(
@@ -143,10 +173,15 @@ export function initSettings(
       <div class="menu-divider"></div>
 
       <div class="menu-section-label">${t('canvasBg')}</div>
-      <div class="menu-bg-swatches">
-        ${BG_COLORS.map((c) =>
-          `<button class="sp-preset" data-color="${c}" style="background:${c}" title="${c}"></button>`
-        ).join('')}
+      <div class="menu-bg-swatches" id="menu-bg-swatches"></div>
+
+      <div class="menu-divider"></div>
+
+      <div class="menu-section-label">${t('theme')}</div>
+      <div class="menu-theme-toggle">
+        <button class="menu-theme-btn" data-mode="light"  title="${t('themeLight')}">${ICONS.sun}${t('themeLight')}</button>
+        <button class="menu-theme-btn" data-mode="dark"   title="${t('themeDark')}">${ICONS.moon}${t('themeDark')}</button>
+        <button class="menu-theme-btn" data-mode="device" title="${t('themeDevice')}">${ICONS.device}${t('themeDevice')}</button>
       </div>
 
     </div>
@@ -158,6 +193,7 @@ export function initSettings(
           ).join('')}
         </select>
       </div>
+      <span class="sp-version">v${pkg.version}</span>
     </div>
   `;
 
@@ -202,6 +238,10 @@ export function initSettings(
     prefsBody.setAttribute('aria-hidden', prefsOpen ? 'false' : 'true');
     prefsToggle.classList.toggle('prefs-open', prefsOpen);
 
+    const curMode = getThemeMode();
+    panel.querySelectorAll<HTMLButtonElement>('.menu-theme-btn').forEach((b) => {
+      b.classList.toggle('active', b.dataset['mode'] === curMode);
+    });
   }
 
   // ── Toggle ───────────────────────────────────────────────────────────────
@@ -268,19 +308,52 @@ export function initSettings(
   });
 
   // ── Background swatches ──────────────────────────────────────────────────
-  panel.querySelectorAll<HTMLButtonElement>('.sp-preset').forEach((b) => {
-    b.addEventListener('click', () => {
-      const color = b.dataset['color']!;
-      current = { ...current, bgColor: color };
-      saveSettings(current);
-      applySettings(appEl, current);
-      syncPanel();
+  function renderBgSwatches(): void {
+    const container = panel.querySelector<HTMLElement>('#menu-bg-swatches')!;
+    const colors = isResolvedLight() ? LIGHT_BG_COLORS : DARK_BG_COLORS;
+    container.innerHTML = colors.map((c) =>
+      `<button class="sp-preset" data-color="${c}" style="background:${c}" title="${c}"></button>`
+    ).join('');
+    container.querySelectorAll<HTMLButtonElement>('.sp-preset').forEach((b) => {
+      b.classList.toggle('active', b.dataset['color'] === current.bgColor);
+      b.addEventListener('click', () => {
+        current = { ...current, bgColor: b.dataset['color']! };
+        saveSettings(current);
+        applySettings(appEl, current);
+        syncPanel();
+      });
     });
-  });
+  }
+
+  renderBgSwatches();
 
   // ── Language selector ────────────────────────────────────────────────────
   panel.querySelector<HTMLSelectElement>('#sp-lang-select')!.addEventListener('change', (e) => {
     setLocale((e.target as HTMLSelectElement).value as Locale);
+  });
+
+  // ── Theme toggle ─────────────────────────────────────────────────────────
+  panel.querySelectorAll<HTMLButtonElement>('.menu-theme-btn').forEach((b) => {
+    b.addEventListener('click', () => {
+      applyTheme(b.dataset['mode'] as ThemeMode);
+      current = { ...current, bgColor: isResolvedLight() ? LIGHT_BG_COLORS[0]! : DARK_BG_COLORS[0]! };
+      saveSettings(current);
+      applySettings(appEl, current);
+      renderBgSwatches();
+      syncPanel();
+    });
+  });
+
+  // Re-apply when system preference changes (for device mode)
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+    if (getThemeMode() === 'device') {
+      applyTheme('device');
+      current = { ...current, bgColor: e.matches ? LIGHT_BG_COLORS[0]! : DARK_BG_COLORS[0]! };
+      saveSettings(current);
+      applySettings(appEl, current);
+      renderBgSwatches();
+      syncPanel();
+    }
   });
 
   history.subscribe(syncPanel);

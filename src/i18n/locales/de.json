@@ -78,5 +78,9 @@
   "undoLabel": "Rückgängig",
   "redoLabel": "Wiederholen",
   "startDrawing": "Mit dem Zeichnen beginnen",
-  "style": "Stil"
+  "style": "Stil",
+  "theme": "Design",
+  "themeLight": "Hell",
+  "themeDark": "Dunkel",
+  "themeDevice": "System"
 }

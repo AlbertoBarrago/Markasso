@@ -78,5 +78,9 @@
   "undoLabel": "Deshacer",
   "redoLabel": "Rehacer",
   "startDrawing": "Empezar a dibujar",
-  "style": "Estilo"
+  "style": "Estilo",
+  "theme": "Tema",
+  "themeLight": "Claro",
+  "themeDark": "Oscuro",
+  "themeDevice": "Sistema"
 }

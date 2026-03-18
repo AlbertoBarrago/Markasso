@@ -78,5 +78,9 @@
   "undoLabel": "元に戻す",
   "redoLabel": "やり直す",
   "startDrawing": "描画を始める",
-  "style": "スタイル"
+  "style": "スタイル",
+  "theme": "テーマ",
+  "themeLight": "ライト",
+  "themeDark": "ダーク",
+  "themeDevice": "システム"
 }

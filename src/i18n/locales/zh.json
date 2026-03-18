@@ -78,5 +78,9 @@
   "undoLabel": "撤销",
   "redoLabel": "重做",
   "startDrawing": "开始绘图",
-  "style": "样式"
+  "style": "样式",
+  "theme": "主题",
+  "themeLight": "浅色",
+  "themeDark": "深色",
+  "themeDevice": "系统"
 }

@@ -78,5 +78,9 @@
   "undoLabel": "Undo",
   "redoLabel": "Redo",
   "startDrawing": "Start drawing",
-  "style": "Style"
+  "style": "Style",
+  "theme": "Theme",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeDevice": "System"
 }
