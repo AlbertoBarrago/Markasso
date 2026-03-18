@@ -326,6 +326,9 @@ src/
 
 ## Changelog
 
+### v2.8.0
+- **Brand logo** — Markasso logo icon added to the welcome screen, thanks to https://github.com/lc-d. 
+
 ### v2.7.0
 - **Multi-language i18n** — UI fully localised in 8 languages: Italiano, English, Español, Français, Deutsch, Português, 中文, 日本語; language persists in `localStorage` and is selectable from the hamburger menu
 
