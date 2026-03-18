@@ -94,11 +94,21 @@ export class ArrowTool implements Tool {
       }
     }
 
+    // When snapped to a start element, dynamically compute border point facing cursor
+    let previewStartX = this.startX;
+    let previewStartY = this.startY;
+    if (this.startElementId) {
+      const startEl = scene.elements.find((el) => el.id === this.startElementId);
+      if (startEl) {
+        [previewStartX, previewStartY] = getElementBorderPoint(startEl, x2, y2);
+      }
+    }
+
     this.preview = {
       id: '__preview__',
       type: 'arrow',
-      x: this.startX,
-      y: this.startY,
+      x: previewStartX,
+      y: previewStartY,
       x2,
       y2,
       strokeColor: appState.strokeColor,

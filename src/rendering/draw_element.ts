@@ -399,7 +399,7 @@ function drawText(
   const drawX = textAlign === 'center' ? x + elWidth / 2
     : textAlign === 'right'  ? x + elWidth
     : x;
-  const lines = buildWrappedLines(ctx, content, elWidth - 8);
+  const lines = buildWrappedLines(ctx, content, elWidth);
   for (let i = 0; i < lines.length; i++) {
     ctx.fillText(lines[i] ?? '', drawX, y + i * fontSize * 1.2);
   }

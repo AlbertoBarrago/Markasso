@@ -79,19 +79,6 @@ export class SelectTool implements Tool {
     const screenX = e.clientX - rect.left;
     const screenY = e.clientY - rect.top;
 
-    // If justCreatedText flag is set, always start marquee mode
-    // This allows user to drag and select the text area immediately after creating text
-    if (scene.appState.justCreatedText) {
-      ctx.history.dispatch({ type: 'CLEAR_JUST_CREATED_TEXT' });
-      this.dragMode = 'marquee';
-      this.marqueeActive = true;
-      this.marqueeX1 = screenX;
-      this.marqueeY1 = screenY;
-      this.marqueeX2 = screenX;
-      this.marqueeY2 = screenY;
-      return;
-    }
-
     // 1. Check endpoint handles (single line/arrow selected)
     if (selectedEls.length === 1) {
       const el = selectedEls[0]!;

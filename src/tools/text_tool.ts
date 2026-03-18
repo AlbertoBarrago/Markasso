@@ -143,13 +143,12 @@ export class TextTool implements Tool {
             strokeWidth: 0,
             opacity: appState.opacity,
             roughness: 0,
+            textAlign: appState.textAlign,
           } satisfies TextElement,
         });
-        // Set flag to enable marquee drag on next select tool interaction
         if (!ctx.history.present.appState.toolLocked) {
           ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
         }
-        ctx.history.dispatch({ type: 'SET_JUST_CREATED_TEXT' });
       }
     };
 
@@ -221,8 +220,12 @@ export class TextTool implements Tool {
 
     const grow = (): void => {
       const lines = ta.value.split('\n');
-      mirror.textContent = lines.reduce((a, b) => a.length >= b.length ? a : b, '') || ' ';
-      ta.style.width  = `${mirror.offsetWidth + 2}px`;
+      let maxWidth = 0;
+      for (const line of lines) {
+        mirror.textContent = line || ' ';
+        maxWidth = Math.max(maxWidth, mirror.offsetWidth);
+      }
+      ta.style.width  = `${maxWidth + 4}px`;
       ta.style.height = `${scaledFont * 1.2 * lines.length}px`;
     };
     ta.addEventListener('input', grow);
@@ -259,7 +262,6 @@ export class TextTool implements Tool {
         if (!ctx.history.present.appState.toolLocked) {
           ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
         }
-        ctx.history.dispatch({ type: 'SET_JUST_CREATED_TEXT' });
       } else {
         mirror.remove();
       }
@@ -369,7 +371,6 @@ export class TextTool implements Tool {
         if (!ctx.history.present.appState.toolLocked) {
           ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
         }
-        ctx.history.dispatch({ type: 'SET_JUST_CREATED_TEXT' });
       }
     };
 
@@ -424,37 +425,62 @@ export class TextTool implements Tool {
     const ta = document.createElement('textarea');
     ta.value = el.content;
 
-    ta.style.position = 'fixed';
-    ta.style.left = `${screenX + canvasRect.left}px`;
-    ta.style.top = `${screenY + canvasRect.top}px`;
-    ta.style.width = `${el.width * viewport.zoom}px`;
-    ta.style.height = `${el.height * viewport.zoom}px`;
-    ta.style.minWidth = `${el.width * viewport.zoom}px`;
-    ta.style.minHeight = `${el.height * viewport.zoom}px`;
-    ta.style.font = `${el.fontSize * viewport.zoom}px ${el.fontFamily}`;
-    ta.style.color = el.strokeColor;
+    ta.style.position   = 'fixed';
+    ta.style.left       = `${screenX + canvasRect.left}px`;
+    ta.style.top        = `${screenY + canvasRect.top}px`;
+    ta.style.width      = `${el.width * viewport.zoom}px`;
+    ta.style.minWidth   = `${el.width * viewport.zoom}px`;
+    ta.style.font       = `${el.fontSize * viewport.zoom}px ${el.fontFamily}`;
+    ta.style.color      = el.strokeColor;
     ta.style.caretColor = 'var(--accent, #7c63d4)';
     ta.style.lineHeight = '1.2';
-    ta.style.padding = '4px';
-    ta.style.margin = '0';
-    ta.style.border = 'none';
-    ta.style.outline = 'none';
-    ta.style.boxShadow = 'none';
-    ta.style.resize = 'none';
-    ta.style.overflow = 'hidden';
-    ta.style.background = 'transparent';
-    ta.style.zIndex = '1000';
-    ta.style.whiteSpace = 'pre-wrap';
-    ta.style.wordBreak = 'break-word';
+    ta.style.margin     = '0';
+    ta.style.outline    = 'none';
+    ta.style.boxShadow  = 'none';
+    ta.style.resize     = 'none';
+    ta.style.overflow   = 'hidden';
+    ta.style.zIndex     = '1000';
+
+    if (el.isCode) {
+      ta.style.fontFamily   = '"Courier New", monospace';
+      ta.style.background   = 'rgba(0,0,0,0.55)';
+      ta.style.border       = '1px dashed rgba(255,255,255,0.3)';
+      ta.style.padding      = '10px';
+      ta.style.whiteSpace   = 'pre';
+      ta.style.wordBreak    = 'normal';
+      ta.style.overflowWrap = 'normal';
+    } else {
+      ta.style.background   = 'transparent';
+      ta.style.border       = 'none';
+      ta.style.padding      = '4px';
+      ta.style.whiteSpace   = 'pre-wrap';
+      ta.style.wordBreak    = 'break-word';
+      ta.style.textAlign    = el.textAlign ?? 'left';
+    }
+
+    // Auto-grow height as user types
+    const grow = (): void => {
+      ta.style.height = '0';
+      ta.style.height = `${ta.scrollHeight}px`;
+    };
+    ta.addEventListener('input', grow);
+    // Trigger initial grow to show all existing content
+    setTimeout(grow, 0);
 
     const doCommit = (): void => {
       const content = ta.value.trim();
+      const newHeight = ta.offsetHeight / viewport.zoom;
       ta.remove();
       if (this.textarea === ta) { this.textarea = null; this.commitFn = null; }
       this.editingId = null;
 
       if (content) {
         ctx.history.dispatch({ type: 'EDIT_TEXT', id: el.id, content });
+        // Update height if content grew/shrank
+        const clampedHeight = Math.max(newHeight, el.fontSize);
+        if (Math.abs(clampedHeight - el.height) > 1) {
+          ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: el.id, height: clampedHeight });
+        }
       } else {
         ctx.history.dispatch({ type: 'DELETE_ELEMENTS', ids: [el.id] });
       }
