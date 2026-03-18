@@ -329,6 +329,8 @@ src/
 ---
 
 ## Changelog
+### v2.9.0
+- **Theme** — Added theme light, dark and system on settings menu
 
 ### v2.8.0
 - **Brand logo** — Markasso logo icon added to the welcome screen, thanks to https://github.com/lc-d. 
