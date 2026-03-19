@@ -725,6 +725,21 @@ html, body {
   letter-spacing: 1px;
 }
 
+.flex-col {
+  flex-direction: column;
+}
+
+.wl-brand-setting-menu {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+.wl-brand-setting-menu .wl-name {
+  font-size: 1.0rem;
+}
+
 .wl-tagline {
   font-size: 13px;
   line-height: 1.6;
@@ -921,7 +936,11 @@ html, body {
 .menu-theme-toggle {
   display: flex;
   gap: 4px;
+  width: 100%;
   padding: 0 10px 8px;
+}
+.sp-lang-wrapper.menu-theme-toggle {
+  padding: 0 8px;
 }
 .menu-theme-btn {
   flex: 1;
@@ -944,7 +963,7 @@ html, body {
 
 /* ── Light theme overrides ────────────────────────────────────────────────── */
 [data-theme="light"] {
-  --bg-island:     rgba(224, 210, 196, 0.97);
+  --bg-island: rgba(241, 236, 234, 0.97);
   --island-border: rgba(80,28,18,0.18);
   --island-shadow: 0 2px 24px rgba(60,10,5,0.12), 0 0 0 1px rgba(80,28,18,0.1);
   --bg-hover:      rgba(80,28,18,0.08);

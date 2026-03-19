@@ -121,20 +121,29 @@ export function initSettings(
 
   panel.innerHTML = `
     <div class="menu-body">
-
-      <button class="menu-item" id="menu-open">
-        ${ICONS.open}<span class="menu-item-label">${t('menuOpen')}</span>
-      </button>
-      <button class="menu-item" id="menu-save">
-        ${ICONS.save}<span class="menu-item-label">${t('menuSave')}</span>
-      </button>
-      <button class="menu-item" id="menu-export-png">
-        ${ICONS.png}<span class="menu-item-label">${t('exportPNG')}</span>
-      </button>
-      <button class="menu-item" id="menu-export-svg">
-        ${ICONS.svg}<span class="menu-item-label">${t('exportSVG')}</span>
-      </button>
-
+      <ul>
+        <li>
+          <button class="menu-item" id="menu-open">
+            ${ICONS.open}<span class="menu-item-label">${t('menuOpen')}</span>
+          </button>
+        </li>
+        <li>
+          <button class="menu-item" id="menu-save">
+            ${ICONS.save}<span class="menu-item-label">${t('menuSave')}</span>
+          </button>
+        </li>
+        <li>
+          <button class="menu-item" id="menu-export-png">
+            ${ICONS.png}<span class="menu-item-label">${t('exportPNG')}</span>
+          </button>
+        </li>
+        <li>
+          <button class="menu-item" id="menu-export-svg">
+            ${ICONS.svg}<span class="menu-item-label">${t('exportSVG')}</span>
+          </button>
+        </li>
+      </ul>
+      
       <div class="menu-divider"></div>
 
       <button class="menu-item" id="menu-guide">
@@ -183,18 +192,28 @@ export function initSettings(
         <button class="menu-theme-btn" data-mode="dark"   title="${t('themeDark')}">${ICONS.moon}${t('themeDark')}</button>
         <button class="menu-theme-btn" data-mode="device" title="${t('themeDevice')}">${ICONS.device}${t('themeDevice')}</button>
       </div>
-
+     <div class="menu-divider"></div>
+     <div class="flex-col">
+       <div class="menu-section-label">${t('language')}</div>
+       <div class="sp-lang-wrapper menu-theme-toggle ">
+            <select class="sp-lang-select" id="sp-lang-select">
+              ${(Object.entries(LOCALES) as [Locale, string][]).map(([code, name]) =>
+        `<option value="${code}"${getLocale() === code ? ' selected' : ''}>${name}</option>`
+      ).join('')}
+            </select>
+        </div>
+        </div>
     </div>
-    <div class="menu-footer">
-      <div class="sp-lang-wrapper">
-        <select class="sp-lang-select" id="sp-lang-select">
-          ${(Object.entries(LOCALES) as [Locale, string][]).map(([code, name]) =>
-            `<option value="${code}"${getLocale() === code ? ' selected' : ''}>${name}</option>`
-          ).join('')}
-        </select>
+    <div class="menu-divider"></div>
+    <footer class="menu-footer">
+      <div class="wl-brand-setting-menu">
+         <img width="32" height="32" src="markasso-logo-icon.svg" alt=""/>
+         <small class="wl-name">Markasso</small>
+         <span class="sp-version">v${pkg.version}</span>
       </div>
-      <span class="sp-version">v${pkg.version}</span>
-    </div>
+    </footer>
+    
+     
   `;
 
   // ── Panel state ──────────────────────────────────────────────────────────
