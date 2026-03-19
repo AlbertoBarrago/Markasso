@@ -82,5 +82,6 @@
   "theme": "Tema",
   "themeLight": "Chiaro",
   "themeDark": "Scuro",
-  "themeDevice": "Sistema"
+  "themeDevice": "Sistema",
+  "language": "Lingua"
 }
