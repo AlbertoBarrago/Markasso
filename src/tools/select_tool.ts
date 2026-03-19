@@ -1,10 +1,22 @@
 import type { Tool, ToolContext } from './tool';
 import type { Element } from '../elements/element';
 import type { HandlePosition } from '../rendering/draw_selection';
-import { getElementBounds, hitTestHandle, getSelectionHandles } from '../rendering/draw_selection';
+import {
+  getElementBounds,
+  getElementBorderPoint,
+  resolveArrowEndpoints,
+  hitTestHandle,
+  getSelectionHandles,
+  getRotationHandleScreen,
+  getElementCenter,
+  hitTestEndpoint,
+  ROTATION_HANDLE_R,
+} from '../rendering/draw_selection';
 import { worldToScreen } from '../core/viewport';
 
-type DragMode = 'none' | 'move' | 'marquee' | 'resize';
+type DragMode = 'none' | 'move' | 'marquee' | 'resize' | 'rotate' | 'endpoint';
+
+const SNAP_RADIUS_PX = 20;
 
 const HANDLE_CURSORS: Record<HandlePosition, string> = {
   nw: 'nw-resize', n: 'ns-resize', ne: 'ne-resize',
@@ -16,6 +28,12 @@ export class SelectTool implements Tool {
   private dragMode: DragMode = 'none';
   private lastWorldX = 0;
   private lastWorldY = 0;
+
+  /** ID of the element currently under the cursor (for hover highlight), or null */
+  hoveredId: string | null = null;
+
+  /** The groupId of the currently "whole-group selected" group, or null */
+  activeGroupId: string | null = null;
 
   private marqueeX1 = 0;
   private marqueeY1 = 0;
@@ -29,6 +47,22 @@ export class SelectTool implements Tool {
   private resizeAnchorX = 0;
   private resizeAnchorY = 0;
 
+  // Endpoint drag state
+  private endpointSide: 'start' | 'end' | null = null;
+  private endpointElId: string | null = null;
+  private endpointSnapTarget: { worldX: number; worldY: number; elementId: string } | null = null;
+
+  /** Exposed for canvas_view to draw a snap indicator */
+  endpointSnapIndicator: { worldX: number; worldY: number } | null = null;
+  /** Exposed for canvas_view to draw a hover highlight on the snap target element */
+  endpointSnapElementId: string | null = null;
+
+  // Rotation state
+  private rotateCenter: [number, number] = [0, 0];
+  private rotateInitialAngle = 0;
+  private rotateInitialRotation = 0;
+  private rotateElId: string | null = null;
+
   // Exposed for renderer to draw marquee preview
   marqueeActive = false;
   getMarquee(): [number, number, number, number] {
@@ -41,12 +75,49 @@ export class SelectTool implements Tool {
 
     const scene = ctx.history.present;
     const selectedEls = scene.elements.filter((el) => scene.selectedIds.has(el.id));
+    const rect = ctx.canvas.getBoundingClientRect();
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
 
-    // 1. Check if a resize handle was clicked
+    // 1. Check endpoint handles (single line/arrow selected)
+    if (selectedEls.length === 1) {
+      const el = selectedEls[0]!;
+      if (el.type === 'line' || el.type === 'arrow') {
+        const endHit = hitTestEndpoint(el, scene.viewport, screenX, screenY);
+        if (endHit) {
+          this.dragMode = 'endpoint';
+          this.endpointSide = endHit;
+          this.endpointElId = el.id;
+          return;
+        }
+      }
+    }
+
+    // 2. Check rotation handle
     if (selectedEls.length > 0) {
-      const rect = ctx.canvas.getBoundingClientRect();
-      const screenX = e.clientX - rect.left;
-      const screenY = e.clientY - rect.top;
+      const rotHandlePos = getRotationHandleScreen(selectedEls, scene.viewport);
+      if (rotHandlePos) {
+        const dist = Math.hypot(screenX - rotHandlePos.screenX, screenY - rotHandlePos.screenY);
+        if (dist <= ROTATION_HANDLE_R + 4) {
+          // Only support rotation for single element
+          if (selectedEls.length === 1) {
+            const el = selectedEls[0]!;
+            this.dragMode = 'rotate';
+            this.rotateCenter = getElementCenter(el);
+            this.rotateInitialAngle = Math.atan2(
+              worldY - this.rotateCenter[1],
+              worldX - this.rotateCenter[0],
+            );
+            this.rotateInitialRotation = el.rotation ?? 0;
+            this.rotateElId = el.id;
+          }
+          return;
+        }
+      }
+    }
+
+    // 3. Check if a resize handle was clicked
+    if (selectedEls.length > 0) {
       const handles = getSelectionHandles(selectedEls, scene.viewport);
       const hitHandle = hitTestHandle(handles, screenX, screenY);
 
@@ -75,26 +146,111 @@ export class SelectTool implements Tool {
       }
     }
 
-    // 2. Hit-test elements
+    // 4. Hit-test elements
     const hit = hitTest(scene.elements, worldX, worldY);
     if (hit) {
-      if (!scene.selectedIds.has(hit.id)) {
-        ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
+      if (e.shiftKey) {
+        // Shift+click: toggle element in/out of selection
+        const currentIds = [...scene.selectedIds];
+        const newIds = scene.selectedIds.has(hit.id)
+          ? currentIds.filter((id) => id !== hit.id)
+          : [...currentIds, hit.id];
+        if (newIds.length > 0) {
+          ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
+        } else {
+          ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
+        }
+        this.dragMode = 'none';
+      } else {
+        // Group-aware selection
+        if (hit.groupId) {
+          if (this.activeGroupId === hit.groupId) {
+            // Inside group: select just this element
+            ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
+            this.dragMode = hit.locked ? 'none' : 'move';
+          } else {
+            // Select whole group
+            const groupIds = scene.elements
+              .filter((el) => el.groupId === hit.groupId)
+              .map((el) => el.id);
+            ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: groupIds });
+            this.activeGroupId = hit.groupId;
+            this.dragMode = hit.locked ? 'none' : 'move';
+          }
+        } else {
+          if (!scene.selectedIds.has(hit.id)) {
+            ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
+          }
+          this.activeGroupId = null;
+          this.dragMode = hit.locked ? 'none' : 'move';
+        }
       }
-      this.dragMode = 'move';
     } else {
       ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
+      this.activeGroupId = null;
       this.dragMode = 'marquee';
       this.marqueeActive = true;
-      const rect = ctx.canvas.getBoundingClientRect();
-      this.marqueeX1 = e.clientX - rect.left;
-      this.marqueeY1 = e.clientY - rect.top;
-      this.marqueeX2 = this.marqueeX1;
-      this.marqueeY2 = this.marqueeY1;
+      this.marqueeX1 = screenX;
+      this.marqueeY1 = screenY;
+      this.marqueeX2 = screenX;
+      this.marqueeY2 = screenY;
     }
   }
 
   onMouseMove(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+    if (this.dragMode === 'endpoint') {
+      const scene = ctx.history.present;
+      const el = scene.elements.find((el) => el.id === this.endpointElId);
+      if (el && (el.type === 'line' || el.type === 'arrow') && this.endpointSide) {
+        // Determine the "other end" position for computing border facing direction
+        const resolved = resolveArrowEndpoints(el, scene.elements);
+        const otherX = this.endpointSide === 'start' ? resolved.x2 : resolved.x;
+        const otherY = this.endpointSide === 'start' ? resolved.y2 : resolved.y;
+
+        // Check for snap to element perimeter
+        const snapRadius = SNAP_RADIUS_PX / scene.viewport.zoom;
+        let snapTarget: { worldX: number; worldY: number; elementId: string } | null = null;
+        for (const candidate of scene.elements) {
+          if (candidate.id === el.id) continue;
+          if (candidate.type === 'line' || candidate.type === 'arrow') continue;
+          const b = getElementBounds(candidate);
+          const nearX = Math.max(b.x, Math.min(b.x + b.w, worldX));
+          const nearY = Math.max(b.y, Math.min(b.y + b.h, worldY));
+          if (Math.hypot(worldX - nearX, worldY - nearY) <= snapRadius) {
+            // Border point facing toward the other end of the arrow
+            const [bx, by] = getElementBorderPoint(candidate, otherX, otherY);
+            snapTarget = { worldX: bx, worldY: by, elementId: candidate.id };
+            break;
+          }
+        }
+        this.endpointSnapTarget = snapTarget;
+        this.endpointSnapIndicator = snapTarget ? { worldX: snapTarget.worldX, worldY: snapTarget.worldY } : null;
+        this.endpointSnapElementId = snapTarget ? snapTarget.elementId : null;
+
+        const resolvedX = snapTarget ? snapTarget.worldX : worldX;
+        const resolvedY = snapTarget ? snapTarget.worldY : worldY;
+
+        if (this.endpointSide === 'start') {
+          ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: el.id, x: resolvedX, y: resolvedY });
+        } else {
+          ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: el.id, x2: resolvedX, y2: resolvedY });
+        }
+      }
+      ctx.onPreviewUpdate?.();
+      return;
+    }
+
+    if (this.dragMode === 'rotate') {
+      const [cx, cy] = this.rotateCenter;
+      const angle = Math.atan2(worldY - cy, worldX - cx);
+      const rotation = this.rotateInitialRotation + (angle - this.rotateInitialAngle);
+      if (this.rotateElId) {
+        ctx.history.dispatch({ type: 'SET_ROTATION', id: this.rotateElId, rotation });
+      }
+      ctx.onPreviewUpdate?.();
+      return;
+    }
+
     if (this.dragMode === 'resize') {
       const scene = ctx.history.present;
       if (
@@ -141,7 +297,11 @@ export class SelectTool implements Tool {
     if (this.dragMode === 'move') {
       const dx = worldX - this.lastWorldX;
       const dy = worldY - this.lastWorldY;
-      const ids = [...ctx.history.present.selectedIds];
+      const { elements, selectedIds } = ctx.history.present;
+      const ids = [...selectedIds].filter((id) => {
+        const el = elements.find((e) => e.id === id);
+        return el && !el.locked;
+      });
       for (const id of ids) {
         ctx.history.dispatch({ type: 'MOVE_ELEMENT', id, dx, dy });
       }
@@ -155,7 +315,19 @@ export class SelectTool implements Tool {
       this.marqueeX2 = e.clientX - rect.left;
       this.marqueeY2 = e.clientY - rect.top;
       ctx.onPreviewUpdate?.();
+      return;
     }
+
+    // dragMode === 'none': update hover highlight
+    if (this.dragMode === 'none') {
+      const scene = ctx.history.present;
+      const hit = hitTest(scene.elements, worldX, worldY);
+      this.hoveredId = hit ? hit.id : null;
+    }
+  }
+
+  onMouseLeave(): void {
+    this.hoveredId = null;
   }
 
   onMouseUp(_e: MouseEvent, _worldX: number, _worldY: number, ctx: ToolContext): void {
@@ -183,25 +355,106 @@ export class SelectTool implements Tool {
       if (ids.length > 0) ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids });
     }
 
+    // Commit endpoint connection on mouseup
+    if (this.dragMode === 'endpoint' && this.endpointElId && this.endpointSide) {
+      const snap = this.endpointSnapTarget;
+      if (this.endpointSide === 'start') {
+        ctx.history.dispatch({
+          type: 'RESIZE_ELEMENT',
+          id: this.endpointElId,
+          startElementId: snap ? snap.elementId : null,
+        });
+      } else {
+        ctx.history.dispatch({
+          type: 'RESIZE_ELEMENT',
+          id: this.endpointElId,
+          endElementId: snap ? snap.elementId : null,
+        });
+      }
+    }
+
+    this.endpointSnapTarget = null;
+    this.endpointSnapIndicator = null;
+    this.endpointSnapElementId = null;
     this.dragMode = 'none';
     this.resizeHandle = null;
     this.resizeOrigEl = null;
     this.resizeOrigBounds = null;
+    this.endpointSide = null;
+    this.endpointElId = null;
+    this.rotateElId = null;
   }
 
   onKeyDown(e: KeyboardEvent, ctx: ToolContext): void {
+    if (e.key === 'Escape') {
+      if (this.activeGroupId) {
+        // Exit entered group: re-select whole group
+        const scene = ctx.history.present;
+        const groupIds = scene.elements
+          .filter((el) => el.groupId === this.activeGroupId)
+          .map((el) => el.id);
+        if (groupIds.length > 0) {
+          ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: groupIds });
+        } else {
+          ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
+        }
+        this.activeGroupId = null;
+      } else {
+        ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
+      }
+      return;
+    }
+
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      const ids = [...ctx.history.present.selectedIds];
+      const scene = ctx.history.present;
+      // Don't delete locked elements
+      const ids = [...scene.selectedIds].filter((id) => {
+        const el = scene.elements.find((e) => e.id === id);
+        return el && !el.locked;
+      });
       if (ids.length > 0) ctx.history.dispatch({ type: 'DELETE_ELEMENTS', ids });
+      return;
+    }
+
+    // Arrow key nudge — 1px normally, 10px with Shift
+    const NUDGE = e.shiftKey ? 10 : 1;
+    let dx = 0, dy = 0;
+    if (e.key === 'ArrowLeft')  dx = -NUDGE;
+    if (e.key === 'ArrowRight') dx =  NUDGE;
+    if (e.key === 'ArrowUp')    dy = -NUDGE;
+    if (e.key === 'ArrowDown')  dy =  NUDGE;
+    if (dx !== 0 || dy !== 0) {
+      e.preventDefault();
+      const ids = [...ctx.history.present.selectedIds];
+      for (const id of ids) {
+        ctx.history.dispatch({ type: 'MOVE_ELEMENT', id, dx, dy });
+      }
     }
   }
 
   getCursor(worldX: number, worldY: number, ctx: ToolContext): string {
     const scene = ctx.history.present;
     const selectedEls = scene.elements.filter((el) => scene.selectedIds.has(el.id));
+    const [screenX, screenY] = worldToScreen(scene.viewport, worldX, worldY);
 
     if (selectedEls.length > 0) {
-      const [screenX, screenY] = worldToScreen(scene.viewport, worldX, worldY);
+      // Check endpoint handles for single line/arrow
+      if (selectedEls.length === 1) {
+        const el = selectedEls[0]!;
+        if (el.type === 'line' || el.type === 'arrow') {
+          const endHit = hitTestEndpoint(el, scene.viewport, screenX, screenY);
+          if (endHit) return 'crosshair';
+        }
+      }
+
+      // Check rotation handle
+      const rotHandlePos = getRotationHandleScreen(selectedEls, scene.viewport);
+      if (rotHandlePos) {
+        const dist = Math.hypot(screenX - rotHandlePos.screenX, screenY - rotHandlePos.screenY);
+        if (dist <= ROTATION_HANDLE_R + 4) return 'grab';
+      }
+
+      // Check resize handles
       const handles = getSelectionHandles(selectedEls, scene.viewport);
       const hit = hitTestHandle(handles, screenX, screenY);
       if (hit) return HANDLE_CURSORS[hit];
@@ -284,7 +537,9 @@ function scaleElement(
       const origB = getElementBounds(el);
       const fontScale = origB.h > 0 ? newH / origB.h : 1;
       const fontSize = Math.max(1, Math.round(el.fontSize * fontScale));
-      return { x: newX, y: newY, width: newW, height: newH, fontSize };
+      // Text width scales with font size, not with dragged width
+      const scaledWidth = el.width * fontScale;
+      return { x: newX, y: newY, width: scaledWidth, height: newH, fontSize };
     }
     case 'line':
     case 'arrow': {
@@ -308,6 +563,8 @@ function scaleElement(
       ] as const);
       return { x: newX, y: newY, points };
     }
+    case 'image':
+      return { x: newX, y: newY, width: newW, height: newH };
   }
 }
 
@@ -336,30 +593,45 @@ function hitTest(elements: ReadonlyArray<Element>, wx: number, wy: number): Elem
 
 function hitTestElement(el: Element, wx: number, wy: number): boolean {
   const PAD = 4;
+
+  // For rotated elements, inverse-rotate the test point into element's local space
+  let lx = wx;
+  let ly = wy;
+  if (el.rotation) {
+    const [cx, cy] = getElementCenter(el);
+    const cos = Math.cos(-el.rotation);
+    const sin = Math.sin(-el.rotation);
+    const dx = wx - cx;
+    const dy = wy - cy;
+    lx = cx + dx * cos - dy * sin;
+    ly = cy + dx * sin + dy * cos;
+  }
+
   switch (el.type) {
     case 'rectangle':
-    case 'text': {
+    case 'text':
+    case 'image': {
       const x = el.width < 0 ? el.x + el.width : el.x;
       const y = el.height < 0 ? el.y + el.height : el.y;
       const w = Math.abs(el.width);
       const h = Math.abs(el.height);
-      return wx >= x - PAD && wx <= x + w + PAD && wy >= y - PAD && wy <= y + h + PAD;
+      return lx >= x - PAD && lx <= x + w + PAD && ly >= y - PAD && ly <= y + h + PAD;
     }
     case 'ellipse': {
       const cx = el.x + el.width / 2;
       const cy = el.y + el.height / 2;
       const rx = Math.abs(el.width / 2) + PAD;
       const ry = Math.abs(el.height / 2) + PAD;
-      return ((wx - cx) / rx) ** 2 + ((wy - cy) / ry) ** 2 <= 1;
+      return ((lx - cx) / rx) ** 2 + ((ly - cy) / ry) ** 2 <= 1;
     }
     case 'line':
     case 'arrow':
-      return distToSegment(wx, wy, el.x, el.y, el.x2, el.y2) < el.strokeWidth / 2 + PAD;
+      return distToSegment(lx, ly, el.x, el.y, el.x2, el.y2) < el.strokeWidth / 2 + PAD;
     case 'freehand': {
       for (let i = 1; i < el.points.length; i++) {
         const p1 = el.points[i - 1]!;
         const p2 = el.points[i]!;
-        if (distToSegment(wx, wy, p1[0], p1[1], p2[0], p2[1]) < el.strokeWidth / 2 + PAD) return true;
+        if (distToSegment(lx, ly, p1[0], p1[1], p2[0], p2[1]) < el.strokeWidth / 2 + PAD) return true;
       }
       return false;
     }
@@ -373,3 +645,4 @@ function distToSegment(px: number, py: number, x1: number, y1: number, x2: numbe
   const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
   return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
 }
+

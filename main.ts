@@ -1,10 +1,14 @@
 import { History } from './src/engine/history';
 import { createScene } from './src/core/scene';
+import { loadSession, initSession } from './src/io/session';
 import { initCanvasView } from './src/ui/canvas_view';
 import { initToolbar } from './src/ui/toolbar';
 import { initShortcuts } from './src/ui/shortcuts';
 import { initSettings, loadSettings, applySettings } from './src/ui/settings';
-import { initPropertiesPanel } from './src/ui/properties_panel';
+import { initContextPanel } from './src/ui/context_panel';
+import { initImageImport } from './src/ui/image_import';
+import { initMobileActionBar } from './src/ui/mobile_action_bar';
+import { initWelcome } from './src/ui/welcome';
 
 function bootstrap(): void {
   const appEl    = document.getElementById('app')       as HTMLElement;
@@ -16,16 +20,24 @@ function bootstrap(): void {
     throw new Error('Missing required DOM elements');
   }
 
-  const history = new History(createScene());
+  const session = loadSession();
+  const initialScene = session
+    ? { ...createScene(), elements: session.elements, viewport: session.viewport }
+    : createScene();
+  const history = new History(initialScene);
 
   // Restore persisted UI settings before first paint
   applySettings(appEl, loadSettings());
 
-  initShortcuts(history);
   initToolbar(toolbar, history);
   initSettings(appEl, toolbar, history);
-  initPropertiesPanel(workspace, history);
-  initCanvasView(canvas, history);
+  initContextPanel(workspace, history);
+  initImageImport(workspace, history);
+  initMobileActionBar(workspace, history);
+  const { selectTool } = initCanvasView(canvas, history);
+  initShortcuts(history, selectTool);
+  initSession(history);
+  if (!session) initWelcome(appEl, history);
 }
 
 bootstrap();

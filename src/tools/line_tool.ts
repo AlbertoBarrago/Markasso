@@ -9,9 +9,9 @@ export class LineTool implements Tool {
 
   onMouseDown(_e: MouseEvent, worldX: number, worldY: number, _ctx: ToolContext): void {
     this.drawing = true;
+    this.preview = null;
     this.startX = worldX;
     this.startY = worldY;
-    this.preview = null;
   }
 
   onMouseMove(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
@@ -19,6 +19,7 @@ export class LineTool implements Tool {
     const { appState } = ctx.history.present;
     let [x2, y2] = [worldX, worldY];
     if (e.shiftKey) [x2, y2] = snap45(this.startX, this.startY, worldX, worldY);
+
     this.preview = {
       id: '__preview__',
       type: 'line',
@@ -31,6 +32,7 @@ export class LineTool implements Tool {
       strokeWidth: appState.strokeWidth,
       opacity: appState.opacity,
       roughness: appState.roughness,
+      strokeStyle: appState.strokeStyle,
     };
     ctx.onPreviewUpdate?.();
   }
@@ -42,27 +44,30 @@ export class LineTool implements Tool {
 
     let [x2, y2] = [worldX, worldY];
     if (e.shiftKey) [x2, y2] = snap45(this.startX, this.startY, worldX, worldY);
+
     const dx = x2 - this.startX, dy = y2 - this.startY;
     if (Math.abs(dx) < 2 && Math.abs(dy) < 2) return;
 
     const { appState } = ctx.history.present;
-    ctx.history.dispatch({
-      type: 'CREATE_ELEMENT',
-      element: {
-        id: crypto.randomUUID(),
-        type: 'line',
-        x: this.startX,
-        y: this.startY,
-        x2,
-        y2,
-        strokeColor: appState.strokeColor,
-        fillColor: 'transparent',
-        strokeWidth: appState.strokeWidth,
-        opacity: appState.opacity,
-        roughness: appState.roughness,
-      },
-    });
-    ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select' });
+    const element: LineElement = {
+      id: crypto.randomUUID(),
+      type: 'line',
+      x: this.startX,
+      y: this.startY,
+      x2,
+      y2,
+      strokeColor: appState.strokeColor,
+      fillColor: 'transparent',
+      strokeWidth: appState.strokeWidth,
+      opacity: appState.opacity,
+      roughness: appState.roughness,
+      strokeStyle: appState.strokeStyle,
+    };
+
+    ctx.history.dispatch({ type: 'CREATE_ELEMENT', element });
+    if (!ctx.history.present.appState.toolLocked) {
+      ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
+    }
   }
 
   getCursor(): string {

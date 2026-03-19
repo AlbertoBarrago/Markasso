@@ -1,6 +1,7 @@
 import type { ElementType } from '../elements/element';
 
-export type ActiveTool = 'select' | ElementType;
+export type DrawableTool = Exclude<ElementType, 'image'>;
+export type ActiveTool = 'select' | 'hand' | 'eraser' | DrawableTool;
 export type GridType   = 'dot' | 'line' | 'mm';
 
 export interface AppState {
@@ -10,11 +11,17 @@ export interface AppState {
   readonly strokeWidth: number;
   readonly fontSize:    number;
   readonly fontFamily:  string;
+  readonly textAlign:   'left' | 'center' | 'right';
+  readonly textMode:    'text' | 'code';
   readonly opacity:     number;
   readonly roughness:   number;
   readonly gridVisible: boolean;
   readonly gridSize:    number;
   readonly gridType:    GridType;
+  readonly strokeStyle: 'solid' | 'dashed' | 'dotted';
+  /** Flag: text was just created, next drag should create marquee */
+  readonly justCreatedText: boolean;
+  readonly toolLocked: boolean;
 }
 
 export function createAppState(): AppState {
@@ -22,13 +29,18 @@ export function createAppState(): AppState {
     activeTool:  'select',
     strokeColor: '#e2e2ef',   // light stroke for dark canvas
     fillColor:   'transparent',
-    strokeWidth: 2,
+    strokeWidth: 1,
     fontSize:    20,
-    fontFamily:  'Virgil, cursive',
+    fontFamily:  'Arial, sans-serif',
+    textAlign:   'left',
+    textMode:    'text',
     opacity:     1,
-    roughness:   1,
-    gridVisible: true,
+    roughness:   0,
+    gridVisible: false,
     gridSize:    20,
     gridType:    'dot',
+    strokeStyle: 'solid',
+    justCreatedText: false,
+    toolLocked: false,
   };
 }

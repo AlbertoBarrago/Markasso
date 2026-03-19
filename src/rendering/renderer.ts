@@ -4,12 +4,11 @@ import { drawGrid } from './draw_grid';
 import { drawElement } from './draw_element';
 import { drawSelection } from './draw_selection';
 
-const CANVAS_BG = '#13131f';
-
 export function render(
   ctx: CanvasRenderingContext2D,
   scene: Scene,
-  canvas: HTMLCanvasElement
+  canvas: HTMLCanvasElement,
+  editingId?: string | null,
 ): void {
   const { viewport, appState } = scene;
   const { width, height } = canvas;
@@ -18,8 +17,13 @@ export function render(
   ctx.resetTransform();
   ctx.clearRect(0, 0, width, height);
 
-  ctx.fillStyle = CANVAS_BG;
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg').trim() || '#141414';
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, width, height);
+
+  // Enable anti-aliasing for smooth curves
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
   if (appState.gridVisible) {
     drawGrid(ctx, viewport, appState.gridSize, appState.gridType, width, height);
@@ -34,7 +38,9 @@ export function render(
   );
 
   for (const el of scene.elements) {
-    drawElement(ctx, el);
+    if (editingId && el.id === editingId) continue;
+    if (el.visible === false) continue;
+    drawElement(ctx, el, scene.elements);
   }
 
   const selected = getSelectedElements(scene);
