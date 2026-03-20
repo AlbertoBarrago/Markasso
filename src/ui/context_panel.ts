@@ -382,7 +382,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       // ── Tool mode: sync appState defaults, show only relevant sections ──────
       const { activeTool, strokeColor, fillColor, strokeWidth, strokeStyle, roughness, opacity, fontSize, fontFamily } = scene.appState;
       const isText = activeTool === 'text';
-      const hasFill = activeTool === 'rectangle' || activeTool === 'ellipse';
+      const hasFill = activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'text';
       const hasStyle = activeTool !== 'text' && activeTool !== 'freehand';
 
       panel.querySelectorAll<HTMLButtonElement>('#cp-stroke-swatches .cp-color-swatch').forEach((sw) => {
@@ -483,7 +483,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     // Hide sections for text/images
     panel.querySelector('#cp-stroke-swatches')!.parentElement!.parentElement!.style.display = allImage ? 'none' : '';
     (panel.querySelector('#cp-stroke-swatches')!.parentElement!.parentElement!.querySelector('.cp-label') as HTMLElement).textContent = allText ? t('color') : t('stroke');
-    panel.querySelector('#cp-fill-swatches')!.parentElement!.parentElement!.style.display = (allText || allImage) ? 'none' : '';
+    panel.querySelector('#cp-fill-swatches')!.parentElement!.parentElement!.style.display = allImage ? 'none' : '';
     panel.querySelector('#cp-width-presets')!.parentElement!.style.display = (allText || allImage) ? 'none' : '';
     panel.querySelector('#cp-style-presets')!.parentElement!.style.display = (allText || allImage) ? 'none' : '';
     panel.querySelector('#cp-roughness-presets')!.parentElement!.style.display = (allText || allImage) ? 'none' : '';

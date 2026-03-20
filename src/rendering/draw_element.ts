@@ -90,7 +90,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       if (el.isCode) {
         drawCode(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, el.strokeColor, el.width, el.height, el.textAlign ?? 'left');
       } else {
-        drawText(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, el.strokeColor, el.width, el.textAlign ?? 'left');
+        drawText(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, el.strokeColor, el.fillColor, el.width, el.height, el.textAlign ?? 'left');
       }
       break;
     case 'image':
@@ -389,9 +389,15 @@ function drawText(
   fontSize: number,
   fontFamily: string,
   color: string,
+  bgColor: string,
   elWidth: number,
+  elHeight: number,
   textAlign: 'left' | 'center' | 'right' = 'left',
 ): void {
+  if (bgColor !== 'transparent') {
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(x, y, elWidth, elHeight);
+  }
   ctx.font = `${fontSize}px ${fontFamily}`;
   ctx.fillStyle = color;
   ctx.textBaseline = 'top';
