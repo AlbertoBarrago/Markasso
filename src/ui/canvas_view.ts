@@ -390,8 +390,14 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
       }
     }
 
-    // Draw eraser slash trail
+    // Draw hover highlight when using eraser tool
     const eraserTool = TOOLS['eraser'] as EraserTool;
+    if (scene.appState.activeTool === 'eraser' && eraserTool.hoveredId) {
+      const hoveredEl = scene.elements.find((el) => el.id === eraserTool.hoveredId);
+      if (hoveredEl) drawHoverHighlight(ctx2d, hoveredEl, scene.viewport);
+    }
+
+    // Draw eraser slash trail
     if (eraserTool.slashTrail.length > 1) {
       drawSlashTrail(ctx2d, eraserTool.slashTrail, scene.viewport);
     }
