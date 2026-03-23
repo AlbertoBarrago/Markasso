@@ -58,6 +58,9 @@ export interface ArrowElement extends BaseElement {
   readonly y2: number;
   readonly startElementId?: string;
   readonly endElementId?: string;
+  readonly label?: string;
+  readonly labelFontSize?: number;
+  readonly labelFontFamily?: string;
 }
 
 export interface FreehandElement extends BaseElement {

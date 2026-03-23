@@ -9,7 +9,7 @@ import { ArrowTool } from '../tools/arrow_tool';
 import { PenTool } from '../tools/pen_tool';
 import { TextTool } from '../tools/text_tool';
 import { EraserTool, type SlashPoint } from '../tools/eraser_tool';
-import type { TextElement, RectangleElement, EllipseElement } from '../elements/element';
+import type { TextElement, RectangleElement, EllipseElement, ArrowElement } from '../elements/element';
 import { render } from '../rendering/renderer';
 import { drawElement } from '../rendering/draw_element';
 import { drawMarquee, drawHoverHighlight, drawSnapIndicator } from '../rendering/draw_selection';
@@ -134,6 +134,15 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
         const bh = Math.abs(el.height);
         if (wx >= bx - 4 && wx <= bx + bw + 4 && wy >= by - 4 && wy <= by + bh + 4) {
           openShapeLabelEditor(el as RectangleElement | EllipseElement, history, canvas);
+          needsRender = true;
+          return;
+        }
+      }
+
+      if (el.type === 'arrow') {
+        const arrow = el as ArrowElement;
+        if (distPointToSegment(wx, wy, arrow.x, arrow.y, arrow.x2, arrow.y2) < arrow.strokeWidth / 2 + 8) {
+          openArrowLabelEditor(arrow, history, canvas);
           needsRender = true;
           return;
         }
@@ -475,6 +484,89 @@ function openShapeLabelEditor(
   ta.style.left        = `${screenCX + canvasRect.left - shapeW / 2}px`;
   ta.style.top         = `${screenCY + canvasRect.top - fontSize * viewport.zoom * 0.6}px`;
   ta.style.width       = `${shapeW}px`;
+  ta.style.minHeight   = `${fontSize * viewport.zoom * 1.2}px`;
+  ta.style.font        = `${fontSize * viewport.zoom}px ${fontFamily}`;
+  ta.style.color       = el.strokeColor;
+  ta.style.caretColor  = 'var(--accent, #7c63d4)';
+  ta.style.textAlign   = 'center';
+  ta.style.lineHeight  = '1.2';
+  ta.style.padding     = '0';
+  ta.style.margin      = '0';
+  ta.style.border      = 'none';
+  ta.style.outline     = 'none';
+  ta.style.boxShadow   = 'none';
+  ta.style.resize      = 'none';
+  ta.style.overflow    = 'hidden';
+  ta.style.background  = 'transparent';
+  ta.style.zIndex      = '1000';
+  ta.style.whiteSpace  = 'pre-wrap';
+  ta.style.wordBreak   = 'break-word';
+
+  const grow = (): void => {
+    ta.style.height = '0';
+    ta.style.height = `${ta.scrollHeight}px`;
+  };
+  ta.addEventListener('input', grow);
+  grow();
+
+  const doCommit = (): void => {
+    const content = ta.value.trim();
+    ta.remove();
+    if (content !== (el.label ?? '')) {
+      history.dispatch({ type: 'SET_SHAPE_LABEL', id: el.id, label: content, labelFontSize: fontSize, labelFontFamily: fontFamily });
+    }
+  };
+
+  ta.addEventListener('blur', doCommit, { once: true });
+
+  ta.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      ta.removeEventListener('blur', doCommit);
+      ta.remove();
+      return;
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      ta.removeEventListener('blur', doCommit);
+      doCommit();
+    }
+  });
+
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+}
+
+function distPointToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+  const dx = x2 - x1, dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+
+function openArrowLabelEditor(
+  el: ArrowElement,
+  history: History,
+  canvas: HTMLCanvasElement,
+): void {
+  const { viewport, appState } = history.present;
+  const mx = (el.x + el.x2) / 2;
+  const my = (el.y + el.y2) / 2;
+  const [screenX, screenY] = worldToScreen(viewport, mx, my);
+  const canvasRect = canvas.getBoundingClientRect();
+
+  const fontSize = el.labelFontSize ?? appState.fontSize;
+  const fontFamily = el.labelFontFamily ?? appState.fontFamily;
+
+  const ta = document.createElement('textarea');
+  ta.value = el.label ?? '';
+
+  ta.style.position    = 'fixed';
+  ta.style.left        = `${screenX + canvasRect.left - 80}px`;
+  ta.style.top         = `${screenY + canvasRect.top - fontSize * viewport.zoom * 0.6}px`;
+  ta.style.width       = '160px';
   ta.style.minHeight   = `${fontSize * viewport.zoom * 1.2}px`;
   ta.style.font        = `${fontSize * viewport.zoom}px ${fontFamily}`;
   ta.style.color       = el.strokeColor;
