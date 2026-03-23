@@ -5,6 +5,7 @@ import { exportPNG, exportSVG } from '../rendering/export';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { t, setLocale, getLocale, LOCALES, type Locale } from '../i18n';
 import pkg from '../../package.json';
+import { trapFocus } from './keyboard_utils';
 
 // ── Theme ─────────────────────────────────────────────────────────────────
 export type ThemeMode = 'light' | 'dark' | 'device';
@@ -116,6 +117,9 @@ export function initSettings(
   // ── Panel ────────────────────────────────────────────────────────────────
   const panel = document.createElement('div');
   panel.className = 'settings-panel';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-modal', 'true');
+  panel.setAttribute('aria-label', 'Menu');
   panel.setAttribute('aria-hidden', 'true');
   document.body.appendChild(panel);
 
@@ -152,7 +156,7 @@ export function initSettings(
 
       <div class="menu-divider"></div>
 
-      <button class="menu-item menu-item--prefs" id="menu-prefs-toggle">
+      <button class="menu-item menu-item--prefs" id="menu-prefs-toggle" aria-expanded="false">
         ${ICONS.prefs}
         <span class="menu-item-label">${t('preferences')}</span>
         <span class="menu-arrow">${ICONS.chevron}</span>
@@ -182,15 +186,15 @@ export function initSettings(
       <div class="menu-divider"></div>
 
       <div class="menu-section-label">${t('canvasBg')}</div>
-      <div class="menu-bg-swatches" id="menu-bg-swatches"></div>
+      <div class="menu-bg-swatches" id="menu-bg-swatches" role="group" aria-label="${t('canvasBg')}"></div>
 
       <div class="menu-divider"></div>
 
       <div class="menu-section-label">${t('theme')}</div>
-      <div class="menu-theme-toggle">
-        <button class="menu-theme-btn" data-mode="light"  title="${t('themeLight')}">${ICONS.sun}${t('themeLight')}</button>
-        <button class="menu-theme-btn" data-mode="dark"   title="${t('themeDark')}">${ICONS.moon}${t('themeDark')}</button>
-        <button class="menu-theme-btn" data-mode="device" title="${t('themeDevice')}">${ICONS.device}${t('themeDevice')}</button>
+      <div class="menu-theme-toggle" role="group" aria-label="${t('theme')}">
+        <button class="menu-theme-btn" data-mode="light"  title="${t('themeLight')}"  aria-pressed="false">${ICONS.sun}${t('themeLight')}</button>
+        <button class="menu-theme-btn" data-mode="dark"   title="${t('themeDark')}"   aria-pressed="false">${ICONS.moon}${t('themeDark')}</button>
+        <button class="menu-theme-btn" data-mode="device" title="${t('themeDevice')}" aria-pressed="false">${ICONS.device}${t('themeDevice')}</button>
       </div>
      <div class="menu-divider"></div>
      <div class="flex-col">
@@ -218,16 +222,22 @@ export function initSettings(
 
   // ── Panel state ──────────────────────────────────────────────────────────
   let prefsOpen = false;
+  let trapCleanup: (() => void) | null = null;
 
   function open(): void {
     panel.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
     positionPanel();
     syncPanel();
+    trapCleanup = trapFocus(panel);
+    panel.querySelector<HTMLElement>('button:not([disabled])')?.focus();
   }
   function close(): void {
+    trapCleanup?.();
+    trapCleanup = null;
     panel.classList.remove('open');
     panel.setAttribute('aria-hidden', 'true');
+    menuBtn.focus();
   }
   function positionPanel(): void {
     const r = menuBtn.getBoundingClientRect();
@@ -239,7 +249,9 @@ export function initSettings(
     gridVis.checked = history.present.appState.gridVisible;
 
     panel.querySelectorAll<HTMLButtonElement>('.sp-grid-btn').forEach((b) => {
-      b.classList.toggle('active', b.dataset['grid'] === history.present.appState.gridType);
+      const isActive = b.dataset['grid'] === history.present.appState.gridType;
+      b.classList.toggle('active', isActive);
+      b.setAttribute('aria-pressed', String(isActive));
     });
 
     panel.querySelectorAll<HTMLButtonElement>('.sp-preset').forEach((b) => {
@@ -256,12 +268,20 @@ export function initSettings(
     const prefsToggle = panel.querySelector<HTMLButtonElement>('#menu-prefs-toggle')!;
     prefsBody.setAttribute('aria-hidden', prefsOpen ? 'false' : 'true');
     prefsToggle.classList.toggle('prefs-open', prefsOpen);
+    prefsToggle.setAttribute('aria-expanded', String(prefsOpen));
 
     const curMode = getThemeMode();
     panel.querySelectorAll<HTMLButtonElement>('.menu-theme-btn').forEach((b) => {
-      b.classList.toggle('active', b.dataset['mode'] === curMode);
+      const isActive = b.dataset['mode'] === curMode;
+      b.classList.toggle('active', isActive);
+      b.setAttribute('aria-pressed', String(isActive));
     });
   }
+
+  // ── Keyboard: close on Escape ────────────────────────────────────────────
+  panel.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') close();
+  });
 
   // ── Toggle ───────────────────────────────────────────────────────────────
   menuBtn.addEventListener('click', (e) => {

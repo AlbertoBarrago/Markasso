@@ -1,6 +1,7 @@
 import type { History } from '../engine/history';
 import type { Element } from '../elements/element';
 import { t } from '../i18n';
+import { rovingTabIndex } from './keyboard_utils';
 
 const STROKE_PRESETS = ['#e2e2ef', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
 const FILL_PRESETS = ['transparent', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
@@ -8,13 +9,14 @@ const FILL_PRESETS = ['transparent', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff',
 export function initContextPanel(workspace: HTMLElement, history: History): void {
   const panel = document.createElement('div');
   panel.id = 'context-panel';
+  panel.setAttribute('role', 'region');
   panel.setAttribute('aria-label', 'Context panel');
   workspace.appendChild(panel);
 
   panel.innerHTML = `
     <div class="cp-section">
       <div class="cp-label">${t('stroke')}</div>
-      <div class="cp-color-row">
+      <div class="cp-color-row" role="group" aria-label="${t('stroke')}">
         <div class="cp-color-swatches" id="cp-stroke-swatches"></div>
         <button class="cp-color-more" id="cp-stroke-more" title="${t('moreColors')}">+</button>
       </div>
@@ -22,7 +24,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
 
     <div class="cp-section">
       <div class="cp-label">${t('fill')}</div>
-      <div class="cp-color-row">
+      <div class="cp-color-row" role="group" aria-label="${t('fill')}">
         <div class="cp-color-swatches" id="cp-fill-swatches"></div>
         <button class="cp-color-more" id="cp-fill-more" title="${t('moreColors')}">+</button>
       </div>
@@ -30,35 +32,35 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
 
     <div class="cp-section">
       <div class="cp-label">${t('strokeWidth')}</div>
-      <div class="cp-btn-row" id="cp-width-presets"></div>
+      <div class="cp-btn-row" id="cp-width-presets" role="group" aria-label="${t('strokeWidth')}"></div>
     </div>
 
     <div class="cp-section">
       <div class="cp-label">${t('strokeStyle')}</div>
-      <div class="cp-btn-row" id="cp-style-presets"></div>
+      <div class="cp-btn-row" id="cp-style-presets" role="group" aria-label="${t('strokeStyle')}"></div>
     </div>
 
     <div class="cp-section">
       <div class="cp-label">${t('roughness')}</div>
-      <div class="cp-btn-row" id="cp-roughness-presets"></div>
+      <div class="cp-btn-row" id="cp-roughness-presets" role="group" aria-label="${t('roughness')}"></div>
     </div>
 
     <div class="cp-section">
       <div class="cp-label">${t('corners')}</div>
-      <div class="cp-btn-row" id="cp-border-presets"></div>
+      <div class="cp-btn-row" id="cp-border-presets" role="group" aria-label="${t('corners')}"></div>
     </div>
 
     <div class="cp-section" id="cp-text-props">
       <div class="cp-label">${t('mode')}</div>
-      <div class="cp-btn-row" id="cp-textmode-presets"></div>
+      <div class="cp-btn-row" id="cp-textmode-presets" role="group" aria-label="${t('mode')}"></div>
       <div class="cp-label" style="margin-top:4px">${t('fontSize')}</div>
       <div class="cp-font-size-row">
         <input type="number" id="cp-font-size" min="6" max="400" step="1" class="cp-font-size-input" />
       </div>
       <div class="cp-label" style="margin-top:4px">${t('fontFamily')}</div>
-      <div class="cp-btn-row" id="cp-font-family-presets"></div>
+      <div class="cp-btn-row" id="cp-font-family-presets" role="group" aria-label="${t('fontFamily')}"></div>
       <div class="cp-label" style="margin-top:4px">${t('alignment')}</div>
-      <div class="cp-btn-row" id="cp-align-presets"></div>
+      <div class="cp-btn-row" id="cp-align-presets" role="group" aria-label="${t('alignment')}"></div>
     </div>
 
     <div class="cp-section">
@@ -75,12 +77,12 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
 
     <div class="cp-section">
       <div class="cp-label">${t('layers')}</div>
-      <div class="cp-btn-row" id="cp-layer-actions"></div>
+      <div class="cp-btn-row" id="cp-layer-actions" role="group" aria-label="${t('layers')}"></div>
     </div>
 
     <div class="cp-section">
       <div class="cp-label">${t('actions')}</div>
-      <div class="cp-btn-row" id="cp-actions"></div>
+      <div class="cp-btn-row" id="cp-actions" role="group" aria-label="${t('actions')}"></div>
     </div>
   `;
 
@@ -91,6 +93,8 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     sw.className = 'cp-color-swatch';
     sw.style.background = color;
     sw.title = color;
+    sw.setAttribute('aria-label', color);
+    sw.setAttribute('aria-pressed', 'false');
     sw.addEventListener('click', () => {
       history.dispatch({ type: 'APPLY_STYLE', strokeColor: color });
     });
@@ -114,7 +118,10 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   for (const color of FILL_PRESETS) {
     const sw = document.createElement('button');
     sw.className = 'cp-color-swatch';
-    sw.title = color === 'transparent' ? t('transparent') : color;
+    const swLabel = color === 'transparent' ? t('transparent') : color;
+    sw.title = swLabel;
+    sw.setAttribute('aria-label', swLabel);
+    sw.setAttribute('aria-pressed', 'false');
     if (color === 'transparent') {
       sw.classList.add('cp-color-swatch-transparent');
     } else {
@@ -370,6 +377,32 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     actions.appendChild(btn);
   }
 
+  // ── Roving tabIndex for all button groups ──────────────────────────────────
+  const colorRowStroke = panel.querySelector<HTMLElement>('#cp-stroke-swatches')!.parentElement!;
+  const colorRowFill   = panel.querySelector<HTMLElement>('#cp-fill-swatches')!.parentElement!;
+  rovingTabIndex(colorRowStroke, '.cp-color-swatch, .cp-color-more', 'horizontal');
+  rovingTabIndex(colorRowFill,   '.cp-color-swatch, .cp-color-more', 'horizontal');
+  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-width-presets')!,       '.cp-btn', 'horizontal');
+  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-style-presets')!,       '.cp-btn', 'horizontal');
+  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-roughness-presets')!,   '.cp-btn', 'horizontal');
+  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-border-presets')!,      '.cp-btn', 'horizontal');
+  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-textmode-presets')!,    '.cp-btn', 'horizontal');
+  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-font-family-presets')!, '.cp-btn', 'horizontal');
+  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-align-presets')!,       '.cp-btn', 'horizontal');
+  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-layer-actions')!,       '.cp-btn', 'horizontal');
+  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-actions')!,             '.cp-btn', 'horizontal');
+
+  /** Sets aria-pressed and roving tabIndex on a button group after .active is toggled. */
+  function syncRovingGroup(container: HTMLElement, selector: string): void {
+    const buttons = [...container.querySelectorAll<HTMLButtonElement>(selector)];
+    const activeIdx = buttons.findIndex((b) => b.classList.contains('active'));
+    const effective = activeIdx >= 0 ? activeIdx : 0;
+    buttons.forEach((b, i) => {
+      b.setAttribute('aria-pressed', String(b.classList.contains('active')));
+      b.tabIndex = i === effective ? 0 : -1;
+    });
+  }
+
   // ── Sync panel ─────────────────────────────────────────────────────────────
   const DRAWING_TOOLS = new Set<string>(['rectangle', 'ellipse', 'line', 'arrow', 'freehand', 'text', 'code']);
 
@@ -382,7 +415,14 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     const hasSelection = selected.length > 0;
     const isTouch = window.matchMedia('(pointer: coarse)').matches;
     const isDrawingTool = DRAWING_TOOLS.has(scene.appState.activeTool);
-    panel.classList.toggle('open', !isTouch && (hasSelection || isDrawingTool));
+    const isOpen = !isTouch && (hasSelection || isDrawingTool);
+    panel.classList.toggle('open', isOpen);
+
+    // When panel is hidden, make all interactive elements unreachable via Tab
+    if (!isOpen) {
+      panel.querySelectorAll<HTMLElement>('button, input, select').forEach((el) => { el.tabIndex = -1; });
+      return;
+    }
 
     if (!hasSelection) {
       if (!isDrawingTool) return;
@@ -395,19 +435,24 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       panel.querySelectorAll<HTMLButtonElement>('#cp-stroke-swatches .cp-color-swatch').forEach((sw) => {
         sw.classList.toggle('active', sw.title === strokeColor);
       });
+      syncRovingGroup(colorRowStroke, '.cp-color-swatch, .cp-color-more');
       panel.querySelectorAll<HTMLButtonElement>('#cp-fill-swatches .cp-color-swatch').forEach((sw) => {
         sw.classList.toggle('active', sw.title === fillColor || (sw.classList.contains('cp-color-swatch-transparent') && fillColor === 'transparent'));
       });
+      syncRovingGroup(colorRowFill, '.cp-color-swatch, .cp-color-more');
       panel.querySelectorAll<HTMLButtonElement>('#cp-width-presets .cp-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset['value'] === String(strokeWidth));
       });
+      syncRovingGroup(panel.querySelector<HTMLElement>('#cp-width-presets')!, '.cp-btn');
       widthInput.value = String(strokeWidth);
       panel.querySelectorAll<HTMLButtonElement>('#cp-style-presets .cp-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset['style'] === strokeStyle);
       });
+      syncRovingGroup(panel.querySelector<HTMLElement>('#cp-style-presets')!, '.cp-btn');
       panel.querySelectorAll<HTMLButtonElement>('#cp-roughness-presets .cp-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset['roughness'] === String(roughness));
       });
+      syncRovingGroup(panel.querySelector<HTMLElement>('#cp-roughness-presets')!, '.cp-btn');
       opacitySlider.value = String(Math.round(opacity * 100));
       opacityVal.textContent = String(Math.round(opacity * 100));
 
@@ -427,12 +472,15 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
         panel.querySelectorAll<HTMLButtonElement>('#cp-font-family-presets .cp-btn').forEach((btn) => {
           btn.classList.toggle('active', btn.dataset['family'] === fontFamily);
         });
+        syncRovingGroup(panel.querySelector<HTMLElement>('#cp-font-family-presets')!, '.cp-btn');
         panel.querySelectorAll<HTMLButtonElement>('#cp-textmode-presets .cp-btn').forEach((btn) => {
           btn.classList.toggle('active', btn.dataset['mode'] === scene.appState.textMode);
         });
+        syncRovingGroup(panel.querySelector<HTMLElement>('#cp-textmode-presets')!, '.cp-btn');
         panel.querySelectorAll<HTMLButtonElement>('#cp-align-presets .cp-btn').forEach((btn) => {
           btn.classList.toggle('active', btn.dataset['align'] === scene.appState.textAlign);
         });
+        syncRovingGroup(panel.querySelector<HTMLElement>('#cp-align-presets')!, '.cp-btn');
       }
 
       panel.querySelector<HTMLElement>('#cp-actions')!.parentElement!.style.display = 'none';
@@ -451,9 +499,11 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     panel.querySelectorAll<HTMLButtonElement>('#cp-stroke-swatches .cp-color-swatch').forEach((sw) => {
       sw.classList.toggle('active', sw.title === first.strokeColor);
     });
+    syncRovingGroup(colorRowStroke, '.cp-color-swatch, .cp-color-more');
     panel.querySelectorAll<HTMLButtonElement>('#cp-fill-swatches .cp-color-swatch').forEach((sw) => {
       sw.classList.toggle('active', sw.title === first.fillColor);
     });
+    syncRovingGroup(colorRowFill, '.cp-color-swatch, .cp-color-more');
 
     // Update color picker values
     if (first.strokeColor !== 'transparent' && !first.strokeColor.startsWith('#')) {
@@ -467,23 +517,27 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     panel.querySelectorAll<HTMLButtonElement>('#cp-width-presets .cp-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['value'] === String(first.strokeWidth));
     });
+    syncRovingGroup(panel.querySelector<HTMLElement>('#cp-width-presets')!, '.cp-btn');
     widthInput.value = String(first.strokeWidth);
 
     // Update style presets
     panel.querySelectorAll<HTMLButtonElement>('#cp-style-presets .cp-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['style'] === (first.strokeStyle ?? 'solid'));
     });
+    syncRovingGroup(panel.querySelector<HTMLElement>('#cp-style-presets')!, '.cp-btn');
 
     // Update roughness presets
     panel.querySelectorAll<HTMLButtonElement>('#cp-roughness-presets .cp-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['roughness'] === String(first.roughness ?? 0));
     });
+    syncRovingGroup(panel.querySelector<HTMLElement>('#cp-roughness-presets')!, '.cp-btn');
 
     // Update border presets
     const cr = first.type === 'rectangle' ? (first.cornerRadius ?? 0) : 0;
     panel.querySelectorAll<HTMLButtonElement>('#cp-border-presets .cp-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['border'] === (cr > 0 ? 'rounded' : 'sharp'));
     });
+    syncRovingGroup(panel.querySelector<HTMLElement>('#cp-border-presets')!, '.cp-btn');
 
     // Update opacity slider
     opacitySlider.value = String(Math.round(first.opacity * 100));
@@ -498,6 +552,10 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     panel.querySelector('#cp-roughness-presets')!.parentElement!.style.display = (allText || allImage) ? 'none' : '';
     panel.querySelector('#cp-border-presets')!.parentElement!.style.display = (allText || allImage) ? 'none' : '';
 
+    // Layer + action groups always present when selection exists
+    syncRovingGroup(panel.querySelector<HTMLElement>('#cp-layer-actions')!, '.cp-btn');
+    syncRovingGroup(panel.querySelector<HTMLElement>('#cp-actions')!, '.cp-btn');
+
     // Show/sync text-specific controls
     const textPropsSection = panel.querySelector<HTMLElement>('#cp-text-props')!;
     textPropsSection.style.display = allText ? '' : 'none';
@@ -506,12 +564,15 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       panel.querySelectorAll<HTMLButtonElement>('#cp-font-family-presets .cp-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset['family'] === first.fontFamily);
       });
+      syncRovingGroup(panel.querySelector<HTMLElement>('#cp-font-family-presets')!, '.cp-btn');
       panel.querySelectorAll<HTMLButtonElement>('#cp-textmode-presets .cp-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset['mode'] === (first.isCode ? 'code' : 'text'));
       });
+      syncRovingGroup(panel.querySelector<HTMLElement>('#cp-textmode-presets')!, '.cp-btn');
       panel.querySelectorAll<HTMLButtonElement>('#cp-align-presets .cp-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset['align'] === (first.textAlign ?? 'left'));
       });
+      syncRovingGroup(panel.querySelector<HTMLElement>('#cp-align-presets')!, '.cp-btn');
     }
   }
 

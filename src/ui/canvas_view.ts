@@ -1,5 +1,6 @@
 import type { History } from '../engine/history';
 import type { Tool, ToolContext } from '../tools/tool';
+import { isFocusInPanel } from './keyboard_utils';
 import { SelectTool } from '../tools/select_tool';
 import { HandTool } from '../tools/hand_tool';
 import { RectangleTool } from '../tools/rectangle_tool';
