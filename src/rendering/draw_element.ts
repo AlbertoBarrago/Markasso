@@ -180,29 +180,25 @@ function drawRectangle(
   else ctx.rect(rx, ry, rw, rh);
   ctx.fill();
 
-  // Draw wobbly stroke along 4 edges
-  const amp = roughness * Math.min(rw, rh) * 0.06;
+  // Draw wobbly stroke along 4 edges using quadratic curves for smooth wobble
+  const amp = roughness * Math.min(rw, rh) * 0.03;
   const corners: [number, number][] = [
     [rx, ry], [rx + rw, ry], [rx + rw, ry + rh], [rx, ry + rh],
   ];
 
   ctx.beginPath();
-  const segments = 4;
   for (let edge = 0; edge < 4; edge++) {
     const [x1, y1] = corners[edge]!;
     const [x2, y2] = corners[(edge + 1) % 4]!;
-    for (let s = 0; s <= segments; s++) {
-      const t = s / segments;
-      const nx = x1 + (x2 - x1) * t;
-      const ny = y1 + (y2 - y1) * t;
-      const ox = roughOffset(seed, edge * 10 + s, 1, amp);
-      const oy = roughOffset(seed + 99, edge * 10 + s, 1, amp);
-      if (edge === 0 && s === 0) {
-        ctx.moveTo(nx + ox, ny + oy);
-      } else {
-        ctx.lineTo(nx + ox, ny + oy);
-      }
-    }
+    if (edge === 0) ctx.moveTo(x1, y1);
+    const mx = (x1 + x2) / 2;
+    const my = (y1 + y2) / 2;
+    const cp1x = (x1 + mx) / 2 + roughOffset(seed,      edge * 7 + 1, 1, amp);
+    const cp1y = (y1 + my) / 2 + roughOffset(seed + 99, edge * 7 + 1, 1, amp);
+    const cp2x = (mx + x2) / 2 + roughOffset(seed,      edge * 7 + 3, 1, amp);
+    const cp2y = (my + y2) / 2 + roughOffset(seed + 99, edge * 7 + 3, 1, amp);
+    ctx.quadraticCurveTo(cp1x, cp1y, mx, my);
+    ctx.quadraticCurveTo(cp2x, cp2y, x2, y2);
   }
   ctx.closePath();
   ctx.stroke();
@@ -237,7 +233,7 @@ function drawEllipse(
 
   // Wobbly stroke: perturb radius at each angle step
   const steps = 48;
-  const amp = roughness * Math.min(rx, ry) * 0.1;
+  const amp = roughness * Math.min(rx, ry) * 0.05;
   ctx.beginPath();
   for (let i = 0; i <= steps; i++) {
     const angle = (i / steps) * Math.PI * 2;
@@ -275,19 +271,18 @@ function drawLine(
   const px = -(y2 - y1) / len;
   const py =  (x2 - x1) / len;
 
-  const segs = Math.max(3, Math.round(len / 40));
-  const amp  = roughness * Math.min(len * 0.08, 28);
+  const segs = Math.max(2, Math.round(len / 80));
+  const amp  = roughness * Math.min(len * 0.04, 14);
 
   ctx.beginPath();
   ctx.moveTo(x1, y1);
-  for (let i = 1; i < segs; i++) {
-    const t  = i / segs;
-    const bx = x1 + (x2 - x1) * t;
-    const by = y1 + (y2 - y1) * t;
-    const off = roughOffset(seed, i, 1, amp);
-    ctx.lineTo(bx + px * off, by + py * off);
+  for (let i = 0; i < segs; i++) {
+    const tCtrl = (i + 0.5) / segs;
+    const tEnd  = (i + 1)   / segs;
+    const cpx = x1 + (x2 - x1) * tCtrl + px * roughOffset(seed, i, 1, amp);
+    const cpy = y1 + (y2 - y1) * tCtrl + py * roughOffset(seed, i, 1, amp);
+    ctx.quadraticCurveTo(cpx, cpy, x1 + (x2 - x1) * tEnd, y1 + (y2 - y1) * tEnd);
   }
-  ctx.lineTo(x2, y2);
   ctx.stroke();
 }
 
@@ -309,19 +304,18 @@ function drawArrowShaft(
   } else {
     const px  = -(y2 - y1) / len;
     const py  =  (x2 - x1) / len;
-    const segs = Math.max(3, Math.round(len / 40));
-    const amp  = roughness * Math.min(len * 0.08, 28);
+    const segs = Math.max(2, Math.round(len / 80));
+    const amp  = roughness * Math.min(len * 0.04, 14);
 
     ctx.beginPath();
     ctx.moveTo(x1, y1);
-    for (let i = 1; i < segs; i++) {
-      const t   = i / segs;
-      const bx  = x1 + (x2 - x1) * t;
-      const by  = y1 + (y2 - y1) * t;
-      const off = roughOffset(seed, i, 1, amp);
-      ctx.lineTo(bx + px * off, by + py * off);
+    for (let i = 0; i < segs; i++) {
+      const tCtrl = (i + 0.5) / segs;
+      const tEnd  = (i + 1)   / segs;
+      const cpx = x1 + (x2 - x1) * tCtrl + px * roughOffset(seed, i, 1, amp);
+      const cpy = y1 + (y2 - y1) * tCtrl + py * roughOffset(seed, i, 1, amp);
+      ctx.quadraticCurveTo(cpx, cpy, x1 + (x2 - x1) * tEnd, y1 + (y2 - y1) * tEnd);
     }
-    ctx.lineTo(x2, y2);
     ctx.stroke();
   }
 }

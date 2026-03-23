@@ -94,6 +94,19 @@ export function initMobileActionBar(workspace: HTMLElement, history: History): v
     btn.addEventListener('click', () => history.dispatch({ type: 'APPLY_STYLE', strokeWidth: w.value }));
     widthEl.appendChild(btn);
   }
+  const mssWidthInput = document.createElement('input');
+  mssWidthInput.type = 'number';
+  mssWidthInput.min = '1';
+  mssWidthInput.max = '100';
+  mssWidthInput.step = '1';
+  mssWidthInput.className = 'cp-font-size-input';
+  mssWidthInput.style.width = '52px';
+  mssWidthInput.addEventListener('change', () => {
+    const v = Math.max(1, Math.min(100, Math.round(Number(mssWidthInput.value))));
+    mssWidthInput.value = String(v);
+    history.dispatch({ type: 'APPLY_STYLE', strokeWidth: v });
+  });
+  widthEl.appendChild(mssWidthInput);
 
   // ── Style presets ──────────────────────────────────────────────────────────
   const styleEl = sheet.querySelector('#mss-style-presets')!;
@@ -229,6 +242,7 @@ export function initMobileActionBar(workspace: HTMLElement, history: History): v
     sheet.querySelectorAll<HTMLButtonElement>('#mss-width-presets .cp-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['value'] === String(first.strokeWidth));
     });
+    mssWidthInput.value = String(first.strokeWidth);
     // Style
     sheet.querySelectorAll<HTMLButtonElement>('#mss-style-presets .cp-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['style'] === (first.strokeStyle ?? 'solid'));
