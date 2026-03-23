@@ -185,10 +185,10 @@ html, body {
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-  padding: 12px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   z-index: 30;
   opacity: 0;
   pointer-events: none;
@@ -196,7 +196,7 @@ html, body {
   transition: opacity .15s, transform .15s;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  max-height: calc(100vh - 100px);
+  max-height: calc(100vh - 148px);
   overflow-y: auto;
 }
 #context-panel.open { opacity: 1; pointer-events: all; transform: translateX(0); }
@@ -206,10 +206,10 @@ html, body {
 #context-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
 #context-panel::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
 
-.cp-section { display: flex; flex-direction: column; gap: 8px; }
+.cp-section { display: flex; flex-direction: column; gap: 6px; }
 
 .cp-label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: rgba(255,255,255,0.8);
   letter-spacing: 0.02em;
@@ -219,12 +219,12 @@ html, body {
 .cp-color-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .cp-color-swatches {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   overflow-x: auto;
   flex: 1;
   scrollbar-width: none;
@@ -233,7 +233,7 @@ html, body {
 .cp-color-swatches::-webkit-scrollbar { display: none; }
 
 .cp-color-swatch {
-  width: 28px; height: 28px;
+  width: 24px; height: 24px;
   border-radius: 6px;
   border: 2px solid rgba(255,255,255,0.15);
   cursor: pointer;
@@ -251,7 +251,7 @@ html, body {
 }
 
 .cp-color-more {
-  width: 28px; height: 28px;
+  width: 24px; height: 24px;
   border-radius: 6px;
   border: 2px solid rgba(255,255,255,0.15);
   background: rgba(255,255,255,0.06);
@@ -277,12 +277,12 @@ html, body {
 /* Button rows */
 .cp-btn-row {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 
 .cp-btn {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -806,6 +806,14 @@ html, body {
   transition: opacity .12s;
 }
 .wl-cta:hover { opacity: .88; }
+
+@media (pointer: coarse), (max-width: 600px) {
+  .wl-shortcuts { display: none; }
+  .wl-card { padding: 24px 20px 20px; gap: 14px; }
+  .wl-brand { gap: 4px; }
+  .wl-brand img { width: 56px; height: 56px; }
+  .wl-name { font-size: 1.2rem; }
+}
 
 /* ── Quota warning toast ───────────────────────────────────────────────────── */
 .quota-toast {
