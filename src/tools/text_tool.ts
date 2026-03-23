@@ -139,7 +139,7 @@ export class TextTool implements Tool {
             fontSize: appState.fontSize,
             fontFamily: appState.fontFamily,
             strokeColor: appState.strokeColor,
-            fillColor: 'transparent',
+            fillColor: appState.fillColor,
             strokeWidth: 0,
             opacity: appState.opacity,
             roughness: 0,

@@ -134,6 +134,11 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       return;
     }
 
+    if (e.key === '\\') {
+      document.body.classList.toggle('ui-hidden');
+      return;
+    }
+
     if (e.key === 'f' || e.key === 'F') {
       const vp = fitToElements(history.present.elements, window.innerWidth, window.innerHeight);
       history.dispatch({ type: 'SET_VIEWPORT', offsetX: vp.offsetX, offsetY: vp.offsetY, zoom: vp.zoom });

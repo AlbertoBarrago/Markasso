@@ -79,7 +79,39 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
       const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
-      drawArrow(ctx, pts.x, pts.y, pts.x2, pts.y2, el.strokeWidth, roughness, seed);
+      if (el.label) {
+        const fontSize = el.labelFontSize ?? 16;
+        const fontFamily = el.labelFontFamily ?? 'Arial, sans-serif';
+        const mx = (pts.x + pts.x2) / 2;
+        const my = (pts.y + pts.y2) / 2;
+        // Measure label box to compute the gap along the arrow
+        ctx.save();
+        ctx.setLineDash([]);
+        ctx.font = `${fontSize}px ${fontFamily}`;
+        const lines = el.label.split('\n');
+        const pad = fontSize * 0.4;
+        const labelW = Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2;
+        const labelH = lines.length * fontSize * 1.2 + pad * 2;
+        ctx.restore();
+        const totalLen = Math.hypot(pts.x2 - pts.x, pts.y2 - pts.y);
+        const dx = totalLen > 0 ? (pts.x2 - pts.x) / totalLen : 1;
+        const dy = totalLen > 0 ? (pts.y2 - pts.y) / totalLen : 0;
+        // Half-extent of the label box projected onto the arrow direction
+        const gapHalf = Math.abs(dx) * labelW / 2 + Math.abs(dy) * labelH / 2;
+        const gapT = totalLen > 0 ? gapHalf / totalLen : 0;
+        const t1 = Math.max(0, 0.5 - gapT);
+        const t2 = Math.min(1, 0.5 + gapT);
+        // Draw shaft in two segments, skipping the label gap
+        drawArrowShaft(ctx, pts.x, pts.y, pts.x + (pts.x2 - pts.x) * t1, pts.y + (pts.y2 - pts.y) * t1, roughness, seed);
+        drawArrowShaft(ctx, pts.x + (pts.x2 - pts.x) * t2, pts.y + (pts.y2 - pts.y) * t2, pts.x2, pts.y2, roughness, seed);
+        drawArrowHead(ctx, pts.x, pts.y, pts.x2, pts.y2, el.strokeWidth);
+        ctx.save();
+        ctx.setLineDash([]);
+        drawArrowLabel(ctx, mx, my, el.label, fontSize, fontFamily, el.strokeColor);
+        ctx.restore();
+      } else {
+        drawArrow(ctx, pts.x, pts.y, pts.x2, pts.y2, el.strokeWidth, roughness, seed);
+      }
       break;
     }
     case 'freehand':
@@ -90,7 +122,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       if (el.isCode) {
         drawCode(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, el.strokeColor, el.width, el.height, el.textAlign ?? 'left');
       } else {
-        drawText(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, el.strokeColor, el.width, el.textAlign ?? 'left');
+        drawText(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, el.strokeColor, el.fillColor, el.width, el.height, el.textAlign ?? 'left');
       }
       break;
     case 'image':
@@ -259,19 +291,15 @@ function drawLine(
   ctx.stroke();
 }
 
-function drawArrow(
+function drawArrowShaft(
   ctx: CanvasRenderingContext2D,
   x1: number,
   y1: number,
   x2: number,
   y2: number,
-  strokeWidth: number,
   roughness: number,
   seed: number,
 ): void {
-  const angle = Math.atan2(y2 - y1, x2 - x1);
-  const headLen = Math.max(12, strokeWidth * 4);
-
   const len = Math.hypot(x2 - x1, y2 - y1);
   if (roughness < 0.05 || len < 1) {
     ctx.beginPath();
@@ -296,8 +324,18 @@ function drawArrow(
     ctx.lineTo(x2, y2);
     ctx.stroke();
   }
+}
 
-  // Arrowhead (always crisp)
+function drawArrowHead(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  strokeWidth: number,
+): void {
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const headLen = Math.max(12, strokeWidth * 4);
   ctx.setLineDash([]);
   ctx.beginPath();
   ctx.moveTo(x2, y2);
@@ -311,6 +349,20 @@ function drawArrow(
     y2 - headLen * Math.sin(angle + Math.PI / 6)
   );
   ctx.stroke();
+}
+
+function drawArrow(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  strokeWidth: number,
+  roughness: number,
+  seed: number,
+): void {
+  drawArrowShaft(ctx, x1, y1, x2, y2, roughness, seed);
+  drawArrowHead(ctx, x1, y1, x2, y2, strokeWidth);
 }
 
 function drawFreehand(
@@ -389,9 +441,15 @@ function drawText(
   fontSize: number,
   fontFamily: string,
   color: string,
+  bgColor: string,
   elWidth: number,
+  elHeight: number,
   textAlign: 'left' | 'center' | 'right' = 'left',
 ): void {
+  if (bgColor !== 'transparent') {
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(x, y, elWidth, elHeight);
+  }
   ctx.font = `${fontSize}px ${fontFamily}`;
   ctx.fillStyle = color;
   ctx.textBaseline = 'top';
@@ -441,6 +499,27 @@ function drawCode(
 }
 
 function drawShapeLabel(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  label: string,
+  fontSize: number,
+  fontFamily: string,
+  color: string,
+): void {
+  ctx.font = `${fontSize}px ${fontFamily}`;
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const lines = label.split('\n');
+  const lineHeight = fontSize * 1.2;
+  const totalHeight = lines.length * lineHeight;
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i] ?? '', cx, cy - totalHeight / 2 + i * lineHeight + lineHeight / 2);
+  }
+}
+
+function drawArrowLabel(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,

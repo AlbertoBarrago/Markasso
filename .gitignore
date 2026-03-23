@@ -14,3 +14,6 @@ dist/
 # Env
 .env
 .env.local
+
+# Local notes (never push)
+TODO.local.md
