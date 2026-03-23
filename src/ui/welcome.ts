@@ -8,7 +8,7 @@ const SHORTCUTS: { icon: string; label: string; key: string }[] = [
   { icon: '📂', label: t('openFile'),  key: `${mod}O` },
   { icon: '💾', label: t('saveFile'),  key: `${mod}S` },
   { icon: '↩',  label: t('undoLabel'), key: `${mod}Z` },
-  { icon: '↪',  label: t('redoLabel'), key: `${mod}Y` },
+  { icon: '↪',  label: t('redoLabel'), key: isMac ? '⌘⇧Z' : 'Ctrl+Y' },
 ];
 
 export function initWelcome(appEl: HTMLElement, history: History): void {
