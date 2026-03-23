@@ -5,7 +5,6 @@ import { exportPNG, exportSVG } from '../rendering/export';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { t, setLocale, getLocale, LOCALES, type Locale } from '../i18n';
 import pkg from '../../package.json';
-import { trapFocus } from './keyboard_utils';
 
 // ── Theme ─────────────────────────────────────────────────────────────────
 export type ThemeMode = 'light' | 'dark' | 'device';
@@ -222,22 +221,16 @@ export function initSettings(
 
   // ── Panel state ──────────────────────────────────────────────────────────
   let prefsOpen = false;
-  let trapCleanup: (() => void) | null = null;
 
   function open(): void {
     panel.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
     positionPanel();
     syncPanel();
-    trapCleanup = trapFocus(panel);
-    panel.querySelector<HTMLElement>('button:not([disabled])')?.focus();
   }
   function close(): void {
-    trapCleanup?.();
-    trapCleanup = null;
     panel.classList.remove('open');
     panel.setAttribute('aria-hidden', 'true');
-    menuBtn.focus();
   }
   function positionPanel(): void {
     const r = menuBtn.getBoundingClientRect();

@@ -190,7 +190,7 @@ export class TextTool implements Tool {
     });
 
     document.body.appendChild(ta);
-    this.focusTextareaDeferred(ta);
+    ta.focus();
 
     this.textarea = ta;
     this.commitFn = onBlur;
@@ -303,7 +303,7 @@ export class TextTool implements Tool {
     });
 
     document.body.appendChild(ta);
-    this.focusTextareaDeferred(ta);
+    ta.focus();
     grow();
 
     this.textarea = ta;
@@ -418,7 +418,7 @@ export class TextTool implements Tool {
     });
 
     document.body.appendChild(ta);
-    this.focusTextareaDeferred(ta);
+    ta.focus();
     grow();
 
     this.textarea = ta;
@@ -522,18 +522,10 @@ export class TextTool implements Tool {
     });
 
     document.body.appendChild(ta);
-    this.focusTextareaDeferred(ta, true);
+    ta.focus();
+    ta.select();
 
     this.textarea = ta;
     this.commitFn = onBlur;
-  }
-
-  /** Defers focus so canvas click/mouseup focus handling doesn't instantly blur textareas. */
-  private focusTextareaDeferred(ta: HTMLTextAreaElement, select = false): void {
-    window.setTimeout(() => {
-      if (!ta.isConnected) return;
-      ta.focus();
-      if (select) ta.select();
-    }, 0);
   }
 }

@@ -1,7 +1,6 @@
 import type { History } from '../engine/history';
 import type { Element } from '../elements/element';
 import { t } from '../i18n';
-import { rovingTabIndex } from './keyboard_utils';
 
 const STROKE_PRESETS = ['#e2e2ef', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
 const FILL_PRESETS = ['transparent', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
@@ -377,29 +376,13 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     actions.appendChild(btn);
   }
 
-  // ── Roving tabIndex for all button groups ──────────────────────────────────
   const colorRowStroke = panel.querySelector<HTMLElement>('#cp-stroke-swatches')!.parentElement!;
   const colorRowFill   = panel.querySelector<HTMLElement>('#cp-fill-swatches')!.parentElement!;
-  rovingTabIndex(colorRowStroke, '.cp-color-swatch, .cp-color-more', 'horizontal');
-  rovingTabIndex(colorRowFill,   '.cp-color-swatch, .cp-color-more', 'horizontal');
-  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-width-presets')!,       '.cp-btn', 'horizontal');
-  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-style-presets')!,       '.cp-btn', 'horizontal');
-  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-roughness-presets')!,   '.cp-btn', 'horizontal');
-  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-border-presets')!,      '.cp-btn', 'horizontal');
-  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-textmode-presets')!,    '.cp-btn', 'horizontal');
-  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-font-family-presets')!, '.cp-btn', 'horizontal');
-  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-align-presets')!,       '.cp-btn', 'horizontal');
-  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-layer-actions')!,       '.cp-btn', 'horizontal');
-  rovingTabIndex(panel.querySelector<HTMLElement>('#cp-actions')!,             '.cp-btn', 'horizontal');
 
-  /** Sets aria-pressed and roving tabIndex on a button group after .active is toggled. */
-  function syncRovingGroup(container: HTMLElement, selector: string): void {
-    const buttons = [...container.querySelectorAll<HTMLButtonElement>(selector)];
-    const activeIdx = buttons.findIndex((b) => b.classList.contains('active'));
-    const effective = activeIdx >= 0 ? activeIdx : 0;
-    buttons.forEach((b, i) => {
+  /** Updates aria-pressed on all buttons in a group based on their .active class. */
+  function syncAriaPressed(container: HTMLElement, selector: string): void {
+    container.querySelectorAll<HTMLButtonElement>(selector).forEach((b) => {
       b.setAttribute('aria-pressed', String(b.classList.contains('active')));
-      b.tabIndex = i === effective ? 0 : -1;
     });
   }
 
@@ -418,9 +401,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     const isOpen = !isTouch && (hasSelection || isDrawingTool);
     panel.classList.toggle('open', isOpen);
 
-    // When panel is hidden, make all interactive elements unreachable via Tab
     if (!isOpen) {
-      panel.querySelectorAll<HTMLElement>('button, input, select').forEach((el) => { el.tabIndex = -1; });
       return;
     }
 
@@ -435,24 +416,24 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       panel.querySelectorAll<HTMLButtonElement>('#cp-stroke-swatches .cp-color-swatch').forEach((sw) => {
         sw.classList.toggle('active', sw.title === strokeColor);
       });
-      syncRovingGroup(colorRowStroke, '.cp-color-swatch, .cp-color-more');
+      syncAriaPressed(colorRowStroke, '.cp-color-swatch, .cp-color-more');
       panel.querySelectorAll<HTMLButtonElement>('#cp-fill-swatches .cp-color-swatch').forEach((sw) => {
         sw.classList.toggle('active', sw.title === fillColor || (sw.classList.contains('cp-color-swatch-transparent') && fillColor === 'transparent'));
       });
-      syncRovingGroup(colorRowFill, '.cp-color-swatch, .cp-color-more');
+      syncAriaPressed(colorRowFill, '.cp-color-swatch, .cp-color-more');
       panel.querySelectorAll<HTMLButtonElement>('#cp-width-presets .cp-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset['value'] === String(strokeWidth));
       });
-      syncRovingGroup(panel.querySelector<HTMLElement>('#cp-width-presets')!, '.cp-btn');
+      syncAriaPressed(panel.querySelector<HTMLElement>('#cp-width-presets')!, '.cp-btn');
       widthInput.value = String(strokeWidth);
       panel.querySelectorAll<HTMLButtonElement>('#cp-style-presets .cp-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset['style'] === strokeStyle);
       });
-      syncRovingGroup(panel.querySelector<HTMLElement>('#cp-style-presets')!, '.cp-btn');
+      syncAriaPressed(panel.querySelector<HTMLElement>('#cp-style-presets')!, '.cp-btn');
       panel.querySelectorAll<HTMLButtonElement>('#cp-roughness-presets .cp-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset['roughness'] === String(roughness));
       });
-      syncRovingGroup(panel.querySelector<HTMLElement>('#cp-roughness-presets')!, '.cp-btn');
+      syncAriaPressed(panel.querySelector<HTMLElement>('#cp-roughness-presets')!, '.cp-btn');
       opacitySlider.value = String(Math.round(opacity * 100));
       opacityVal.textContent = String(Math.round(opacity * 100));
 
@@ -472,15 +453,15 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
         panel.querySelectorAll<HTMLButtonElement>('#cp-font-family-presets .cp-btn').forEach((btn) => {
           btn.classList.toggle('active', btn.dataset['family'] === fontFamily);
         });
-        syncRovingGroup(panel.querySelector<HTMLElement>('#cp-font-family-presets')!, '.cp-btn');
+        syncAriaPressed(panel.querySelector<HTMLElement>('#cp-font-family-presets')!, '.cp-btn');
         panel.querySelectorAll<HTMLButtonElement>('#cp-textmode-presets .cp-btn').forEach((btn) => {
           btn.classList.toggle('active', btn.dataset['mode'] === scene.appState.textMode);
         });
-        syncRovingGroup(panel.querySelector<HTMLElement>('#cp-textmode-presets')!, '.cp-btn');
+        syncAriaPressed(panel.querySelector<HTMLElement>('#cp-textmode-presets')!, '.cp-btn');
         panel.querySelectorAll<HTMLButtonElement>('#cp-align-presets .cp-btn').forEach((btn) => {
           btn.classList.toggle('active', btn.dataset['align'] === scene.appState.textAlign);
         });
-        syncRovingGroup(panel.querySelector<HTMLElement>('#cp-align-presets')!, '.cp-btn');
+        syncAriaPressed(panel.querySelector<HTMLElement>('#cp-align-presets')!, '.cp-btn');
       }
 
       panel.querySelector<HTMLElement>('#cp-actions')!.parentElement!.style.display = 'none';
@@ -499,11 +480,11 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     panel.querySelectorAll<HTMLButtonElement>('#cp-stroke-swatches .cp-color-swatch').forEach((sw) => {
       sw.classList.toggle('active', sw.title === first.strokeColor);
     });
-    syncRovingGroup(colorRowStroke, '.cp-color-swatch, .cp-color-more');
+    syncAriaPressed(colorRowStroke, '.cp-color-swatch, .cp-color-more');
     panel.querySelectorAll<HTMLButtonElement>('#cp-fill-swatches .cp-color-swatch').forEach((sw) => {
       sw.classList.toggle('active', sw.title === first.fillColor);
     });
-    syncRovingGroup(colorRowFill, '.cp-color-swatch, .cp-color-more');
+    syncAriaPressed(colorRowFill, '.cp-color-swatch, .cp-color-more');
 
     // Update color picker values
     if (first.strokeColor !== 'transparent' && !first.strokeColor.startsWith('#')) {
@@ -517,27 +498,27 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     panel.querySelectorAll<HTMLButtonElement>('#cp-width-presets .cp-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['value'] === String(first.strokeWidth));
     });
-    syncRovingGroup(panel.querySelector<HTMLElement>('#cp-width-presets')!, '.cp-btn');
+    syncAriaPressed(panel.querySelector<HTMLElement>('#cp-width-presets')!, '.cp-btn');
     widthInput.value = String(first.strokeWidth);
 
     // Update style presets
     panel.querySelectorAll<HTMLButtonElement>('#cp-style-presets .cp-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['style'] === (first.strokeStyle ?? 'solid'));
     });
-    syncRovingGroup(panel.querySelector<HTMLElement>('#cp-style-presets')!, '.cp-btn');
+    syncAriaPressed(panel.querySelector<HTMLElement>('#cp-style-presets')!, '.cp-btn');
 
     // Update roughness presets
     panel.querySelectorAll<HTMLButtonElement>('#cp-roughness-presets .cp-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['roughness'] === String(first.roughness ?? 0));
     });
-    syncRovingGroup(panel.querySelector<HTMLElement>('#cp-roughness-presets')!, '.cp-btn');
+    syncAriaPressed(panel.querySelector<HTMLElement>('#cp-roughness-presets')!, '.cp-btn');
 
     // Update border presets
     const cr = first.type === 'rectangle' ? (first.cornerRadius ?? 0) : 0;
     panel.querySelectorAll<HTMLButtonElement>('#cp-border-presets .cp-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['border'] === (cr > 0 ? 'rounded' : 'sharp'));
     });
-    syncRovingGroup(panel.querySelector<HTMLElement>('#cp-border-presets')!, '.cp-btn');
+    syncAriaPressed(panel.querySelector<HTMLElement>('#cp-border-presets')!, '.cp-btn');
 
     // Update opacity slider
     opacitySlider.value = String(Math.round(first.opacity * 100));
@@ -553,8 +534,8 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     panel.querySelector('#cp-border-presets')!.parentElement!.style.display = (allText || allImage) ? 'none' : '';
 
     // Layer + action groups always present when selection exists
-    syncRovingGroup(panel.querySelector<HTMLElement>('#cp-layer-actions')!, '.cp-btn');
-    syncRovingGroup(panel.querySelector<HTMLElement>('#cp-actions')!, '.cp-btn');
+    syncAriaPressed(panel.querySelector<HTMLElement>('#cp-layer-actions')!, '.cp-btn');
+    syncAriaPressed(panel.querySelector<HTMLElement>('#cp-actions')!, '.cp-btn');
 
     // Show/sync text-specific controls
     const textPropsSection = panel.querySelector<HTMLElement>('#cp-text-props')!;
@@ -564,15 +545,15 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       panel.querySelectorAll<HTMLButtonElement>('#cp-font-family-presets .cp-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset['family'] === first.fontFamily);
       });
-      syncRovingGroup(panel.querySelector<HTMLElement>('#cp-font-family-presets')!, '.cp-btn');
+      syncAriaPressed(panel.querySelector<HTMLElement>('#cp-font-family-presets')!, '.cp-btn');
       panel.querySelectorAll<HTMLButtonElement>('#cp-textmode-presets .cp-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset['mode'] === (first.isCode ? 'code' : 'text'));
       });
-      syncRovingGroup(panel.querySelector<HTMLElement>('#cp-textmode-presets')!, '.cp-btn');
+      syncAriaPressed(panel.querySelector<HTMLElement>('#cp-textmode-presets')!, '.cp-btn');
       panel.querySelectorAll<HTMLButtonElement>('#cp-align-presets .cp-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset['align'] === (first.textAlign ?? 'left'));
       });
-      syncRovingGroup(panel.querySelector<HTMLElement>('#cp-align-presets')!, '.cp-btn');
+      syncAriaPressed(panel.querySelector<HTMLElement>('#cp-align-presets')!, '.cp-btn');
     }
   }
 

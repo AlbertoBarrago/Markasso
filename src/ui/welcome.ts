@@ -1,6 +1,5 @@
 import type { History } from '../engine/history';
 import { t } from '../i18n';
-import { trapFocus } from './keyboard_utils';
 
 const isMac = navigator.platform.toUpperCase().includes('MAC');
 const mod   = isMac ? '⌘' : 'Ctrl+';
@@ -40,17 +39,11 @@ export function initWelcome(appEl: HTMLElement, history: History): void {
     </div>
   `;
 
-  let trapCleanup: (() => void) | null = null;
-
   const dismiss = (): void => {
-    trapCleanup?.();
-    trapCleanup = null;
     overlay.classList.add('wl-out');
     overlay.addEventListener('animationend', () => overlay.remove(), { once: true });
     unsubscribe();
     document.removeEventListener('keydown', onKey);
-    // Return focus to canvas after dialog closes
-    document.querySelector<HTMLElement>('#main')?.focus();
   };
 
   const onKey = (e: KeyboardEvent): void => {
@@ -67,9 +60,4 @@ export function initWelcome(appEl: HTMLElement, history: History): void {
   });
 
   appEl.appendChild(overlay);
-
-  // Trap focus inside dialog and move focus to the CTA button
-  const card = overlay.querySelector<HTMLElement>('.wl-card')!;
-  trapCleanup = trapFocus(card);
-  overlay.querySelector<HTMLElement>('.wl-cta')?.focus();
 }

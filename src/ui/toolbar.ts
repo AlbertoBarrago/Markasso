@@ -4,8 +4,6 @@ import { exportPNG, exportSVG } from '../rendering/export';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { fitToElements } from '../core/viewport';
 import { t } from '../i18n';
-import { rovingTabIndex } from './keyboard_utils';
-
 
 // ── SVG icons ──────────────────────────────────────────────────────────────────
 const IC = {
@@ -79,14 +77,11 @@ export function initToolbar(container: HTMLElement, history: History): void {
     b.title = `${t.label} (${t.key})`;
     b.setAttribute('aria-label', t.label);
     b.setAttribute('aria-pressed', 'false');
-    b.tabIndex = -1;
     b.innerHTML = `${t.icon}${t.num ? `<span class="tb-btn-key">${t.num}</span>` : ''}`;
     b.addEventListener('click', () => history.dispatch({ type: 'SET_TOOL', tool: t.tool }));
     toolBtns.set(t.tool, b);
     centerPill.appendChild(b);
   });
-
-  rovingTabIndex(centerPill, '.tb-btn', 'horizontal');
 
   // ── Bottom-left: undo/redo + zoom ─────────────────────────────────────────
   const bottomLeft = div('tb-island-bottomleft');
@@ -222,10 +217,6 @@ export function initToolbar(container: HTMLElement, history: History): void {
       b.classList.toggle('active', isActive);
       b.setAttribute('aria-pressed', String(isActive));
     }
-    // Roving tabIndex: the active tool button (or lock if none active) gets tabIndex=0
-    const allPillBtns = [...centerPill.querySelectorAll<HTMLButtonElement>('.tb-btn')];
-    const activeBtn = allPillBtns.find((b) => b.classList.contains('active')) ?? allPillBtns[0];
-    allPillBtns.forEach((b) => { b.tabIndex = b === activeBtn ? 0 : -1; });
     undoBtn.disabled = !history.canUndo();
     redoBtn.disabled = !history.canRedo();
     zoomLabel.textContent = `${Math.round(history.present.viewport.zoom * 100)}%`;
