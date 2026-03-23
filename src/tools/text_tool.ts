@@ -19,7 +19,20 @@ export class TextTool implements Tool {
   onMouseDown(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
     e.preventDefault();
     this.commitSync(ctx);
-    
+
+    // If clicking on an existing text element, edit it instead of creating a new one
+    const elements = ctx.history.present.elements;
+    for (let i = elements.length - 1; i >= 0; i--) {
+      const el = elements[i];
+      if (!el || el.type !== 'text') continue;
+      const PAD = 4;
+      if (worldX >= el.x - PAD && worldX <= el.x + el.width + PAD &&
+          worldY >= el.y - PAD && worldY <= el.y + el.height + PAD) {
+        this.editExisting(el, ctx);
+        return;
+      }
+    }
+
     // Start drag to define text area
     this.isDragging = true;
     this.startX = worldX;
@@ -163,8 +176,8 @@ export class TextTool implements Tool {
       if (e.key === 'Escape') {
         e.stopPropagation();
         ta.removeEventListener('blur', onBlur);
-        ta.remove();
-        if (this.textarea === ta) { this.textarea = null; this.commitFn = null; }
+        if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
+        doCommit();
         return;
       }
       // Enter commits; Shift+Enter inserts newline
@@ -277,9 +290,8 @@ export class TextTool implements Tool {
       if (e.key === 'Escape') {
         e.stopPropagation();
         ta.removeEventListener('blur', onBlur);
-        mirror.remove();
-        ta.remove();
-        if (this.textarea === ta) { this.textarea = null; this.commitFn = null; }
+        if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
+        doCommit();
         return;
       }
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -384,8 +396,8 @@ export class TextTool implements Tool {
       if (e.key === 'Escape') {
         e.stopPropagation();
         ta.removeEventListener('blur', onBlur);
-        ta.remove();
-        if (this.textarea === ta) { this.textarea = null; this.commitFn = null; }
+        if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
+        doCommit();
         return;
       }
       // Shift+Enter commits in code mode; plain Enter inserts newline
@@ -497,9 +509,8 @@ export class TextTool implements Tool {
       if (e.key === 'Escape') {
         e.stopPropagation();
         ta.removeEventListener('blur', onBlur);
-        ta.remove();
-        if (this.textarea === ta) { this.textarea = null; this.commitFn = null; }
-        this.editingId = null;
+        if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
+        doCommit();
         return;
       }
       if (e.key === 'Enter' && !e.shiftKey) {
