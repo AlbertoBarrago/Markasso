@@ -37,6 +37,9 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
 
     // Space bar: activate hand tool while pressed
     if (e.key === ' ' && !e.ctrlKey && !e.metaKey) {
+      // Keep native Space activation on focused controls (buttons/menu items).
+      // This avoids stealing Space from toolbar buttons after a11y focus updates.
+      if (target.closest('button, [role="button"], [role="menuitem"]')) return;
       e.preventDefault();
       if (!spacePressed) {
         spacePressed = true;
