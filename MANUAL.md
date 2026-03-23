@@ -1,6 +1,13 @@
-# Markasso — User Manual
+<div align="center">
 
-A dark-canvas whiteboard for diagrams, notes, and freehand drawing.
+<img src="public/markasso-logo-icon.svg" width="80" height="80" alt="Markasso logo" />
+
+<h2>Markasso — User Manual</h2>
+
+<p>A dark-canvas whiteboard for diagrams, notes, and freehand drawing.<br/>
+<a href="https://albertobarrago.github.io/Markasso/">Open the app</a> · <a href="./README.md">Back to README</a></p>
+
+</div>
 
 ---
 
@@ -24,7 +31,7 @@ Press `Escape` to return to the Select tool at any time.
 
 ### Tool Lock
 
-The **lock button** (🔒) at the far left of the toolbar controls what happens after you finish drawing a shape:
+The **lock button** at the far left of the toolbar controls what happens after you finish drawing a shape:
 
 - **Unlocked (default):** the tool reverts to Select and the new element is selected — the properties panel opens automatically so you can style it immediately.
 - **Locked:** the drawing tool stays active so you can place the next shape without re-selecting the tool. Useful for drawing many shapes of the same type in a row.
@@ -43,16 +50,23 @@ Hold `Shift` to snap the angle to 45° increments.
 **Connecting arrows to shapes (Smart Links):** hover the arrow tool over any shape — a highlight and cyan ring appear on the nearest border point. Click and drag to start from that point. Move the end near another shape to connect it. The arrow attaches to the border (not the center) and follows the shapes as they move.
 
 ### Pen (Freehand)
-Hold and drag to draw. The stroke is automatically smoothed when you release.
+Hold and drag to draw. The stroke is automatically smoothed when you release. The pen tool stays active after each stroke so you can keep drawing without re-selecting.
 
 ### Eraser
-Select the Eraser tool (`0`) then click or drag over elements to delete them. The topmost element under the cursor is erased first. Locked elements are skipped. A glowing slash trail follows the cursor for visual feedback.
+Select the Eraser tool (`0`) then click or drag over elements to delete them. The topmost element under the cursor is erased first. Locked elements are skipped. A glowing slash trail follows the cursor for visual feedback. Elements highlight as the eraser passes over them.
 
 ### Text
 Click anywhere to place a text box and start typing. Press `Enter` to confirm, `Escape` to cancel. Double-click existing text to edit it.
 
+**Code mode:** toggle Code mode in the properties panel to create a monospace block with dark background. Use `Tab` for indentation and `Shift+Enter` to commit.
+
+**Text alignment:** set left, center, or right alignment per element from the properties panel.
+
 ### Shape Labels
-Double-click any rectangle or ellipse to add a text label inside it.
+Double-click any rectangle or ellipse to add a text label inside it. The label is clipped to the shape's bounds.
+
+### Arrow Labels
+Double-click any arrow to add a label along its path.
 
 ---
 
@@ -100,7 +114,7 @@ Group elements so they behave as a unit.
 Lock elements to protect them from accidental edits.
 
 - **Lock:** select elements → click the lock button in the context toolbar.
-- **Unlock:** select the locked element → click the unlock button (tooltip says "Unlock").
+- **Unlock:** select the locked element → click the unlock button.
 
 Locked elements:
 - Remain fully visible
@@ -117,8 +131,8 @@ Arrows (and lines) can be permanently connected to shapes.
 1. Select the Arrow tool (`A`).
 2. Hover over a shape — it highlights and shows a cyan ring on the border. Click to start from that border point.
 3. Drag to another shape — its border highlights too. Release to connect.
-4. The arrow is now live: move either shape and the arrow follows, always attaching at the correct border point facing the other shape.
-5. After the arrow is placed the tool automatically returns to Select — no need to press `Escape`.
+4. The arrow is now live: move either shape and the arrow follows, always attaching at the correct border point.
+5. After the arrow is placed the tool automatically returns to Select.
 
 **Editing a link:**
 Select the arrow → drag either cyan endpoint handle. Drag near a shape to reconnect, or drag away from all shapes to disconnect.
@@ -135,10 +149,10 @@ Control which elements appear on top.
 
 | Action | Keyboard | Toolbar |
 |--------|----------|---------|
-| Bring to front | `Ctrl+Shift+]` | ↑↑ button |
-| Move forward one | — | ↑ button |
-| Move back one | — | ↓ button |
-| Send to back | `Ctrl+Shift+[` | ↓↓ button |
+| Bring to front | `Ctrl+Shift+]` | front button |
+| Move forward one | — | forward button |
+| Move back one | — | back button |
+| Send to back | `Ctrl+Shift+[` | back button |
 
 ---
 
@@ -165,6 +179,8 @@ With an element selected, the **Properties panel** (slider icon in the context t
 - **Roughness** — 0 = crisp, higher = hand-drawn / sketchy look
 - **Corners** — Sharp or Rounded (rectangles only)
 - **Font** and **font size** (text elements)
+- **Alignment** — left / center / right (text elements)
+- **Code mode** — monospace block with dark background (text elements)
 
 ---
 
@@ -185,14 +201,24 @@ With an element selected, the **Properties panel** (slider icon in the context t
 | Zoom | Scroll wheel, or pinch on trackpad/touch |
 | Fit all elements | `F` |
 | Reset zoom to 100% | `Shift+0` |
+| Toggle all panels | `\` (backslash) |
+
+---
+
+## Theme
+
+Switch between **Dark**, **Light**, and **System** themes from the Settings panel (hamburger menu). Your preference is saved across sessions.
 
 ---
 
 ## Import & Export
 
-- **Import image:** click the image icon in the context toolbar (or drag and drop onto the canvas).
-- **Export:** use the export button in Settings to save as PNG or the native `.markasso` format.
-- **Save/Load:** the canvas auto-saves to the browser session. Use File → Save / Load for `.markasso` files.
+- **Import image:** click the image icon in the context toolbar (or drag and drop onto the canvas, or `Ctrl+V` to paste from clipboard).
+- **Open .markasso:** drag and drop a `.markasso` file onto the canvas, or use File → Open in the Settings menu.
+- **Save .markasso:** File → Save in the Settings menu. Saves the full scene including images.
+- **Export PNG:** downloads a 2× PNG cropped to the bounding box of all elements.
+- **Export SVG:** downloads a clean SVG cropped to the bounding box.
+- **Auto-save:** the canvas saves automatically to `localStorage` — your work survives page refreshes.
 
 ---
 
@@ -213,6 +239,7 @@ With an element selected, the **Properties panel** (slider icon in the context t
 | `G` | Toggle grid |
 | `F` | Fit canvas to elements |
 | `Shift+0` | Reset zoom to 100% |
+| `\` | Toggle all UI panels |
 | `Ctrl+Z` | Undo |
 | `Ctrl+Y` | Redo |
 | `Ctrl+A` | Select all |

@@ -1,10 +1,16 @@
-<p align="center">
-  <img src="public/markasso-logo-icon.svg" width="100" height="100" alt="Markasso logo" />
-</p>
+<div align="center">
 
-# Markasso
+<img src="public/markasso-logo-icon.svg" width="128" height="128" alt="Markasso logo" />
 
-> **Marker + Picasso. Zero dependencies. Zero excuses.**
+<h1>MARKASSO</h1>
+
+<p>A fast, minimal, keyboard-first whiteboard that runs entirely in the browser.<br/><em>Marker + Picasso. Zero dependencies. Zero excuses.</em></p>
+
+<a href="https://albertobarrago.github.io/Markasso/">
+  <img src="https://img.shields.io/badge/▶_Try_it_live-Markasso-c42020?style=for-the-badge" alt="Live Demo" />
+</a>
+
+<br/><br/>
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5.x-646cff?logo=vite&logoColor=white)
@@ -12,13 +18,19 @@
 ![Zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
+<br/>
+
+[User Manual](./MANUAL.md) · [Contributing](./CONTRIBUTORS.md) · [Report an Issue](https://github.com/AlbertoBarrago/Markasso/issues)
+
+</div>
+
 ---
 
 ## Overview
 
 Markasso is a fast, minimal, keyboard-first whiteboard engine that runs entirely in the browser.
 
-Built with vanilla TypeScript and the Canvas 2D API—no framework dependencies. Just you, a canvas, and JavaScript doing exactly what it was invented to do.
+Built with vanilla TypeScript and the Canvas 2D API — no framework dependencies. Just you, a canvas, and JavaScript doing exactly what it was invented to do.
 
 While Excalidraw excels at freehand sketching and Draw.io offers comprehensive diagramming, **Markasso occupies a different niche**: smaller, faster, and requiring no sign-in, cookies, or workspace creation.
 
@@ -60,7 +72,7 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 | **Infinite canvas** | Pan with middle-click or `Alt+drag`; zoom with `Ctrl+scroll` |
 | **Millimeter grid** | Dot · Line · Graph-paper modes (real mm at 96 DPI) |
 | **Navigation recovery** | `F` fits all content into view · `Shift+0` resets to origin |
-| **Dark theme** | Pure `#141414` canvas with floating panels and `backdrop-filter: blur` |
+| **Dark / Light theme** | Switchable themes with system preference support |
 
 ### Selection & Manipulation
 
@@ -77,7 +89,7 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 
 | Feature | Description |
 |---|---|
-| **Smart arrow links** | Connect arrows to shapes—arrows attach to the border (not center), facing each other |
+| **Smart arrow links** | Connect arrows to shapes — arrows attach to the border (not center), facing each other |
 | **Hover preview** | Hover to preview connection points before drawing |
 | **Cascade delete** | Deleting a shape removes all connected arrows and lines |
 
@@ -87,6 +99,7 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 |---|---|
 | **Groups** | `Ctrl+G` to group · click selects all members · click again enters group for individual editing |
 | **Shape labels** | Double-click any rectangle or ellipse to type a label, clipped inside the shape |
+| **Arrow labels** | Add labels to arrow elements |
 | **Text scaling** | Dragging a text handle scales the font size, not just the box |
 | **Double-click to edit** | Open any existing text element for inline editing |
 
@@ -95,7 +108,8 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 | Feature | Description |
 |---|---|
 | **Shift constraints** | Rectangle/Ellipse → square/circle · Line/Arrow → 45° snap · Resize → keep aspect ratio |
-| **Hover highlight** | Elements highlight on hover—always know what you're about to select |
+| **Hover highlight** | Elements highlight on hover — always know what you're about to select |
+| **Eraser hover** | Elements highlight as you drag the eraser over them |
 
 ### UI & Interface
 
@@ -104,16 +118,18 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 | **Floating glass UI** | Excalidraw-style islands: lock · hand · tools · eraser, top-right import + export; mobile gets a compact bottom-right action bar |
 | **Properties panel** | Stroke color, fill color, stroke width, stroke style, opacity, roughness, rounded corners; font size + family for text |
 | **Tool lock** | Lock button keeps the active drawing tool after placing a shape instead of reverting to Select |
-| **Keyboard shortcuts** | Letter keys + numeric keys `1–7`, `0` for eraser |
+| **Panel toggle** | `\` (backslash) shows/hides all UI panels for a distraction-free canvas |
+| **Keyboard navigation** | Full Tab-based keyboard navigation through all panels |
+| **About modal** | Info panel with version, links, and credits |
 
 ### Persistence & Export
 
 | Feature | Description |
 |---|---|
-| **Session persistence** | Auto-saved to `localStorage`—your work survives page refreshes |
-| **`.markasso` format** | Save and reload your full scene as a `.markasso` file (JSON)—images included |
+| **Session persistence** | Auto-saved to `localStorage` — your work survives page refreshes |
+| **`.markasso` format** | Save and reload your full scene as a `.markasso` file (JSON) — images included |
 | **Image import** | Drag-and-drop, file picker, or `Ctrl+V` paste; `.markasso` files can also be dropped directly |
-| **Export PNG / SVG** | Download the canvas as a 2× PNG or a clean SVG—bounding-box auto-fit |
+| **Export PNG / SVG** | Download the canvas as a 2× PNG or a clean SVG — bounding-box auto-fit |
 
 ### History & Undo
 
@@ -125,7 +141,7 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 
 | Feature | Description |
 |---|---|
-| **Zero dependencies** | Browser Canvas 2D API only |
+| **Zero dependencies** | Browser Canvas 2D API only — no React, no framework, no bundled megabytes |
 
 ---
 
@@ -147,24 +163,24 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 
 ## Getting Started
 
-### Installation
+### Install
 
 ```bash
-npm install
+pnpm install
 ```
 
-### Development
+### Develop
 
 ```bash
-npm run dev        # Start dev server at http://localhost:5173
+pnpm dev        # Start dev server at http://localhost:5173
 ```
 
 ### Build & Test
 
 ```bash
-npm run build      # Type-check and bundle → dist/
-npm run typecheck  # TypeScript validation
-npm test           # Run Vitest unit tests
+pnpm build      # Type-check and bundle → dist/
+pnpm typecheck  # TypeScript validation
+pnpm test       # Run Vitest unit tests
 ```
 
 No `.env` files. No API keys. No containerization required.
@@ -194,6 +210,7 @@ No `.env` files. No API keys. No containerization required.
 | `G` | Toggle grid |
 | `F` | Fit all content into view |
 | `Shift+0` | Reset viewport to origin |
+| `\` | Toggle all UI panels |
 | `Scroll` | Pan |
 | `Middle-click drag` / `Alt+drag` | Pan |
 | `Ctrl+scroll` | Zoom to cursor |
@@ -230,7 +247,7 @@ No `.env` files. No API keys. No containerization required.
 
 ## Architecture
 
-Markasso follows a **Redux-style unidirectional data flow**—no mutable state, no event spaghetti, no surprises.
+Markasso follows a **Redux-style unidirectional data flow** — no mutable state, no event spaghetti, no surprises.
 
 ```
 User event
@@ -253,7 +270,7 @@ render(ctx, scene, canvas)        ← called every requestAnimationFrame
 
 ### Key Invariants
 
-- **All coordinates in CSS pixels.** The canvas buffer is `clientWidth × devicePixelRatio` for sharpness (`#141414` background), but all viewport `offsetX/Y`, element positions, and mouse events live in CSS pixel space. The renderer applies DPR via `ctx.setTransform(zoom*dpr, ...)`.
+- **All coordinates in CSS pixels.** The canvas buffer is `clientWidth × devicePixelRatio` for sharpness, but all viewport `offsetX/Y`, element positions, and mouse events live in CSS pixel space.
 - **Immutable scene.** Every `Scene` object is never mutated. The reducer returns a new reference or the same reference if nothing changed (enabling cheap equality checks).
 - **Ephemeral commands** (pan, zoom, set-viewport, select, tool change) are excluded from the undo stack.
 - **`APPLY_STYLE`** is the single undoable command that updates both `appState` defaults and all currently selected elements in one atomic operation.
@@ -323,17 +340,33 @@ src/
 | Language | TypeScript 5 | Exhaustive `switch` on discriminated unions catches unhandled commands at compile time |
 | Build | Vite | Zero-config, instant HMR, single-file output |
 | Rendering | Canvas 2D API | Direct pixel control without virtual DOM overhead |
-| Testing | Vitest | Runs in Node—no browser needed for reducer/viewport math |
+| Testing | Vitest | Runs in Node — no browser needed for reducer/viewport math |
 | Dependencies | None | `crypto.randomUUID()`, `requestAnimationFrame`, `ResizeObserver` — all native |
 
 ---
 
 ## Changelog
+
+### v2.11.x
+- **About modal** — info panel with version, credits and links
+- **Accessibility** — full Tab-based keyboard navigation through all panels; focus management fixes for Safari and mobile
+- **Light theme polish** — improved contrast and visual refinements
+- **Safari mobile** — pen tool and touch event fixes
+- **Mobile menu** — spacing and layout improvements
+
+### v2.10.0
+- **Panel toggle** — `\` (backslash) shows/hides all UI panels for a distraction-free canvas
+- **Arrow labels** — add labels to arrow elements
+- **Pen tool flow** — pen tool stays active after drawing instead of reverting to Select
+- **Text tool** — background fill for text elements; single-click placement improvements
+- **Eraser hover** — elements highlight as the eraser passes over them
+- **Smoother lines** — stroke definition improvements for freehand paths
+
 ### v2.9.0
 - **Theme** — Added theme light, dark and system on settings menu
 
 ### v2.8.0
-- **Brand logo** — Markasso logo icon added to the welcome screen, thanks to https://github.com/lc-d. 
+- **Brand logo** — Markasso logo icon added to the welcome screen, thanks to https://github.com/lc-d.
 
 ### v2.7.0
 - **Multi-language i18n** — UI fully localised in 8 languages: Italiano, English, Español, Français, Deutsch, Português, 中文, 日本語; language persists in `localStorage` and is selectable from the hamburger menu
@@ -345,91 +378,25 @@ src/
 - **Text tool: code mode** — toggle between Text and Code mode in the panel; code mode creates auto-sized monospace blocks with dark background, Tab indentation, Shift+Enter to commit
 - **Text tool: alignment** — left / center / right alignment buttons in the text panel; alignment is stored per-element and applied in the renderer
 - **Text tool: auto-size on click** — single click no longer creates a fixed 240 px box; the textarea expands with the text and the element dimensions match the content width exactly
-- **Cursor polish** — text tool cursor is always crosshair; switches to text cursor while a textarea is open for editing
-- **Welcome screen fix** — dismissed overlay was blocking all mouse events due to `transitionend` never firing on a CSS animation; fixed by switching to `animationend`
 
 ### v2.6.0
-- **Picasso theme** — UI palette inspired by Picasso's *Le Rêve* (1932): crimson `#c42020` accent, warm near-black island backgrounds, warm off-white text; replaces the previous blue-violet theme
+- **Picasso theme** — UI palette inspired by Picasso's *Le Rêve* (1932): crimson `#c42020` accent, warm near-black island backgrounds, warm off-white text
 - **Favicon** — custom logo added as browser tab icon
-- **Welcome screen** — first-visit overlay with the Markasso wordmark in a pixel/retro font, a browser-storage reminder, and key shortcuts; auto-dismisses as soon as the user draws the first element
+- **Welcome screen** — first-visit overlay with the Markasso wordmark, a browser-storage reminder, and key shortcuts; auto-dismisses when the user draws the first element
 
 ### v2.5.0
-- **Mobile action bar** — compact Excalidraw-style bottom-right island always visible on touch devices: undo and redo are always shown; duplicate and delete appear when an element is selected
-- **Mobile style sheet** — tapping the sliders button opens a bottom sheet with stroke color, fill color, stroke width, stroke style, roughness, borders, and opacity; sections auto-hide based on element type; closes on outside tap
-- **Mobile layout cleanup** — desktop context panel suppressed on touch; floating undo/redo/zoom island replaced by the action bar; context panel repositioned and viewport-sized for touch
+- **Mobile action bar** — compact bottom-right island always visible on touch devices: undo/redo always shown; duplicate and delete appear when an element is selected
+- **Mobile style sheet** — bottom sheet with all style controls; closes on outside tap
+- **Mobile layout cleanup** — desktop context panel suppressed on touch; proper viewport sizing
 
-### v2.4.9
-- **Auto-select after drawing** — when tool lock is off, placing a shape reverts to Select and keeps the new element selected so the properties panel opens automatically
-- **Rounded corners** — rectangle elements now support a corner radius toggle (Sharp / Arrotondato) in the properties panel, fully undoable via `APPLY_STYLE`
-
-### v2.4.8
-- **Eraser tool** — new tool (`0`) erases elements on click or drag; locked elements are skipped
-- **Sword-slash trail** — a glowing white trail fades out over 350 ms as you erase, for satisfying visual feedback
-- **Tool lock button** — lock icon in the toolbar keeps the active drawing tool after placing a shape instead of reverting to Select; unlocked is the new default
-- **Toolbar layout** — restructured to match Excalidraw style: lock · hand · select–text · eraser
-- **Properties panel auto-opens** — after drawing a shape the panel opens immediately showing the new element's style controls
-
-### v2.4.7
-- **Font size & family in context panel** — when a text element is selected, the panel now shows a font size input (click to auto-select the value) and font family preset buttons (Arial, Georgia, Monospace, Comic Sans)
-- **Single-click text placement** — clicking the canvas with the text tool now opens a textarea immediately, without requiring a drag; drag still works to define a custom area
-- **Text word-wrap fix** — text now wraps on the canvas exactly as it did inside the textarea, using real glyph metrics (`measureText`); the SVG export also respects the element width
-
-### v2.4.6
-- **Global menu** — hamburger button replaces the gear icon; file actions (Open, Save, Export PNG/SVG, Clear canvas) are now in the menu alongside Preferences and theme
-- **Custom canvas background** — choose from dark background presets directly in the menu; the background colour is persisted across sessions
-- **Grid off by default** — new canvases start with a clean, grid-free background
-
-### v2.4.5
-- **Improved tools panel UX** — consolidated context and properties panels for a cleaner, less cluttered interface
-
-### v2.4.4
-- **Hand tool** — pan the canvas by holding `H` or `Space`, or selecting the hand from the toolbar
-- **Improved text tool** — click to place, type, confirm with `Enter`/`Escape`; tool auto-returns to Select after confirming
-
-### v2.4.3
-- **Text tool auto-resets** — after confirming a text element the tool returns to Select automatically
-
-### v2.4.2
-- **Lock icon fixed** — the padlock icon now shows the current state (closed = locked, open = unlocked)
-- **Select locked elements** — locked elements can now be click-selected; they still cannot be moved, resized, or deleted
-
-### v2.4.1
-- **Arrow tool auto-resets** — after drawing a linked arrow the tool returns to Select automatically
-- **Cascade delete** — deleting a shape now removes all arrows and lines connected to it
-
-### v2.4.0
-- **Smoother pen curves** — real-time exponential smoothing filters trackpad jitter
-- **Improved curve rendering** — cubic Bézier curves with Catmull-Rom splines
-- **High-quality anti-aliasing** — canvas smoothing enabled for crisp curves at any zoom level
-- **Finer point capture** — reduced from 3px to 2px threshold for more detailed strokes
-- **Cleaner default stroke** — 1px width with round line caps and joins
-
-### v2.3.2
-- **Border-point snap fix** — corrected edge case where arrow/line endpoints did not snap to exact border attachment points
-
-### v2.3.0
-- **Border attachment** — smart links attach to element borders (facing the other shape), not the center
-- **Perimeter snap** — arrow/line tools activate magnetic snap near element edges
-- **Hover preview** — connection point preview when hovering over shapes
-- **Group entry fix** — clicking an element inside a group correctly selects that individual element
-- **Pen tool flow** — pen tool stays active after drawing a stroke
-
-### v2.2.0
-- **Smart arrow links** — drag arrow endpoints near shapes to connect them
-- **Lock elements** — lock/unlock via the context toolbar
-- **Groups** — `Ctrl+G` to group elements with nested editing support
-- **Hover highlight** — soft glow around elements on hover
-- **Shift+click multi-select** — add or remove elements without a marquee
-- **Arrow key nudge** — move selection 1px (10px with Shift)
-- **Duplicate** — `Ctrl+D` clones selection with 20px offset
-- **Pen tool smoothing** — strokes filtered and simplified on release
-
-### v2.1.5
-- **`.markasso` format** — save and reload full scenes as portable JSON files
-- **Open .markasso** — toolbar button and drag & drop support for loading saved scenes
-- **Session persistence** — auto-save to `localStorage` with quota warnings
-- **Properties panel** — now opens adjacent to the context panel
-- **Default font** — changed to `Arial, sans-serif`
+### v2.4.x
+- **Eraser tool** (`0`) with sword-slash trail effect
+- **Tool lock button** — keep active drawing tool after placing a shape
+- **Rounded corners** — rectangle corner radius toggle (Sharp / Rounded)
+- **Groups** — `Ctrl+G` with nested group editing support
+- **Smart arrow links** — border attachment, hover preview, cascade delete
+- **Auto-select after drawing** — new element is selected and properties panel opens automatically
+- **Pen tool** — Catmull-Rom smoothing, real-time jitter filtering, cubic Bézier rendering
 
 ---
 
