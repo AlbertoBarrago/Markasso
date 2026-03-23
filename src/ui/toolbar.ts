@@ -4,6 +4,7 @@ import { exportPNG, exportSVG } from '../rendering/export';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { fitToElements } from '../core/viewport';
 import { t } from '../i18n';
+import { rovingTabIndex } from './keyboard_utils';
 
 
 // ── SVG icons ──────────────────────────────────────────────────────────────────
@@ -50,12 +51,16 @@ export function initToolbar(container: HTMLElement, history: History): void {
 
   // ── Center-top: tool buttons pill ─────────────────────────────────────────
   const centerPill = div('tb-island tb-island-tools');
+  centerPill.setAttribute('role', 'toolbar');
+  centerPill.setAttribute('aria-label', 'Drawing tools');
   const toolBtns = new Map<ActiveTool, HTMLButtonElement>();
 
   // Lock button (first, no shortcut badge)
   const lockBtn = document.createElement('button');
   lockBtn.className = 'tb-btn';
   lockBtn.title = t('lockTool');
+  lockBtn.setAttribute('aria-label', t('lockTool'));
+  lockBtn.setAttribute('aria-pressed', 'false');
   lockBtn.innerHTML = IC.lockOpen;
   lockBtn.addEventListener('click', () => {
     const locked = history.present.appState.toolLocked;
@@ -72,18 +77,24 @@ export function initToolbar(container: HTMLElement, history: History): void {
     const b = document.createElement('button');
     b.className = 'tb-btn';
     b.title = `${t.label} (${t.key})`;
+    b.setAttribute('aria-label', t.label);
+    b.setAttribute('aria-pressed', 'false');
+    b.tabIndex = -1;
     b.innerHTML = `${t.icon}${t.num ? `<span class="tb-btn-key">${t.num}</span>` : ''}`;
     b.addEventListener('click', () => history.dispatch({ type: 'SET_TOOL', tool: t.tool }));
     toolBtns.set(t.tool, b);
     centerPill.appendChild(b);
-
   });
+
+  rovingTabIndex(centerPill, '.tb-btn', 'horizontal');
 
   // ── Bottom-left: undo/redo + zoom ─────────────────────────────────────────
   const bottomLeft = div('tb-island-bottomleft');
 
   // Undo / Redo
   const undoPill = div('tb-island tb-island-undo');
+  undoPill.setAttribute('role', 'group');
+  undoPill.setAttribute('aria-label', 'History');
   const undoBtn = mkBtn(IC.undo, t('undo'));
   const redoBtn = mkBtn(IC.redo, t('redo'));
   undoBtn.addEventListener('click', () => history.undo());
@@ -92,6 +103,8 @@ export function initToolbar(container: HTMLElement, history: History): void {
 
   // Zoom
   const zoomPill = div('tb-island tb-island-zoom');
+  zoomPill.setAttribute('role', 'group');
+  zoomPill.setAttribute('aria-label', 'Zoom');
   const fitBtn   = mkBtn(IC.fit, t('fitContent'));
   const minusBtn = mkBtn('−', t('zoomOut'));
   const plusBtn  = mkBtn('+', t('zoomIn'));
@@ -143,7 +156,9 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const exportIsland = div('tb-island');
   exportIsland.style.position = 'relative';
   const exportTrigger = mkBtn(IC.export, t('export'));
+  exportTrigger.setAttribute('aria-expanded', 'false');
   const exportPanel = document.createElement('div');
+  exportPanel.setAttribute('role', 'menu');
   exportPanel.style.cssText = [
     'position:absolute', 'right:0', 'top:calc(100% + 6px)',
     'background:rgba(26,26,40,0.98)', 'border:1px solid rgba(255,255,255,0.1)',
@@ -165,9 +180,25 @@ export function initToolbar(container: HTMLElement, history: History): void {
     e.stopPropagation();
     panelOpen = !panelOpen;
     exportPanel.style.display = panelOpen ? 'flex' : 'none';
+    exportTrigger.setAttribute('aria-expanded', String(panelOpen));
+    if (panelOpen) {
+      exportPanel.querySelector<HTMLButtonElement>('button:not([disabled])')?.focus();
+    }
+  });
+  exportIsland.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && panelOpen) {
+      panelOpen = false;
+      exportPanel.style.display = 'none';
+      exportTrigger.setAttribute('aria-expanded', 'false');
+      exportTrigger.focus();
+    }
   });
   document.addEventListener('click', () => {
-    if (panelOpen) { panelOpen = false; exportPanel.style.display = 'none'; }
+    if (panelOpen) {
+      panelOpen = false;
+      exportPanel.style.display = 'none';
+      exportTrigger.setAttribute('aria-expanded', 'false');
+    }
   });
   exportIsland.append(exportTrigger, exportPanel);
 
@@ -184,8 +215,17 @@ export function initToolbar(container: HTMLElement, history: History): void {
   function sync(): void {
     const { activeTool, toolLocked } = history.present.appState;
     lockBtn.classList.toggle('active', toolLocked);
+    lockBtn.setAttribute('aria-pressed', String(toolLocked));
     lockBtn.innerHTML = toolLocked ? IC.lock : IC.lockOpen;
-    for (const [t, b] of toolBtns) b.classList.toggle('active', t === activeTool);
+    for (const [t, b] of toolBtns) {
+      const isActive = t === activeTool;
+      b.classList.toggle('active', isActive);
+      b.setAttribute('aria-pressed', String(isActive));
+    }
+    // Roving tabIndex: the active tool button (or lock if none active) gets tabIndex=0
+    const allPillBtns = [...centerPill.querySelectorAll<HTMLButtonElement>('.tb-btn')];
+    const activeBtn = allPillBtns.find((b) => b.classList.contains('active')) ?? allPillBtns[0];
+    allPillBtns.forEach((b) => { b.tabIndex = b === activeBtn ? 0 : -1; });
     undoBtn.disabled = !history.canUndo();
     redoBtn.disabled = !history.canRedo();
     zoomLabel.textContent = `${Math.round(history.present.viewport.zoom * 100)}%`;
@@ -217,6 +257,7 @@ function mkBtn(icon: string, title: string): HTMLButtonElement {
 
 function menuItem(label: string, iconSvg: string, onClick: () => void): HTMLButtonElement {
   const item = document.createElement('button');
+  item.setAttribute('role', 'menuitem');
   item.style.cssText = [
     'display:flex', 'align-items:center', 'gap:8px',
     'background:none', 'border:none', 'color:#d4d4e8',

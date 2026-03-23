@@ -1,6 +1,7 @@
 import type { History } from '../engine/history';
 import type { SelectTool } from '../tools/select_tool';
 import { fitToElements } from '../core/viewport';
+import { isFocusInPanel } from './keyboard_utils';
 
 export function initShortcuts(history: History, selectTool: SelectTool): void {
   const shortcuts = new Map<string, () => void>([
@@ -28,9 +29,11 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
   let previousTool: string | null = null;
 
   window.addEventListener('keydown', (e) => {
-    // Don't capture shortcuts when typing in an input/textarea
+    // Don't capture shortcuts when typing in an input/textarea/select
     const target = e.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
+    // Block single-key shortcuts when focus is inside a UI panel; allow modifier combos (Ctrl/Cmd+…)
+    if (isFocusInPanel() && !e.ctrlKey && !e.metaKey) return;
 
     // Space bar: activate hand tool while pressed
     if (e.key === ' ' && !e.ctrlKey && !e.metaKey) {
