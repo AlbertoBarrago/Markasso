@@ -342,11 +342,10 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
         const { viewport } = scene;
         const dpr = window.devicePixelRatio;
         ctx2d.setTransform(viewport.zoom * dpr, 0, 0, viewport.zoom * dpr, viewport.offsetX * dpr, viewport.offsetY * dpr);
-        ctx2d.globalAlpha = 0.5;
-        ctx2d.fillStyle = 'rgba(124, 99, 212, 0.3)';
-        ctx2d.strokeStyle = scene.appState.strokeColor;
-        ctx2d.lineWidth = 1;
-        ctx2d.setLineDash([5, 5]);
+        ctx2d.fillStyle = 'rgba(120,180,255,0.1)';
+        ctx2d.strokeStyle = 'rgba(120,180,255,0.8)';
+        ctx2d.lineWidth = 1.5 / viewport.zoom;
+        ctx2d.setLineDash([6, 3]);
         ctx2d.fillRect(preview.x, preview.y, preview.width, preview.height);
         ctx2d.strokeRect(preview.x, preview.y, preview.width, preview.height);
         ctx2d.restore();
