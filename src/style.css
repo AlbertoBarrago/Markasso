@@ -39,7 +39,10 @@ html, body {
 #app { position: fixed; inset: 0; }
 
 /* Canvas workspace fills everything */
-#workspace { position: fixed; inset: 0; z-index: 1; }
+/* touch-action: none prevents Safari from intercepting touches at the
+   parent level before they reach the canvas, which can suppress touchmove
+   events and break pen-tool drawing on iOS. */
+#workspace { position: fixed; inset: 0; z-index: 1; touch-action: none; }
 
 #main {
   position: absolute; inset: 0;

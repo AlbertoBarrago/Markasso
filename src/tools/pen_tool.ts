@@ -56,6 +56,15 @@ export class PenTool implements Tool {
     ctx.onPreviewUpdate?.();
   }
 
+  onCancel(_ctx: ToolContext): void {
+    // Discard the in-progress stroke without committing (e.g. second finger added,
+    // or a touchcancel event fired). This prevents unwanted partial strokes on mobile.
+    this.drawing = false;
+    this.points = [];
+    this.smoothedPoints = [];
+    this.preview = null;
+  }
+
   onMouseUp(_e: MouseEvent, _worldX: number, _worldY: number, ctx: ToolContext): void {
     if (!this.drawing) return;
     this.drawing = false;

@@ -182,11 +182,21 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
       getActiveTool().onMouseDown(syntheticMouse('mousedown', t.clientX, t.clientY), wx, wy, toolCtx);
       needsRender = true;
     } else if (e.touches.length === 2) {
-      // Cancel any in-progress single-touch draw
-      const t1prev = getTouchById(e.touches, touch1Id);
-      if (t1prev) {
-        const [wx, wy] = getWorldCoordsFromTouch(t1prev);
-        getActiveTool().onMouseUp(syntheticMouse('mouseup', t1prev.clientX, t1prev.clientY), wx, wy, toolCtx);
+      // Cancel any in-progress single-touch draw.
+      // Use onCancel() when available (e.g. PenTool) so the tool can discard
+      // the partial stroke rather than committing it — a second finger is
+      // almost always a pinch-to-zoom, not an intentional stroke end.
+      const activeTool = getActiveTool();
+      if (touch1Id !== -1) {
+        if (activeTool.onCancel) {
+          activeTool.onCancel(toolCtx);
+        } else {
+          const t1prev = getTouchById(e.touches, touch1Id);
+          if (t1prev) {
+            const [wx, wy] = getWorldCoordsFromTouch(t1prev);
+            activeTool.onMouseUp(syntheticMouse('mouseup', t1prev.clientX, t1prev.clientY), wx, wy, toolCtx);
+          }
+        }
       }
       const t1 = e.touches.item(0)!;
       const t2 = e.touches.item(1)!;
@@ -274,6 +284,19 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
     }
     needsRender = true;
   }, { passive: false });
+
+  // touchcancel fires when the OS interrupts a touch sequence (e.g. incoming
+  // call, system gesture). Cancel any in-progress tool action so the tool
+  // state doesn't get stuck with drawing=true and a dangling preview.
+  canvas.addEventListener('touchcancel', () => {
+    const activeTool = getActiveTool();
+    if (activeTool.onCancel) {
+      activeTool.onCancel(toolCtx);
+    }
+    touch1Id = -1;
+    touch2Id = -1;
+    needsRender = true;
+  });
 
   canvas.addEventListener('mouseleave', () => {
     const tool = getActiveTool();
