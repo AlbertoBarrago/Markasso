@@ -1,6 +1,8 @@
 {
   "name": "markasso",
-  "version": "2.10.1",
+  "author": "alBz <albertobarrago@gmail.com>",
+  "contributors": ["Lorenzo Cataldi <lorenzo@cataldi.design>"],
+  "version": "2.9.0",
   "private": true,
   "type": "module",
   "scripts": {
