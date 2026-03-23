@@ -1040,6 +1040,12 @@ html, body {
 [data-theme="light"] .mobile-action-btn { background: rgba(80,28,18,0.05); }
 [data-theme="light"] .mss-handle { background: rgba(80,28,18,0.2); }
 
+/* UI hide mode (\ toggle) */
+body.ui-hidden #toolbar,
+body.ui-hidden #context-panel,
+body.ui-hidden #layers-panel,
+body.ui-hidden #mobile-actions { display: none !important; }
+
 /* Quota toast */
 [data-theme="light"] .quota-toast {
   background: rgba(255, 252, 248, 0.98);
