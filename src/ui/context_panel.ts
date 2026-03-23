@@ -327,7 +327,6 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   const ACTIONS = [
     { icon: '📋', label: t('duplicate'), action: 'duplicate' },
     { icon: '🗑', label: t('delete'),    action: 'delete' },
-    { icon: '🔗', label: t('link'),      action: 'link' },
   ];
   for (const a of ACTIONS) {
     const btn = document.createElement('button');
@@ -353,11 +352,6 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
         history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
       } else if (a.action === 'delete') {
         history.dispatch({ type: 'DELETE_ELEMENTS', ids });
-      } else if (a.action === 'link') {
-        const url = prompt(t('insertUrl'));
-        if (url) {
-          console.log('Link:', url);
-        }
       }
     });
     actions.appendChild(btn);
