@@ -80,5 +80,8 @@
   "theme": "テーマ",
   "themeLight": "ライト",
   "themeDark": "ダーク",
-  "themeDevice": "システム"
+  "themeDevice": "システム",
+  "language": "言語",
+  "menuAbout": "このアプリについて",
+  "aboutDescription": "ブラウザで使える軽量・依存ゼロのホワイトボード。"
 }

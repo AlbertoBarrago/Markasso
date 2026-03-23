@@ -80,5 +80,8 @@
   "theme": "Theme",
   "themeLight": "Light",
   "themeDark": "Dark",
-  "themeDevice": "System"
+  "themeDevice": "System",
+  "language": "Language",
+  "menuAbout": "About",
+  "aboutDescription": "A lightweight, zero-dependency whiteboard for your browser."
 }

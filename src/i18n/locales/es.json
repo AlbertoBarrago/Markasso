@@ -80,5 +80,8 @@
   "theme": "Tema",
   "themeLight": "Claro",
   "themeDark": "Oscuro",
-  "themeDevice": "Sistema"
+  "themeDevice": "Sistema",
+  "language": "Idioma",
+  "menuAbout": "Acerca de",
+  "aboutDescription": "Una pizarra ligera y sin dependencias para tu navegador."
 }

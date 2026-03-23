@@ -80,5 +80,8 @@
   "theme": "Design",
   "themeLight": "Hell",
   "themeDark": "Dunkel",
-  "themeDevice": "System"
+  "themeDevice": "System",
+  "language": "Sprache",
+  "menuAbout": "Über",
+  "aboutDescription": "Ein leichtes Whiteboard ohne Abhängigkeiten für deinen Browser."
 }

@@ -80,5 +80,8 @@
   "theme": "Tema",
   "themeLight": "Claro",
   "themeDark": "Escuro",
-  "themeDevice": "Sistema"
+  "themeDevice": "Sistema",
+  "language": "Idioma",
+  "menuAbout": "Sobre",
+  "aboutDescription": "Um quadro branco leve e sem dependências para o seu navegador."
 }

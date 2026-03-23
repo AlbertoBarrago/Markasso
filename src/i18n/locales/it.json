@@ -81,5 +81,7 @@
   "themeLight": "Chiaro",
   "themeDark": "Scuro",
   "themeDevice": "Sistema",
-  "language": "Lingua"
+  "language": "Lingua",
+  "menuAbout": "Info",
+  "aboutDescription": "Una lavagna leggera e senza dipendenze per il tuo browser."
 }

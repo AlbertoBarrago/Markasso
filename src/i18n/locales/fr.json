@@ -80,5 +80,8 @@
   "theme": "Thème",
   "themeLight": "Clair",
   "themeDark": "Sombre",
-  "themeDevice": "Système"
+  "themeDevice": "Système",
+  "language": "Langue",
+  "menuAbout": "À propos",
+  "aboutDescription": "Un tableau blanc léger et sans dépendances pour votre navigateur."
 }

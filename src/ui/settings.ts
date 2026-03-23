@@ -78,6 +78,8 @@ const ICONS = {
   prefs:   svg(p('M3 5h14M3 10h14M3 15h14M7 3v4M13 8v4M10 13v4')),
   chevron: svg(p('M8 5l5 5-5 5')),
   guide:   svg(p('M10 2a8 8 0 100 16A8 8 0 0010 2zM10 7v4M10 13h.01')),
+  about:   svg(p('M3 4a1 1 0 011-1h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1zM10 9v5M10 6.5h.01')),
+  coffee:  svg(p('M6 2v3M10 2v3M14 2v3M4 7h12l-1.5 9a2 2 0 01-2 1.5h-5a2 2 0 01-2-1.5zM16 9h2a2 2 0 010 4h-2')),
   lang:    svg(p('M10 2a8 8 0 100 16A8 8 0 0010 2zM2 10h16M10 2c-2 4-2 10 0 16M10 2c2 4 2 10 0 16')),
   sun:     svg(`<circle cx="10" cy="10" r="3"/>${p('M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.41 1.41M13.37 13.37l1.41 1.41M4.22 15.78l1.41-1.41M13.37 6.63l1.41-1.41')}`),
   moon:    svg(p('M15 10a6 6 0 01-6 6 6 6 0 010-12c.34 0 .67.03 1 .08A5 5 0 1014.92 9c.05.33.08.66.08 1z')),
@@ -206,18 +208,51 @@ export function initSettings(
             </select>
         </div>
         </div>
+
+      <div class="menu-divider"></div>
+
+      <button class="menu-item" id="menu-about">
+        ${ICONS.about}<span class="menu-item-label">${t('menuAbout')}</span>
+      </button>
     </div>
-    <div class="menu-divider"></div>
-    <footer class="menu-footer">
-      <div class="wl-brand-setting-menu">
-         <img width="32" height="32" src="markasso-logo-icon.svg" alt=""/>
-         <small class="wl-name">Markasso</small>
-         <span class="sp-version">v${pkg.version}</span>
-      </div>
-    </footer>
-    
-     
   `;
+
+  // ── About modal ──────────────────────────────────────────────────────────
+  const aboutModal = document.createElement('div');
+  aboutModal.className = 'about-modal';
+  aboutModal.setAttribute('role', 'dialog');
+  aboutModal.setAttribute('aria-modal', 'true');
+  aboutModal.setAttribute('aria-label', 'About Markasso');
+  aboutModal.setAttribute('aria-hidden', 'true');
+  aboutModal.innerHTML = `
+    <div class="about-modal-box">
+      <img class="about-modal-logo" width="64" height="64" src="markasso-logo-icon.svg" alt="Markasso"/>
+      <h2 class="about-modal-name">Markasso</h2>
+      <p class="about-modal-desc">${t('aboutDescription')}</p>
+      <p class="about-modal-author">by <strong>alBz</strong></p>
+      <a class="about-modal-coffee" href="https://buymeacoffee.com/albz" target="_blank" rel="noopener noreferrer">
+        ${ICONS.coffee} Buy me a coffee
+      </a>
+      <span class="about-modal-version">v${pkg.version}</span>
+    </div>
+  `;
+  document.body.appendChild(aboutModal);
+
+  function openAbout(): void {
+    aboutModal.classList.add('open');
+    aboutModal.setAttribute('aria-hidden', 'false');
+  }
+  function closeAbout(): void {
+    aboutModal.classList.remove('open');
+    aboutModal.setAttribute('aria-hidden', 'true');
+  }
+
+  aboutModal.addEventListener('click', (e) => {
+    if (e.target === aboutModal) closeAbout();
+  });
+  aboutModal.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeAbout();
+  });
 
   // ── Panel state ──────────────────────────────────────────────────────────
   let prefsOpen = false;
@@ -304,6 +339,10 @@ export function initSettings(
   panel.querySelector<HTMLButtonElement>('#menu-guide')!.addEventListener('click', () => {
     window.open('https://github.com/AlbertoBarrago/Markasso/blob/main/MANUAL.md', '_blank');
     close();
+  });
+  panel.querySelector<HTMLButtonElement>('#menu-about')!.addEventListener('click', () => {
+    close();
+    openAbout();
   });
   panel.querySelector<HTMLButtonElement>('#menu-clear')!.addEventListener('click', () => {
     if (confirm('Clear the canvas? This cannot be undone.')) {

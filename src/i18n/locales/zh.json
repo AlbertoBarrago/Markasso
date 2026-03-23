@@ -80,5 +80,8 @@
   "theme": "主题",
   "themeLight": "浅色",
   "themeDark": "深色",
-  "themeDevice": "系统"
+  "themeDevice": "系统",
+  "language": "语言",
+  "menuAbout": "关于",
+  "aboutDescription": "一款轻量、零依赖的浏览器白板。"
 }
