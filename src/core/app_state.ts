@@ -19,15 +19,19 @@ export interface AppState {
   readonly gridSize:    number;
   readonly gridType:    GridType;
   readonly strokeStyle: 'solid' | 'dashed' | 'dotted';
-  /** Flag: text was just created, next drag should create marquee */
   readonly justCreatedText: boolean;
   readonly toolLocked: boolean;
 }
 
 export function createAppState(): AppState {
+  const resolvedTheme = typeof document !== 'undefined'
+    ? document.documentElement.getAttribute('data-theme')
+    : null;
+  const defaultStrokeColor = resolvedTheme === 'light' ? '#000000' : '#e2e2ef';
+
   return {
     activeTool:  'select',
-    strokeColor: '#e2e2ef',   // light stroke for dark canvas
+    strokeColor: defaultStrokeColor,
     fillColor:   'transparent',
     strokeWidth: 1,
     fontSize:    20,

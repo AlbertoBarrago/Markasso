@@ -62,6 +62,8 @@ const GRID_TYPES: { type: GridType; label: string; desc: string }[] = [
 
 const DARK_BG_COLORS  = ['#141414', '#1a1a2e', '#0d1117', '#1e1e1e', '#12100e', '#0f1923'];
 const LIGHT_BG_COLORS = ['#ffffff', '#fef5ef', '#fde8d8', '#f8dfd4', '#f5d5c8', '#f0cfc0'];
+const LIGHT_STROKE_COLOR = '#000000';
+const DARK_STROKE_COLOR = '#e2e2ef';
 
 function svg(inner: string, size = 16): string {
   return `<svg width="${size}" height="${size}" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
@@ -398,6 +400,12 @@ export function initSettings(
 
   renderBgSwatches();
 
+  // Keep default drawing color high-contrast for the active theme.
+  history.dispatch({
+    type: 'SET_STROKE_COLOR',
+    color: isResolvedLight() ? LIGHT_STROKE_COLOR : DARK_STROKE_COLOR,
+  });
+
   // ── Language selector ────────────────────────────────────────────────────
   panel.querySelector<HTMLSelectElement>('#sp-lang-select')!.addEventListener('change', (e) => {
     setLocale((e.target as HTMLSelectElement).value as Locale);
@@ -407,6 +415,10 @@ export function initSettings(
   panel.querySelectorAll<HTMLButtonElement>('.menu-theme-btn').forEach((b) => {
     b.addEventListener('click', () => {
       applyTheme(b.dataset['mode'] as ThemeMode);
+      history.dispatch({
+        type: 'SET_STROKE_COLOR',
+        color: isResolvedLight() ? LIGHT_STROKE_COLOR : DARK_STROKE_COLOR,
+      });
       current = { ...current, bgColor: isResolvedLight() ? LIGHT_BG_COLORS[0]! : DARK_BG_COLORS[0]! };
       saveSettings(current);
       applySettings(appEl, current);
@@ -419,6 +431,10 @@ export function initSettings(
   window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
     if (getThemeMode() === 'device') {
       applyTheme('device');
+      history.dispatch({
+        type: 'SET_STROKE_COLOR',
+        color: isResolvedLight() ? LIGHT_STROKE_COLOR : DARK_STROKE_COLOR,
+      });
       current = { ...current, bgColor: e.matches ? LIGHT_BG_COLORS[0]! : DARK_BG_COLORS[0]! };
       saveSettings(current);
       applySettings(appEl, current);

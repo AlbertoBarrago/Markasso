@@ -2,7 +2,7 @@ import type { History } from '../engine/history';
 import type { Element } from '../elements/element';
 import { t } from '../i18n';
 
-const STROKE_PRESETS = ['#e2e2ef', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
+const STROKE_PRESETS = ['#000000', '#e2e2ef', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
 const FILL_PRESETS   = ['transparent', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
 
 export function initMobileActionBar(workspace: HTMLElement, history: History): void {

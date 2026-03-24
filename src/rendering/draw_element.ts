@@ -2,10 +2,18 @@ import type { Element } from '../elements/element';
 import { getElementCenter, resolveArrowEndpoints } from './draw_selection';
 import { getCachedImage } from './image_cache';
 
+function resolveStrokeColorForTheme(strokeColor: string): string {
+  if (typeof document === 'undefined') return strokeColor;
+  const resolvedTheme = document.documentElement.getAttribute('data-theme');
+  if (resolvedTheme !== 'light') return strokeColor;
+  return strokeColor.toLowerCase() === '#e2e2ef' ? '#000000' : strokeColor;
+}
+
 export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allElements?: ReadonlyArray<Element>): void {
   ctx.save();
+  const strokeColor = resolveStrokeColorForTheme(el.strokeColor);
   ctx.globalAlpha = el.opacity;
-  ctx.strokeStyle = el.strokeColor;
+  ctx.strokeStyle = strokeColor;
   ctx.lineWidth = el.strokeWidth;
   ctx.fillStyle = el.fillColor === 'transparent' ? 'rgba(0,0,0,0)' : el.fillColor;
   ctx.lineCap = 'round';
@@ -44,7 +52,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         ctx.beginPath();
         ctx.rect(rx, ry, rw, rh);
         ctx.clip();
-        drawShapeLabel(ctx, rx + rw / 2, ry + rh / 2, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', el.strokeColor);
+        drawShapeLabel(ctx, rx + rw / 2, ry + rh / 2, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', strokeColor);
         ctx.restore();
       }
       break;
@@ -63,7 +71,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         ctx.beginPath();
         ctx.ellipse(cx, cy, erx, ery, 0, 0, Math.PI * 2);
         ctx.clip();
-        drawShapeLabel(ctx, cx, cy, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', el.strokeColor);
+        drawShapeLabel(ctx, cx, cy, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', strokeColor);
         ctx.restore();
       }
       break;
@@ -107,7 +115,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         drawArrowHead(ctx, pts.x, pts.y, pts.x2, pts.y2, el.strokeWidth);
         ctx.save();
         ctx.setLineDash([]);
-        drawArrowLabel(ctx, mx, my, el.label, fontSize, fontFamily, el.strokeColor);
+        drawArrowLabel(ctx, mx, my, el.label, fontSize, fontFamily, strokeColor);
         ctx.restore();
       } else {
         drawArrow(ctx, pts.x, pts.y, pts.x2, pts.y2, el.strokeWidth, roughness, seed);
@@ -120,9 +128,9 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
     case 'text':
       ctx.setLineDash([]);
       if (el.isCode) {
-        drawCode(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, el.strokeColor, el.width, el.height, el.textAlign ?? 'left');
+        drawCode(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, strokeColor, el.width, el.height, el.textAlign ?? 'left');
       } else {
-        drawText(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, el.strokeColor, el.fillColor, el.width, el.height, el.textAlign ?? 'left');
+        drawText(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, strokeColor, el.fillColor, el.width, el.height, el.textAlign ?? 'left');
       }
       break;
     case 'image':

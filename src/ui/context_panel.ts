@@ -2,7 +2,7 @@ import type { History } from '../engine/history';
 import type { Element } from '../elements/element';
 import { t } from '../i18n';
 
-const STROKE_PRESETS = ['#e2e2ef', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
+const STROKE_PRESETS = ['#000000', '#e2e2ef', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
 const FILL_PRESETS = ['transparent', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
 
 export function initContextPanel(workspace: HTMLElement, history: History): void {
@@ -105,7 +105,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   const strokePicker = document.createElement('input');
   strokePicker.type = 'color';
   strokePicker.className = 'cp-color-picker';
-  strokePicker.value = STROKE_PRESETS[0] || '#e2e2ef';
+  strokePicker.value = history.present.appState.strokeColor || STROKE_PRESETS[0] || '#000000';
   strokePicker.addEventListener('input', () => {
     history.dispatch({ type: 'APPLY_STYLE', strokeColor: strokePicker.value });
   });
