@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { reducer } from '../src/engine/reducer';
 import { createScene } from '../src/core/scene';
 import type { Scene } from '../src/core/scene';
-import type { RectangleElement, ArrowElement } from '../src/elements/element';
+import type { RectangleElement, ArrowElement, LineElement } from '../src/elements/element';
 
 function makeRect(overrides: Partial<RectangleElement> = {}): RectangleElement {
   return {
@@ -29,6 +29,36 @@ describe('reducer', () => {
     expect(next.elements).toHaveLength(1);
     expect(next.elements[0]).toEqual(el);
     expect(next.selectedIds.has('rect-1')).toBe(true);
+  });
+
+  it('CREATE_ELEMENTS adds all elements and selects them', () => {
+    const scene = createScene();
+    const elements: LineElement[] = [
+      {
+        id: 'l1',
+        type: 'line',
+        x: 0, y: 0, x2: 10, y2: 10,
+        strokeColor: '#000',
+        fillColor: 'transparent',
+        strokeWidth: 2,
+        opacity: 1,
+        roughness: 0,
+      },
+      {
+        id: 'l2',
+        type: 'line',
+        x: 10, y: 10, x2: 20, y2: 0,
+        strokeColor: '#000',
+        fillColor: 'transparent',
+        strokeWidth: 2,
+        opacity: 1,
+        roughness: 0,
+      },
+    ];
+    const next = reducer(scene, { type: 'CREATE_ELEMENTS', elements });
+    expect(next.elements).toHaveLength(2);
+    expect(next.selectedIds.has('l1')).toBe(true);
+    expect(next.selectedIds.has('l2')).toBe(true);
   });
 
   it('DELETE_ELEMENTS removes elements', () => {

@@ -4,6 +4,7 @@ import type { Viewport } from '../core/viewport';
 
 export type Command =
   | { type: 'CREATE_ELEMENT';  element: Element }
+  | { type: 'CREATE_ELEMENTS'; elements: Element[] }
   | { type: 'UPDATE_ELEMENT';  id: string; props: Partial<Element> }
   | { type: 'MOVE_ELEMENT';    id: string; dx: number; dy: number }
   | {

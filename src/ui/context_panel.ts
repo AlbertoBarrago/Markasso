@@ -387,7 +387,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   }
 
   // ── Sync panel ─────────────────────────────────────────────────────────────
-  const DRAWING_TOOLS = new Set<string>(['rectangle', 'ellipse', 'line', 'arrow', 'freehand', 'text', 'code']);
+  const DRAWING_TOOLS = new Set<string>(['rectangle', 'ellipse', 'line', 'arrow', 'rombo', 'freehand', 'text', 'code']);
 
   function sync(): void {
     const scene = history.present;

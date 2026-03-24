@@ -42,6 +42,7 @@
   "ellipse": "Ellipse",
   "line": "Line",
   "arrow": "Arrow",
+  "rhombus": "Rhombus",
   "pen": "Pen",
   "textTool": "Text",
   "eraser": "Eraser",

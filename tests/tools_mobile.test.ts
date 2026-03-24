@@ -21,6 +21,7 @@ import { RectangleTool } from '../src/tools/rectangle_tool';
 import { EllipseTool } from '../src/tools/ellipse_tool';
 import { LineTool } from '../src/tools/line_tool';
 import { ArrowTool } from '../src/tools/arrow_tool';
+import { RomboTool } from '../src/tools/rombo_tool';
 import { EraserTool } from '../src/tools/eraser_tool';
 import { HandTool } from '../src/tools/hand_tool';
 import { SelectTool } from '../src/tools/select_tool';
@@ -322,6 +323,40 @@ describe('LineTool — mobile touch sequence', () => {
 
     tool.onMouseDown(me(0, 0), 0, 0, ctx);
     tool.onMouseUp(me(1, 1), 1, 1, ctx);
+
+    expect(history.present.elements).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// RomboTool
+// ---------------------------------------------------------------------------
+
+describe('RomboTool — mobile touch sequence', () => {
+  it('creates a rhombus as four line elements in one group', () => {
+    const history = new History(createScene());
+    const tool = new RomboTool();
+    const ctx = makeCtx(history);
+
+    tool.onMouseDown(me(0, 0), 0, 0, ctx);
+    tool.onMouseMove(me(100, 60), 100, 60, ctx);
+    tool.onMouseUp(me(100, 60), 100, 60, ctx);
+
+    expect(history.present.elements).toHaveLength(4);
+    expect(history.present.elements.every((el) => el.type === 'line')).toBe(true);
+
+    const groupIds = new Set(history.present.elements.map((el) => el.groupId));
+    expect(groupIds.size).toBe(1);
+    expect([...groupIds][0]).toBeTruthy();
+  });
+
+  it('does not create elements for tiny taps (< 2px)', () => {
+    const history = new History(createScene());
+    const tool = new RomboTool();
+    const ctx = makeCtx(history);
+
+    tool.onMouseDown(me(10, 10), 10, 10, ctx);
+    tool.onMouseUp(me(11, 11), 11, 11, ctx);
 
     expect(history.present.elements).toHaveLength(0);
   });

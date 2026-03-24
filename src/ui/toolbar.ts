@@ -15,6 +15,7 @@ const IC = {
   ellipse:   `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="10" cy="10" rx="7.5" ry="5.5"/></svg>`,
   line:      `<svg width="18" height="18" viewBox="0 0 20 20"><line x1="4" y1="16" x2="16" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
   arrow:     `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="16" x2="16" y2="4"/><path d="M9 4h7v7"/></svg>`,
+  rombo:     `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l7 7-7 7-7-7z"/></svg>`,
   freehand:  `<svg width="18" height="18" aria-hidden="true" focusable="false" role="img" viewBox="0 0 20 20" class="" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="1.25"><path clip-rule="evenodd" d="m7.643 15.69 7.774-7.773a2.357 2.357 0 1 0-3.334-3.334L4.31 12.357a3.333 3.333 0 0 0-.977 2.357v1.953h1.953c.884 0 1.732-.352 2.357-.977Z"></path><path d="m11.25 5.417 3.333 3.333"></path></g></svg>`,
   text:      `<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4h12v2.5H12v9.5H8V6.5H4z"/></svg>`,
   undo:      `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h9a4 4 0 010 8H8"/><path d="M7 5L4 8l3 3"/></svg>`,
@@ -37,10 +38,11 @@ const TOOLS: { tool: ActiveTool; icon: string; label: string; key: string; num: 
   { tool: 'select',    icon: IC.select,    label: t('select'),    key: 'V / 1',     num: '1' },
   { tool: 'rectangle', icon: IC.rectangle, label: t('rectangle'), key: 'R / 2',     num: '2' },
   { tool: 'ellipse',   icon: IC.ellipse,   label: t('ellipse'),   key: 'E / 3',     num: '3' },
-  { tool: 'line',      icon: IC.line,      label: t('line'),      key: 'L / 4',     num: '4' },
+  { tool: 'rombo',     icon: IC.rombo,     label: t('rhombus'),   key: 'D / 4',     num: '4' },
   { tool: 'arrow',     icon: IC.arrow,     label: t('arrow'),     key: 'A / 5',     num: '5' },
   { tool: 'freehand',  icon: IC.freehand,  label: t('pen'),       key: 'P / 6',     num: '6' },
   { tool: 'text',      icon: IC.text,      label: t('textTool'),  key: 'T / 7',     num: '7' },
+  { tool: 'line',      icon: IC.line,      label: t('line'),      key: 'L / 8',     num: '8' },
   { tool: 'eraser',    icon: IC.eraser,    label: t('eraser'),    key: '0',          num: '0' },
 ];
 
@@ -72,6 +74,11 @@ export function initToolbar(container: HTMLElement, history: History): void {
   centerPill.appendChild(lockSep);
 
   TOOLS.forEach((t) => {
+    if (t.tool === 'eraser') {
+      const sep = document.createElement('span');
+      sep.className = 'tb-separator';
+      centerPill.appendChild(sep);
+    }
     const b = document.createElement('button');
     b.className = 'tb-btn';
     b.title = `${t.label} (${t.key})`;

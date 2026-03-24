@@ -6,6 +6,7 @@ import { RectangleTool } from '../tools/rectangle_tool';
 import { EllipseTool } from '../tools/ellipse_tool';
 import { LineTool } from '../tools/line_tool';
 import { ArrowTool } from '../tools/arrow_tool';
+import { RomboTool } from '../tools/rombo_tool';
 import { PenTool } from '../tools/pen_tool';
 import { TextTool } from '../tools/text_tool';
 import { EraserTool, type SlashPoint } from '../tools/eraser_tool';
@@ -24,6 +25,7 @@ const TOOLS: Record<ActiveTool, Tool> = {
   ellipse: new EllipseTool(),
   line: new LineTool(),
   arrow: new ArrowTool(),
+  rombo: new RomboTool(),
   freehand: new PenTool(),
   text: new TextTool(),
 };
@@ -392,12 +394,15 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
     if ('preview' in activeTool) {
       const preview = (activeTool as { preview: unknown }).preview;
       if (preview) {
+        const previews = Array.isArray(preview) ? preview : [preview];
         ctx2d.save();
         const { viewport } = scene;
         const dpr = window.devicePixelRatio;
         ctx2d.setTransform(viewport.zoom * dpr, 0, 0, viewport.zoom * dpr, viewport.offsetX * dpr, viewport.offsetY * dpr);
         ctx2d.globalAlpha = 0.7;
-        drawElement(ctx2d, preview as Parameters<typeof drawElement>[1], scene.elements);
+        for (const el of previews) {
+          drawElement(ctx2d, el as Parameters<typeof drawElement>[1], scene.elements);
+        }
         ctx2d.restore();
       }
     }

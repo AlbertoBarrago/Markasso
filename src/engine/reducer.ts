@@ -17,6 +17,13 @@ export function reducer(scene: Scene, command: Command): Scene {
         selectedIds: new Set([command.element.id]),
       };
 
+    case 'CREATE_ELEMENTS':
+      return {
+        ...scene,
+        elements: [...scene.elements, ...command.elements],
+        selectedIds: new Set(command.elements.map((el) => el.id)),
+      };
+
     case 'UPDATE_ELEMENT':
       return {
         ...scene,
