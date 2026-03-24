@@ -333,7 +333,7 @@ describe('LineTool — mobile touch sequence', () => {
 // ---------------------------------------------------------------------------
 
 describe('RomboTool — mobile touch sequence', () => {
-  it('creates a rhombus as four line elements in one group', () => {
+  it('creates a single rhombus element', () => {
     const history = new History(createScene());
     const tool = new RomboTool();
     const ctx = makeCtx(history);
@@ -342,12 +342,12 @@ describe('RomboTool — mobile touch sequence', () => {
     tool.onMouseMove(me(100, 60), 100, 60, ctx);
     tool.onMouseUp(me(100, 60), 100, 60, ctx);
 
-    expect(history.present.elements).toHaveLength(4);
-    expect(history.present.elements.every((el) => el.type === 'line')).toBe(true);
-
-    const groupIds = new Set(history.present.elements.map((el) => el.groupId));
-    expect(groupIds.size).toBe(1);
-    expect([...groupIds][0]).toBeTruthy();
+    expect(history.present.elements).toHaveLength(1);
+    const el = history.present.elements[0]!;
+    expect(el.type).toBe('rhombus');
+    if (el.type !== 'rhombus') throw new Error('expected rhombus');
+    expect(el.width).toBe(100);
+    expect(el.height).toBe(60);
   });
 
   it('does not create elements for tiny taps (< 2px)', () => {

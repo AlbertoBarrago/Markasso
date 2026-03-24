@@ -59,7 +59,7 @@ export function reducer(scene: Scene, command: Command): Scene {
         elements: scene.elements.map((el) => {
           if (el.id !== command.id) return el;
           const { x, y, width, height, x2, y2, fontSize, points } = command;
-          if (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'text' || el.type === 'image') {
+          if (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'rhombus' || el.type === 'text' || el.type === 'image') {
             return {
               ...el,
               ...(x        !== undefined && { x }),

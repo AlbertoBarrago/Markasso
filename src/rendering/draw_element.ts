@@ -57,6 +57,12 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       }
       break;
     }
+    case 'rhombus': {
+      const roughness = el.roughness ?? 0;
+      const seed = hashId(el.id);
+      drawRhombus(ctx, el.x, el.y, el.width, el.height, roughness, seed);
+      break;
+    }
     case 'ellipse': {
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
@@ -250,6 +256,61 @@ function drawEllipse(
     const py = cy + ry * perturbation * Math.sin(angle);
     if (i === 0) ctx.moveTo(px, py);
     else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.stroke();
+}
+
+function drawRhombus(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  roughness: number,
+  seed: number,
+): void {
+  const rx = width < 0 ? x + width : x;
+  const ry = height < 0 ? y + height : y;
+  const rw = Math.abs(width);
+  const rh = Math.abs(height);
+
+  const top: [number, number]    = [rx + rw / 2, ry];
+  const right: [number, number]  = [rx + rw,     ry + rh / 2];
+  const bottom: [number, number] = [rx + rw / 2, ry + rh];
+  const left: [number, number]   = [rx,           ry + rh / 2];
+
+  // Fill with clean diamond
+  ctx.beginPath();
+  ctx.moveTo(top[0], top[1]);
+  ctx.lineTo(right[0], right[1]);
+  ctx.lineTo(bottom[0], bottom[1]);
+  ctx.lineTo(left[0], left[1]);
+  ctx.closePath();
+  ctx.fill();
+
+  if (roughness < 0.05) {
+    ctx.stroke();
+    return;
+  }
+
+  // Wobbly stroke along 4 edges
+  const corners = [top, right, bottom, left];
+  const amp = roughness * Math.min(rw, rh) * 0.03;
+
+  ctx.beginPath();
+  for (let edge = 0; edge < 4; edge++) {
+    const [x1, y1] = corners[edge]!;
+    const [x2, y2] = corners[(edge + 1) % 4]!;
+    if (edge === 0) ctx.moveTo(x1, y1);
+    const mx = (x1 + x2) / 2;
+    const my = (y1 + y2) / 2;
+    const cp1x = (x1 + mx) / 2 + roughOffset(seed,      edge * 7 + 1, 1, amp);
+    const cp1y = (y1 + my) / 2 + roughOffset(seed + 99, edge * 7 + 1, 1, amp);
+    const cp2x = (mx + x2) / 2 + roughOffset(seed,      edge * 7 + 3, 1, amp);
+    const cp2y = (my + y2) / 2 + roughOffset(seed + 99, edge * 7 + 3, 1, amp);
+    ctx.quadraticCurveTo(cp1x, cp1y, mx, my);
+    ctx.quadraticCurveTo(cp2x, cp2y, x2, y2);
   }
   ctx.closePath();
   ctx.stroke();

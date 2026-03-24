@@ -107,6 +107,7 @@ export function getElementBounds(el: Element, allElements?: ReadonlyArray<Elemen
   switch (el.type) {
     case 'rectangle':
     case 'ellipse':
+    case 'rhombus':
     case 'text':
     case 'image': {
       const x = el.width < 0 ? el.x + el.width : el.x;

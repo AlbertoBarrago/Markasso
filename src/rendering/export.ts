@@ -1,5 +1,5 @@
 import type { Scene } from '../core/scene';
-import type { Element, RectangleElement, EllipseElement, LineElement, ArrowElement, FreehandElement, TextElement, ImageElement } from '../elements/element';
+import type { Element, RectangleElement, EllipseElement, RhombusElement, LineElement, ArrowElement, FreehandElement, TextElement, ImageElement } from '../elements/element';
 import { drawElement } from './draw_element';
 import { getElementBounds } from './draw_selection';
 
@@ -77,6 +77,7 @@ function computeBounds(elements: ReadonlyArray<Element>): { minX: number; minY: 
     switch (el.type) {
       case 'rectangle':
       case 'ellipse':
+      case 'rhombus':
       case 'text': {
         const x = el.width < 0 ? el.x + el.width : el.x;
         const y = el.height < 0 ? el.y + el.height : el.y;
@@ -122,6 +123,7 @@ function elementToSVG(el: Element, ox: number, oy: number): string {
   switch (el.type) {
     case 'rectangle': return rectToSVG(el, ox, oy);
     case 'ellipse':   return ellipseToSVG(el, ox, oy);
+    case 'rhombus':   return rhombusToSVG(el, ox, oy);
     case 'line':      return lineToSVG(el, ox, oy);
     case 'arrow':     return arrowToSVG(el, ox, oy);
     case 'freehand':  return freehandToSVG(el, ox, oy);
@@ -179,6 +181,20 @@ function ellipseToSVG(el: EllipseElement, ox: number, oy: number): string {
     svg += '\n' + shapeLabelToSVG(cx, cy, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', el.strokeColor, el.opacity);
   }
   return svg;
+}
+
+function rhombusToSVG(el: RhombusElement, ox: number, oy: number): string {
+  const x = (el.width < 0 ? el.x + el.width : el.x) + ox;
+  const y = (el.height < 0 ? el.y + el.height : el.y) + oy;
+  const w = Math.abs(el.width);
+  const h = Math.abs(el.height);
+  const pts = [
+    `${round(x + w / 2)},${round(y)}`,
+    `${round(x + w)},${round(y + h / 2)}`,
+    `${round(x + w / 2)},${round(y + h)}`,
+    `${round(x)},${round(y + h / 2)}`,
+  ].join(' ');
+  return `<polygon points="${pts}" ${shapeProps(el)}${rotateAttr(el, ox, oy)}/>`;
 }
 
 function lineToSVG(el: LineElement, ox: number, oy: number): string {

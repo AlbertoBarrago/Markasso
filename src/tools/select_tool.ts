@@ -537,6 +537,7 @@ function scaleElement(
   switch (el.type) {
     case 'rectangle':
     case 'ellipse':
+    case 'rhombus':
       return { x: newX, y: newY, width: newW, height: newH };
     case 'text': {
       const origB = getElementBounds(el);
@@ -628,6 +629,18 @@ function hitTestElement(el: Element, wx: number, wy: number): boolean {
       const rx = Math.abs(el.width / 2) + PAD;
       const ry = Math.abs(el.height / 2) + PAD;
       return ((lx - cx) / rx) ** 2 + ((ly - cy) / ry) ** 2 <= 1;
+    }
+    case 'rhombus': {
+      const x = el.width < 0 ? el.x + el.width : el.x;
+      const y = el.height < 0 ? el.y + el.height : el.y;
+      const w = Math.abs(el.width);
+      const h = Math.abs(el.height);
+      const cx = x + w / 2;
+      const cy = y + h / 2;
+      // Normalized diamond: |nx| + |ny| <= 1
+      const nx = (lx - cx) / (w / 2 + PAD);
+      const ny = (ly - cy) / (h / 2 + PAD);
+      return Math.abs(nx) + Math.abs(ny) <= 1;
     }
     case 'line':
     case 'arrow':
