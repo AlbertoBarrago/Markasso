@@ -14,7 +14,11 @@ export class TextTool implements Tool {
   private startX = 0;
   private startY = 0;
   private currentX = 0;
-  private currentY = 0;
+  private dragWidth = 0;
+  private previewLineHeight = 20;
+
+  /** Prevents SET_TOOL dispatch when commit is triggered from onDeactivate */
+  private _suppressToolSwitch = false;
 
   onMouseDown(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
     e.preventDefault();
@@ -33,62 +37,56 @@ export class TextTool implements Tool {
       }
     }
 
-    // Start drag to define text area
+    // Start drag to define text width
     this.isDragging = true;
     this.startX = worldX;
     this.startY = worldY;
     this.currentX = worldX;
-    this.currentY = worldY;
+    this.dragWidth = 0;
+    this.previewLineHeight = ctx.history.present.appState.fontSize * 1.2;
   }
 
-  onMouseMove(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
-    if (this.isDragging) {
-      this.currentX = worldX;
-      this.currentY = worldY;
-      ctx.onPreviewUpdate?.();
+  onMouseMove(_e: MouseEvent, worldX: number, _worldY: number, ctx: ToolContext): void {
+    if (!this.isDragging) return;
+    this.currentX = worldX;
+    this.dragWidth = Math.abs(this.currentX - this.startX);
+    ctx.onPreviewUpdate?.();
+  }
+
+  onMouseUp(_e: MouseEvent, _worldX: number, _worldY: number, ctx: ToolContext): void {
+    if (!this.isDragging) return;
+    this.isDragging = false;
+
+    const { appState } = ctx.history.present;
+
+    if (appState.textMode === 'code') {
+      this.createCodeTextarea(this.startX, this.startY, ctx);
+      return;
     }
-  }
 
-  onMouseUp(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
-    if (this.isDragging) {
-      this.isDragging = false;
-
-      const { appState } = ctx.history.present;
-
-      if (appState.textMode === 'code') {
-        // Code mode: always auto-size, ignore drag dimensions
-        this.createCodeTextarea(this.startX, this.startY, ctx);
-        return;
-      }
-
-      // Calculate bounds from drag
+    if (this.dragWidth > 5) {
+      // Horizontal drag: fixed width, height auto-adjusts to content
       const x = Math.min(this.startX, this.currentX);
-      const y = Math.min(this.startY, this.currentY);
-      const width = Math.abs(this.currentX - this.startX);
-      const height = Math.abs(this.currentY - this.startY);
-
-      if (width > 5 && height > 5) {
-        // Drag: use defined area
-        this.createTextarea(x, y, width, height, ctx);
-      } else {
-        // Single click: auto-size to text content
-        this.createAutoTextarea(this.startX, this.startY, ctx);
-      }
+      this.createFixedWidthTextarea(x, this.startY, this.dragWidth, ctx);
+    } else {
+      // Single click: auto-size to text content
+      this.createAutoTextarea(this.startX, this.startY, ctx);
     }
   }
 
   onDeactivate(ctx: ToolContext): void {
+    this.isDragging = false;
     this.commitSync(ctx);
   }
 
-  /** Get preview rectangle for rendering during drag */
+  /** Get preview rectangle for rendering during drag (horizontal width only) */
   getPreview(): { x: number; y: number; width: number; height: number } | null {
-    if (!this.isDragging) return null;
+    if (!this.isDragging || this.dragWidth < 5) return null;
     return {
       x: Math.min(this.startX, this.currentX),
-      y: Math.min(this.startY, this.currentY),
-      width: Math.abs(this.currentX - this.startX),
-      height: Math.abs(this.currentY - this.startY),
+      y: this.startY,
+      width: this.dragWidth,
+      height: this.previewLineHeight,
     };
   }
 
@@ -98,43 +96,51 @@ export class TextTool implements Tool {
     const fn = this.commitFn;
     this.commitFn = null;
     this.textarea = null;
+    this._suppressToolSwitch = true;
     fn();
+    this._suppressToolSwitch = false;
   }
 
-  private createTextarea(worldX: number, worldY: number, width: number, height: number, ctx: ToolContext): void {
+  private createFixedWidthTextarea(worldX: number, worldY: number, width: number, ctx: ToolContext): void {
     const { viewport, appState } = ctx.history.present;
     const [screenX, screenY] = worldToScreen(viewport, worldX, worldY);
     const canvasRect = ctx.canvas.getBoundingClientRect();
+    const scaledFont = appState.fontSize * viewport.zoom;
+    const scaledWidth = width * viewport.zoom;
 
     const ta = document.createElement('textarea');
-
-    // ── Invisible / Excalidraw-like style ────────────────────────────────
-    ta.style.position = 'fixed';
-    ta.style.left = `${screenX + canvasRect.left}px`;
-    ta.style.top = `${screenY + canvasRect.top}px`;
-    ta.style.width = `${width * viewport.zoom}px`;
-    ta.style.height = `${height * viewport.zoom}px`;
-    ta.style.minWidth = `${width * viewport.zoom}px`;
-    ta.style.minHeight = `${height * viewport.zoom}px`;
-    ta.style.font = `${appState.fontSize * viewport.zoom}px ${appState.fontFamily}`;
-    ta.style.color = appState.strokeColor;
+    ta.style.position   = 'fixed';
+    ta.style.left       = `${screenX + canvasRect.left}px`;
+    ta.style.top        = `${screenY + canvasRect.top}px`;
+    ta.style.width      = `${scaledWidth}px`;
+    ta.style.height     = `${scaledFont * 1.2}px`;
+    ta.style.font       = `${scaledFont}px ${appState.fontFamily}`;
+    ta.style.color      = appState.strokeColor;
     ta.style.caretColor = 'var(--accent, #7c63d4)';
     ta.style.lineHeight = '1.2';
-    ta.style.padding = '4px';
-    ta.style.margin = '0';
-    ta.style.border = 'none';
-    ta.style.outline = 'none';
-    ta.style.boxShadow = 'none';
-    ta.style.resize = 'none';
-    ta.style.overflow = 'hidden';
+    ta.style.padding    = '0';
+    ta.style.margin     = '0';
+    ta.style.border     = 'none';
+    ta.style.outline    = '1.5px dashed rgba(120,180,255,0.65)';
+    ta.style.boxShadow  = 'none';
+    ta.style.resize     = 'none';
+    ta.style.overflow   = 'hidden';
     ta.style.background = 'transparent';
-    ta.style.zIndex = '1000';
+    ta.style.zIndex     = '1000';
     ta.style.whiteSpace = 'pre-wrap';
-    ta.style.wordBreak = 'break-word';
+    ta.style.wordBreak  = 'break-word';
+    ta.style.textAlign  = appState.textAlign;
 
-    // ── Commit logic ─────────────────────────────────────────────────────
+    // Height auto-grows, width stays fixed
+    const grow = (): void => {
+      ta.style.height = '0';
+      ta.style.height = `${ta.scrollHeight}px`;
+    };
+    ta.addEventListener('input', grow);
+
     const doCommit = (): void => {
       const content = ta.value.trim();
+      const h = ta.offsetHeight / viewport.zoom;
       ta.remove();
       if (this.textarea === ta) { this.textarea = null; this.commitFn = null; }
 
@@ -146,20 +152,20 @@ export class TextTool implements Tool {
             type: 'text',
             x: worldX,
             y: worldY,
-            width: width,
-            height: height,
+            width,
+            height: Math.max(h, appState.fontSize),
             content,
-            fontSize: appState.fontSize,
-            fontFamily: appState.fontFamily,
+            fontSize:    appState.fontSize,
+            fontFamily:  appState.fontFamily,
             strokeColor: appState.strokeColor,
-            fillColor: appState.fillColor,
+            fillColor:   'transparent',
             strokeWidth: 0,
-            opacity: appState.opacity,
-            roughness: 0,
-            textAlign: appState.textAlign,
+            opacity:     appState.opacity,
+            roughness:   0,
+            textAlign:   appState.textAlign,
           } satisfies TextElement,
         });
-        if (!ctx.history.present.appState.toolLocked) {
+        if (!this._suppressToolSwitch && !ctx.history.present.appState.toolLocked) {
           ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
         }
       }
@@ -171,16 +177,14 @@ export class TextTool implements Tool {
     };
 
     ta.addEventListener('blur', onBlur, { once: true });
-
     ta.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
         ta.removeEventListener('blur', onBlur);
         if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
-        doCommit();
+        ta.remove();
         return;
       }
-      // Enter commits; Shift+Enter inserts newline
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         ta.removeEventListener('blur', onBlur);
@@ -216,7 +220,7 @@ export class TextTool implements Tool {
     ta.style.padding     = '0';
     ta.style.margin      = '0';
     ta.style.border      = 'none';
-    ta.style.outline     = 'none';
+    ta.style.outline     = '1.5px dashed rgba(120,180,255,0.65)';
     ta.style.boxShadow   = 'none';
     ta.style.resize      = 'none';
     ta.style.overflow    = 'hidden';
@@ -272,7 +276,7 @@ export class TextTool implements Tool {
             textAlign:   appState.textAlign,
           } satisfies TextElement,
         });
-        if (!ctx.history.present.appState.toolLocked) {
+        if (!this._suppressToolSwitch && !ctx.history.present.appState.toolLocked) {
           ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
         }
       } else {
@@ -380,7 +384,7 @@ export class TextTool implements Tool {
             isCode:      true,
           } satisfies TextElement,
         });
-        if (!ctx.history.present.appState.toolLocked) {
+        if (!this._suppressToolSwitch && !ctx.history.present.appState.toolLocked) {
           ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
         }
       }
@@ -464,6 +468,7 @@ export class TextTool implements Tool {
     } else {
       ta.style.background   = 'transparent';
       ta.style.border       = 'none';
+      ta.style.outline      = '1.5px dashed rgba(120,180,255,0.65)';
       ta.style.padding      = '4px';
       ta.style.whiteSpace   = 'pre-wrap';
       ta.style.wordBreak    = 'break-word';

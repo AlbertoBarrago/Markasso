@@ -385,6 +385,11 @@ export class SelectTool implements Tool {
     this.rotateElId = null;
   }
 
+  onDeactivate(_ctx: ToolContext): void {
+    this.dragMode = 'none';
+    this.marqueeActive = false;
+  }
+
   onKeyDown(e: KeyboardEvent, ctx: ToolContext): void {
     if (e.key === 'Escape') {
       if (this.activeGroupId) {

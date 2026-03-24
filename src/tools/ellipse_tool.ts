@@ -68,6 +68,11 @@ export class EllipseTool implements Tool {
     }
   }
 
+  onDeactivate(_ctx: ToolContext): void {
+    this.drawing = false;
+    this.preview = null;
+  }
+
   getCursor(): string {
     return 'crosshair';
   }

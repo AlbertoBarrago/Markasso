@@ -65,6 +65,13 @@ export class PenTool implements Tool {
     this.preview = null;
   }
 
+  onDeactivate(_ctx: ToolContext): void {
+    this.drawing = false;
+    this.points = [];
+    this.smoothedPoints = [];
+    this.preview = null;
+  }
+
   onMouseUp(_e: MouseEvent, _worldX: number, _worldY: number, ctx: ToolContext): void {
     if (!this.drawing) return;
     this.drawing = false;
@@ -91,7 +98,9 @@ export class PenTool implements Tool {
         strokeStyle: appState.strokeStyle,
       },
     });
-    ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
+    if (!ctx.history.present.appState.toolLocked) {
+      ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
+    }
   }
 
   getCursor(): string {

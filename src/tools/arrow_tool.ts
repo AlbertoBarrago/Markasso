@@ -182,6 +182,15 @@ export class ArrowTool implements Tool {
     this.endElementId = null;
   }
 
+  onDeactivate(_ctx: ToolContext): void {
+    this.drawing = false;
+    this.preview = null;
+    this.startElementId = null;
+    this.endElementId = null;
+    this.snapIndicator = null;
+    this.snapElementId = null;
+  }
+
   getCursor(): string {
     return 'crosshair';
   }

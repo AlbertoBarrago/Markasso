@@ -330,11 +330,25 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
   });
 
   // Sync tool when scene tool changes
+  let prevActiveTool = history.present.appState.activeTool;
+  let isHandlingToolChange = false;
   history.subscribe((scene) => {
     needsRender = true;
-    // Update cursor
-    const tool = TOOLS[scene.appState.activeTool];
-    canvas.style.cursor = tool.getCursor(0, 0, toolCtx);
+    const newActiveTool = scene.appState.activeTool;
+    if (newActiveTool !== prevActiveTool) {
+      if (!isHandlingToolChange) {
+        isHandlingToolChange = true;
+        const prev = prevActiveTool;
+        prevActiveTool = newActiveTool;
+        TOOLS[prev].onDeactivate?.(toolCtx);
+        TOOLS[newActiveTool].onActivate?.(toolCtx);
+        isHandlingToolChange = false;
+      } else {
+        // Re-entrant tool change during deactivation — just track it
+        prevActiveTool = newActiveTool;
+      }
+    }
+    canvas.style.cursor = TOOLS[newActiveTool].getCursor(0, 0, toolCtx);
   });
 
   // rAF render loop
@@ -385,6 +399,34 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
         ctx2d.globalAlpha = 0.7;
         drawElement(ctx2d, preview as Parameters<typeof drawElement>[1], scene.elements);
         ctx2d.restore();
+
+        // Freehand: draw a live bounding-box outline so the user can see
+        // the spatial extent of the stroke while drawing.
+        if (scene.appState.activeTool === 'freehand') {
+          const pts = (preview as { points: ReadonlyArray<readonly [number, number]> }).points;
+          if (pts.length >= 2) {
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            for (const [px, py] of pts) {
+              if (px < minX) minX = px; if (px > maxX) maxX = px;
+              if (py < minY) minY = py; if (py > maxY) maxY = py;
+            }
+            const w = maxX - minX;
+            const h = maxY - minY;
+            if (w > 2 || h > 2) {
+              ctx2d.save();
+              const { viewport } = scene;
+              const dpr = window.devicePixelRatio;
+              ctx2d.setTransform(viewport.zoom * dpr, 0, 0, viewport.zoom * dpr, viewport.offsetX * dpr, viewport.offsetY * dpr);
+              ctx2d.strokeStyle = 'rgba(120,180,255,0.55)';
+              ctx2d.fillStyle = 'rgba(120,180,255,0.04)';
+              ctx2d.lineWidth = 1 / viewport.zoom;
+              ctx2d.setLineDash([5 / viewport.zoom, 4 / viewport.zoom]);
+              ctx2d.fillRect(minX, minY, w, h);
+              ctx2d.strokeRect(minX, minY, w, h);
+              ctx2d.restore();
+            }
+          }
+        }
       }
     }
 
