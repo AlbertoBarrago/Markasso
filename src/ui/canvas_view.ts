@@ -172,8 +172,12 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
     return null;
   }
 
+  function preventIfCancelable(e: Event): void {
+    if (e.cancelable) e.preventDefault();
+  }
+
   canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
+    preventIfCancelable(e);
     if (e.touches.length === 1) {
       const t = e.touches.item(0)!;
       touch1Id = t.identifier;
@@ -212,7 +216,7 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
   }, { passive: false });
 
   canvas.addEventListener('touchmove', (e) => {
-    e.preventDefault();
+    preventIfCancelable(e);
     if (touch2Id === -1) {
       // Single-finger: dispatch move to active tool
       const t = getTouchById(e.touches, touch1Id);
@@ -250,7 +254,7 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
   }, { passive: false });
 
   canvas.addEventListener('touchend', (e) => {
-    e.preventDefault();
+    preventIfCancelable(e);
     if (touch2Id === -1) {
       // Single-finger end
       const changedTouch = e.changedTouches[0];
