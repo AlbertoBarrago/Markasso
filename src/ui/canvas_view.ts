@@ -10,7 +10,7 @@ import { RomboTool } from '../tools/rombo_tool';
 import { PenTool } from '../tools/pen_tool';
 import { TextTool } from '../tools/text_tool';
 import { EraserTool, type SlashPoint } from '../tools/eraser_tool';
-import type { TextElement, RectangleElement, EllipseElement, ArrowElement } from '../elements/element';
+import type { TextElement, RectangleElement, EllipseElement, RhombusElement, ArrowElement } from '../elements/element';
 import { render } from '../rendering/renderer';
 import { drawElement } from '../rendering/draw_element';
 import { drawMarquee, drawHoverHighlight, drawSnapIndicator } from '../rendering/draw_selection';
@@ -129,13 +129,13 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
         }
       }
 
-      if (el.type === 'rectangle' || el.type === 'ellipse') {
+      if (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'rhombus') {
         const bx = el.width < 0 ? el.x + el.width : el.x;
         const by = el.height < 0 ? el.y + el.height : el.y;
         const bw = Math.abs(el.width);
         const bh = Math.abs(el.height);
         if (wx >= bx - 4 && wx <= bx + bw + 4 && wy >= by - 4 && wy <= by + bh + 4) {
-          openShapeLabelEditor(el as RectangleElement | EllipseElement, history, canvas);
+          openShapeLabelEditor(el as RectangleElement | EllipseElement | RhombusElement, history, canvas);
           needsRender = true;
           return;
         }
@@ -503,7 +503,7 @@ function drawSlashTrail(
 // ── Shape label editor ─────────────────────────────────────────────────────────
 
 function openShapeLabelEditor(
-  el: RectangleElement | EllipseElement,
+  el: RectangleElement | EllipseElement | RhombusElement,
   history: History,
   canvas: HTMLCanvasElement,
 ): void {

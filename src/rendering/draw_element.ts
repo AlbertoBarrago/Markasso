@@ -61,6 +61,25 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
       drawRhombus(ctx, el.x, el.y, el.width, el.height, roughness, seed);
+      if (el.label) {
+        const rx = el.width < 0 ? el.x + el.width : el.x;
+        const ry = el.height < 0 ? el.y + el.height : el.y;
+        const rw = Math.abs(el.width);
+        const rh = Math.abs(el.height);
+        const cx = rx + rw / 2;
+        const cy = ry + rh / 2;
+        ctx.save();
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(cx, ry);
+        ctx.lineTo(rx + rw, cy);
+        ctx.lineTo(cx, ry + rh);
+        ctx.lineTo(rx, cy);
+        ctx.closePath();
+        ctx.clip();
+        drawShapeLabel(ctx, cx, cy, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', strokeColor);
+        ctx.restore();
+      }
       break;
     }
     case 'ellipse': {

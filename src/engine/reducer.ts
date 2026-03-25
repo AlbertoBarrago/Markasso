@@ -144,7 +144,7 @@ export function reducer(scene: Scene, command: Command): Scene {
       return {
         ...scene,
         elements: scene.elements.map((el) =>
-          el.id === command.id && (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'arrow')
+          el.id === command.id && (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'rhombus' || el.type === 'arrow')
             ? { ...el, label: command.label, labelFontSize: command.labelFontSize, labelFontFamily: command.labelFontFamily }
             : el
         ),

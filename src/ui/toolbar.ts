@@ -30,6 +30,7 @@ const IC = {
   hamburger: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/></svg>`,
   importImg: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="16" height="14" rx="2"/><circle cx="7" cy="8" r="1.5"/><path d="M2 14l4-4 3 3 3-3 4 4"/><path d="M13 7l2-2 2 2M15 5v5"/></svg>`,
   eraser:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h14"/><path d="M5 17l-2-4 9-8 4 4-7 8H5z"/><path d="M12 5l4 4"/></svg>`,
+  tap:       `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>`,
   code:      `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6L3 10l4 4"/><path d="M13 6l4 4-4 4"/></svg>`,
 };
 
@@ -90,10 +91,9 @@ export function initToolbar(container: HTMLElement, history: History): void {
     centerPill.appendChild(b);
   });
 
-  // ── Bottom-left: undo/redo + zoom ─────────────────────────────────────────
-  const bottomLeft = div('tb-island-bottomleft');
+  // ── Bottom-right: undo/redo ────────────────────────────────────────────────
+  const bottomRight = div('tb-island-bottomright');
 
-  // Undo / Redo
   const undoPill = div('tb-island tb-island-undo');
   undoPill.setAttribute('role', 'group');
   undoPill.setAttribute('aria-label', 'History');
@@ -102,6 +102,10 @@ export function initToolbar(container: HTMLElement, history: History): void {
   undoBtn.addEventListener('click', () => history.undo());
   redoBtn.addEventListener('click', () => history.redo());
   undoPill.append(undoBtn, redoBtn);
+  bottomRight.append(undoPill);
+
+  // ── Bottom-left: zoom ──────────────────────────────────────────────────────
+  const bottomLeft = div('tb-island-bottomleft');
 
   // Zoom
   const zoomPill = div('tb-island tb-island-zoom');
@@ -133,7 +137,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   });
   zoomPill.append(fitBtn, minusBtn, zoomLabel, plusBtn);
 
-  bottomLeft.append(undoPill, zoomPill);
+  bottomLeft.append(zoomPill);
 
   // ── Top-right: import + export dropdown ───────────────────────────────────
   const topRight = div('tb-island-topright');
@@ -211,7 +215,43 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const tbLeft = div('tb-island tb-left');
   topLeft.append(tbLeft);
 
-  container.append(centerPill, bottomLeft, topRight, topLeft);
+  container.append(centerPill, bottomLeft, bottomRight, topRight, topLeft);
+
+  // ── Mobile: tools FAB + popup ─────────────────────────────────────────────
+  const toolsFab = document.createElement('button');
+  toolsFab.id = 'mobile-tools-fab';
+  toolsFab.innerHTML = IC.tap;
+
+  const toolsPopup = document.createElement('div');
+  toolsPopup.id = 'mobile-tools-popup';
+
+  for (const toolDef of TOOLS) {
+    const b = document.createElement('button');
+    b.className = 'mobile-tools-popup-btn';
+    b.title = toolDef.label;
+    b.innerHTML = toolDef.icon;
+    b.dataset['tool'] = toolDef.tool;
+    b.addEventListener('click', () => {
+      history.dispatch({ type: 'SET_TOOL', tool: toolDef.tool });
+      toolsPopup.classList.remove('open');
+      toolsFab.classList.remove('active');
+    });
+    toolsPopup.appendChild(b);
+  }
+
+  toolsFab.addEventListener('click', () => {
+    const open = toolsPopup.classList.toggle('open');
+    toolsFab.classList.toggle('active', open);
+  });
+
+  document.addEventListener('pointerdown', (e) => {
+    if (toolsPopup.classList.contains('open') && !toolsPopup.contains(e.target as Node) && e.target !== toolsFab) {
+      toolsPopup.classList.remove('open');
+      toolsFab.classList.remove('active');
+    }
+  });
+
+  container.append(toolsFab, toolsPopup);
 
   // ── Sync ──────────────────────────────────────────────────────────────────
   function sync(): void {
@@ -224,6 +264,9 @@ export function initToolbar(container: HTMLElement, history: History): void {
       b.classList.toggle('active', isActive);
       b.setAttribute('aria-pressed', String(isActive));
     }
+    toolsPopup.querySelectorAll<HTMLButtonElement>('.mobile-tools-popup-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset['tool'] === activeTool);
+    });
     undoBtn.disabled = !history.canUndo();
     redoBtn.disabled = !history.canRedo();
     zoomLabel.textContent = `${Math.round(history.present.viewport.zoom * 100)}%`;

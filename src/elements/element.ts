@@ -49,6 +49,9 @@ export interface RhombusElement extends BaseElement {
   readonly type: 'rhombus';
   readonly width: number;
   readonly height: number;
+  readonly label?: string;
+  readonly labelFontSize?: number;
+  readonly labelFontFamily?: string;
 }
 
 export interface LineElement extends BaseElement {

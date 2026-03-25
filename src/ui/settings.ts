@@ -38,7 +38,7 @@ function isResolvedLight(): boolean {
 }
 
 export function loadSettings(): UISettings {
-  const defaultBg = isResolvedLight() ? '#ffffff' : '#141414';
+  const defaultBg = isResolvedLight() ? '#ffffff' : '#080808';
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return { bgColor: defaultBg, ...(JSON.parse(raw) as Partial<UISettings>) };
