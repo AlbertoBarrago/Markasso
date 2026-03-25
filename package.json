@@ -4,7 +4,7 @@
   "contributors": [
     "Lorenzo Cataldi <lorenzo@cataldi.design>"
   ],
-  "version": "2.11.11",
+  "version": "2.11.12",
   "private": true,
   "type": "module",
   "scripts": {
