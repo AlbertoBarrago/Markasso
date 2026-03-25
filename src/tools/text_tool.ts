@@ -22,7 +22,7 @@ export class TextTool implements Tool {
 
   onMouseDown(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
     e.preventDefault();
-    this.commitSync(ctx);
+    if (this.commitSync(ctx)) return;
 
     // If clicking on an existing text element, edit it instead of creating a new one
     const elements = ctx.history.present.elements;
@@ -90,8 +90,8 @@ export class TextTool implements Tool {
     };
   }
 
-  private commitSync(ctx: ToolContext): void {
-    if (!this.textarea || !this.commitFn) return;
+  private commitSync(ctx: ToolContext): boolean {
+    if (!this.textarea || !this.commitFn) return false;
     this.textarea.removeEventListener('blur', this.commitFn);
     const fn = this.commitFn;
     this.commitFn = null;
@@ -99,6 +99,7 @@ export class TextTool implements Tool {
     this._suppressToolSwitch = true;
     fn();
     this._suppressToolSwitch = false;
+    return true;
   }
 
   private createFixedWidthTextarea(worldX: number, worldY: number, width: number, ctx: ToolContext): void {
@@ -518,11 +519,28 @@ export class TextTool implements Tool {
         doCommit();
         return;
       }
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        ta.removeEventListener('blur', onBlur);
-        if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
-        doCommit();
+      if (el.isCode) {
+        // In code mode: Shift+Enter commits, plain Enter inserts newline
+        if (e.key === 'Enter' && e.shiftKey) {
+          e.preventDefault();
+          ta.removeEventListener('blur', onBlur);
+          if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
+          doCommit();
+        }
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          const s = ta.selectionStart;
+          ta.value = ta.value.slice(0, s) + '  ' + ta.value.slice(ta.selectionEnd);
+          ta.selectionStart = ta.selectionEnd = s + 2;
+          grow();
+        }
+      } else {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          ta.removeEventListener('blur', onBlur);
+          if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
+          doCommit();
+        }
       }
     });
 

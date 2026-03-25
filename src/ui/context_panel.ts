@@ -387,7 +387,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   }
 
   // ── Sync panel ─────────────────────────────────────────────────────────────
-  const DRAWING_TOOLS = new Set<string>(['rectangle', 'ellipse', 'line', 'arrow', 'rombo', 'freehand', 'text', 'code']);
+  const DRAWING_TOOLS = new Set<string>(['rectangle', 'ellipse', 'line', 'arrow', 'rombo', 'freehand', 'text']);
 
   function sync(): void {
     const scene = history.present;
@@ -410,7 +410,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       // ── Tool mode: sync appState defaults, show only relevant sections ──────
       const { activeTool, strokeColor, fillColor, strokeWidth, strokeStyle, roughness, opacity, fontSize, fontFamily } = scene.appState;
       const isText = activeTool === 'text';
-      const hasFill = activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'text';
+      const hasFill = activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'rombo' || activeTool === 'text';
       const hasStyle = activeTool !== 'text' && activeTool !== 'freehand';
 
       panel.querySelectorAll<HTMLButtonElement>('#cp-stroke-swatches .cp-color-swatch').forEach((sw) => {
