@@ -1108,6 +1108,9 @@ html, body {
 .sp-lang-wrapper.menu-theme-toggle {
   padding: 0 8px 10px;
 }
+.sp-lang-wrapper.menu-theme-toggle::after {
+  top: calc(50% - 5px);
+}
 .menu-theme-btn {
   flex: 1;
   height: 32px;
