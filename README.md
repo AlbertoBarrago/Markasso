@@ -4,7 +4,7 @@
 
 <h1>MARKASSO</h1>
 
-<p>A fast, minimal, keyboard-first whiteboard that runs entirely in the browser.<br/><em>Marker + Picasso. Zero dependencies. Zero excuses.</em></p>
+<p>is a zero-latency, framework-agnostic whiteboard engine. Built with vanilla TypeScript and the Canvas 2D API, it delivers a high-performance drawing experience with zero dependencies and a keyboard-first workflow. It’s the "Vesper" of whiteboards: dark, fast, and focused.</p>
 
 <a href="https://albertobarrago.github.io/Markasso/">
   <img src="https://img.shields.io/badge/▶_Try_it_live-Markasso-c42020?style=for-the-badge" alt="Live Demo" />
@@ -59,10 +59,11 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 | Select | `V` / `1` |
 | Rectangle | `R` / `2` |
 | Ellipse | `E` / `3` |
-| Line | `L` / `4` |
+| Rhombus (Diamond) | `D` / `4` |
 | Arrow | `A` / `5` |
 | Pen (freehand) | `P` / `6` |
 | Text | `T` / `7` |
+| Line | `L` / `8` |
 | Eraser | `0` |
 
 ### Canvas & Navigation
@@ -197,10 +198,11 @@ No `.env` files. No API keys. No containerization required.
 | `V` / `1` | Select |
 | `R` / `2` | Rectangle |
 | `E` / `3` | Ellipse |
-| `L` / `4` | Line |
+| `D` / `4` | Rhombus (Diamond) |
 | `A` / `5` | Arrow |
 | `P` / `6` | Pen (freehand) |
 | `T` / `7` | Text |
+| `L` / `8` | Line |
 | `0` | Eraser |
 
 ### Navigation
@@ -348,9 +350,12 @@ src/
 ## Changelog
 
 ### v2.11.x
+- **Rhombus tool** (`D` / `4`) — draw diamond/rhombus shapes; `Shift` constrains to equilateral; supports fill, stroke, opacity, roughness
+- **Line shortcut updated** — Line is now `L` / `8` (slot 4 taken by Rhombus)
+- **Light theme WCAG** — high-contrast light theme rework for accessibility compliance
+- **Theme-adaptive stroke** — default stroke color adjusts automatically when switching themes
 - **About modal** — info panel with version, credits and links
 - **Accessibility** — full Tab-based keyboard navigation through all panels; focus management fixes for Safari and mobile
-- **Light theme polish** — improved contrast and visual refinements
 - **Safari mobile** — pen tool and touch event fixes
 - **Mobile menu** — spacing and layout improvements
 

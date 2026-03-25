@@ -21,10 +21,11 @@ Select a tool from the toolbar or press its keyboard shortcut.
 | Select     | `V` or `1` | Select, move, resize, rotate elements |
 | Rectangle  | `R` or `2` | Draw rectangles |
 | Ellipse    | `E` or `3` | Draw ellipses and circles |
-| Line       | `L` or `4` | Draw straight lines |
+| Rhombus    | `D` or `4` | Draw diamond/rhombus shapes |
 | Arrow      | `A` or `5` | Draw arrows |
 | Pen        | `P` or `6` | Freehand drawing |
 | Text       | `T` or `7` | Add text |
+| Line       | `L` or `8` | Draw straight lines |
 | Eraser     | `0` | Erase elements by clicking or dragging over them |
 
 Press `Escape` to return to the Select tool at any time.
@@ -42,6 +43,9 @@ The **lock button** at the far left of the toolbar controls what happens after y
 
 ### Shapes (Rectangle / Ellipse)
 Click and drag to draw. Hold `Shift` while dragging to constrain to a square or circle.
+
+### Rhombus (Diamond)
+Click and drag to draw a diamond shape. Hold `Shift` to constrain to an equilateral rhombus. Supports fill, stroke, opacity, and roughness like other shapes.
 
 ### Line / Arrow
 Click to set the start point, drag to the end point, release to confirm.
@@ -230,10 +234,11 @@ Switch between **Dark**, **Light**, and **System** themes from the Settings pane
 | `V` / `1` | Select tool |
 | `R` / `2` | Rectangle |
 | `E` / `3` | Ellipse |
-| `L` / `4` | Line |
+| `D` / `4` | Rhombus (Diamond) |
 | `A` / `5` | Arrow |
 | `P` / `6` | Pen |
 | `T` / `7` | Text |
+| `L` / `8` | Line |
 | `0` | Eraser |
 | `Escape` | Back to Select / exit group / deselect |
 | `G` | Toggle grid |
