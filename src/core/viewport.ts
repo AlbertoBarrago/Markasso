@@ -40,10 +40,6 @@ export function pan(viewport: Viewport, dx: number, dy: number): Viewport {
   };
 }
 
-export function resetViewport(): Viewport {
-  return createViewport();
-}
-
 export function fitToElements(
   elements: ReadonlyArray<Element>,
   canvasWidth: number,

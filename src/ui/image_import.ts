@@ -105,9 +105,3 @@ export function initImageImport(workspace: HTMLElement, history: History): void 
   // Expose trigger function via the file input element
   (fileInput as HTMLInputElement & { triggerOpen: () => void }).triggerOpen = () => fileInput.click();
 }
-
-export function openImageFilePicker(workspace: HTMLElement): void {
-  const input = workspace.querySelector<HTMLInputElement & { triggerOpen?: () => void }>('input[type="file"]');
-  if (input?.triggerOpen) input.triggerOpen();
-  else input?.click();
-}
