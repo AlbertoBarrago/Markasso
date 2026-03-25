@@ -17,3 +17,7 @@ dist/
 
 # Local notes (never push)
 TODO.local.md
+
+# Claude Code (AI assistant config — keep local)
+CLAUDE.md
+.claude/
