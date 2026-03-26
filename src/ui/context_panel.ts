@@ -254,7 +254,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       btn.className = 'cp-popup-swatch cp-popup-shade';
       btn.style.background = shade;
       btn.title = shade;
-      btn.innerHTML = `<span class="cp-popup-shade-key">⇧${i + 1}</span>`;
+      btn.innerHTML = '';
       btn.addEventListener('click', () => pickColor(shade));
       shadesContainer.appendChild(btn);
     });
@@ -287,18 +287,20 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
 
     // Position to the right of the context panel, aligned with its top
     popup.style.display = 'block';
-    const panelRect = panel.getBoundingClientRect();
-    const pw = popup.offsetWidth;
-    const ph = popup.offsetHeight;
-    let left = panelRect.right + 8;
-    if (left + pw > window.innerWidth - 8) left = panelRect.left - pw - 8;
-    let top = panelRect.top;
-    if (top + ph > window.innerHeight - 8) top = window.innerHeight - ph - 8;
-    if (top < 8) top = 8;
-    popup.style.left = left + 'px';
-    popup.style.top = top + 'px';
-
-    requestAnimationFrame(() => hexInput.focus());
+    requestAnimationFrame(() => {
+      const panelRect = panel.getBoundingClientRect();
+      const pw = popup.offsetWidth;
+      const ph = popup.offsetHeight;
+      let left = panelRect.right + 8;
+      if (left + pw > window.innerWidth - 8) left = panelRect.left - pw - 8;
+      if (left < 8) left = 8;
+      let top = panelRect.top;
+      if (top + ph > window.innerHeight - 8) top = window.innerHeight - ph - 8;
+      if (top < 8) top = 8;
+      popup.style.left = left + 'px';
+      popup.style.top = top + 'px';
+      hexInput.focus();
+    });
   }
 
   function closePopup(): void {
@@ -315,24 +317,6 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && popup.style.display !== 'none') closePopup();
 
-    // ⇧1–⇧5: apply shade N of the current stroke color
-    if (e.shiftKey && !e.ctrlKey && !e.metaKey) {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
-      if (isFocusInPanel()) return;
-      const digit = parseInt(e.code.replace('Digit', ''), 10);
-      if (!isNaN(digit) && digit >= 1 && digit <= 5) {
-        e.preventDefault();
-        const scene = history.present;
-        const first = [...scene.selectedIds]
-          .map((id) => scene.elements.find((el) => el.id === id))
-          .find((el): el is Element => el !== undefined);
-        const baseColor = first?.strokeColor ?? scene.appState.strokeColor;
-        const shades = computeShades(baseColor.startsWith('#') ? baseColor : '#808080');
-        const shade = shades[digit - 1];
-        if (shade) history.dispatch({ type: 'APPLY_STYLE', strokeColor: shade });
-      }
-    }
   });
 
   // ── Updates the "+" button appearance when a custom color is set ──────────

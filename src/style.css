@@ -390,18 +390,19 @@ html, body {
 .cp-popup-hex-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 8px;
-  padding: 7px 12px 7px 16px;
+  padding: 8px 20px;
 }
 
 .cp-popup-hex-hash {
   color: rgba(255,255,255,0.35);
-  font-size: 13px;
+  font-size: 11px;
   font-family: monospace;
   user-select: none;
+  margin-left: -4px;
 }
 
 .cp-popup-hex-input {
@@ -412,7 +413,7 @@ html, body {
   font-size: 13px;
   font-family: monospace;
   /* exactly 6 hex chars wide */
-  width: calc(6ch + 2px);
+  width: calc(6ch + 8px);
   letter-spacing: .06em;
 }
 
