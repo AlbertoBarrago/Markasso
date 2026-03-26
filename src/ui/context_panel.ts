@@ -1,9 +1,97 @@
 import type { History } from '../engine/history';
 import type { Element } from '../elements/element';
 import { t } from '../i18n';
+import { isFocusInPanel } from './keyboard_utils';
 
 const STROKE_PRESETS = ['#000000', '#e2e2ef', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
 const FILL_PRESETS = ['transparent', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
+
+// 15-color palette for the custom color popup (5 × 3 grid)
+// First slot is transparent — picking it resets the custom color slot back to "+"
+const POPUP_COLORS = [
+  'transparent', '#000000', '#e2e2ef', '#f5f5f5', '#ffffff',
+  '#4d96ff', '#748ffc', '#c77dff', '#f783ac', '#ff6b6b',
+  '#6bcb77', '#a9e34b', '#ffd43b', '#ff922b', '#f03e3e',
+];
+
+const CUSTOM_COLORS_KEY = 'markasso-custom-colors';
+
+function loadCustomColor(kind: 'stroke' | 'fill'): string | null {
+  try {
+    const raw = localStorage.getItem(CUSTOM_COLORS_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const val = (parsed as Record<string, unknown>)[kind];
+    return typeof val === 'string' ? val : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveCustomColor(kind: 'stroke' | 'fill', color: string | null): void {
+  let data: Record<string, string | null> = {};
+  try {
+    const raw = localStorage.getItem(CUSTOM_COLORS_KEY);
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw);
+      if (typeof parsed === 'object' && parsed !== null) {
+        data = parsed as Record<string, string | null>;
+      }
+    }
+  } catch { /* ignore */ }
+  data[kind] = color;
+  localStorage.setItem(CUSTOM_COLORS_KEY, JSON.stringify(data));
+}
+
+function hexToHsl(hex: string): [number, number, number] {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l * 100];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h = 0;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+  else if (max === g) h = ((b - r) / d + 2) / 6;
+  else h = ((r - g) / d + 4) / 6;
+  return [h * 360, s * 100, l * 100];
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  h /= 360; s /= 100; l /= 100;
+  const hue2rgb = (p: number, q: number, t: number): number => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  let r, g, b;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+  return '#' + [r, g, b].map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+}
+
+function computeShades(hex: string): string[] {
+  if (!hex || !hex.startsWith('#') || hex.length !== 7) return [];
+  try {
+    const [h, s] = hexToHsl(hex);
+    return [20, 35, 50, 65, 80].map((l) => hslToHex(h, s, l));
+  } catch {
+    return [];
+  }
+}
 
 export function initContextPanel(workspace: HTMLElement, history: History): void {
   const panel = document.createElement('div');
@@ -85,6 +173,185 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     </div>
   `;
 
+  // ── Custom color state (one slot per row, persisted) ──────────────────────
+  let customStroke: string | null = loadCustomColor('stroke');
+  let customFill: string | null = loadCustomColor('fill');
+
+  // ── Color picker popup ─────────────────────────────────────────────────────
+  const popup = document.createElement('div');
+  popup.className = 'cp-color-popup';
+  popup.setAttribute('role', 'dialog');
+  popup.setAttribute('aria-label', t('moreColors'));
+  popup.style.display = 'none';
+  document.body.appendChild(popup);
+
+  const shadesContainer = document.createElement('div');
+  shadesContainer.className = 'cp-popup-shades';
+
+  popup.innerHTML = `
+    <div class="cp-popup-section">
+      <div class="cp-popup-label">${t('color')}</div>
+      <div class="cp-popup-grid" id="cp-popup-grid"></div>
+    </div>
+    <div class="cp-popup-section" id="cp-popup-shades-section">
+      <div class="cp-popup-label">${t('shades')}</div>
+    </div>
+    <div class="cp-popup-section cp-popup-hex-section">
+      <div class="cp-popup-label">${t('hexCode')}</div>
+      <div class="cp-popup-hex-row">
+        <span class="cp-popup-hex-hash">#</span>
+        <input class="cp-popup-hex-input" id="cp-popup-hex" maxlength="6" spellcheck="false" />
+      </div>
+    </div>
+  `;
+
+  // Append shades container inside the shades section
+  popup.querySelector('#cp-popup-shades-section')!.appendChild(shadesContainer);
+
+  // Populate preset grid
+  const popupGrid = popup.querySelector<HTMLElement>('#cp-popup-grid')!;
+  for (const color of POPUP_COLORS) {
+    const btn = document.createElement('button');
+    btn.className = 'cp-popup-swatch';
+    if (color === 'transparent') {
+      btn.classList.add('cp-popup-swatch-transparent');
+    } else {
+      btn.style.background = color;
+    }
+    btn.title = color === 'transparent' ? t('transparent') : color;
+    btn.dataset['color'] = color;
+    btn.addEventListener('click', () => {
+      pickColor(color);
+    });
+    popupGrid.appendChild(btn);
+  }
+
+  const hexInput = popup.querySelector<HTMLInputElement>('#cp-popup-hex')!;
+  hexInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const hex = '#' + hexInput.value.replace(/[^0-9a-fA-F]/g, '');
+      if (hex.length === 7) pickColor(hex);
+    }
+    if (e.key === 'Escape') closePopup();
+  });
+  hexInput.addEventListener('input', () => {
+    const clean = hexInput.value.replace(/[^0-9a-fA-F]/g, '');
+    hexInput.value = clean;
+    if (clean.length === 6) {
+      const hex = '#' + clean;
+      updateShades(hex);
+      currentPickerCallback?.({ preview: hex });
+    }
+  });
+
+  let currentPickerCallback: ((result: { pick?: string; preview?: string }) => void) | null = null;
+
+  function updateShades(baseColor: string): void {
+    shadesContainer.innerHTML = '';
+    const shades = computeShades(baseColor);
+    shades.forEach((shade, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'cp-popup-swatch cp-popup-shade';
+      btn.style.background = shade;
+      btn.title = shade;
+      btn.innerHTML = `<span class="cp-popup-shade-key">⇧${i + 1}</span>`;
+      btn.addEventListener('click', () => pickColor(shade));
+      shadesContainer.appendChild(btn);
+    });
+    (popup.querySelector('#cp-popup-shades-section') as HTMLElement).style.display = shades.length ? '' : 'none';
+  }
+
+  function pickColor(color: string): void {
+    currentPickerCallback?.({ pick: color });
+    closePopup();
+  }
+
+  function openPopup(
+    anchor: HTMLElement,
+    currentColor: string,
+    onResult: (result: { pick?: string; preview?: string }) => void,
+  ): void {
+    currentPickerCallback = onResult;
+
+    // Highlight active preset
+    popup.querySelectorAll<HTMLButtonElement>('.cp-popup-swatch').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset['color'] === currentColor.toLowerCase());
+    });
+
+    // Shades based on current color
+    const base = currentColor.startsWith('#') ? currentColor : '#808080';
+    updateShades(base);
+
+    // Hex input
+    hexInput.value = currentColor.startsWith('#') ? currentColor.slice(1) : '';
+
+    // Position to the right of the context panel, aligned with its top
+    popup.style.display = 'block';
+    const panelRect = panel.getBoundingClientRect();
+    const pw = popup.offsetWidth;
+    const ph = popup.offsetHeight;
+    let left = panelRect.right + 8;
+    if (left + pw > window.innerWidth - 8) left = panelRect.left - pw - 8;
+    let top = panelRect.top;
+    if (top + ph > window.innerHeight - 8) top = window.innerHeight - ph - 8;
+    if (top < 8) top = 8;
+    popup.style.left = left + 'px';
+    popup.style.top = top + 'px';
+
+    requestAnimationFrame(() => hexInput.focus());
+  }
+
+  function closePopup(): void {
+    popup.style.display = 'none';
+    currentPickerCallback = null;
+  }
+
+  // Close popup on outside click
+  document.addEventListener('pointerdown', (e) => {
+    if (popup.style.display !== 'none' && !popup.contains(e.target as Node)) {
+      closePopup();
+    }
+  }, true);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && popup.style.display !== 'none') closePopup();
+
+    // ⇧1–⇧5: apply shade N of the current stroke color
+    if (e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
+      if (isFocusInPanel()) return;
+      const digit = parseInt(e.code.replace('Digit', ''), 10);
+      if (!isNaN(digit) && digit >= 1 && digit <= 5) {
+        e.preventDefault();
+        const scene = history.present;
+        const first = [...scene.selectedIds]
+          .map((id) => scene.elements.find((el) => el.id === id))
+          .find((el): el is Element => el !== undefined);
+        const baseColor = first?.strokeColor ?? scene.appState.strokeColor;
+        const shades = computeShades(baseColor.startsWith('#') ? baseColor : '#808080');
+        const shade = shades[digit - 1];
+        if (shade) history.dispatch({ type: 'APPLY_STYLE', strokeColor: shade });
+      }
+    }
+  });
+
+  // ── Updates the "+" button appearance when a custom color is set ──────────
+  function updateMoreBtn(btn: HTMLButtonElement, color: string | null): void {
+    if (color) {
+      btn.style.background = color;
+      btn.style.border = '2px solid rgba(255,255,255,0.15)';
+      btn.textContent = '';
+      btn.title = color;
+      btn.classList.add('cp-color-more-filled');
+    } else {
+      btn.style.background = '';
+      btn.style.border = '';
+      btn.textContent = '+';
+      btn.title = t('moreColors');
+      btn.classList.remove('cp-color-more-filled');
+    }
+  }
+
   // ── Stroke swatches ────────────────────────────────────────────────────────
   const strokeSwatches = panel.querySelector('#cp-stroke-swatches')!;
   for (const color of STROKE_PRESETS) {
@@ -100,17 +367,28 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     strokeSwatches.appendChild(sw);
   }
 
-  // Stroke color picker
-  const strokeMore = panel.querySelector('#cp-stroke-more')!;
-  const strokePicker = document.createElement('input');
-  strokePicker.type = 'color';
-  strokePicker.className = 'cp-color-picker';
-  strokePicker.value = history.present.appState.strokeColor || STROKE_PRESETS[0] || '#000000';
-  strokePicker.addEventListener('input', () => {
-    history.dispatch({ type: 'APPLY_STYLE', strokeColor: strokePicker.value });
+  const strokeMore = panel.querySelector<HTMLButtonElement>('#cp-stroke-more')!;
+  updateMoreBtn(strokeMore, customStroke);
+  strokeMore.addEventListener('click', () => {
+    const currentColor = customStroke ?? history.present.appState.strokeColor ?? STROKE_PRESETS[0] ?? '#000000';
+    openPopup(strokeMore, currentColor, ({ pick, preview }) => {
+      if (preview) {
+        history.dispatch({ type: 'APPLY_STYLE', strokeColor: preview });
+      }
+      if (pick) {
+        if (pick === 'transparent') {
+          customStroke = null;
+          saveCustomColor('stroke', null);
+          updateMoreBtn(strokeMore, null);
+        } else {
+          customStroke = pick;
+          saveCustomColor('stroke', pick);
+          updateMoreBtn(strokeMore, pick);
+          history.dispatch({ type: 'APPLY_STYLE', strokeColor: pick });
+        }
+      }
+    });
   });
-  strokeMore.addEventListener('click', () => strokePicker.click());
-  panel.appendChild(strokePicker);
 
   // ── Fill swatches ──────────────────────────────────────────────────────────
   const fillSwatches = panel.querySelector('#cp-fill-swatches')!;
@@ -132,17 +410,29 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     fillSwatches.appendChild(sw);
   }
 
-  // Fill color picker
-  const fillMore = panel.querySelector('#cp-fill-more')!;
-  const fillPicker = document.createElement('input');
-  fillPicker.type = 'color';
-  fillPicker.className = 'cp-color-picker';
-  fillPicker.value = FILL_PRESETS[1] || '#ffffff';
-  fillPicker.addEventListener('input', () => {
-    history.dispatch({ type: 'APPLY_STYLE', fillColor: fillPicker.value });
+  const fillMore = panel.querySelector<HTMLButtonElement>('#cp-fill-more')!;
+  updateMoreBtn(fillMore, customFill);
+  fillMore.addEventListener('click', () => {
+    const currentColor = customFill ?? history.present.appState.fillColor ?? FILL_PRESETS[1] ?? '#ffffff';
+    const base = currentColor === 'transparent' ? '#ffffff' : currentColor;
+    openPopup(fillMore, base, ({ pick, preview }) => {
+      if (preview) {
+        history.dispatch({ type: 'APPLY_STYLE', fillColor: preview });
+      }
+      if (pick) {
+        if (pick === 'transparent') {
+          customFill = null;
+          saveCustomColor('fill', null);
+          updateMoreBtn(fillMore, null);
+        } else {
+          customFill = pick;
+          saveCustomColor('fill', pick);
+          updateMoreBtn(fillMore, pick);
+          history.dispatch({ type: 'APPLY_STYLE', fillColor: pick });
+        }
+      }
+    });
   });
-  fillMore.addEventListener('click', () => fillPicker.click());
-  panel.appendChild(fillPicker);
 
   // ── Width presets ──────────────────────────────────────────────────────────
   const widthPresets = panel.querySelector('#cp-width-presets')!;
@@ -424,10 +714,12 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       panel.querySelectorAll<HTMLButtonElement>('#cp-stroke-swatches .cp-color-swatch').forEach((sw) => {
         sw.classList.toggle('active', sw.title === strokeColor);
       });
+      strokeMore.classList.toggle('active', !!customStroke && customStroke.toLowerCase() === strokeColor.toLowerCase());
       syncAriaPressed(colorRowStroke, '.cp-color-swatch, .cp-color-more');
       panel.querySelectorAll<HTMLButtonElement>('#cp-fill-swatches .cp-color-swatch').forEach((sw) => {
         sw.classList.toggle('active', sw.title === fillColor || (sw.classList.contains('cp-color-swatch-transparent') && fillColor === 'transparent'));
       });
+      fillMore.classList.toggle('active', !!customFill && customFill.toLowerCase() === fillColor.toLowerCase());
       syncAriaPressed(colorRowFill, '.cp-color-swatch, .cp-color-more');
       panel.querySelectorAll<HTMLButtonElement>('#cp-width-presets .cp-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset['value'] === String(strokeWidth));
@@ -489,19 +781,13 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     panel.querySelectorAll<HTMLButtonElement>('#cp-stroke-swatches .cp-color-swatch').forEach((sw) => {
       sw.classList.toggle('active', sw.title === first.strokeColor);
     });
+    strokeMore.classList.toggle('active', !!customStroke && customStroke.toLowerCase() === first.strokeColor.toLowerCase());
     syncAriaPressed(colorRowStroke, '.cp-color-swatch, .cp-color-more');
     panel.querySelectorAll<HTMLButtonElement>('#cp-fill-swatches .cp-color-swatch').forEach((sw) => {
       sw.classList.toggle('active', sw.title === first.fillColor);
     });
+    fillMore.classList.toggle('active', !!customFill && customFill.toLowerCase() === first.fillColor.toLowerCase());
     syncAriaPressed(colorRowFill, '.cp-color-swatch, .cp-color-more');
-
-    // Update color picker values
-    if (first.strokeColor !== 'transparent' && !first.strokeColor.startsWith('#')) {
-      strokePicker.value = first.strokeColor;
-    }
-    if (first.fillColor !== 'transparent' && !first.fillColor.startsWith('#')) {
-      fillPicker.value = first.fillColor;
-    }
 
     // Update width presets
     panel.querySelectorAll<HTMLButtonElement>('#cp-width-presets .cp-btn').forEach((btn) => {
@@ -534,14 +820,22 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     opacitySlider.value = String(Math.round(first.opacity * 100));
     opacityVal.textContent = String(Math.round(first.opacity * 100));
 
-    // Hide sections for text/images
-    panel.querySelector('#cp-stroke-swatches')!.parentElement!.parentElement!.style.display = allImage ? 'none' : '';
-    (panel.querySelector('#cp-stroke-swatches')!.parentElement!.parentElement!.querySelector('.cp-label') as HTMLElement).textContent = allText ? t('color') : t('stroke');
-    panel.querySelector('#cp-fill-swatches')!.parentElement!.parentElement!.style.display = allImage ? 'none' : '';
-    panel.querySelector('#cp-width-presets')!.parentElement!.style.display = (allText || allImage) ? 'none' : '';
-    panel.querySelector('#cp-style-presets')!.parentElement!.style.display = (allText || allImage) ? 'none' : '';
-    panel.querySelector('#cp-roughness-presets')!.parentElement!.style.display = (allText || allImage) ? 'none' : '';
-    panel.querySelector('#cp-border-presets')!.parentElement!.style.display = (allText || allImage) ? 'none' : '';
+    // Dynamic section visibility based on selected element types
+    const FILL_TYPES = new Set(['rectangle', 'ellipse', 'rhombus', 'text']);
+    const STYLE_TYPES = new Set(['rectangle', 'ellipse', 'rhombus', 'line', 'arrow']);
+    const hasFill = !allImage && selected.some((el) => FILL_TYPES.has(el.type));
+    const hasStyle = !allImage && !allText && selected.some((el) => STYLE_TYPES.has(el.type));
+    const hasBorder = selected.some((el) => el.type === 'rectangle');
+    const hasWidth = !allText && !allImage;
+
+    const strokeSection = panel.querySelector('#cp-stroke-swatches')!.parentElement!.parentElement!;
+    strokeSection.style.display = allImage ? 'none' : '';
+    (strokeSection.querySelector('.cp-label') as HTMLElement).textContent = allText ? t('color') : t('stroke');
+    panel.querySelector('#cp-fill-swatches')!.parentElement!.parentElement!.style.display = hasFill ? '' : 'none';
+    panel.querySelector('#cp-width-presets')!.parentElement!.style.display = hasWidth ? '' : 'none';
+    panel.querySelector('#cp-style-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
+    panel.querySelector('#cp-roughness-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
+    panel.querySelector('#cp-border-presets')!.parentElement!.style.display = hasBorder ? '' : 'none';
 
     // Layer + action groups always present when selection exists
     syncAriaPressed(panel.querySelector<HTMLElement>('#cp-layer-actions')!, '.cp-btn');
