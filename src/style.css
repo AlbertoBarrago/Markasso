@@ -1049,8 +1049,44 @@ html, body {
     transition: background .12s, color .12s;
   }
   .mobile-tools-popup-btn svg { pointer-events: none; }
-  .mobile-tools-popup-btn.active { background: var(--accent-light); color: var(--accent); }
+  .mobile-tools-popup-btn.active {
+    background: var(--accent-light);
+    color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
   .mobile-tools-popup-btn:active { background: var(--accent-light); color: var(--accent); }
+}
+
+/* ── iPad: larger touch targets on coarse-pointer wide screens ───────────── */
+@media (pointer: coarse) and (min-width: 768px) {
+  #mobile-tools-fab {
+    width: 56px;
+    height: 56px;
+  }
+
+  #mobile-tools-fab[data-tool]:not([data-tool="select"]):not([data-tool="hand"]) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  #mobile-tools-popup {
+    grid-template-columns: repeat(5, 56px);
+    gap: 8px;
+    padding: 14px;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-tools-popup-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+  }
+
+  .mobile-action-btn {
+    width: 48px;
+    height: 48px;
+  }
 }
 
 /* ── Mobile style bottom sheet ───────────────────────────────────────────── */

@@ -266,6 +266,8 @@ export function initToolbar(container: HTMLElement, history: History): void {
     toolsPopup.querySelectorAll<HTMLButtonElement>('.mobile-tools-popup-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['tool'] === activeTool);
     });
+    toolsFab.innerHTML = (TOOLS.find(td => td.tool === activeTool)?.icon ?? IC.tap);
+    toolsFab.dataset['tool'] = activeTool;
     undoBtn.disabled = !history.canUndo();
     redoBtn.disabled = !history.canRedo();
     zoomLabel.textContent = `${Math.round(history.present.viewport.zoom * 100)}%`;
