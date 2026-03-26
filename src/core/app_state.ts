@@ -29,11 +29,13 @@ export function createAppState(): AppState {
     : null;
   const defaultStrokeColor = resolvedTheme === 'light' ? '#000000' : '#e2e2ef';
 
+  const isMobile = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+
   return {
     activeTool:  'select',
     strokeColor: defaultStrokeColor,
     fillColor:   'transparent',
-    strokeWidth: 1,
+    strokeWidth: isMobile ? 4 : 1,
     fontSize:    20,
     fontFamily:  'Arial, sans-serif',
     textAlign:   'left',
