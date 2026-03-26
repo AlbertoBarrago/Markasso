@@ -168,12 +168,20 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   widthInput.step = '1';
   widthInput.className = 'cp-font-size-input';
   widthInput.style.width = '52px';
-  widthInput.addEventListener('change', () => {
-    const v = Math.max(1, Math.min(100, Math.round(Number(widthInput.value))));
-    widthInput.value = String(v);
-    history.dispatch({ type: 'APPLY_STYLE', strokeWidth: v });
-  });
-  widthPresets.appendChild(widthInput);
+  let widthDisplay: HTMLDivElement | null = null;
+  if (widthInput.type !== 'number') {
+    widthDisplay = document.createElement('div');
+    widthDisplay.setAttribute('aria-live', 'polite');
+    widthDisplay.className = 'cp-width-display';
+    widthPresets.appendChild(widthDisplay);
+  } else {
+    widthInput.addEventListener('change', () => {
+      const v = Math.max(1, Math.min(100, Math.round(Number(widthInput.value))));
+      widthInput.value = String(v);
+      history.dispatch({ type: 'APPLY_STYLE', strokeWidth: v });
+    });
+    widthPresets.appendChild(widthInput);
+  }
 
   // ── Style presets ──────────────────────────────────────────────────────────
   const stylePresets = panel.querySelector('#cp-style-presets')!;
@@ -425,7 +433,8 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
         btn.classList.toggle('active', btn.dataset['value'] === String(strokeWidth));
       });
       syncAriaPressed(panel.querySelector<HTMLElement>('#cp-width-presets')!, '.cp-btn');
-      widthInput.value = String(strokeWidth);
+      if (widthDisplay) widthDisplay.textContent = `${strokeWidth}px`;
+      else widthInput.value = String(strokeWidth);
       panel.querySelectorAll<HTMLButtonElement>('#cp-style-presets .cp-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset['style'] === strokeStyle);
       });
@@ -499,7 +508,8 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       btn.classList.toggle('active', btn.dataset['value'] === String(first.strokeWidth));
     });
     syncAriaPressed(panel.querySelector<HTMLElement>('#cp-width-presets')!, '.cp-btn');
-    widthInput.value = String(first.strokeWidth);
+    if (widthDisplay) widthDisplay.textContent = `${first.strokeWidth}px`;
+    else widthInput.value = String(first.strokeWidth);
 
     // Update style presets
     panel.querySelectorAll<HTMLButtonElement>('#cp-style-presets .cp-btn').forEach((btn) => {
