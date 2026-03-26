@@ -101,12 +101,20 @@ export function initMobileActionBar(workspace: HTMLElement, history: History): v
   mssWidthInput.step = '1';
   mssWidthInput.className = 'cp-font-size-input';
   mssWidthInput.style.width = '52px';
-  mssWidthInput.addEventListener('change', () => {
-    const v = Math.max(1, Math.min(100, Math.round(Number(mssWidthInput.value))));
-    mssWidthInput.value = String(v);
-    history.dispatch({ type: 'APPLY_STYLE', strokeWidth: v });
-  });
-  widthEl.appendChild(mssWidthInput);
+  let mssWidthDisplay: HTMLDivElement | null = null;
+  if (mssWidthInput.type !== 'number') {
+    mssWidthDisplay = document.createElement('div');
+    mssWidthDisplay.setAttribute('aria-live', 'polite');
+    mssWidthDisplay.className = 'cp-width-display';
+    widthEl.appendChild(mssWidthDisplay);
+  } else {
+    mssWidthInput.addEventListener('change', () => {
+      const v = Math.max(1, Math.min(100, Math.round(Number(mssWidthInput.value))));
+      mssWidthInput.value = String(v);
+      history.dispatch({ type: 'APPLY_STYLE', strokeWidth: v });
+    });
+    widthEl.appendChild(mssWidthInput);
+  }
 
   // ── Style presets ──────────────────────────────────────────────────────────
   const styleEl = sheet.querySelector('#mss-style-presets')!;
@@ -242,7 +250,8 @@ export function initMobileActionBar(workspace: HTMLElement, history: History): v
     sheet.querySelectorAll<HTMLButtonElement>('#mss-width-presets .cp-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['value'] === String(first.strokeWidth));
     });
-    mssWidthInput.value = String(first.strokeWidth);
+    if (mssWidthDisplay) mssWidthDisplay.textContent = `${first.strokeWidth}px`;
+    else mssWidthInput.value = String(first.strokeWidth);
     // Style
     sheet.querySelectorAll<HTMLButtonElement>('#mss-style-presets .cp-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['style'] === (first.strokeStyle ?? 'solid'));
