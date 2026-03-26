@@ -37,6 +37,7 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
   let panStartX = 0;
   let panStartY = 0;
   let needsRender = true;
+  let editingShapeLabelId: string | null = null;
 
   const toolCtx: ToolContext = {
     history,
@@ -135,7 +136,7 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
         const bw = Math.abs(el.width);
         const bh = Math.abs(el.height);
         if (wx >= bx - 4 && wx <= bx + bw + 4 && wy >= by - 4 && wy <= by + bh + 4) {
-          openShapeLabelEditor(el as RectangleElement | EllipseElement | RhombusElement, history, canvas);
+          openShapeLabelEditor(el as RectangleElement | EllipseElement | RhombusElement, history, canvas, (id) => { editingShapeLabelId = id; needsRender = true; });
           needsRender = true;
           return;
         }
@@ -370,7 +371,7 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
 
   function renderFrame(): void {
     const editingId = (TOOLS.text as TextTool).editingId;
-    render(ctx2d, history.present, canvas, editingId);
+    render(ctx2d, history.present, canvas, editingId, editingShapeLabelId);
 
     // Draw preview element on top (in world transform)
     const activeTool = getActiveTool();
@@ -506,6 +507,7 @@ function openShapeLabelEditor(
   el: RectangleElement | EllipseElement | RhombusElement,
   history: History,
   canvas: HTMLCanvasElement,
+  onEditingChange: (id: string | null) => void,
 ): void {
   const { viewport, appState } = history.present;
   const bx = el.width < 0 ? el.x + el.width : el.x;
@@ -554,7 +556,10 @@ function openShapeLabelEditor(
   ta.addEventListener('input', grow);
   grow();
 
+  onEditingChange(el.id);
+
   const doCommit = (): void => {
+    onEditingChange(null);
     const content = ta.value.trim();
     ta.remove();
     if (content !== (el.label ?? '')) {
@@ -568,6 +573,7 @@ function openShapeLabelEditor(
     if (e.key === 'Escape') {
       e.stopPropagation();
       ta.removeEventListener('blur', doCommit);
+      onEditingChange(null);
       ta.remove();
       return;
     }

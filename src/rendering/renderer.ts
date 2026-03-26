@@ -9,6 +9,7 @@ export function render(
   scene: Scene,
   canvas: HTMLCanvasElement,
   editingId?: string | null,
+  editingShapeLabelId?: string | null,
 ): void {
   const { viewport, appState } = scene;
   const { width, height } = canvas;
@@ -40,7 +41,7 @@ export function render(
   for (const el of scene.elements) {
     if (editingId && el.id === editingId) continue;
     if (el.visible === false) continue;
-    drawElement(ctx, el, scene.elements);
+    drawElement(ctx, el, scene.elements, editingShapeLabelId);
   }
 
   const selected = getSelectedElements(scene);

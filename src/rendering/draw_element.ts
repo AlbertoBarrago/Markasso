@@ -9,7 +9,7 @@ function resolveStrokeColorForTheme(strokeColor: string): string {
   return strokeColor.toLowerCase() === '#e2e2ef' ? '#000000' : strokeColor;
 }
 
-export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allElements?: ReadonlyArray<Element>): void {
+export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allElements?: ReadonlyArray<Element>, editingShapeLabelId?: string | null): void {
   ctx.save();
   const strokeColor = resolveStrokeColorForTheme(el.strokeColor);
   ctx.globalAlpha = el.opacity;
@@ -42,7 +42,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
       drawRectangle(ctx, el.x, el.y, el.width, el.height, roughness, seed, el.cornerRadius ?? 0);
-      if (el.label) {
+      if (el.label && editingShapeLabelId !== el.id) {
         const rx = el.width < 0 ? el.x + el.width : el.x;
         const ry = el.height < 0 ? el.y + el.height : el.y;
         const rw = Math.abs(el.width);
@@ -52,7 +52,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         ctx.beginPath();
         ctx.rect(rx, ry, rw, rh);
         ctx.clip();
-        drawShapeLabel(ctx, rx + rw / 2, ry + rh / 2, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', strokeColor);
+        drawShapeLabel(ctx, rx + rw / 2, ry + rh / 2, rw, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', strokeColor);
         ctx.restore();
       }
       break;
@@ -61,7 +61,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
       drawRhombus(ctx, el.x, el.y, el.width, el.height, roughness, seed);
-      if (el.label) {
+      if (el.label && editingShapeLabelId !== el.id) {
         const rx = el.width < 0 ? el.x + el.width : el.x;
         const ry = el.height < 0 ? el.y + el.height : el.y;
         const rw = Math.abs(el.width);
@@ -77,7 +77,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         ctx.lineTo(rx, cy);
         ctx.closePath();
         ctx.clip();
-        drawShapeLabel(ctx, cx, cy, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', strokeColor);
+        drawShapeLabel(ctx, cx, cy, rw * 0.7, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', strokeColor);
         ctx.restore();
       }
       break;
@@ -86,7 +86,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
       drawEllipse(ctx, el.x, el.y, el.width, el.height, roughness, seed);
-      if (el.label) {
+      if (el.label && editingShapeLabelId !== el.id) {
         const cx = el.x + el.width / 2;
         const cy = el.y + el.height / 2;
         const erx = Math.abs(el.width / 2);
@@ -96,7 +96,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         ctx.beginPath();
         ctx.ellipse(cx, cy, erx, ery, 0, 0, Math.PI * 2);
         ctx.clip();
-        drawShapeLabel(ctx, cx, cy, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', strokeColor);
+        drawShapeLabel(ctx, cx, cy, erx * 2 * 0.7, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', strokeColor);
         ctx.restore();
       }
       break;
@@ -584,6 +584,7 @@ function drawShapeLabel(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
+  shapeWidth: number,
   label: string,
   fontSize: number,
   fontFamily: string,
@@ -593,7 +594,8 @@ function drawShapeLabel(
   ctx.fillStyle = color;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const lines = label.split('\n');
+  const maxWidth = Math.max(shapeWidth - 16, fontSize);
+  const lines = label.split('\n').flatMap((line) => buildWrappedLines(ctx, line, maxWidth));
   const lineHeight = fontSize * 1.2;
   const totalHeight = lines.length * lineHeight;
   for (let i = 0; i < lines.length; i++) {
