@@ -57,6 +57,10 @@ export class SelectTool implements Tool {
   /** Exposed for canvas_view to draw a hover highlight on the snap target element */
   endpointSnapElementId: string | null = null;
 
+  // Shift+drag clone state
+  private shiftClonePending = false;
+  private shiftCloneTarget: Element | null = null;
+
   // Rotation state
   private rotateCenter: [number, number] = [0, 0];
   private rotateInitialAngle = 0;
@@ -150,17 +154,10 @@ export class SelectTool implements Tool {
     const hit = hitTest(scene.elements, worldX, worldY);
     if (hit) {
       if (e.shiftKey) {
-        // Shift+click: toggle element in/out of selection
-        const currentIds = [...scene.selectedIds];
-        const newIds = scene.selectedIds.has(hit.id)
-          ? currentIds.filter((id) => id !== hit.id)
-          : [...currentIds, hit.id];
-        if (newIds.length > 0) {
-          ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
-        } else {
-          ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
-        }
-        this.dragMode = 'none';
+        // Shift+drag → clone; Shift+click → toggle (decided on mouseUp)
+        this.shiftClonePending = true;
+        this.shiftCloneTarget = hit;
+        this.dragMode = hit.locked ? 'none' : 'move';
       } else {
         // Group-aware selection
         if (hit.groupId) {
@@ -295,6 +292,26 @@ export class SelectTool implements Tool {
     }
 
     if (this.dragMode === 'move') {
+      if (this.shiftClonePending) {
+        const dist = Math.hypot(worldX - this.lastWorldX, worldY - this.lastWorldY);
+        if (dist < 2) return;
+        // It's a drag: clone and drag
+        this.shiftClonePending = false;
+        const scene = ctx.history.present;
+        const hit = this.shiftCloneTarget!;
+        this.shiftCloneTarget = null;
+        const idsToClone = scene.selectedIds.has(hit.id)
+          ? [...scene.selectedIds]
+          : [hit.id];
+        const elsToClone = scene.elements.filter((el) => idsToClone.includes(el.id) && !el.locked);
+        if (elsToClone.length > 0) {
+          const newElements = elsToClone.map((el) => ({ ...el, id: crypto.randomUUID() } as Element));
+          ctx.history.dispatch({ type: 'CREATE_ELEMENTS', elements: newElements });
+          // CREATE_ELEMENTS selects the clones — subsequent moves drag them
+        }
+        // Fall through to move the newly selected clones
+      }
+
       const dx = worldX - this.lastWorldX;
       const dy = worldY - this.lastWorldY;
       const { elements, selectedIds } = ctx.history.present;
@@ -331,6 +348,20 @@ export class SelectTool implements Tool {
   }
 
   onMouseUp(_e: MouseEvent, _worldX: number, _worldY: number, ctx: ToolContext): void {
+    // Shift+click (no drag): fall back to toggle selection
+    if (this.shiftClonePending && this.shiftCloneTarget) {
+      const hit = this.shiftCloneTarget;
+      const scene = ctx.history.present;
+      const currentIds = [...scene.selectedIds];
+      const newIds = scene.selectedIds.has(hit.id)
+        ? currentIds.filter((id) => id !== hit.id)
+        : [...currentIds, hit.id];
+      if (newIds.length > 0) ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
+      else ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
+    }
+    this.shiftClonePending = false;
+    this.shiftCloneTarget = null;
+
     if (this.dragMode === 'marquee') {
       this.marqueeActive = false;
       const scene = ctx.history.present;
@@ -388,6 +419,8 @@ export class SelectTool implements Tool {
   onDeactivate(_ctx: ToolContext): void {
     this.dragMode = 'none';
     this.marqueeActive = false;
+    this.shiftClonePending = false;
+    this.shiftCloneTarget = null;
   }
 
   onKeyDown(e: KeyboardEvent, ctx: ToolContext): void {

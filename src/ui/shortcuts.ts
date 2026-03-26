@@ -1,7 +1,9 @@
 import type { History } from '../engine/history';
 import type { SelectTool } from '../tools/select_tool';
+import type { Element } from '../elements/element';
 import { fitToElements } from '../core/viewport';
 import { isFocusInPanel } from './keyboard_utils';
+import { elementClipboard } from '../core/clipboard';
 
 export function initShortcuts(history: History, selectTool: SelectTool): void {
   const shortcuts = new Map<string, () => void>([
@@ -91,6 +93,44 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       }
       if (newIds.length > 0) history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
       return;
+    }
+
+    // Ctrl+C — copy selected elements to internal clipboard
+    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+      if (window.getSelection()?.toString()) return; // let browser handle text selection copy
+      const scene = history.present;
+      const selected = scene.elements.filter((el) => scene.selectedIds.has(el.id));
+      if (selected.length > 0) {
+        elementClipboard.elements = selected;
+        elementClipboard.pasteCount = 0;
+      }
+      return;
+    }
+
+    // Ctrl+V — paste elements from internal clipboard
+    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+      const { elements } = elementClipboard;
+      if (elements.length > 0) {
+        e.preventDefault();
+        elementClipboard.pasteCount += 1;
+        const offset = elementClipboard.pasteCount * 20;
+        const idMap = new Map(elements.map((el) => [el.id, crypto.randomUUID()]));
+        const newElements: Element[] = elements.map((el) => {
+          const newId = idMap.get(el.id)!;
+          if (el.type === 'freehand') {
+            return { ...el, id: newId, x: el.x + offset, y: el.y + offset,
+                     points: el.points.map(([px, py]) => [px + offset, py + offset] as const) };
+          }
+          if (el.type === 'line' || el.type === 'arrow') {
+            return { ...el, id: newId, x: el.x + offset, y: el.y + offset,
+                     x2: el.x2 + offset, y2: el.y2 + offset };
+          }
+          return { ...el, id: newId, x: el.x + offset, y: el.y + offset };
+        });
+        history.dispatch({ type: 'CREATE_ELEMENTS', elements: newElements });
+        return;
+      }
+      // no internal clipboard → fall through to native paste (image paste)
     }
 
     // Ctrl+Shift+] — bring to front

@@ -1,6 +1,7 @@
 import type { History } from '../engine/history';
 import type { ImageElement } from '../elements/element';
 import { importMarkasso } from '../io/markasso';
+import { elementClipboard } from '../core/clipboard';
 
 export function initImageImport(workspace: HTMLElement, history: History): void {
   // Hidden file input
@@ -42,6 +43,7 @@ export function initImageImport(workspace: HTMLElement, history: History): void 
 
   // Paste handler (Ctrl+V with image in clipboard)
   document.addEventListener('paste', (e) => {
+    if (elementClipboard.elements.length > 0) return; // element paste handled via keydown
     const items = e.clipboardData?.items;
     if (!items) return;
     for (const item of Array.from(items)) {

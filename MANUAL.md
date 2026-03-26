@@ -85,6 +85,8 @@ Double-click any arrow to add a label along its path.
 ### Moving
 Drag any selected element to move it. When multiple elements are selected they all move together.
 
+**Shift+drag to clone:** hold `Shift` and drag a selected element to leave the original in place and drag a copy. If multiple elements are selected, all of them are cloned.
+
 ### Resizing
 Select an element — eight handles appear around the bounding box. Drag any handle to resize. Hold `Shift` while dragging a corner handle to preserve aspect ratio.
 
@@ -166,6 +168,8 @@ Control which elements appear on top.
 |--------|----------|
 | Undo | `Ctrl+Z` |
 | Redo | `Ctrl+Y` or `Ctrl+Shift+Z` |
+| Copy | `Ctrl+C` |
+| Paste | `Ctrl+V` |
 | Duplicate | `Ctrl+D` |
 | Delete | `Delete` / `Backspace` |
 | Select all | `Ctrl+A` |
@@ -248,6 +252,8 @@ Switch between **Dark**, **Light**, and **System** themes from the Settings pane
 | `Ctrl+Z` | Undo |
 | `Ctrl+Y` | Redo |
 | `Ctrl+A` | Select all |
+| `Ctrl+C` | Copy selection |
+| `Ctrl+V` | Paste (elements or image from clipboard) |
 | `Ctrl+D` | Duplicate selection |
 | `Ctrl+G` | Group selection |
 | `Ctrl+Shift+G` | Ungroup |
@@ -257,3 +263,4 @@ Switch between **Dark**, **Light**, and **System** themes from the Settings pane
 | `Shift+Arrow` | Nudge 10px |
 | `Delete` / `Backspace` | Delete selection |
 | `Shift+click` | Add/remove from selection |
+| `Shift+drag` | Clone and drag (leave original in place) |
