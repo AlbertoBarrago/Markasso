@@ -1,8 +1,8 @@
-import type { Scene } from '../core/scene';
-import { getSelectedElements } from '../core/scene';
-import { drawGrid } from './draw_grid';
-import { drawElement } from './draw_element';
-import { drawSelection } from './draw_selection';
+import type {Scene} from '../core/scene';
+import {getSelectedElements} from '../core/scene';
+import {drawGrid} from './draw_grid';
+import {drawElement} from './draw_element';
+import {drawSelection} from './draw_selection';
 
 export function render(
   ctx: CanvasRenderingContext2D,
@@ -18,8 +18,7 @@ export function render(
   ctx.resetTransform();
   ctx.clearRect(0, 0, width, height);
 
-  const bg = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg').trim() || '#141414';
-  ctx.fillStyle = bg;
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg').trim() || '#141414';
   ctx.fillRect(0, 0, width, height);
 
   // Enable anti-aliasing for smooth curves
