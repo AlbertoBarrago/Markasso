@@ -3,8 +3,9 @@ import type { Element } from '../elements/element';
 import { t } from '../i18n';
 import { isFocusInPanel } from './keyboard_utils';
 
-const STROKE_PRESETS = ['#000000', '#e2e2ef', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
-const FILL_PRESETS = ['transparent', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff', '#ffffff'];
+const SHARED_COLOR_PRESETS = ['#e2e2ef', '#ff6b6b', '#6bcb77', '#4d96ff', '#c77dff'];
+const FILL_PRESETS = ['transparent', ...SHARED_COLOR_PRESETS];
+const STROKE_PRESETS = FILL_PRESETS;
 
 // 15-color palette for the custom color popup (5 × 3 grid)
 // First slot is transparent — picking it resets the custom color slot back to "+"
@@ -102,18 +103,18 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
 
   panel.innerHTML = `
     <div class="cp-section">
-      <div class="cp-label">${t('stroke')}</div>
-      <div class="cp-color-row" role="group" aria-label="${t('stroke')}">
-        <div class="cp-color-swatches" id="cp-stroke-swatches"></div>
-        <button class="cp-color-more" id="cp-stroke-more" title="${t('moreColors')}">+</button>
-      </div>
-    </div>
-
-    <div class="cp-section">
       <div class="cp-label">${t('fill')}</div>
       <div class="cp-color-row" role="group" aria-label="${t('fill')}">
         <div class="cp-color-swatches" id="cp-fill-swatches"></div>
         <button class="cp-color-more" id="cp-fill-more" title="${t('moreColors')}">+</button>
+      </div>
+    </div>
+
+    <div class="cp-section">
+      <div class="cp-label">${t('stroke')}</div>
+      <div class="cp-color-row" role="group" aria-label="${t('stroke')}">
+        <div class="cp-color-swatches" id="cp-stroke-swatches"></div>
+        <button class="cp-color-more" id="cp-stroke-more" title="${t('moreColors')}">+</button>
       </div>
     </div>
 
@@ -341,10 +342,15 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   for (const color of STROKE_PRESETS) {
     const sw = document.createElement('button');
     sw.className = 'cp-color-swatch';
-    sw.style.background = color;
-    sw.title = color;
-    sw.setAttribute('aria-label', color);
+    const swLabel = color === 'transparent' ? t('transparent') : color;
+    sw.title = swLabel;
+    sw.setAttribute('aria-label', swLabel);
     sw.setAttribute('aria-pressed', 'false');
+    if (color === 'transparent') {
+      sw.classList.add('cp-color-swatch-transparent');
+    } else {
+      sw.style.background = color;
+    }
     sw.addEventListener('click', () => {
       history.dispatch({ type: 'APPLY_STYLE', strokeColor: color });
     });
@@ -354,7 +360,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   const strokeMore = panel.querySelector<HTMLButtonElement>('#cp-stroke-more')!;
   updateMoreBtn(strokeMore, customStroke);
   strokeMore.addEventListener('click', () => {
-    const currentColor = customStroke ?? history.present.appState.strokeColor ?? STROKE_PRESETS[0] ?? '#000000';
+    const currentColor = customStroke ?? history.present.appState.strokeColor ?? STROKE_PRESETS[1] ?? '#e2e2ef';
     openPopup(strokeMore, currentColor, ({ pick, preview }) => {
       if (preview) {
         history.dispatch({ type: 'APPLY_STYLE', strokeColor: preview });

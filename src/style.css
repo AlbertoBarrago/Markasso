@@ -204,8 +204,8 @@ html, body {
   position: fixed;
   top: 72px;
   left: 16px;
-  width: 260px;
-  max-width: 350px;
+  width: 230px;
+  max-width: 240px;
   background: var(--bg-island);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
@@ -251,7 +251,6 @@ html, body {
   display: flex;
   gap: 4px;
   overflow-x: auto;
-  flex: 1;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -284,7 +283,20 @@ html, body {
   font-size: 16px;
   font-weight: 300;
   flex-shrink: 0;
+  margin-left: 14px;
+  position: relative;
   transition: background .1s, border-color .1s;
+}
+.cp-color-more::before {
+  content: '';
+  position: absolute;
+  left: -9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 24px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 1px;
 }
 .cp-color-more:hover { 
   background: rgba(255,255,255,0.1); 
@@ -1393,6 +1405,9 @@ html, body {
   border-color: #A9011B;
   background: #ffffff;
   color: #000000;
+}
+[data-theme="light"] .cp-color-more::before {
+  background: rgba(0,0,0,0.2);
 }
 [data-theme="light"] .cp-color-more:hover {
   background: rgba(169, 1, 27, 0.08);
