@@ -3,6 +3,43 @@ import type { Viewport } from '../core/viewport';
 import { worldToScreen } from '../core/viewport';
 
 /**
+ * Returns the distance from (px, py) to the actual visual boundary of an element.
+ * Used to pick the best snap candidate when multiple elements overlap.
+ */
+export function distToShapeBoundary(
+  el: Element,
+  b: { x: number; y: number; w: number; h: number },
+  px: number,
+  py: number,
+): number {
+  const cx = b.x + b.w / 2;
+  const cy = b.y + b.h / 2;
+  const hw = b.w / 2;
+  const hh = b.h / 2;
+  if (hw < 0.001 || hh < 0.001) return Math.hypot(px - cx, py - cy);
+  const dx = px - cx;
+  const dy = py - cy;
+
+  if (el.type === 'ellipse') {
+    // Approximate distance to ellipse boundary: |normalized_radius - 1| * min_radius
+    const n = Math.hypot(dx / hw, dy / hh);
+    return Math.abs(n - 1) * Math.min(hw, hh);
+  }
+  if (el.type === 'rhombus') {
+    // Distance to diamond boundary: |L1_normalized - 1| * min_half
+    const n = Math.abs(dx) / hw + Math.abs(dy) / hh;
+    return Math.abs(n - 1) * Math.min(hw, hh);
+  }
+  // Rectangle / text / image / freehand: distance to nearest edge
+  const insideX = hw - Math.abs(dx);
+  const insideY = hh - Math.abs(dy);
+  if (insideX < 0 || insideY < 0) {
+    return Math.hypot(Math.max(0, -insideX), Math.max(0, -insideY));
+  }
+  return Math.min(insideX, insideY);
+}
+
+/**
  * Returns the point on the border of an element in the direction from its center toward (targetX, targetY).
  * For ellipses uses the true ellipse boundary; for all others uses the bounding rectangle.
  */
@@ -22,6 +59,14 @@ export function getElementBorderPoint(
   if (el.type === 'ellipse') {
     const angle = Math.atan2(dy, dx);
     return [cx + (b.w / 2) * Math.cos(angle), cy + (b.h / 2) * Math.sin(angle)];
+  }
+
+  if (el.type === 'rhombus') {
+    // Diamond border: L1-norm intersection
+    const hw = b.w / 2;
+    const hh = b.h / 2;
+    const t = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh);
+    return [cx + dx * t, cy + dy * t];
   }
 
   // Rectangle / text / image / freehand — axis-aligned border intersection

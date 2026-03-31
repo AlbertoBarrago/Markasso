@@ -4,6 +4,7 @@ import type { HandlePosition } from '../rendering/draw_selection';
 import {
   getElementBounds,
   getElementBorderPoint,
+  distToShapeBoundary,
   resolveArrowEndpoints,
   hitTestHandle,
   getSelectionHandles,
@@ -207,17 +208,19 @@ export class SelectTool implements Tool {
         // Check for snap to element perimeter
         const snapRadius = SNAP_RADIUS_PX / scene.viewport.zoom;
         let snapTarget: { worldX: number; worldY: number; elementId: string } | null = null;
+        let bestSnapDist = Infinity;
         for (const candidate of scene.elements) {
           if (candidate.id === el.id) continue;
           if (candidate.type === 'line' || candidate.type === 'arrow') continue;
           const b = getElementBounds(candidate);
           const nearX = Math.max(b.x, Math.min(b.x + b.w, worldX));
           const nearY = Math.max(b.y, Math.min(b.y + b.h, worldY));
-          if (Math.hypot(worldX - nearX, worldY - nearY) <= snapRadius) {
-            // Border point facing toward the other end of the arrow
+          if (Math.hypot(worldX - nearX, worldY - nearY) > snapRadius) continue;
+          const d = distToShapeBoundary(candidate, b, worldX, worldY);
+          if (d < bestSnapDist) {
+            bestSnapDist = d;
             const [bx, by] = getElementBorderPoint(candidate, otherX, otherY);
             snapTarget = { worldX: bx, worldY: by, elementId: candidate.id };
-            break;
           }
         }
         this.endpointSnapTarget = snapTarget;
