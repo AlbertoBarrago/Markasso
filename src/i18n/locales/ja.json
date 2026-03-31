@@ -57,6 +57,7 @@
   "zoomIn": "拡大",
   "resetZoom": "ズームを100%にリセット (Shift+0)",
   "openMarkasso": ".markasso を開く",
+  "importMermaid": "Mermaid を読み込む",
   "export": "エクスポート",
   "exportPNG": "PNG をエクスポート",
   "exportSVG": "SVG をエクスポート",

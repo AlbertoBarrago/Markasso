@@ -1,6 +1,7 @@
 import type { History } from '../engine/history';
 import type { ImageElement } from '../elements/element';
 import { importMarkasso } from '../io/markasso';
+import { importMermaid, importMermaidText } from '../io/mermaid';
 import { elementClipboard } from '../core/clipboard';
 
 export function initImageImport(workspace: HTMLElement, history: History): void {
@@ -23,7 +24,13 @@ export function initImageImport(workspace: HTMLElement, history: History): void 
     const items = e.dataTransfer?.items;
     if (items) {
       for (const item of Array.from(items)) {
-        if (item.kind === 'file' && (item.type.startsWith('image/') || item.type === 'application/json')) {
+        if (
+          item.kind === 'file' &&
+          (item.type.startsWith('image/') ||
+            item.type === 'application/json' ||
+            item.type === 'text/plain' ||
+            item.type === 'text/x-mermaid')
+        ) {
           e.dataTransfer!.dropEffect = 'copy';
           return;
         }
@@ -36,21 +43,32 @@ export function initImageImport(workspace: HTMLElement, history: History): void 
     const files = e.dataTransfer?.files;
     if (!files) return;
     for (const file of Array.from(files)) {
-      if (file.name.endsWith('.markasso')) { importMarkasso(file, history); break; }
-      if (file.type.startsWith('image/'))  { loadFile(file); break; }
+      if (file.name.endsWith('.markasso'))                      { importMarkasso(file, history); break; }
+      if (file.name.endsWith('.mmd') || file.name.endsWith('.mermaid')) { importMermaid(file, history); break; }
+      if (file.type.startsWith('image/'))                       { loadFile(file); break; }
     }
   });
 
-  // Paste handler (Ctrl+V with image in clipboard)
+  // Paste handler (Ctrl+V with image or Mermaid text in clipboard)
   document.addEventListener('paste', (e) => {
     if (elementClipboard.elements.length > 0) return; // element paste handled via keydown
     const items = e.clipboardData?.items;
     if (!items) return;
+
     for (const item of Array.from(items)) {
+      if (item.type === 'text/plain') {
+        item.getAsString((text) => {
+          const trimmed = text.trimStart();
+          if (/^(?:graph\s|flowchart\s|sequenceDiagram\b)/i.test(trimmed)) {
+            importMermaidText(trimmed, history);
+          }
+        });
+        return;
+      }
       if (item.type.startsWith('image/')) {
         const file = item.getAsFile();
         if (file) loadFile(file);
-        break;
+        return;
       }
     }
   });

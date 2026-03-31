@@ -57,6 +57,7 @@
   "zoomIn": "Aumentar zoom",
   "resetZoom": "Redefinir zoom para 100% (Shift+0)",
   "openMarkasso": "Abrir .markasso",
+  "importMermaid": "Importar Mermaid",
   "export": "Exportar",
   "exportPNG": "Exportar PNG",
   "exportSVG": "Exportar SVG",

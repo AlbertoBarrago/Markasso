@@ -2,6 +2,7 @@ import type { History } from '../engine/history';
 import type { ActiveTool } from '../core/app_state';
 import { exportPNG, exportSVG } from '../rendering/export';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
+import { importMermaid } from '../io/mermaid';
 import { fitToElements } from '../core/viewport';
 import { t } from '../i18n';
 
@@ -26,6 +27,7 @@ const IC = {
   imgPNG:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><rect x="2" y="3" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="8" r="1.5" fill="currentColor"/><path d="M2 14l4-4 3 3 3-3 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   imgSVG:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><circle cx="4" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 10C8 5 12 5 13.5 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
   markasso:  `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  mermaid:   `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="7" height="5" rx="1"/><rect x="12" y="14" width="7" height="5" rx="1"/><path d="M4.5 6v4h11v4"/><path d="M14 16l1.5-2 1.5 2"/></svg>`,
   layers:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L2 6l8 4 8-4z"/><path d="M2 10l8 4 8-4"/><path d="M2 14l8 4 8-4"/></svg>`,
   hamburger: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/></svg>`,
   importImg: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="16" height="14" rx="2"/><circle cx="7" cy="8" r="1.5"/><path d="M2 14l4-4 3 3 3-3 4 4"/><path d="M13 7l2-2 2 2M15 5v5"/></svg>`,
@@ -155,7 +157,22 @@ export function initToolbar(container: HTMLElement, history: History): void {
   });
   const importTrigger = mkBtn(IC.import, t('openMarkasso'));
   importTrigger.addEventListener('click', () => importInput.click());
-  importIsland.append(importTrigger);
+
+  // Import .mmd (Mermaid)
+  const mermaidInput = document.createElement('input');
+  mermaidInput.type = 'file';
+  mermaidInput.accept = '.mmd,.mermaid,text/plain';
+  mermaidInput.style.display = 'none';
+  container.appendChild(mermaidInput);
+  mermaidInput.addEventListener('change', () => {
+    const file = mermaidInput.files?.[0];
+    if (file) importMermaid(file, history);
+    mermaidInput.value = '';
+  });
+  const mermaidTrigger = mkBtn(IC.mermaid, t('importMermaid'));
+  mermaidTrigger.addEventListener('click', () => mermaidInput.click());
+
+  importIsland.append(importTrigger, mermaidTrigger);
 
   // Export dropdown
   const exportIsland = div('tb-island');
