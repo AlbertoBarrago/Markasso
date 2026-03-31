@@ -224,6 +224,10 @@ Switch between **Dark**, **Light**, and **System** themes from the Settings pane
 - **Import image:** click the image icon in the context toolbar (or drag and drop onto the canvas, or `Ctrl+V` to paste from clipboard).
 - **Open .markasso:** drag and drop a `.markasso` file onto the canvas, or use File → Open in the Settings menu.
 - **Save .markasso:** File → Save in the Settings menu. Saves the full scene including images.
+- **Import Mermaid diagram:** drag and drop a `.mmd` or `.mermaid` file onto the canvas, click the Mermaid button in the toolbar, or paste Mermaid text with `Ctrl+V`. Supported diagram types:
+  - `graph` / `flowchart` — directions TD, LR, RL, BT; node shapes `[]` (rectangle), `(())` (ellipse), `{}` (rhombus); solid arrows `-->`, dashed arrows `-.->`, plain lines `---`; inline edge labels
+  - `sequenceDiagram` — participants become rectangles arranged in a row; messages become arrows with labels
+  - The viewport auto-fits to the imported diagram after conversion.
 - **Export PNG:** downloads a 2× PNG cropped to the bounding box of all elements.
 - **Export SVG:** downloads a clean SVG cropped to the bounding box.
 - **Auto-save:** the canvas saves automatically to `localStorage` — your work survives page refreshes.

@@ -4,6 +4,17 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [0.0.3] — 2026-03-31
+
+### Added
+- **Mermaid import** — import `.mmd` / `.mermaid` files via drag-and-drop or the new toolbar button; paste Mermaid text directly from the clipboard (`Ctrl+V`)
+- Supported diagram types: `graph` / `flowchart` (directions TD, LR, RL, BT) and `sequenceDiagram`
+- Node shapes auto-mapped: `[]` → rectangle, `(())` → ellipse, `{}` → rhombus
+- Edge types: solid arrows `-->`, dashed arrows `-.->`, plain lines `---`; inline labels preserved
+- Viewport auto-fits to the imported diagram after conversion
+
+---
+
 ## [0.0.1] — 2026-03-31
 
 ### Added

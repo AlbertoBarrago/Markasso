@@ -130,6 +130,7 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 | **Session persistence** | Auto-saved to `localStorage` — your work survives page refreshes |
 | **`.markasso` format** | Save and reload your full scene as a `.markasso` file (JSON) — images included |
 | **Image import** | Drag-and-drop, file picker, or `Ctrl+V` paste; `.markasso` files can also be dropped directly |
+| **Mermaid import** | Import `.mmd` / `.mermaid` files via drag-and-drop or the toolbar button; paste Mermaid text from the clipboard — `graph`, `flowchart`, and `sequenceDiagram` are converted to native elements |
 | **Export PNG / SVG** | Download the canvas as a 2× PNG or a clean SVG — bounding-box auto-fit |
 
 ### History & Undo
@@ -296,6 +297,7 @@ src/
 │   └── history.ts          # Undo/redo stack + pub/sub
 ├── io/
 │   ├── markasso.ts         # .markasso save / load (exportMarkasso, importMarkasso)
+│   ├── mermaid.ts          # Mermaid parser + layout engine → Markasso elements
 │   └── session.ts          # localStorage auto-save / restore + quota warning toast
 ├── rendering/
 │   ├── renderer.ts         # rAF render loop entry point
