@@ -598,15 +598,15 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   // ── Layer actions ──────────────────────────────────────────────────────────
   const layerActions = panel.querySelector('#cp-layer-actions')!;
   const LAYERS = [
-    { icon: '⤓', label: t('toBack'),   action: 'back' },
-    { icon: '↓', label: t('backward'), action: 'backward' },
-    { icon: '↑', label: t('forward'),  action: 'forward' },
-    { icon: '⤒', label: t('toFront'),  action: 'front' },
+    { icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="17" x2="17" y2="17"/><polyline points="10,14 10,4"/><polyline points="6,8 10,4 14,8"/><line x1="3" y1="17" x2="17" y2="17"/></svg>`, label: t('toBack'),   action: 'back' },
+    { icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="4" x2="10" y2="16"/><polyline points="6,12 10,16 14,12"/></svg>`, label: t('backward'), action: 'backward' },
+    { icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="16" x2="10" y2="4"/><polyline points="6,8 10,4 14,8"/></svg>`, label: t('forward'),  action: 'forward' },
+    { icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="3" x2="17" y2="3"/><polyline points="10,6 10,16"/><polyline points="6,12 10,16 14,12"/></svg>`, label: t('toFront'),  action: 'front' },
   ];
   for (const l of LAYERS) {
     const btn = document.createElement('button');
     btn.className = 'cp-btn cp-layer-btn';
-    btn.textContent = l.icon;
+    btn.innerHTML = l.icon;
     btn.title = l.label;
     btn.dataset['layer'] = l.action;
     btn.addEventListener('click', () => {
@@ -632,13 +632,13 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
   // ── Actions ────────────────────────────────────────────────────────────────
   const actions = panel.querySelector('#cp-actions')!;
   const ACTIONS = [
-    { icon: '📋', label: t('duplicate'), action: 'duplicate' },
-    { icon: '🗑', label: t('delete'),    action: 'delete' },
+    { icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="9" height="9" rx="1.5"/><path d="M13 7V5.5A1.5 1.5 0 0 0 11.5 4h-7A1.5 1.5 0 0 0 3 5.5v7A1.5 1.5 0 0 0 4.5 14H7"/></svg>`, label: t('duplicate'), action: 'duplicate' },
+    { icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 17,6"/><path d="M8 6V4h4v2"/><rect x="5" y="6" width="10" height="10" rx="1"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="12" y1="10" x2="12" y2="14"/></svg>`, label: t('delete'),    action: 'delete' },
   ];
   for (const a of ACTIONS) {
     const btn = document.createElement('button');
     btn.className = 'cp-btn cp-action-btn';
-    btn.textContent = a.icon;
+    btn.innerHTML = a.icon;
     btn.title = a.label;
     btn.dataset['action'] = a.action;
     btn.addEventListener('click', () => {
