@@ -1,0 +1,206 @@
+/* ── Reset & variables ─────────────────────────────────────────────── */
+:root {
+  --accent:        #A9011B;
+  --accent-light:  rgba(196,32,32,0.18);
+  --focus-ring:    #7c63d4;
+
+  --bg-island:     rgba(13, 7, 7, 0.98);
+  --island-border: rgb(87 87 87);
+  --island-shadow: 0 2px 24px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04);
+  --island-radius: 12px;
+  --input-border: rgba(89, 89, 89, .4);
+
+  --bg-hover:   rgba(255,255,255,0.07);
+  --border:     var(--island-border);
+  --text:       #e8d4d4;
+  --false-white:      #FFFADF;
+  --text-muted: rgb(141 141 141);
+  --radius:     8px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Keyboard focus indicators ─────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--canvas-bg, #080808);
+  color: var(--text);
+}
+
+/* ── App shell — full screen ───────────────────────────────────────── */
+#app { position: fixed; inset: 0; }
+
+/* Canvas workspace fills everything */
+/* touch-action: none prevents Safari from intercepting touches at the
+   parent level before they reach the canvas, which can suppress touchmove
+   events and break pen-tool drawing on iOS. */
+#workspace { position: fixed; inset: 0; z-index: 1; touch-action: none; }
+
+#main {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  touch-action: none; display: block;
+}
+
+/* Toolbar is a transparent pointer-events:none overlay that hosts islands */
+#toolbar {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  background: transparent;
+}
+
+/* ── Floating islands ──────────────────────────────────────────────── */
+.tb-island {
+  pointer-events: all;
+  touch-action: none;
+  background: var(--bg-island);
+  border: 1px solid var(--island-border);
+  border-radius: var(--island-radius);
+  box-shadow: var(--island-shadow);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  gap: 2px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  user-select: none;
+}
+
+/* Center-top: tools */
+.tb-island-tools {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+/* Top-right: export */
+.tb-island-topright {
+  position: fixed;
+  top: 12px; right: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: all;
+}
+
+/* Top-left: settings */
+.tb-island-topleft {
+  position: fixed;
+  top: 12px; left: 16px;
+  z-index: 10;
+  pointer-events: all;
+}
+
+/* Bottom-left: zoom */
+.tb-island-bottomleft {
+  position: fixed;
+  bottom: 16px; left: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: all;
+}
+
+/* Bottom-right: undo/redo */
+.tb-island-bottomright {
+  position: fixed;
+  bottom: 16px; right: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: all;
+}
+
+.tb-left {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Separator between hand tool and other tools */
+.tb-separator {
+  width: 1px;
+  height: 24px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  margin: 0 6px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────── */
+.tb-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px; height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background .12s, color .12s;
+  flex-shrink: 0;
+}
+.tb-btn:hover   { background: var(--bg-hover); color: var(--text); }
+.tb-btn.active  { background: var(--accent-light); color: var(--accent); }
+.tb-btn:disabled{ opacity: .3; cursor: default; }
+.tb-btn svg     { pointer-events: none; }
+
+/* Subscript shortcut number */
+.tb-btn-key {
+  position: absolute;
+  bottom: 3px; right: 4px;
+  font-size: 8px; font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+.tb-btn.active .tb-btn-key { color: var(--accent); }
+
+/* Zoom percentage label */
+.tb-zoom {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  min-width: 40px;
+  text-align: center;
+  padding: 0 4px;
+  user-select: none;
+}
+
+.tb-zoom-btn {
+  width: auto;
+  min-width: 40px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* UI hide mode (\ toggle) */
+body.ui-hidden #toolbar,
+body.ui-hidden #context-panel,
+body.ui-hidden #layers-panel,
+body.ui-hidden #mobile-actions { display: none !important; }

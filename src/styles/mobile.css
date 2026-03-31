@@ -1,0 +1,204 @@
+/* ── Mobile action bar (bottom-right, always visible on touch) ───────────── */
+#mobile-actions { display: none; }
+
+@media (pointer: coarse) {
+  #mobile-actions {
+    display: flex;
+    position: fixed;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    right: 16px;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg-island);
+    border: 1px solid var(--island-border);
+    border-radius: var(--island-radius);
+    box-shadow: var(--island-shadow);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    padding: 4px;
+    z-index: 40;
+    pointer-events: all;
+  }
+}
+
+.mobile-action-btn {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--island-border);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+  flex-shrink: 0;
+}
+.mobile-action-btn:hover  { background: var(--bg-hover); }
+.mobile-action-btn:active { background: var(--accent-light); color: var(--accent); }
+.mobile-action-btn.mobile-action-danger { color: #ff6b6b; }
+.mobile-action-btn.mobile-action-danger:active { background: rgba(255,80,80,0.15); color: #ff6b6b; }
+.mobile-action-btn svg { pointer-events: none; }
+.mobile-action-btn:disabled { opacity: .3; cursor: default; }
+.mobile-action-sep {
+  width: 1px; height: 20px;
+  background: var(--island-border);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+.mobile-action-btn.active {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+/* ── Mobile tools FAB ────────────────────────────────────────────────────── */
+#mobile-tools-fab { display: none; }
+
+@media (pointer: coarse) {
+  #mobile-tools-fab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    left: 16px;
+    width: 44px;
+    height: 44px;
+    background: var(--bg-island);
+    border: 1px solid var(--island-border);
+    border-radius: var(--island-radius);
+    box-shadow: var(--island-shadow);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    color: var(--text);
+    cursor: pointer;
+    z-index: 40;
+    pointer-events: all;
+    transition: background .12s, color .12s;
+  }
+  #mobile-tools-fab svg { pointer-events: none; }
+  #mobile-tools-fab.active { background: var(--accent-light); color: var(--accent); }
+}
+
+/* ── Mobile tools popup ──────────────────────────────────────────────────── */
+#mobile-tools-popup { display: none; }
+
+@media (pointer: coarse) {
+  #mobile-tools-popup {
+    display: grid;
+    grid-template-columns: repeat(4, 44px);
+    gap: 6px;
+    position: fixed;
+    left: 12px;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    background: var(--bg-island);
+    border: 1px solid var(--island-border);
+    border-radius: 16px;
+    box-shadow: var(--island-shadow);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 12px;
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity .18s, transform .18s;
+  }
+  #mobile-tools-popup.open {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(0);
+  }
+  .mobile-tools-popup-btn {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--island-border);
+    border-radius: 10px;
+    color: var(--text);
+    cursor: pointer;
+    transition: background .12s, color .12s;
+  }
+  .mobile-tools-popup-btn svg { pointer-events: none; }
+  .mobile-tools-popup-btn.active {
+    background: var(--accent-light);
+    color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+  .mobile-tools-popup-btn:active { background: var(--accent-light); color: var(--accent); }
+}
+
+/* ── iPad: larger touch targets on coarse-pointer wide screens ───────────── */
+@media (pointer: coarse) and (min-width: 768px) {
+  #mobile-tools-fab {
+    width: 56px;
+    height: 56px;
+  }
+
+  #mobile-tools-fab[data-tool]:not([data-tool="select"]):not([data-tool="hand"]) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  #mobile-tools-popup {
+    grid-template-columns: repeat(5, 56px);
+    gap: 8px;
+    padding: 14px;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-tools-popup-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+  }
+
+  .mobile-action-btn {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* ── Mobile style bottom sheet ───────────────────────────────────────────── */
+#mobile-style-sheet { display: none; }
+
+@media (pointer: coarse) {
+  #mobile-style-sheet {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    background: var(--bg-island);
+    border: 1px solid var(--island-border);
+    border-radius: 16px;
+    box-shadow: var(--island-shadow);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 12px 16px 16px;
+    z-index: 50;
+    max-height: 55vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(12px);
+    transition: opacity .18s, transform .18s;
+  }
+  #mobile-style-sheet.open {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(0);
+  }
+  #mobile-style-sheet::-webkit-scrollbar { display: none; }
+
+  .mss-handle {
+    width: 36px; height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+    align-self: center;
+    margin-bottom: 4px;
+    flex-shrink: 0;
+  }
+}
