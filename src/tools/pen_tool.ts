@@ -84,6 +84,7 @@ export class PenTool implements Tool {
     const origin = simplified[0] ?? [0, 0];
     ctx.history.dispatch({
       type: 'CREATE_ELEMENT',
+      select: false,
       element: {
         id: crypto.randomUUID(),
         type: 'freehand',

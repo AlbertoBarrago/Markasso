@@ -79,6 +79,20 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       return;
     }
 
+    // Delete/Backspace — delete selected elements regardless of active tool
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const scene = history.present;
+      const ids = [...scene.selectedIds].filter((id) => {
+        const el = scene.elements.find((el) => el.id === id);
+        return el && !el.locked;
+      });
+      if (ids.length > 0) {
+        e.preventDefault();
+        history.dispatch({ type: 'DELETE_ELEMENTS', ids });
+        return;
+      }
+    }
+
     // Ctrl+D — duplicate selected elements with a small offset
     if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
       e.preventDefault();

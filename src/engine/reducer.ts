@@ -14,7 +14,7 @@ export function reducer(scene: Scene, command: Command): Scene {
       return {
         ...scene,
         elements: [...scene.elements, command.element],
-        selectedIds: new Set([command.element.id]),
+        selectedIds: command.select === false ? new Set() : new Set([command.element.id]),
       };
 
     case 'CREATE_ELEMENTS':
