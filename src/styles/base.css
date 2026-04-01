@@ -1,8 +1,9 @@
 /* ── Reset & variables ─────────────────────────────────────────────── */
 :root {
-  --accent:        #A9011B;
-  --accent-light:  rgba(196,32,32,0.18);
-  --focus-ring:    #7c63d4;
+  --accent: #c42059;
+  --accent-light: rgb(196, 32, 81, .2);
+  --focus-ring: var(--accent);
+  --alert: #fa0101;
 
   --bg-island:     rgba(13, 7, 7, 0.98);
   --island-border: rgb(87 87 87);
@@ -164,7 +165,11 @@ html, body {
   flex-shrink: 0;
 }
 .tb-btn:hover   { background: var(--bg-hover); color: var(--text); }
-.tb-btn.active  { background: var(--accent-light); color: var(--accent); }
+.tb-btn.active  {
+  background: var(--accent-light);
+  color: var(--accent);
+  outline: 2px solid var(--accent);
+}
 .tb-btn:disabled{ opacity: .3; cursor: default; }
 .tb-btn svg     { pointer-events: none; }
 
