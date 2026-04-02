@@ -69,6 +69,32 @@ const SEQ_PART_SPACING = 240; // center-to-center horizontal distance
 const SEQ_MSG_FIRST_Y = SEQ_PART_H + 50;
 const SEQ_MSG_SPACING = 60;
 
+// ── Color palette ──────────────────────────────────────────────────────────────
+
+// Reuse colors already present in the app's POPUP_COLORS palette for consistency
+const MERMAID_COLORS = {
+  dark: {
+    rectangle: { fill: 'rgba(77,150,255,0.18)',  stroke: '#4d96ff' },
+    rhombus:   { fill: 'rgba(255,107,107,0.18)', stroke: '#ff6b6b' },
+    ellipse:   { fill: 'rgba(107,203,119,0.18)', stroke: '#6bcb77' },
+  },
+  light: {
+    rectangle: { fill: 'rgba(77,150,255,0.14)',  stroke: '#1a6fd4' },
+    rhombus:   { fill: 'rgba(220,50,50,0.10)',   stroke: '#c0392b' },
+    ellipse:   { fill: 'rgba(40,160,70,0.10)',   stroke: '#27ae60' },
+  },
+} as const;
+
+// Cycles per participant in sequence diagrams (same palette as POPUP_COLORS)
+const SEQ_COLORS = ['#4d96ff', '#6bcb77', '#c77dff', '#ffd43b', '#ff6b6b'];
+
+function withAlpha(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 export function importMermaid(file: File, history: History): void {
@@ -86,11 +112,13 @@ export function importMermaidText(text: string, history: History): void {
     const resolvedTheme = document.documentElement.getAttribute('data-theme');
     const strokeColor = resolvedTheme === 'light' ? '#000000' : '#e2e2ef';
 
+    const isDark = resolvedTheme !== 'light';
+
     // Try flowchart / graph
     const flowchart = parseDiagram(text);
     if (flowchart) {
       if (flowchart.nodes.size === 0) { alert('No nodes found in the Mermaid diagram.'); return; }
-      const elements = buildElements(flowchart, strokeColor);
+      const elements = buildElements(flowchart, strokeColor, isDark);
       if (elements.length === 0) { alert('No elements could be created from this diagram.'); return; }
       dispatchElements(elements, history);
       return;
@@ -100,7 +128,7 @@ export function importMermaidText(text: string, history: History): void {
     const sequence = parseSequenceDiagram(text);
     if (sequence) {
       if (sequence.participants.length === 0) { alert('No participants found in the sequence diagram.'); return; }
-      const elements = buildSequenceElements(sequence, strokeColor);
+      const elements = buildSequenceElements(sequence, strokeColor, isDark);
       if (elements.length === 0) { alert('No elements could be created from this diagram.'); return; }
       dispatchElements(elements, history);
       return;
@@ -118,6 +146,9 @@ export function importMermaidText(text: string, history: History): void {
 
 function dispatchElements(elements: Element[], history: History): void {
   history.dispatch({ type: 'CREATE_ELEMENTS', elements });
+  if (elements.length > 1) {
+    history.dispatch({ type: 'GROUP_ELEMENTS', ids: elements.map((e) => e.id), groupId: crypto.randomUUID() });
+  }
   const vp = fitToElements(elements, window.innerWidth, window.innerHeight);
   history.dispatch({ type: 'SET_VIEWPORT', offsetX: vp.offsetX, offsetY: vp.offsetY, zoom: vp.zoom });
 }
@@ -347,9 +378,10 @@ function computeLayout(
 // ── Element builder ────────────────────────────────────────────────────────────
 
 /** Exported for testing. Converts a parsed diagram to Markasso elements. */
-export function buildElements(diagram: ParsedDiagram, strokeColor: string): Element[] {
+export function buildElements(diagram: ParsedDiagram, strokeColor: string, isDark = true): Element[] {
   const { nodes, edges, direction } = diagram;
   const positions = computeLayout(nodes, edges, direction);
+  const palette = isDark ? MERMAID_COLORS.dark : MERMAID_COLORS.light;
 
   // Map mermaid node id → Markasso element id
   const idMap = new Map<string, string>();
@@ -360,41 +392,54 @@ export function buildElements(diagram: ParsedDiagram, strokeColor: string): Elem
     const elemId = crypto.randomUUID();
     idMap.set(nodeId, elemId);
 
-    const base = {
-      id: elemId,
-      x: pos.x,
-      y: pos.y,
-      strokeColor,
-      fillColor: 'transparent' as const,
+    const baseStyle = {
       strokeWidth: 1.5,
       opacity: 1,
       roughness: 0,
     };
 
     if (node.shape === 'ellipse') {
+      const c = palette.ellipse;
       const el: EllipseElement = {
-        ...base,
+        ...baseStyle,
+        id: elemId,
         type: 'ellipse',
+        x: pos.x,
+        y: pos.y,
         width: NODE_W,
         height: NODE_H,
+        strokeColor: c.stroke,
+        fillColor: c.fill,
         ...(node.label ? { label: node.label, labelFontSize: 14 } : {}),
       };
       shapeElements.push(el);
     } else if (node.shape === 'rhombus') {
+      const c = palette.rhombus;
       const el: RhombusElement = {
-        ...base,
+        ...baseStyle,
+        id: elemId,
         type: 'rhombus',
+        x: pos.x,
+        y: pos.y,
         width: RHOMBUS_W,
         height: RHOMBUS_H,
+        strokeColor: c.stroke,
+        fillColor: c.fill,
         ...(node.label ? { label: node.label, labelFontSize: 14 } : {}),
       };
       shapeElements.push(el);
     } else {
+      const c = palette.rectangle;
       const el: RectangleElement = {
-        ...base,
+        ...baseStyle,
+        id: elemId,
         type: 'rectangle',
+        x: pos.x,
+        y: pos.y,
         width: NODE_W,
         height: NODE_H,
+        strokeColor: c.stroke,
+        fillColor: c.fill,
         ...(node.label ? { label: node.label, labelFontSize: 14 } : {}),
       };
       shapeElements.push(el);
@@ -532,51 +577,56 @@ export function parseSequenceDiagram(text: string): ParsedSequenceDiagram | null
 // ── Sequence diagram builder ───────────────────────────────────────────────────
 
 /** Exported for testing. Converts a parsed sequence diagram to Markasso elements. */
-export function buildSequenceElements(diagram: ParsedSequenceDiagram, strokeColor: string): Element[] {
+export function buildSequenceElements(diagram: ParsedSequenceDiagram, strokeColor: string, _isDark = true): Element[] {
   const { participants, messages } = diagram;
   const elements: Element[] = [];
 
-  // Map participant id → column index
+  // Map participant id → column index and color
   const colIndex = new Map<string, number>(participants.map((p, i) => [p.id, i]));
   const centerX = (id: string) => (colIndex.get(id) ?? 0) * SEQ_PART_SPACING + SEQ_PART_W / 2;
+  const participantColor = (id: string) => SEQ_COLORS[(colIndex.get(id) ?? 0) % SEQ_COLORS.length]!;
 
   const totalHeight = SEQ_MSG_FIRST_Y + messages.length * SEQ_MSG_SPACING + 40;
 
-  const base = {
-    strokeColor,
-    fillColor: 'transparent' as const,
+  const baseStyle = {
     strokeWidth: 1.5,
     opacity: 1,
     roughness: 0,
   };
 
-  // Participant boxes
+  // Participant boxes — each gets a unique color from the palette
   for (const p of participants) {
     const cx = centerX(p.id);
+    const color = participantColor(p.id);
     const el: RectangleElement = {
-      ...base,
+      ...baseStyle,
       id: crypto.randomUUID(),
       type: 'rectangle',
       x: cx - SEQ_PART_W / 2,
       y: 0,
       width: SEQ_PART_W,
       height: SEQ_PART_H,
+      strokeColor: color,
+      fillColor: withAlpha(color, 0.15),
       ...(p.label ? { label: p.label, labelFontSize: 13 } : {}),
     };
     elements.push(el);
   }
 
-  // Lifelines (dashed vertical lines)
+  // Lifelines — same color as participant but subtle
   for (const p of participants) {
     const cx = centerX(p.id);
+    const color = participantColor(p.id);
     const el: LineElement = {
-      ...base,
+      ...baseStyle,
       id: crypto.randomUUID(),
       type: 'line',
       x: cx,
       y: SEQ_PART_H,
       x2: cx,
       y2: totalHeight,
+      strokeColor: withAlpha(color, 0.4),
+      fillColor: 'transparent',
       strokeStyle: 'dashed',
       strokeWidth: 1,
     };
@@ -594,36 +644,42 @@ export function buildSequenceElements(diagram: ParsedSequenceDiagram, strokeColo
       // Self-message: two short arrows forming a bracket shape
       const offset = SEQ_PART_SPACING * 0.3;
       const leg1: LineElement = {
-        ...base,
+        ...baseStyle,
         id: crypto.randomUUID(),
         type: 'line',
         x: x1,
         y,
         x2: x1 + offset,
         y2: y,
+        strokeColor,
+        fillColor: 'transparent' as const,
         ...(msg.dashed ? { strokeStyle: 'dashed' as const } : {}),
       };
       const leg2: ArrowElement = {
-        ...base,
+        ...baseStyle,
         id: crypto.randomUUID(),
         type: 'arrow',
         x: x1 + offset,
         y,
         x2: x1 + offset,
         y2: y + SEQ_MSG_SPACING * 0.6,
+        strokeColor,
+        fillColor: 'transparent' as const,
         ...(msg.dashed ? { strokeStyle: 'dashed' as const } : {}),
         ...(msg.label ? { label: msg.label, labelFontSize: 12 } : {}),
       };
       elements.push(leg1, leg2);
     } else {
       const el: ArrowElement = {
-        ...base,
+        ...baseStyle,
         id: crypto.randomUUID(),
         type: 'arrow',
         x: x1,
         y,
         x2,
         y2: y,
+        strokeColor,
+        fillColor: 'transparent' as const,
         ...(msg.dashed ? { strokeStyle: 'dashed' as const } : {}),
         ...(msg.label ? { label: msg.label, labelFontSize: 12 } : {}),
       };

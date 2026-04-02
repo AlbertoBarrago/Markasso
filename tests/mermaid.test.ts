@@ -197,10 +197,18 @@ describe('buildElements', () => {
     expect(arrow.strokeStyle).toBe('dashed');
   });
 
-  it('uses the provided strokeColor on all elements', () => {
+  it('uses palette colors on shapes and provided strokeColor on connectors', () => {
     const d = parseDiagram('graph TD\n  A --> B')!;
     const els = buildElements(d, '#ff0000');
-    for (const el of els) {
+    const shapes = els.filter(e => e.type === 'rectangle' || e.type === 'ellipse' || e.type === 'rhombus');
+    const connectors = els.filter(e => e.type === 'arrow' || e.type === 'line');
+    // Shapes use the built-in palette, not the passed strokeColor
+    for (const el of shapes) {
+      expect(el.strokeColor).not.toBe('#ff0000');
+      expect(el.fillColor).not.toBe('transparent');
+    }
+    // Connectors keep the passed strokeColor
+    for (const el of connectors) {
       expect(el.strokeColor).toBe('#ff0000');
     }
   });
@@ -425,9 +433,17 @@ describe('buildSequenceElements', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('uses the provided strokeColor', () => {
+  it('uses palette colors on participant boxes and provided strokeColor on message arrows', () => {
     const els = buildSequenceElements(simple, '#abcdef');
-    for (const el of els) {
+    const boxes = els.filter(e => e.type === 'rectangle');
+    const arrows = els.filter(e => e.type === 'arrow');
+    // Participant boxes use the cycling palette
+    for (const el of boxes) {
+      expect(el.strokeColor).not.toBe('#abcdef');
+      expect(el.fillColor).not.toBe('transparent');
+    }
+    // Message arrows keep the passed strokeColor
+    for (const el of arrows) {
       expect(el.strokeColor).toBe('#abcdef');
     }
   });

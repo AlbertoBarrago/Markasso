@@ -487,14 +487,15 @@ export function getSelectionHandles(
 export function hitTestHandle(
   handles: Handle[],
   screenX: number,
-  screenY: number
+  screenY: number,
+  tolerance = 8,
 ): HandlePosition | null {
   for (const h of handles) {
     if (
-      screenX >= h.screenX - HANDLE_HALF - 2 &&
-      screenX <= h.screenX + HANDLE_HALF + 2 &&
-      screenY >= h.screenY - HANDLE_HALF - 2 &&
-      screenY <= h.screenY + HANDLE_HALF + 2
+      screenX >= h.screenX - HANDLE_HALF - tolerance &&
+      screenX <= h.screenX + HANDLE_HALF + tolerance &&
+      screenY >= h.screenY - HANDLE_HALF - tolerance &&
+      screenY <= h.screenY + HANDLE_HALF + tolerance
     ) {
       return h.position;
     }

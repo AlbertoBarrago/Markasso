@@ -159,6 +159,14 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
   let lastPinchDist = 0, lastPinchMidX = 0, lastPinchMidY = 0;
   let lastTapTime = 0, lastTapX = 0, lastTapY = 0;
 
+  // Touch pan inertia
+  let inertiaVX = 0;
+  let inertiaVY = 0;
+  let inertiaRafId = 0;
+  let lastTouchMoveTime = 0;
+  let prevInertiaX = 0;
+  let prevInertiaY = 0;
+
   function getWorldCoordsFromTouch(touch: Touch): [number, number] {
     const rect = canvas.getBoundingClientRect();
     return screenToWorld(history.present.viewport, touch.clientX - rect.left, touch.clientY - rect.top);
@@ -179,6 +187,7 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
 
   canvas.addEventListener('touchstart', (e) => {
     preventIfCancelable(e);
+    cancelAnimationFrame(inertiaRafId);
     if (e.touches.length === 1) {
       const t = e.touches.item(0)!;
       touch1Id = t.identifier;
@@ -224,6 +233,13 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
       if (!t) return;
       lastTouchX = t.clientX;
       lastTouchY = t.clientY;
+      const now = performance.now();
+      const dt = Math.max(1, now - lastTouchMoveTime);
+      inertiaVX = (t.clientX - prevInertiaX) / dt;
+      inertiaVY = (t.clientY - prevInertiaY) / dt;
+      prevInertiaX = t.clientX;
+      prevInertiaY = t.clientY;
+      lastTouchMoveTime = now;
       const [wx, wy] = getWorldCoordsFromTouch(t);
       getActiveTool().onMouseMove(syntheticMouse('mousemove', t.clientX, t.clientY), wx, wy, toolCtx);
       needsRender = true;
@@ -262,6 +278,22 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
       if (changedTouch) {
         const [wx, wy] = getWorldCoordsFromTouch(changedTouch);
         getActiveTool().onMouseUp(syntheticMouse('mouseup', changedTouch.clientX, changedTouch.clientY), wx, wy, toolCtx);
+        // Touch pan inertia — only when panning, not drawing
+        if (history.present.appState.activeTool === 'hand') {
+          cancelAnimationFrame(inertiaRafId);
+          const FRICTION = 0.90;
+          const MIN_V = 0.05;
+          const frameMs = 16;
+          const applyInertia = (): void => {
+            inertiaVX *= FRICTION;
+            inertiaVY *= FRICTION;
+            if (Math.abs(inertiaVX) < MIN_V && Math.abs(inertiaVY) < MIN_V) return;
+            history.dispatch({ type: 'PAN_VIEWPORT', dx: inertiaVX * frameMs, dy: inertiaVY * frameMs });
+            needsRender = true;
+            inertiaRafId = requestAnimationFrame(applyInertia);
+          };
+          inertiaRafId = requestAnimationFrame(applyInertia);
+        }
         // Double-tap detection
         const now = Date.now();
         const dx = changedTouch.clientX - lastTapX;
@@ -319,12 +351,18 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
     const originY = e.clientY - rect.top;
 
     if (e.ctrlKey || e.metaKey) {
-      // Pinch zoom
-      const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+      // Pinch zoom (trackpad) or Ctrl+wheel (mouse)
+      // deltaMode=0: trackpad pixel deltas (small) → fine sensitivity
+      // deltaMode=1/2: mouse wheel lines/pages → coarser sensitivity
+      const sensitivity = e.deltaMode === 0 ? 0.005 : 0.05;
+      const rawFactor = Math.exp(-e.deltaY * sensitivity);
+      // Hard cap: no single event jumps more than 2× in either direction
+      const factor = Math.min(Math.max(rawFactor, 0.5), 2.0);
       history.dispatch({ type: 'ZOOM_VIEWPORT', factor, originX, originY });
     } else {
-      // Scroll pan
-      history.dispatch({ type: 'PAN_VIEWPORT', dx: -e.deltaX, dy: -e.deltaY });
+      // Scroll pan — normalize non-pixel deltas so mouse and trackpad feel consistent
+      const scale = e.deltaMode === 0 ? 1 : 12;
+      history.dispatch({ type: 'PAN_VIEWPORT', dx: -e.deltaX * scale, dy: -e.deltaY * scale });
     }
     needsRender = true;
   }, { passive: false });

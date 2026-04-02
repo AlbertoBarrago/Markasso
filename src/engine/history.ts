@@ -27,6 +27,7 @@ export class History {
   private _present: Scene;
   private future:  Scene[] = [];
   private listeners: Listener[] = [];
+  private _dragging = false;
 
   constructor(initial: Scene = createScene()) {
     this._present = initial;
@@ -34,11 +35,27 @@ export class History {
 
   get present(): Scene { return this._present; }
 
+  /** Call at the start of a drag (move/resize/rotate). Records the pre-drag
+   *  state once so the entire drag undoes in a single Ctrl+Z step. */
+  beginDrag(): void {
+    this.past.push(this._present);
+    this.future = [];
+    this._dragging = true;
+  }
+
+  /** Call at the end of a drag. Pops the undo entry if nothing actually changed. */
+  endDrag(): void {
+    this._dragging = false;
+    if (this.past.length > 0 && this.past[this.past.length - 1] === this._present) {
+      this.past.pop();
+    }
+  }
+
   dispatch(command: Command): void {
     const next = reducer(this._present, command);
     if (next === this._present) return;
 
-    if (!EPHEMERAL_COMMANDS.has(command.type)) {
+    if (!this._dragging && !EPHEMERAL_COMMANDS.has(command.type)) {
       this.past.push(this._present);
       this.future = [];
     }

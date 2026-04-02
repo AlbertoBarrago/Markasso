@@ -26,9 +26,13 @@ const HANDLE_CURSORS: Record<HandlePosition, string> = {
 };
 
 export class SelectTool implements Tool {
+  private readonly handleTolerance = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches ? 14 : 8;
   private dragMode: DragMode = 'none';
   private lastWorldX = 0;
   private lastWorldY = 0;
+  private mouseDownScreenX = 0;
+  private mouseDownScreenY = 0;
+  private dragThresholdMet = false;
 
   /** ID of the element currently under the cursor (for hover highlight), or null */
   hoveredId: string | null = null;
@@ -47,6 +51,10 @@ export class SelectTool implements Tool {
   private resizeOrigBounds: { x: number; y: number; w: number; h: number } | null = null;
   private resizeAnchorX = 0;
   private resizeAnchorY = 0;
+  private resizeInitialSignX = 1;
+  private resizeInitialSignY = 1;
+  // Original bounds per element for multi-selection resize (keyed by element id)
+  private resizeOrigElBounds = new Map<string, { x: number; y: number; w: number; h: number }>();
 
   // Endpoint drag state
   private endpointSide: 'start' | 'end' | null = null;
@@ -84,6 +92,10 @@ export class SelectTool implements Tool {
     const screenX = e.clientX - rect.left;
     const screenY = e.clientY - rect.top;
 
+    this.mouseDownScreenX = screenX;
+    this.mouseDownScreenY = screenY;
+    this.dragThresholdMet = false;
+
     // 1. Check endpoint handles (single line/arrow selected)
     if (selectedEls.length === 1) {
       const el = selectedEls[0]!;
@@ -93,6 +105,7 @@ export class SelectTool implements Tool {
           this.dragMode = 'endpoint';
           this.endpointSide = endHit;
           this.endpointElId = el.id;
+          ctx.history.beginDrag();
           return;
         }
       }
@@ -115,6 +128,7 @@ export class SelectTool implements Tool {
             );
             this.rotateInitialRotation = el.rotation ?? 0;
             this.rotateElId = el.id;
+            ctx.history.beginDrag();
           }
           return;
         }
@@ -124,7 +138,7 @@ export class SelectTool implements Tool {
     // 3. Check if a resize handle was clicked
     if (selectedEls.length > 0) {
       const handles = getSelectionHandles(selectedEls, scene.viewport);
-      const hitHandle = hitTestHandle(handles, screenX, screenY);
+      const hitHandle = hitTestHandle(handles, screenX, screenY, this.handleTolerance);
 
       if (hitHandle) {
         this.dragMode = 'resize';
@@ -135,9 +149,11 @@ export class SelectTool implements Tool {
         } else {
           // Multi-selection: treat union bounds as the resize surface
           this.resizeOrigEl = null;
+          this.resizeOrigElBounds.clear();
           let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
           for (const el of selectedEls) {
             const b = getElementBounds(el);
+            this.resizeOrigElBounds.set(el.id, b);
             minX = Math.min(minX, b.x);
             minY = Math.min(minY, b.y);
             maxX = Math.max(maxX, b.x + b.w);
@@ -147,6 +163,9 @@ export class SelectTool implements Tool {
         }
         this.resizeAnchorX = anchorX(hitHandle, this.resizeOrigBounds);
         this.resizeAnchorY = anchorY(hitHandle, this.resizeOrigBounds);
+        this.resizeInitialSignX = Math.sign(worldX - this.resizeAnchorX) || 1;
+        this.resizeInitialSignY = Math.sign(worldY - this.resizeAnchorY) || 1;
+        ctx.history.beginDrag();
         return;
       }
     }
@@ -183,6 +202,7 @@ export class SelectTool implements Tool {
           this.dragMode = hit.locked ? 'none' : 'move';
         }
       }
+      if (this.dragMode === 'move') ctx.history.beginDrag();
     } else {
       ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
       this.activeGroupId = null;
@@ -252,6 +272,13 @@ export class SelectTool implements Tool {
     }
 
     if (this.dragMode === 'resize') {
+      if (!this.dragThresholdMet) {
+        const rect = ctx.canvas.getBoundingClientRect();
+        const sx = e.clientX - rect.left;
+        const sy = e.clientY - rect.top;
+        if (Math.hypot(sx - this.mouseDownScreenX, sy - this.mouseDownScreenY) < 4) return;
+        this.dragThresholdMet = true;
+      }
       const scene = ctx.history.present;
       if (
         this.resizeHandle &&
@@ -267,6 +294,8 @@ export class SelectTool implements Tool {
           worldY,
           this.resizeOrigBounds,
           e.shiftKey,
+          this.resizeInitialSignX,
+          this.resizeInitialSignY,
         );
         if (resized) {
           ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: this.resizeOrigEl.id, ...resized });
@@ -276,13 +305,16 @@ export class SelectTool implements Tool {
         const selectedEls = scene.elements.filter((el) => scene.selectedIds.has(el.id));
         const ob = this.resizeOrigBounds;
         const newBounds = newBoundsFromHandle(
-          this.resizeHandle, this.resizeAnchorX, this.resizeAnchorY, worldX, worldY, ob, e.shiftKey
+          this.resizeHandle, this.resizeAnchorX, this.resizeAnchorY, worldX, worldY, ob, e.shiftKey,
+          this.resizeInitialSignX, this.resizeInitialSignY,
         );
         if (newBounds && ob.w > 0 && ob.h > 0) {
           const scaleX = newBounds.w / ob.w;
           const scaleY = newBounds.h / ob.h;
           for (const el of selectedEls) {
-            const b = getElementBounds(el);
+            // Use original bounds captured at mousedown — not current bounds — to
+            // prevent each mousemove from multiplying on top of the previous resize.
+            const b = this.resizeOrigElBounds.get(el.id) ?? getElementBounds(el);
             const relX = (b.x - ob.x) * scaleX + newBounds.x;
             const relY = (b.y - ob.y) * scaleY + newBounds.y;
             const resized = scaleElement(el, relX, relY, b.w * scaleX, b.h * scaleY);
@@ -407,6 +439,11 @@ export class SelectTool implements Tool {
       }
     }
 
+    if (this.dragMode === 'resize' || this.dragMode === 'move' ||
+        this.dragMode === 'rotate' || this.dragMode === 'endpoint') {
+      ctx.history.endDrag();
+    }
+
     this.endpointSnapTarget = null;
     this.endpointSnapIndicator = null;
     this.endpointSnapElementId = null;
@@ -414,6 +451,9 @@ export class SelectTool implements Tool {
     this.resizeHandle = null;
     this.resizeOrigEl = null;
     this.resizeOrigBounds = null;
+    this.resizeInitialSignX = 1;
+    this.resizeInitialSignY = 1;
+    this.resizeOrigElBounds.clear();
     this.endpointSide = null;
     this.endpointElId = null;
     this.rotateElId = null;
@@ -497,7 +537,7 @@ export class SelectTool implements Tool {
 
       // Check resize handles
       const handles = getSelectionHandles(selectedEls, scene.viewport);
-      const hit = hitTestHandle(handles, screenX, screenY);
+      const hit = hitTestHandle(handles, screenX, screenY, this.handleTolerance);
       if (hit) return HANDLE_CURSORS[hit];
     }
 
@@ -534,6 +574,8 @@ function newBoundsFromHandle(
   curX: number, curY: number,
   orig: { x: number; y: number; w: number; h: number },
   shiftKey = false,
+  initialSignX = 1,
+  initialSignY = 1,
 ): { x: number; y: number; w: number; h: number } | null {
   const fixX = handle === 'n' || handle === 's';
   const fixY = handle === 'w' || handle === 'e';
@@ -548,8 +590,8 @@ function newBoundsFromHandle(
     const ar = orig.w / orig.h;
     const rawW = Math.abs(curX - ax);
     const rawH = Math.abs(curY - ay);
-    const sx = Math.sign(curX - ax) || 1;
-    const sy = Math.sign(curY - ay) || 1;
+    const sx = initialSignX;
+    const sy = initialSignY;
     let finalW: number, finalH: number;
     if (rawW / rawH > ar) { finalH = rawH; finalW = rawH * ar; }
     else                  { finalW = rawW; finalH = rawW / ar; }
@@ -561,7 +603,7 @@ function newBoundsFromHandle(
 
   const w = maxX - minX;
   const h = maxY - minY;
-  if (w < 1 || h < 1) return null;
+  if (w < 8 || h < 8) return null;
   return { x: minX, y: minY, w, h };
 }
 
@@ -617,8 +659,10 @@ function computeResize(
   curX: number, curY: number,
   origBounds: { x: number; y: number; w: number; h: number },
   shiftKey = false,
+  initialSignX = 1,
+  initialSignY = 1,
 ): ResizePayload | null {
-  const nb = newBoundsFromHandle(handle, ax, ay, curX, curY, origBounds, shiftKey);
+  const nb = newBoundsFromHandle(handle, ax, ay, curX, curY, origBounds, shiftKey, initialSignX, initialSignY);
   if (!nb) return null;
   return scaleElement(el, nb.x, nb.y, nb.w, nb.h);
 }
