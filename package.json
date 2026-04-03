@@ -20,7 +20,7 @@
   "devDependencies": {
     "husky": "^9.1.7",
     "typescript": "^5.4.5",
-    "vite": "^5.2.11",
+    "vite": "^6.0.0",
     "vitest": "^1.6.0"
   }
 }
