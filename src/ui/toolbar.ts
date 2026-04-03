@@ -255,6 +255,24 @@ export function initToolbar(container: HTMLElement, history: History): void {
     toolsPopup.appendChild(b);
   }
 
+  // Lock button row at the bottom of the popup
+  const lockRowSep = document.createElement('div');
+  lockRowSep.className = 'mobile-tools-popup-sep';
+  const lockRowEl = document.createElement('div');
+  lockRowEl.className = 'mobile-tools-popup-lock-row';
+  const mobileLockBtn = document.createElement('button');
+  mobileLockBtn.className = 'mobile-tools-popup-btn';
+  mobileLockBtn.title = t('lockTool');
+  mobileLockBtn.innerHTML = IC.lockOpen;
+  mobileLockBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const locked = history.present.appState.toolLocked;
+    history.dispatch({ type: 'SET_TOOL_LOCK', locked: !locked });
+  });
+  lockRowEl.appendChild(mobileLockBtn);
+  toolsPopup.appendChild(lockRowSep);
+  toolsPopup.appendChild(lockRowEl);
+
   toolsFab.addEventListener('click', () => {
     const open = toolsPopup.classList.toggle('open');
     toolsFab.classList.toggle('active', open);
@@ -265,7 +283,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
       toolsPopup.classList.remove('open');
       toolsFab.classList.remove('active');
     }
-  });
+  }, { capture: true });
 
   container.append(toolsFab, toolsPopup);
 
@@ -280,9 +298,12 @@ export function initToolbar(container: HTMLElement, history: History): void {
       b.classList.toggle('active', isActive);
       b.setAttribute('aria-pressed', String(isActive));
     }
-    toolsPopup.querySelectorAll<HTMLButtonElement>('.mobile-tools-popup-btn').forEach((btn) => {
+    toolsPopup.querySelectorAll<HTMLButtonElement>('.mobile-tools-popup-btn[data-tool]').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['tool'] === activeTool);
     });
+    mobileLockBtn.innerHTML = toolLocked ? IC.lock : IC.lockOpen;
+    mobileLockBtn.classList.toggle('active', toolLocked);
+    mobileLockBtn.setAttribute('aria-pressed', String(toolLocked));
     toolsFab.innerHTML = (TOOLS.find(td => td.tool === activeTool)?.icon ?? IC.tap);
     toolsFab.dataset['tool'] = activeTool;
     undoBtn.disabled = !history.canUndo();

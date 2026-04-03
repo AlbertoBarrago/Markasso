@@ -127,6 +127,22 @@
   .mobile-tools-popup-btn:active { background: var(--accent-light); color: var(--accent); }
 }
 
+/* ── Tools popup lock row ────────────────────────────────────────────────── */
+@media (pointer: coarse) {
+  .mobile-tools-popup-sep {
+    grid-column: 1 / -1;
+    height: 1px;
+    background: var(--island-border);
+    margin: 2px 0;
+  }
+
+  .mobile-tools-popup-lock-row {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+  }
+}
+
 /* ── iPad: larger touch targets on coarse-pointer wide screens ───────────── */
 @media (pointer: coarse) and (min-width: 768px) {
   #mobile-tools-fab {
