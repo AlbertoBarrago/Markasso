@@ -1,8 +1,9 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '/Markasso/',
+  base: '/',
   root: '.',
+  plugins: [],
   build: {
     outDir: 'dist',
     sourcemap: true,
