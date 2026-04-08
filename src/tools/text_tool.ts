@@ -122,7 +122,7 @@ export class TextTool implements Tool {
     ta.style.padding    = '0';
     ta.style.margin     = '0';
     ta.style.border     = 'none';
-    ta.style.outline    = '1.5px dashed rgba(120,180,255,0.65)';
+    ta.style.outline    = 'none';
     ta.style.boxShadow  = 'none';
     ta.style.resize     = 'none';
     ta.style.overflow   = 'hidden';
@@ -186,12 +186,6 @@ export class TextTool implements Tool {
         ta.remove();
         return;
       }
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        ta.removeEventListener('blur', onBlur);
-        if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
-        doCommit();
-      }
     });
 
     document.body.appendChild(ta);
@@ -221,7 +215,7 @@ export class TextTool implements Tool {
     ta.style.padding     = '0';
     ta.style.margin      = '0';
     ta.style.border      = 'none';
-    ta.style.outline     = '1.5px dashed rgba(120,180,255,0.65)';
+    ta.style.outline     = 'none';
     ta.style.boxShadow   = 'none';
     ta.style.resize      = 'none';
     ta.style.overflow    = 'hidden';
@@ -298,12 +292,6 @@ export class TextTool implements Tool {
         if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
         doCommit();
         return;
-      }
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        ta.removeEventListener('blur', onBlur);
-        if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
-        doCommit();
       }
     });
 
@@ -445,8 +433,6 @@ export class TextTool implements Tool {
     ta.style.position   = 'fixed';
     ta.style.left       = `${screenX + canvasRect.left}px`;
     ta.style.top        = `${screenY + canvasRect.top}px`;
-    ta.style.width      = `${el.width * viewport.zoom}px`;
-    ta.style.minWidth   = `${el.width * viewport.zoom}px`;
     ta.style.font       = `${el.fontSize * viewport.zoom}px ${el.fontFamily}`;
     ta.style.color      = el.strokeColor;
     ta.style.caretColor = 'var(--accent, #7c63d4)';
@@ -458,7 +444,12 @@ export class TextTool implements Tool {
     ta.style.overflow   = 'hidden';
     ta.style.zIndex     = '1000';
 
+    let mirror: HTMLSpanElement | null = null;
+    const scaledFont = el.fontSize * viewport.zoom;
+
     if (el.isCode) {
+      ta.style.width        = `${el.width * viewport.zoom}px`;
+      ta.style.minWidth     = `${el.width * viewport.zoom}px`;
       ta.style.fontFamily   = '"Courier New", monospace';
       ta.style.background   = 'rgba(0,0,0,0.55)';
       ta.style.border       = '1px dashed rgba(255,255,255,0.3)';
@@ -467,19 +458,36 @@ export class TextTool implements Tool {
       ta.style.wordBreak    = 'normal';
       ta.style.overflowWrap = 'normal';
     } else {
+      ta.style.minWidth     = '4px';
+      ta.style.width        = `${el.width * viewport.zoom}px`;
       ta.style.background   = 'transparent';
       ta.style.border       = 'none';
-      ta.style.outline      = '1.5px dashed rgba(120,180,255,0.65)';
-      ta.style.padding      = '4px';
-      ta.style.whiteSpace   = 'pre-wrap';
-      ta.style.wordBreak    = 'break-word';
+      ta.style.outline      = 'none';
+      ta.style.padding      = '0';
+      ta.style.whiteSpace   = 'pre';
+      ta.style.overflowWrap = 'normal';
       ta.style.textAlign    = el.textAlign ?? 'left';
+
+      mirror = document.createElement('span');
+      mirror.style.cssText = `position:fixed;visibility:hidden;white-space:pre;font:${scaledFont}px ${el.fontFamily};padding:0;`;
+      document.body.appendChild(mirror);
     }
 
-    // Auto-grow height as user types
+    // Auto-grow width and height as user types
     const grow = (): void => {
-      ta.style.height = '0';
-      ta.style.height = `${ta.scrollHeight}px`;
+      if (mirror) {
+        const lines = ta.value.split('\n');
+        let maxWidth = 0;
+        for (const line of lines) {
+          mirror.textContent = line || ' ';
+          maxWidth = Math.max(maxWidth, mirror.offsetWidth);
+        }
+        ta.style.width  = `${maxWidth + 4}px`;
+        ta.style.height = `${scaledFont * 1.2 * lines.length}px`;
+      } else {
+        ta.style.height = '0';
+        ta.style.height = `${ta.scrollHeight}px`;
+      }
     };
     ta.addEventListener('input', grow);
     // Trigger initial grow to show all existing content
@@ -488,16 +496,20 @@ export class TextTool implements Tool {
     const doCommit = (): void => {
       const content = ta.value.trim();
       const newHeight = ta.offsetHeight / viewport.zoom;
+      const newWidth  = ta.offsetWidth  / viewport.zoom;
+      mirror?.remove();
       ta.remove();
       if (this.textarea === ta) { this.textarea = null; this.commitFn = null; }
       this.editingId = null;
 
       if (content) {
         ctx.history.dispatch({ type: 'EDIT_TEXT', id: el.id, content });
-        // Update height if content grew/shrank
         const clampedHeight = Math.max(newHeight, el.fontSize);
-        if (Math.abs(clampedHeight - el.height) > 1) {
-          ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: el.id, height: clampedHeight });
+        const clampedWidth  = Math.max(newWidth, 10);
+        const heightChanged = Math.abs(clampedHeight - el.height) > 1;
+        const widthChanged  = Math.abs(clampedWidth  - el.width)  > 1;
+        if (heightChanged || widthChanged) {
+          ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: el.id, height: clampedHeight, width: clampedWidth });
         }
       } else {
         ctx.history.dispatch({ type: 'DELETE_ELEMENTS', ids: [el.id] });
@@ -533,13 +545,6 @@ export class TextTool implements Tool {
           ta.value = ta.value.slice(0, s) + '  ' + ta.value.slice(ta.selectionEnd);
           ta.selectionStart = ta.selectionEnd = s + 2;
           grow();
-        }
-      } else {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          ta.removeEventListener('blur', onBlur);
-          if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
-          doCommit();
         }
       }
     });
