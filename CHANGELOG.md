@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [0.0.7] — 2026-04-08
+
+### Improved
+- **Text tool — fluid editing (Excalidraw-style)** — clicking to create or edit text no longer shows a dashed outline while typing; `Enter` inserts a newline instead of committing; clicking outside (blur) confirms the text. The element auto-resizes both width and height to fit the actual content after every edit.
+
+---
+
 ## [0.0.6] — 2026-04-08
 
 ### Fixed
