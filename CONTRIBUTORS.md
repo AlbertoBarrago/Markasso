@@ -6,9 +6,10 @@ Thank you to everyone who has contributed to Markasso.
 
 ## Core Team
 
-| Name | Role | Contact |
-|------|------|---------|
+| Name            | Role                 | Contact                    |
+|-----------------|----------------------|----------------------------|
 | Alberto Barrago | Creator & Maintainer | <albertobarrago@gmail.com> |
+| Lorenzo Cataldi | Designer             | <lorenzo@cataldi.design>       |
 
 ---
 

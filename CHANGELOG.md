@@ -4,6 +4,16 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [0.0.6] — 2026-04-08
+
+### Fixed
+- **Mermaid paste hang on cyclic diagrams** — pasting a flowchart with back edges (e.g. `D --> B` where B is an ancestor of D) caused the layout BFS to loop infinitely, freezing the browser tab. A depth cap (`nodeIds.length`) now guarantees termination; DAG layouts are unaffected.
+
+### Dev
+- Added `vitest.config.ts` to decouple the test runner from the Cloudflare Vite plugin, restoring `pnpm test` after the Vite 8 dependency update.
+
+---
+
 ## [0.0.3] — 2026-03-31
 
 ### Added
