@@ -696,7 +696,16 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     if (!hasSelection) {
       if (!isDrawingTool) return;
       // ── Tool mode: sync appState defaults, show only relevant sections ──────
-      const { activeTool, strokeColor, fillColor, strokeWidth, strokeStyle, roughness, opacity, fontSize, fontFamily } = scene.appState;
+      const { activeTool, fontSize, fontFamily } = scene.appState;
+      const lastEl = scene.appState.lastCreatedId
+        ? scene.elements.find((e) => e.id === scene.appState.lastCreatedId)
+        : undefined;
+      const strokeColor  = lastEl ? lastEl.strokeColor              : scene.appState.strokeColor;
+      const fillColor    = lastEl ? lastEl.fillColor                : scene.appState.fillColor;
+      const strokeWidth  = lastEl ? lastEl.strokeWidth              : scene.appState.strokeWidth;
+      const strokeStyle  = lastEl ? (lastEl.strokeStyle ?? 'solid') : scene.appState.strokeStyle;
+      const roughness    = lastEl ? (lastEl.roughness  ?? 0)        : scene.appState.roughness;
+      const opacity      = lastEl ? lastEl.opacity                  : scene.appState.opacity;
       const isText = activeTool === 'text';
       const hasFill = activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'rombo' || activeTool === 'text';
       const hasStyle = activeTool !== 'text' && activeTool !== 'freehand';

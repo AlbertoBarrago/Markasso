@@ -11,11 +11,15 @@ export class PenTool implements Tool {
   private smoothedPoints: [number, number][] = [];
   preview: FreehandElement | null = null;
 
-  onMouseDown(_e: MouseEvent, worldX: number, worldY: number, _ctx: ToolContext): void {
+  onMouseDown(_e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
     this.drawing = true;
     this.points = [[worldX, worldY]];
     this.smoothedPoints = [[worldX, worldY]];
     this.preview = null;
+    const { selectedIds, appState } = ctx.history.present;
+    if (selectedIds.size > 0 || appState.lastCreatedId != null) {
+      ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
+    }
   }
 
   onMouseMove(_e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {

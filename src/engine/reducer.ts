@@ -15,6 +15,10 @@ export function reducer(scene: Scene, command: Command): Scene {
         ...scene,
         elements: [...scene.elements, command.element],
         selectedIds: command.select === false ? new Set() : new Set([command.element.id]),
+        appState: {
+          ...scene.appState,
+          lastCreatedId: command.select === false ? command.element.id : null,
+        },
       };
 
     case 'CREATE_ELEMENTS':
@@ -151,10 +155,10 @@ export function reducer(scene: Scene, command: Command): Scene {
       };
 
     case 'SELECT_ELEMENTS':
-      return { ...scene, selectedIds: new Set(command.ids) };
+      return { ...scene, selectedIds: new Set(command.ids), appState: { ...scene.appState, lastCreatedId: null } };
 
     case 'CLEAR_SELECTION':
-      return { ...scene, selectedIds: new Set() };
+      return { ...scene, selectedIds: new Set(), appState: { ...scene.appState, lastCreatedId: null } };
 
     case 'PAN_VIEWPORT':
       return { ...scene, viewport: pan(scene.viewport, command.dx, command.dy) };
@@ -165,12 +169,35 @@ export function reducer(scene: Scene, command: Command): Scene {
     case 'SET_VIEWPORT':
       return { ...scene, viewport: { offsetX: command.offsetX, offsetY: command.offsetY, zoom: command.zoom } };
 
-    case 'SET_TOOL':
+    case 'SET_TOOL': {
+      const NON_DRAWING = new Set(['select', 'hand', 'eraser']);
+      const isDrawingTool = !NON_DRAWING.has(command.tool);
+      let newAppState = { ...scene.appState, activeTool: command.tool, lastCreatedId: null };
+
+      // When switching to a drawing tool while an element is selected,
+      // inherit that element's style so the sidebar reflects the current shape.
+      if (!command.keepSelection && isDrawingTool && scene.selectedIds.size > 0) {
+        const firstId = [...scene.selectedIds][0]!;
+        const el = scene.elements.find((e) => e.id === firstId);
+        if (el) {
+          newAppState = {
+            ...newAppState,
+            strokeColor: el.strokeColor,
+            fillColor:   el.fillColor,
+            strokeWidth: el.strokeWidth,
+            opacity:     el.opacity,
+            roughness:   el.roughness ?? 0,
+            strokeStyle: el.strokeStyle ?? 'solid',
+          };
+        }
+      }
+
       return {
         ...scene,
-        appState: { ...scene.appState, activeTool: command.tool },
+        appState:    newAppState,
         selectedIds: command.keepSelection ? scene.selectedIds : new Set(),
       };
+    }
 
     case 'SET_STROKE_COLOR':
       return { ...scene, appState: { ...scene.appState, strokeColor: command.color } };
@@ -340,11 +367,12 @@ export function reducer(scene: Scene, command: Command): Scene {
       if (strokeStyle   !== undefined) statePatch['strokeStyle']   = strokeStyle;
       if (textAlign     !== undefined) statePatch['textAlign']     = textAlign;
 
+      const fallbackId = scene.selectedIds.size === 0 ? scene.appState.lastCreatedId : null;
       return {
         ...scene,
         appState: { ...scene.appState, ...statePatch },
         elements: scene.elements.map((el) =>
-          scene.selectedIds.has(el.id)
+          scene.selectedIds.has(el.id) || el.id === fallbackId
             ? ({ ...el, ...patch } as Element)
             : el
         ),

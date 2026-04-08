@@ -5,22 +5,24 @@ export type ActiveTool = 'select' | 'hand' | 'eraser' | DrawableTool | 'rombo';
 export type GridType   = 'dot' | 'line' | 'mm';
 
 export interface AppState {
-  readonly activeTool:  ActiveTool;
-  readonly strokeColor: string;
-  readonly fillColor:   string;
-  readonly strokeWidth: number;
-  readonly fontSize:    number;
-  readonly fontFamily:  string;
-  readonly textAlign:   'left' | 'center' | 'right';
-  readonly textMode:    'text' | 'code';
-  readonly opacity:     number;
-  readonly roughness:   number;
-  readonly gridVisible: boolean;
-  readonly gridSize:    number;
-  readonly gridType:    GridType;
-  readonly strokeStyle: 'solid' | 'dashed' | 'dotted';
+  readonly activeTool:    ActiveTool;
+  readonly strokeColor:   string;
+  readonly fillColor:     string;
+  readonly strokeWidth:   number;
+  readonly fontSize:      number;
+  readonly fontFamily:    string;
+  readonly textAlign:     'left' | 'center' | 'right';
+  readonly textMode:      'text' | 'code';
+  readonly opacity:       number;
+  readonly roughness:     number;
+  readonly gridVisible:   boolean;
+  readonly gridSize:      number;
+  readonly gridType:      GridType;
+  readonly strokeStyle:   'solid' | 'dashed' | 'dotted';
   readonly justCreatedText: boolean;
-  readonly toolLocked: boolean;
+  readonly toolLocked:    boolean;
+  /** ID of the last element created with select:false — allows the panel to style it without selecting it */
+  readonly lastCreatedId: string | null;
 }
 
 export function createAppState(): AppState {
@@ -48,5 +50,6 @@ export function createAppState(): AppState {
     strokeStyle: 'solid',
     justCreatedText: false,
     toolLocked: false,
+    lastCreatedId: null,
   };
 }
