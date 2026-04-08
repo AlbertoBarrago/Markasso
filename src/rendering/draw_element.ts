@@ -633,6 +633,20 @@ function drawImage(
   height: number,
 ): void {
   const img = getCachedImage(src);
+  if (!img) {
+    // Permanently broken source — draw an error placeholder
+    ctx.save();
+    ctx.fillStyle = 'rgba(180,40,40,0.25)';
+    ctx.fillRect(x, y, width, height);
+    ctx.strokeStyle = 'rgba(220,80,80,0.7)';
+    ctx.setLineDash([4, 4]);
+    ctx.strokeRect(x, y, width, height);
+    ctx.fillStyle = 'rgba(220,80,80,0.8)';
+    ctx.font = '12px monospace';
+    ctx.fillText('⚠ image error', x + 6, y + 16);
+    ctx.restore();
+    return;
+  }
   if (img.complete && img.naturalWidth > 0) {
     ctx.drawImage(img, x, y, width, height);
   } else {
@@ -644,7 +658,5 @@ function drawImage(
     ctx.setLineDash([4, 4]);
     ctx.strokeRect(x, y, width, height);
     ctx.restore();
-    // Trigger re-render once loaded
-    img.onload = () => { /* renderer will pick it up on next frame */ };
   }
 }

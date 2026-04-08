@@ -51,7 +51,7 @@ export function fitToElements(
   let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
 
   for (const el of elements) {
-    if (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'text') {
+    if (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'text' || el.type === 'rhombus') {
       const x1 = Math.min(el.x, el.x + el.width);
       const y1 = Math.min(el.y, el.y + el.height);
       const x2 = Math.max(el.x, el.x + el.width);

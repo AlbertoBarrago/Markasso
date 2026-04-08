@@ -274,8 +274,6 @@ export class TextTool implements Tool {
         if (!this._suppressToolSwitch && !ctx.history.present.appState.toolLocked) {
           ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
         }
-      } else {
-        mirror.remove();
       }
     };
 
