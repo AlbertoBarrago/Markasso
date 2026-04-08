@@ -321,9 +321,13 @@ function computeLayout(
   const queue: string[] = [...startNodes];
   for (const r of startNodes) levelMap.set(r, 0);
 
+  // Cap depth at nodeIds.length to guarantee termination on cyclic diagrams.
+  // A DAG with n nodes has longest path ≤ n-1, so the cap never affects valid DAGs.
+  const depthCap = nodeIds.length;
   while (queue.length > 0) {
     const current = queue.shift()!;
     const currentLevel = levelMap.get(current)!;
+    if (currentLevel >= depthCap) continue; // cycle guard
     for (const neighbor of adj.get(current) ?? []) {
       if ((levelMap.get(neighbor) ?? -1) < currentLevel + 1) {
         levelMap.set(neighbor, currentLevel + 1);

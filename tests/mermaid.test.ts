@@ -245,6 +245,17 @@ describe('buildElements', () => {
     const ids = els.map(e => e.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  it('terminates and produces elements for a cyclic diagram', () => {
+    // D --> B creates a back edge; the BFS must not loop infinitely
+    const d = parseDiagram(
+      'flowchart TD\n  A[User Action] --> B[Frontend]\n  B --> C[Mock API]\n  C --> D[Mock Response]\n  D --> B\n  B --> E[UI Update]'
+    )!;
+    const els = buildElements(d, STROKE);
+    expect(els.length).toBeGreaterThan(0);
+    const shapes = els.filter(e => e.type === 'rectangle');
+    expect(shapes).toHaveLength(5); // A, B, C, D, E
+  });
 });
 
 // ── parseSequenceDiagram ───────────────────────────────────────────────────────
