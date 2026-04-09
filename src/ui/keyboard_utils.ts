@@ -4,7 +4,7 @@ export function isFocusInPanel(): boolean {
   if (!active || active === document.body) return false;
 
   // Keep global single-key shortcuts disabled while interacting with modal/panel UI.
-  if (active.closest('#context-panel, .settings-panel, #welcome-overlay')) return true;
+  if (active.closest('#context-panel, .settings-panel, #welcome-overlay, #shortcuts-help')) return true;
 
   // Toolbar buttons should not disable shortcuts (regression after a11y focus updates).
   if (active.closest('.tb-btn')) return false;

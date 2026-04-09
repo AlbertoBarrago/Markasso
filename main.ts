@@ -9,6 +9,7 @@ import { initContextPanel } from './src/ui/context_panel';
 import { initImageImport } from './src/ui/image_import';
 import { initMobileActionBar } from './src/ui/mobile_action_bar';
 import { initWelcome } from './src/ui/welcome';
+import { initShortcutsHelp } from './src/ui/shortcuts_help';
 
 function bootstrap(): void {
   const appEl    = document.getElementById('app')       as HTMLElement;
@@ -36,6 +37,7 @@ function bootstrap(): void {
   initMobileActionBar(workspace, history);
   const { selectTool } = initCanvasView(canvas, history);
   initShortcuts(history, selectTool);
+  initShortcutsHelp(appEl);
   initSession(history);
   if (!session) initWelcome(appEl, history);
 }
