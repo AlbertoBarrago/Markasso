@@ -139,18 +139,21 @@ function showCanvasHint(appEl: HTMLElement): void {
 
   const hint = document.createElement('div');
   hint.id = 'shortcuts-hint';
-  hint.innerHTML = `Press <kbd>?</kbd> to see all shortcuts`;
+  hint.innerHTML = `Press <kbd>?</kbd> to see all keyboard shortcuts`;
   appEl.appendChild(hint);
 
+  // Trigger the visible state on next frame so the CSS transition fires
+  requestAnimationFrame(() => hint.classList.add('sh-hint-visible'));
+
   const hide = (): void => {
-    hint.classList.add('sh-hint-out');
+    hint.classList.remove('sh-hint-visible');
     hint.addEventListener('transitionend', () => hint.remove(), { once: true });
     localStorage.setItem(SEEN_KEY, '1');
     clearTimeout(timer);
   };
 
-  const timer = setTimeout(hide, 4000);
-  window.addEventListener('keydown', hide, { once: true });
+  const timer = setTimeout(hide, 5000);
+  window.addEventListener('pointerdown', hide, { once: true });
 }
 
 export function initShortcutsHelp(appEl: HTMLElement): void {

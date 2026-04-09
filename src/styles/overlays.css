@@ -359,39 +359,31 @@
   white-space: nowrap;
 }
 
-/* Canvas hint */
+/* Canvas hint — Excalidraw-style bottom gray text */
 #shortcuts-hint {
   position: fixed;
-  top: 12px;
+  bottom: 20px;
   left: 50%;
-  transform: translateX(-50%) translateY(0);
+  transform: translateX(-50%);
   z-index: 200;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg-island);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  padding: 5px 12px 5px 10px;
   font-size: 12px;
   color: var(--text-muted);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  pointer-events: none;
-  opacity: 1;
-  transition: opacity .4s ease;
-}
-#shortcuts-hint.sh-hint-out {
   opacity: 0;
+  pointer-events: none;
+  transition: opacity .5s ease;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+#shortcuts-hint.sh-hint-visible {
+  opacity: 0.6;
 }
 #shortcuts-hint kbd {
-  font-size: 10px;
+  font-size: 11px;
   font-family: inherit;
   font-weight: 600;
   color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 4px;
   padding: 1px 5px;
 }
@@ -413,15 +405,9 @@
   background: rgba(169, 1, 27, 0.06);
   border-color: rgba(169, 1, 27, 0.20);
 }
-[data-theme="light"] #shortcuts-hint {
-  background: #ffffff;
-  border-color: var(--island-border);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
 [data-theme="light"] #shortcuts-hint kbd {
-  background: rgba(169, 1, 27, 0.06);
-  border-color: rgba(169, 1, 27, 0.20);
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.15);
 }
 
 /* ── Quota warning toast ───────────────────────────────────────────────────── */

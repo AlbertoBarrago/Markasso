@@ -277,14 +277,14 @@ export function initToolbar(container: HTMLElement, history: History): void {
   toolsFab.addEventListener('click', () => {
     const open = toolsPopup.classList.toggle('open');
     toolsFab.classList.toggle('active', open);
-    toolsFab.innerHTML = open ? IC.close : (TOOLS.find(td => td.tool === history.present.appState.activeTool)?.icon ?? IC.toolbox);
+    toolsFab.innerHTML = open ? IC.close : IC.toolbox;
   });
 
   document.addEventListener('pointerdown', (e) => {
     if (toolsPopup.classList.contains('open') && !toolsPopup.contains(e.target as Node) && e.target !== toolsFab) {
       toolsPopup.classList.remove('open');
       toolsFab.classList.remove('active');
-      toolsFab.innerHTML = TOOLS.find(td => td.tool === history.present.appState.activeTool)?.icon ?? IC.toolbox;
+      toolsFab.innerHTML = IC.toolbox;
     }
   }, { capture: true });
 
@@ -307,9 +307,6 @@ export function initToolbar(container: HTMLElement, history: History): void {
     mobileLockBtn.innerHTML = toolLocked ? IC.lock : IC.lockOpen;
     mobileLockBtn.classList.toggle('active', toolLocked);
     mobileLockBtn.setAttribute('aria-pressed', String(toolLocked));
-    if (!toolsPopup.classList.contains('open')) {
-      toolsFab.innerHTML = TOOLS.find(td => td.tool === activeTool)?.icon ?? IC.toolbox;
-    }
     toolsFab.dataset['tool'] = activeTool;
     undoBtn.disabled = !history.canUndo();
     redoBtn.disabled = !history.canRedo();
