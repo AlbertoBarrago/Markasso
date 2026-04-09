@@ -362,7 +362,7 @@
 /* Canvas hint — subtle bottom-center text below toolbar islands */
 #shortcuts-hint {
   position: fixed;
-  bottom: 4px;
+  bottom: 68px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 200;
