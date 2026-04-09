@@ -32,7 +32,8 @@ const IC = {
   hamburger: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/></svg>`,
   importImg: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="16" height="14" rx="2"/><circle cx="7" cy="8" r="1.5"/><path d="M2 14l4-4 3 3 3-3 4 4"/><path d="M13 7l2-2 2 2M15 5v5"/></svg>`,
   eraser:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h14"/><path d="M5 17l-2-4 9-8 4 4-7 8H5z"/><path d="M12 5l4 4"/></svg>`,
-  tap:       `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>`,
+  toolbox:   `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="6" height="6" rx="1.5"/><rect x="12" y="2" width="6" height="6" rx="1.5"/><rect x="2" y="12" width="6" height="6" rx="1.5"/><rect x="12" y="12" width="6" height="6" rx="1.5"/></svg>`,
+  close:     `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="2" y1="2" x2="14" y2="14"/><line x1="14" y1="2" x2="2" y2="14"/></svg>`,
 };
 
 const TOOLS: { tool: ActiveTool; icon: string; label: string; key: string; num: string }[] = [
@@ -236,7 +237,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   // ── Mobile: tools FAB + popup ─────────────────────────────────────────────
   const toolsFab = document.createElement('button');
   toolsFab.id = 'mobile-tools-fab';
-  toolsFab.innerHTML = IC.tap;
+  toolsFab.innerHTML = IC.toolbox;
 
   const toolsPopup = document.createElement('div');
   toolsPopup.id = 'mobile-tools-popup';
@@ -276,12 +277,14 @@ export function initToolbar(container: HTMLElement, history: History): void {
   toolsFab.addEventListener('click', () => {
     const open = toolsPopup.classList.toggle('open');
     toolsFab.classList.toggle('active', open);
+    toolsFab.innerHTML = open ? IC.close : (TOOLS.find(td => td.tool === history.present.appState.activeTool)?.icon ?? IC.toolbox);
   });
 
   document.addEventListener('pointerdown', (e) => {
     if (toolsPopup.classList.contains('open') && !toolsPopup.contains(e.target as Node) && e.target !== toolsFab) {
       toolsPopup.classList.remove('open');
       toolsFab.classList.remove('active');
+      toolsFab.innerHTML = TOOLS.find(td => td.tool === history.present.appState.activeTool)?.icon ?? IC.toolbox;
     }
   }, { capture: true });
 
@@ -304,7 +307,9 @@ export function initToolbar(container: HTMLElement, history: History): void {
     mobileLockBtn.innerHTML = toolLocked ? IC.lock : IC.lockOpen;
     mobileLockBtn.classList.toggle('active', toolLocked);
     mobileLockBtn.setAttribute('aria-pressed', String(toolLocked));
-    toolsFab.innerHTML = (TOOLS.find(td => td.tool === activeTool)?.icon ?? IC.tap);
+    if (!toolsPopup.classList.contains('open')) {
+      toolsFab.innerHTML = TOOLS.find(td => td.tool === activeTool)?.icon ?? IC.toolbox;
+    }
     toolsFab.dataset['tool'] = activeTool;
     undoBtn.disabled = !history.canUndo();
     redoBtn.disabled = !history.canRedo();
