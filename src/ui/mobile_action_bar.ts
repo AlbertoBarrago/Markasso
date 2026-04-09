@@ -542,19 +542,22 @@ export function initMobileActionBar(workspace: HTMLElement, history: History): v
     opacitySlider.value = String(pct);
     opacityVal.textContent = String(pct);
 
-    // Hide sections irrelevant for images / text
-    const hideForImage = allImage;
-    const hideForTextOrImage = allText || allImage;
+    // Hide sections based on selected element types (mirrors desktop context panel logic)
+    const FILL_TYPES  = new Set(['rectangle', 'ellipse', 'rhombus', 'text']);
+    const STYLE_TYPES = new Set(['rectangle', 'ellipse', 'rhombus', 'line', 'arrow']);
+    const hasFill  = !allImage && selected.some((el) => FILL_TYPES.has(el.type));
+    const hasStyle = !allImage && !allText && selected.some((el) => STYLE_TYPES.has(el.type));
+    const hasWidth = !allText && !allImage;
     (sheet.querySelector('#mss-stroke-swatches')!.closest('.cp-section') as HTMLElement).style.display =
-      hideForImage ? 'none' : '';
+      allImage ? 'none' : '';
     (sheet.querySelector('#mss-fill-swatches')!.closest('.cp-section') as HTMLElement).style.display =
-      hideForTextOrImage ? 'none' : '';
+      hasFill ? '' : 'none';
     (sheet.querySelector('#mss-width-presets')!.closest('.cp-section') as HTMLElement).style.display =
-      hideForTextOrImage ? 'none' : '';
+      hasWidth ? '' : 'none';
     (sheet.querySelector('#mss-style-presets')!.closest('.cp-section') as HTMLElement).style.display =
-      hideForTextOrImage ? 'none' : '';
+      hasStyle ? '' : 'none';
     (sheet.querySelector('#mss-roughness-presets')!.closest('.cp-section') as HTMLElement).style.display =
-      hideForTextOrImage ? 'none' : '';
+      hasStyle ? '' : 'none';
     (sheet.querySelector('#mss-border-presets')!.closest('.cp-section') as HTMLElement).style.display =
       (first.type !== 'rectangle') ? 'none' : '';
   }
