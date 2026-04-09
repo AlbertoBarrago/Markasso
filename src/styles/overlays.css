@@ -359,31 +359,31 @@
   white-space: nowrap;
 }
 
-/* Canvas hint — Excalidraw-style bottom gray text */
+/* Canvas hint — subtle bottom-center text below toolbar islands */
 #shortcuts-hint {
   position: fixed;
-  bottom: 20px;
+  bottom: 4px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 200;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
   opacity: 0;
   pointer-events: none;
-  transition: opacity .5s ease;
+  transition: opacity .6s ease;
   white-space: nowrap;
   letter-spacing: 0.01em;
 }
 #shortcuts-hint.sh-hint-visible {
-  opacity: 0.6;
+  opacity: 0.35;
 }
 #shortcuts-hint kbd {
-  font-size: 11px;
+  font-size: 10px;
   font-family: inherit;
   font-weight: 600;
   color: var(--text-muted);
   background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 4px;
   padding: 1px 5px;
 }

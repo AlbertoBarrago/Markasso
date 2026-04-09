@@ -134,24 +134,21 @@ export function isShortcutsHelpOpen(): boolean {
 }
 
 function showCanvasHint(appEl: HTMLElement): void {
-  const SEEN_KEY = 'markasso-shortcuts-hint-seen';
-  if (localStorage.getItem(SEEN_KEY)) return;
-
   const hint = document.createElement('div');
   hint.id = 'shortcuts-hint';
   hint.innerHTML = `Press <kbd>?</kbd> to see all keyboard shortcuts`;
   appEl.appendChild(hint);
 
-  // Trigger the visible state on next frame so the CSS transition fires
+  // Fade in on next frame so the CSS transition fires
   requestAnimationFrame(() => hint.classList.add('sh-hint-visible'));
 
   const hide = (): void => {
     hint.classList.remove('sh-hint-visible');
     hint.addEventListener('transitionend', () => hint.remove(), { once: true });
-    localStorage.setItem(SEEN_KEY, '1');
     clearTimeout(timer);
   };
 
+  // Auto-hide after 5s or on first pointer interaction
   const timer = setTimeout(hide, 5000);
   window.addEventListener('pointerdown', hide, { once: true });
 }
