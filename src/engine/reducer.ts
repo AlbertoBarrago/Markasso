@@ -379,6 +379,32 @@ export function reducer(scene: Scene, command: Command): Scene {
       };
     }
 
+    case 'ALIGN_ELEMENTS': {
+      const movesMap = new Map(command.moves.map((m) => [m.id, m]));
+      return {
+        ...scene,
+        elements: scene.elements.map((el) => {
+          const move = movesMap.get(el.id);
+          if (!move) return el;
+          const dx = move.x - el.x;
+          const dy = move.y - el.y;
+          if (dx === 0 && dy === 0) return el;
+          if (el.type === 'line' || el.type === 'arrow') {
+            return { ...el, x: move.x, y: move.y, x2: el.x2 + dx, y2: el.y2 + dy };
+          }
+          if (el.type === 'freehand') {
+            return {
+              ...el,
+              x: move.x,
+              y: move.y,
+              points: el.points.map(([px, py]) => [px + dx, py + dy] as const),
+            };
+          }
+          return { ...el, x: move.x, y: move.y };
+        }),
+      };
+    }
+
     default:
       return assertNever(command);
   }

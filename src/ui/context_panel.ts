@@ -1,5 +1,6 @@
 import type { History } from '../engine/history';
 import type { Element } from '../elements/element';
+import { getElementBounds } from '../rendering/draw_selection';
 import { t } from '../i18n';
 import { isFocusInPanel } from './keyboard_utils';
 
@@ -161,6 +162,11 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
         <span class="cp-slider-val" id="cp-opacity-val">100</span>
         <span>100</span>
       </div>
+    </div>
+
+    <div class="cp-section" id="cp-spatial-align-section">
+      <div class="cp-label">${t('alignment')}</div>
+      <div class="cp-btn-row" id="cp-spatial-align-actions" role="group" aria-label="${t('alignment')}"></div>
     </div>
 
     <div class="cp-section">
@@ -595,6 +601,59 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     history.dispatch({ type: 'APPLY_STYLE', opacity: Number(opacitySlider.value) / 100 });
   });
 
+  // ── Spatial alignment actions (multi-select) ──────────────────────────────
+  const spatialAlignActions = panel.querySelector('#cp-spatial-align-actions')!;
+  type SpatialAlignment = 'left' | 'center-h' | 'right' | 'top' | 'middle-v' | 'bottom';
+  const SPATIAL_ALIGNS: { value: SpatialAlignment; label: string; icon: string }[] = [
+    { value: 'left',     label: t('left'),   icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="2" x2="3" y2="18"/><rect x="5" y="5" width="6" height="4" rx="1"/><rect x="5" y="11" width="10" height="4" rx="1"/></svg>` },
+    { value: 'center-h', label: t('center'), icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="2" x2="10" y2="18"/><rect x="4" y="5" width="12" height="4" rx="1"/><rect x="6" y="11" width="8" height="4" rx="1"/></svg>` },
+    { value: 'right',    label: t('right'),  icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="2" x2="17" y2="18"/><rect x="9" y="5" width="6" height="4" rx="1"/><rect x="5" y="11" width="10" height="4" rx="1"/></svg>` },
+    { value: 'top',      label: 'Top',       icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="3" x2="18" y2="3"/><rect x="5" y="5" width="4" height="6" rx="1"/><rect x="11" y="5" width="4" height="10" rx="1"/></svg>` },
+    { value: 'middle-v', label: 'Middle',    icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="10" x2="18" y2="10"/><rect x="5" y="4" width="4" height="12" rx="1"/><rect x="11" y="6" width="4" height="8" rx="1"/></svg>` },
+    { value: 'bottom',   label: 'Bottom',    icon: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="17" x2="18" y2="17"/><rect x="5" y="9" width="4" height="6" rx="1"/><rect x="11" y="5" width="4" height="10" rx="1"/></svg>` },
+  ];
+  for (const sa of SPATIAL_ALIGNS) {
+    const btn = document.createElement('button');
+    btn.className = 'cp-btn cp-spatial-align-btn';
+    btn.title = sa.label;
+    btn.innerHTML = sa.icon;
+    btn.dataset['spatialAlign'] = sa.value;
+    btn.addEventListener('click', () => {
+      const scene = history.present;
+      const elements = scene.elements.filter(
+        (el) => scene.selectedIds.has(el.id) && !el.locked
+      );
+      if (elements.length < 2) return;
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const el of elements) {
+        const b = getElementBounds(el);
+        minX = Math.min(minX, b.x);
+        minY = Math.min(minY, b.y);
+        maxX = Math.max(maxX, b.x + b.w);
+        maxY = Math.max(maxY, b.y + b.h);
+      }
+
+      const moves = elements.map((el) => {
+        const b = getElementBounds(el);
+        let newX = el.x;
+        let newY = el.y;
+        switch (sa.value) {
+          case 'left':     newX = el.x + (minX - b.x); break;
+          case 'center-h': newX = el.x + ((minX + maxX) / 2 - (b.x + b.w / 2)); break;
+          case 'right':    newX = el.x + (maxX - (b.x + b.w)); break;
+          case 'top':      newY = el.y + (minY - b.y); break;
+          case 'middle-v': newY = el.y + ((minY + maxY) / 2 - (b.y + b.h / 2)); break;
+          case 'bottom':   newY = el.y + (maxY - (b.y + b.h)); break;
+        }
+        return { id: el.id, x: newX, y: newY };
+      });
+
+      history.dispatch({ type: 'ALIGN_ELEMENTS', moves });
+    });
+    spatialAlignActions.appendChild(btn);
+  }
+
   // ── Layer actions ──────────────────────────────────────────────────────────
   const layerActions = panel.querySelector('#cp-layer-actions')!;
   const LAYERS = [
@@ -765,6 +824,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       }
 
       panel.querySelector<HTMLElement>('#cp-actions')!.parentElement!.style.display = 'none';
+      panel.querySelector<HTMLElement>('#cp-spatial-align-section')!.style.display = 'none';
       return;
     }
 
@@ -835,6 +895,10 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     panel.querySelector('#cp-style-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
     panel.querySelector('#cp-roughness-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
     panel.querySelector('#cp-border-presets')!.parentElement!.style.display = hasBorder ? '' : 'none';
+
+    // Spatial alignment section — only when ≥2 elements are selected
+    panel.querySelector<HTMLElement>('#cp-spatial-align-section')!.style.display =
+      selected.length >= 2 ? '' : 'none';
 
     // Layer + action groups always present when selection exists
     syncAriaPressed(panel.querySelector<HTMLElement>('#cp-layer-actions')!, '.cp-btn');

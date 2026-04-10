@@ -48,6 +48,11 @@ export type Command =
   | { type: 'SET_JUST_CREATED_TEXT' }
   | { type: 'SET_TOOL_LOCK'; locked: boolean }
   | { type: 'SET_TEXT_MODE'; mode: 'text' | 'code' }
+  /** Aligns selected elements spatially. Positions are pre-computed by the caller. Undoable. */
+  | {
+      type: 'ALIGN_ELEMENTS';
+      moves: Array<{ id: string; x: number; y: number }>;
+    }
   /** Applies style to ALL selected elements AND updates appState defaults. Undoable. */
   | {
       type: 'APPLY_STYLE';

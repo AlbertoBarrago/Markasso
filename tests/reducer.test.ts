@@ -263,6 +263,107 @@ describe('reducer', () => {
     expect(el.endElementId).toBeUndefined();
   });
 
+  describe('ALIGN_ELEMENTS', () => {
+    function makeScene(): Scene {
+      const scene = createScene();
+      const r1 = makeRect({ id: 'r1', x: 0,  y: 0,  width: 40, height: 20 });
+      const r2 = makeRect({ id: 'r2', x: 60, y: 30, width: 20, height: 40 });
+      const r3 = makeRect({ id: 'r3', x: 10, y: 80, width: 30, height: 30 });
+      return { ...scene, elements: [r1, r2, r3] };
+    }
+
+    it('aligns left edges to minimum x', () => {
+      const scene = makeScene();
+      // r1 bounds x=0, r2 bounds x=60 → both align to x=0
+      const next = reducer(scene, {
+        type: 'ALIGN_ELEMENTS',
+        moves: [
+          { id: 'r1', x: 0,  y: 0  }, // already at left
+          { id: 'r2', x: 0,  y: 30 }, // moved left
+        ],
+      });
+      const r1 = next.elements.find((e) => e.id === 'r1')!;
+      const r2 = next.elements.find((e) => e.id === 'r2')!;
+      expect(r1.x).toBe(0);
+      expect(r2.x).toBe(0);
+    });
+
+    it('aligns right edges', () => {
+      const scene = makeScene();
+      // r1 right=40, r2 right=80 → align both to right=80 → r1.x=40, r2.x=60
+      const next = reducer(scene, {
+        type: 'ALIGN_ELEMENTS',
+        moves: [
+          { id: 'r1', x: 40, y: 0  },
+          { id: 'r2', x: 60, y: 30 },
+        ],
+      });
+      const r1 = next.elements.find((e) => e.id === 'r1')!;
+      const r2 = next.elements.find((e) => e.id === 'r2')!;
+      expect(r1.x).toBe(40);
+      expect(r2.x).toBe(60);
+    });
+
+    it('aligns top edges', () => {
+      const scene = makeScene();
+      const next = reducer(scene, {
+        type: 'ALIGN_ELEMENTS',
+        moves: [
+          { id: 'r1', x: 0,  y: 0  },
+          { id: 'r2', x: 60, y: 0  },
+        ],
+      });
+      const r2 = next.elements.find((e) => e.id === 'r2')!;
+      expect(r2.y).toBe(0);
+    });
+
+    it('aligns bottom edges', () => {
+      const scene = makeScene();
+      // r1 bottom=20, r2 bottom=70 → align r1 to y=50 so r1.y+20=70
+      const next = reducer(scene, {
+        type: 'ALIGN_ELEMENTS',
+        moves: [
+          { id: 'r1', x: 0,  y: 50 },
+          { id: 'r2', x: 60, y: 30 },
+        ],
+      });
+      const r1 = next.elements.find((e) => e.id === 'r1')!;
+      const r2 = next.elements.find((e) => e.id === 'r2')!;
+      expect(r1.y).toBe(50);
+      expect(r2.y).toBe(30);
+    });
+
+    it('does not touch untargeted elements', () => {
+      const scene = makeScene();
+      const next = reducer(scene, {
+        type: 'ALIGN_ELEMENTS',
+        moves: [{ id: 'r1', x: 5, y: 5 }],
+      });
+      const r3 = next.elements.find((e) => e.id === 'r3')!;
+      expect(r3.x).toBe(10);
+      expect(r3.y).toBe(80);
+    });
+
+    it('updates line endpoints proportionally', () => {
+      const scene = createScene();
+      const line: LineElement = {
+        id: 'l1', type: 'line',
+        x: 10, y: 10, x2: 50, y2: 40,
+        strokeColor: '#000', fillColor: 'transparent',
+        strokeWidth: 1, opacity: 1, roughness: 0,
+      };
+      const next = reducer(
+        { ...scene, elements: [line] },
+        { type: 'ALIGN_ELEMENTS', moves: [{ id: 'l1', x: 0, y: 0 }] },
+      );
+      const el = next.elements[0]! as LineElement;
+      expect(el.x).toBe(0);
+      expect(el.y).toBe(0);
+      expect(el.x2).toBe(40); // 50 + (0 - 10)
+      expect(el.y2).toBe(30); // 40 + (0 - 10)
+    });
+  });
+
   it('ZOOM_VIEWPORT zooms to cursor', () => {
     const scene = createScene();
     const next = reducer(scene, {
