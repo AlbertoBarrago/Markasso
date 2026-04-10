@@ -4,6 +4,11 @@ import { getElementBounds } from '../rendering/draw_selection';
 
 const TRAIL_DURATION = 350; // ms
 
+const ERASER_CURSOR = (() => {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='8' fill='none' stroke='white' stroke-width='1.5'/><circle cx='10' cy='10' r='8' fill='none' stroke='black' stroke-width='0.5'/></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 10 10, crosshair`;
+})();
+
 export interface SlashPoint { worldX: number; worldY: number; time: number }
 
 export class EraserTool implements Tool {
@@ -70,6 +75,6 @@ export class EraserTool implements Tool {
   }
 
   getCursor(): string {
-    return 'crosshair';
+    return ERASER_CURSOR;
   }
 }

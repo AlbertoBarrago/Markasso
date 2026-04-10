@@ -302,7 +302,7 @@ export class TextTool implements Tool {
   }
 
   getCursor(): string {
-    return this.textarea ? 'text' : 'crosshair';
+    return 'text';
   }
 
   private createCodeTextarea(worldX: number, worldY: number, ctx: ToolContext): void {
