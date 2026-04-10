@@ -4,6 +4,38 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.0.0] — 2026-04-10
+
+First stable release.
+
+### Added
+- **Spatial alignment toolbar** — multi-element alignment and distribution controls (align left/center/right/top/middle/bottom, distribute horizontally/vertically)
+- **Keyboard shortcuts help dialog** — `?` opens an overlay listing all shortcuts
+- **SEO & social sharing** — OG tags and Twitter `summary_large_image` card for link previews
+
+### Improved
+- **Mobile toolbox FAB** — cleaner icon, more consistent with desktop toolbar style
+- **Tool cursors** — eraser and text tools now use purpose-built cursors instead of fallback defaults
+
+### Fixed
+- Canvas hint position adjusted to sit above the bottom toolbar islands on mobile
+- Hide fill/background color pickers for line and arrow in the mobile style panel
+
+---
+
+## [0.0.8] — 2026-04-09
+
+### Added
+- **Keyboard shortcuts help dialog** — accessible via `?` key
+
+### Improved
+- Mobile toolbox FAB icon redesigned for clarity
+
+### Fixed
+- Fill and background color controls no longer appear for line/arrow elements in the mobile style panel
+
+---
+
 ## [0.0.7] — 2026-04-08
 
 ### Improved

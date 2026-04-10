@@ -61,9 +61,9 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 | Ellipse | `E` / `3` |
 | Rhombus (Diamond) | `D` / `4` |
 | Arrow | `A` / `5` |
-| Pen (freehand) | `P` / `6` |
-| Text | `T` / `7` |
-| Line | `L` / `8` |
+| Line | `L` / `6` |
+| Pen (freehand) | `P` / `7` |
+| Text | `T` / `8` |
 | Eraser | `0` |
 
 ### Canvas & Navigation
@@ -147,22 +147,6 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 
 ---
 
-## Comparison
-
-| Feature | Markasso | Excalidraw | Draw.io |
-|---|:---:|:---:|:---:|
-| Zero dependencies | ✅ | ❌ | ❌ |
-| No login required | ✅ | ✅ | ✅ |
-| Cookie banners | None | Varies | Yes |
-| Bundle size | Minimal | Moderate | Large |
-| Infinite canvas | ✅ | ✅ | ✅ |
-| Keyboard-first design | ✅ | Partial | ❌ |
-| Pure Canvas 2D | ✅ | ✅ | SVG-based |
-| Offline support | ✅ | ✅ | ✅ |
-| Handwritten style | ❌ | ✅ | ❌ |
-
----
-
 ## Getting Started
 
 ### Install
@@ -201,9 +185,9 @@ No `.env` files. No API keys. No containerization required.
 | `E` / `3` | Ellipse |
 | `D` / `4` | Rhombus (Diamond) |
 | `A` / `5` | Arrow |
-| `P` / `6` | Pen (freehand) |
-| `T` / `7` | Text |
-| `L` / `8` | Line |
+| `L` / `6` | Line |
+| `P` / `7` | Pen (freehand) |
+| `T` / `8` | Text |
 | `0` | Eraser |
 
 ### Navigation

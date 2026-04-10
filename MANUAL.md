@@ -5,7 +5,7 @@
 <h2>Markasso — User Manual</h2>
 
 <p>A dark-canvas whiteboard for diagrams, notes, and freehand drawing.<br/>
-<a href="https://albertobarrago.github.io/Markasso/">Open the app</a> · <a href="./README.md">Back to README</a></p>
+<a href="https://markasso.it">Open the app</a> · <a href="./README.md">Back to README</a></p>
 
 </div>
 
@@ -23,9 +23,9 @@ Select a tool from the toolbar or press its keyboard shortcut.
 | Ellipse    | `E` or `3` | Draw ellipses and circles |
 | Rhombus    | `D` or `4` | Draw diamond/rhombus shapes |
 | Arrow      | `A` or `5` | Draw arrows |
-| Pen        | `P` or `6` | Freehand drawing |
-| Text       | `T` or `7` | Add text |
-| Line       | `L` or `8` | Draw straight lines |
+| Line       | `L` or `6` | Draw straight lines |
+| Pen        | `P` or `7` | Freehand drawing |
+| Text       | `T` or `8` | Add text |
 | Eraser     | `0` | Erase elements by clicking or dragging over them |
 
 Press `Escape` to return to the Select tool at any time.
@@ -112,6 +112,23 @@ Group elements so they behave as a unit.
 | Select whole group | Click any member |
 | Enter group (select individual) | Click a member a second time while the group is already selected |
 | Exit group | Press `Escape` to return to whole-group selection |
+
+---
+
+## Alignment
+
+With two or more elements selected, the **alignment toolbar** appears above the selection. It lets you align and distribute elements in one click.
+
+| Action | Description |
+|--------|-------------|
+| Align left | Align left edges to the leftmost element |
+| Align center (H) | Center horizontally |
+| Align right | Align right edges to the rightmost element |
+| Align top | Align top edges to the topmost element |
+| Align middle (V) | Center vertically |
+| Align bottom | Align bottom edges to the bottommost element |
+| Distribute horizontally | Space elements evenly across the horizontal axis |
+| Distribute vertically | Space elements evenly across the vertical axis |
 
 ---
 
@@ -244,10 +261,11 @@ Switch between **Dark**, **Light**, and **System** themes from the Settings pane
 | `E` / `3` | Ellipse |
 | `D` / `4` | Rhombus (Diamond) |
 | `A` / `5` | Arrow |
-| `P` / `6` | Pen |
-| `T` / `7` | Text |
-| `L` / `8` | Line |
+| `L` / `6` | Line |
+| `P` / `7` | Pen |
+| `T` / `8` | Text |
 | `0` | Eraser |
+| `?` | Open keyboard shortcuts help dialog |
 | `Escape` | Back to Select / exit group / deselect |
 | `G` | Toggle grid |
 | `F` | Fit canvas to elements |
