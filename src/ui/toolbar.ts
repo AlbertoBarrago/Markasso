@@ -1,6 +1,6 @@
 import type { History } from '../engine/history';
 import type { ActiveTool } from '../core/app_state';
-import { exportPNG, exportSVG, exportPDF, exportHTML } from '../rendering/export';
+import { exportPNG, exportSVG, exportHTML } from '../rendering/export';
 import { buildShareUrl } from '../io/share';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { importMermaid } from '../io/mermaid';
@@ -304,10 +304,9 @@ export function initToolbar(container: HTMLElement, history: History): void {
 
   const exportPNGItem      = menuItem(t('exportPNG'),      IC.imgPNG,   () => exportPNG(history.present, askBackground()));
   const exportSVGItem      = menuItem(t('exportSVG'),      IC.imgSVG,   () => exportSVG(history.present, askBackground()));
-  const exportPDFItem      = menuItem(t('exportPDF'),      IC.export,   () => exportPDF(history.present));
   const exportHTMLItem     = menuItem(t('exportHTML'),     IC.export,   () => exportHTML(history.present));
   const exportMarkassoItem = menuItem(t('saveMarkasso'),   IC.markasso, () => exportMarkasso(history.present));
-  exportPanel.append(exportPNGItem, exportSVGItem, exportPDFItem, exportHTMLItem, exportMarkassoItem);
+  exportPanel.append(exportPNGItem, exportSVGItem, exportHTMLItem, exportMarkassoItem);
 
   let panelOpen = false;
   exportTrigger.addEventListener('click', (e) => {
@@ -525,7 +524,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
     exportTrigger.disabled = !hasElements;
     exportPNGItem.disabled = !hasElements;
     exportSVGItem.disabled = !hasElements;
-    exportPDFItem.disabled = !hasElements;
+
     exportHTMLItem.disabled = !hasElements;
     exportMarkassoItem.disabled = !hasElements;
     shareBtn.disabled = !hasElements;

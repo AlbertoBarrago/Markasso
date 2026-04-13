@@ -42,55 +42,6 @@ export function exportPNG(scene: Scene, withBackground = true): void {
   triggerDownload(url, 'markasso-export.png');
 }
 
-// ── PDF export ─────────────────────────────────────────────────────────────────
-
-export function exportPDF(scene: Scene): void {
-  const { elements } = scene;
-  if (elements.length === 0) return;
-
-  const { minX, minY, maxX, maxY } = computeBounds(elements);
-  const PAD = 24;
-  const w = maxX - minX + PAD * 2;
-  const h = maxY - minY + PAD * 2;
-  const scale = 2;
-
-  const offscreen = document.createElement('canvas');
-  offscreen.width = w * scale;
-  offscreen.height = h * scale;
-  const ctx = offscreen.getContext('2d')!;
-  ctx.fillStyle = getCanvasBg();
-  ctx.fillRect(0, 0, offscreen.width, offscreen.height);
-  ctx.scale(scale, scale);
-  ctx.translate(PAD - minX, PAD - minY);
-  for (const el of elements) drawElement(ctx, el);
-
-  const dataUrl = offscreen.toDataURL('image/png');
-  const bg = getCanvasBg();
-
-  const html = `<!DOCTYPE html><html><head><style>
-    @page{margin:0}
-    html,body{margin:0;padding:0;background:${bg};print-color-adjust:exact;-webkit-print-color-adjust:exact}
-    body{display:flex;justify-content:center;align-items:flex-start}
-    img{max-width:100%;height:auto;display:block}
-  </style></head><body><img src="${dataUrl}"/></body></html>`;
-
-  const blob = new Blob([html], { type: 'text/html' });
-  const blobUrl = URL.createObjectURL(blob);
-
-  const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:800px;height:600px;opacity:0;pointer-events:none;';
-  iframe.onload = () => {
-    iframe.contentWindow?.focus();
-    iframe.contentWindow?.print();
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-      URL.revokeObjectURL(blobUrl);
-    }, 2000);
-  };
-  document.body.appendChild(iframe);
-  iframe.src = blobUrl;
-}
-
 // ── HTML embed export ──────────────────────────────────────────────────────────
 
 export function exportHTML(scene: Scene): void {

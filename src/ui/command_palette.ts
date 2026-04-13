@@ -1,6 +1,6 @@
 import type { History } from '../engine/history';
 import type { SelectTool } from '../tools/select_tool';
-import { exportPNG, exportSVG, exportPDF, exportHTML } from '../rendering/export';
+import { exportPNG, exportSVG, exportHTML } from '../rendering/export';
 import { exportMarkasso } from '../io/markasso';
 import { buildShareUrl } from '../io/share';
 import { fitToElements } from '../core/viewport';
@@ -244,13 +244,6 @@ export function initCommandPalette(history: History, _selectTool: SelectTool): v
       category: 'action',
       icon: `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M7 9l3 3 3-3"/><path d="M4 14v1.5A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5V14"/></svg>`,
       execute: () => exportSVG(history.present, false),
-    });
-    items.push({
-      id: 'action:export-pdf',
-      label: t('exportPDF'),
-      category: 'action',
-      icon: `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M7 9l3 3 3-3"/><path d="M4 14v1.5A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5V14"/></svg>`,
-      execute: () => exportPDF(history.present),
     });
     items.push({
       id: 'action:export-html',
