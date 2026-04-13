@@ -75,4 +75,5 @@ export type Command =
       italic?:        boolean;
       underline?:     boolean;
       strikethrough?: boolean;
+      arrowHead?:     'none' | 'start' | 'end' | 'both';
     };

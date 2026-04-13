@@ -72,6 +72,11 @@ export interface LineElement extends BaseElement {
   /** Optional quadratic bezier control point — when set the line renders as a curve */
   readonly cx?: number;
   readonly cy?: number;
+  /** Arrowhead placement — undefined / 'none' means plain line */
+  readonly arrowHead?: 'none' | 'start' | 'end' | 'both';
+  readonly label?: string;
+  readonly labelFontSize?: number;
+  readonly labelFontFamily?: string;
 }
 
 export interface ArrowElement extends BaseElement {

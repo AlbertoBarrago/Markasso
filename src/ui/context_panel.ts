@@ -169,6 +169,11 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
       <div class="cp-btn-row" id="cp-linecap-presets" role="group" aria-label="${t('lineCap')}"></div>
     </div>
 
+    <div class="cp-section" id="cp-arrowhead-section">
+      <div class="cp-label">${t('arrowHead')}</div>
+      <div class="cp-btn-row" id="cp-arrowhead-presets" role="group" aria-label="${t('arrowHead')}"></div>
+    </div>
+
     <div class="cp-section">
       <div class="cp-label">${t('roughness')}</div>
       <div class="cp-btn-row" id="cp-roughness-presets" role="group" aria-label="${t('roughness')}"></div>
@@ -586,6 +591,43 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
     lineCapPresets.appendChild(btn);
   }
 
+  // ── Arrowhead presets ─────────────────────────────────────────────────────
+  const arrowHeadPresets = panel.querySelector('#cp-arrowhead-presets')!;
+  const ARROW_HEADS: Array<{ value: 'none' | 'end' | 'start' | 'both'; label: string; icon: string }> = [
+    {
+      value: 'none',
+      label: t('arrowNone'),
+      icon: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><line x1="3" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+    },
+    {
+      value: 'end',
+      label: t('arrowEnd'),
+      icon: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="10" x2="15" y2="10"/><path d="M11 6l4 4-4 4"/></svg>`,
+    },
+    {
+      value: 'start',
+      label: t('arrowStart'),
+      icon: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="10" x2="17" y2="10"/><path d="M9 6L5 10l4 4"/></svg>`,
+    },
+    {
+      value: 'both',
+      label: t('arrowBoth'),
+      icon: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="10" x2="15" y2="10"/><path d="M9 6L5 10l4 4"/><path d="M11 6l4 4-4 4"/></svg>`,
+    },
+  ];
+  for (const ah of ARROW_HEADS) {
+    const btn = document.createElement('button');
+    btn.className = 'cp-btn cp-arrowhead-btn';
+    btn.title = ah.label;
+    btn.setAttribute('aria-label', ah.label);
+    btn.innerHTML = ah.icon;
+    btn.dataset['arrowhead'] = ah.value;
+    btn.addEventListener('click', () => {
+      history.dispatch({ type: 'APPLY_STYLE', arrowHead: ah.value });
+    });
+    arrowHeadPresets.appendChild(btn);
+  }
+
   // ── Roughness presets ──────────────────────────────────────────────────────
   const roughnessPresets = panel.querySelector('#cp-roughness-presets')!;
   const ROUGHNESS = [
@@ -950,7 +992,7 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
   }
 
   // ── Sync panel ─────────────────────────────────────────────────────────────
-  const DRAWING_TOOLS = new Set<string>(['rectangle', 'ellipse', 'line', 'arrow', 'rombo', 'freehand', 'text']);
+  const DRAWING_TOOLS = new Set<string>(['rectangle', 'ellipse', 'line', 'rombo', 'freehand', 'text']);
 
   function sync(): void {
     const scene = history.present;
@@ -1019,7 +1061,13 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
       opacitySlider.value = String(Math.round(opacity * 100));
       opacityVal.textContent = String(Math.round(opacity * 100));
 
-      const hasLineCap = activeTool === 'line' || activeTool === 'arrow' || activeTool === 'freehand';
+      const hasLineCap = activeTool === 'line' || activeTool === 'freehand';
+      const hasArrowHead = activeTool === 'line';
+      const toolArrowHead = (lastEl?.type === 'line' ? lastEl.arrowHead : undefined) ?? 'none';
+      panel.querySelectorAll<HTMLButtonElement>('#cp-arrowhead-presets .cp-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset['arrowhead'] === toolArrowHead);
+      });
+      syncAriaPressed(panel.querySelector<HTMLElement>('#cp-arrowhead-presets')!, '.cp-btn');
       const strokeSection = panel.querySelector('#cp-stroke-swatches')!.parentElement!.parentElement!;
       strokeSection.style.display = '';
       (strokeSection.querySelector('.cp-label') as HTMLElement).textContent = isText ? t('color') : t('stroke');
@@ -1028,6 +1076,7 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
       panel.querySelector('#cp-style-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
       panel.querySelector('#cp-roughness-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
       (panel.querySelector('#cp-linecap-section') as HTMLElement).style.display = hasLineCap ? '' : 'none';
+      (panel.querySelector('#cp-arrowhead-section') as HTMLElement).style.display = hasArrowHead ? '' : 'none';
       (panel.querySelector('#cp-shadow-section') as HTMLElement).style.display = isText ? 'none' : '';
       panel.querySelector('#cp-border-presets')!.parentElement!.style.display = (activeTool === 'rectangle' || activeTool === 'rombo') ? '' : 'none';
 
@@ -1126,13 +1175,22 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
 
     // Dynamic section visibility based on selected element types
     const FILL_TYPES = new Set(['rectangle', 'ellipse', 'rhombus', 'text']);
-    const STYLE_TYPES = new Set(['rectangle', 'ellipse', 'rhombus', 'line', 'arrow']);
-    const CAP_TYPES = new Set(['line', 'arrow', 'freehand']);
+    const STYLE_TYPES = new Set(['rectangle', 'ellipse', 'rhombus', 'line']);
+    const CAP_TYPES = new Set(['line', 'freehand']);
     const hasFill = !allImage && selected.some((el) => FILL_TYPES.has(el.type));
     const hasStyle = !allImage && !allText && selected.some((el) => STYLE_TYPES.has(el.type));
     const hasLineCap = !allImage && !allText && selected.some((el) => CAP_TYPES.has(el.type));
+    const hasArrowHead = !allImage && !allText && selected.some((el) => el.type === 'line');
     const hasBorder = selected.some((el) => el.type === 'rectangle' || el.type === 'rhombus');
     const hasWidth = !allText && !allImage;
+
+    // Update arrowhead presets (from first selected line element)
+    const firstLine = selected.find((el) => el.type === 'line');
+    const selArrowHead = (firstLine?.type === 'line' ? firstLine.arrowHead : undefined) ?? 'none';
+    panel.querySelectorAll<HTMLButtonElement>('#cp-arrowhead-presets .cp-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset['arrowhead'] === selArrowHead);
+    });
+    syncAriaPressed(panel.querySelector<HTMLElement>('#cp-arrowhead-presets')!, '.cp-btn');
 
     const strokeSection = panel.querySelector('#cp-stroke-swatches')!.parentElement!.parentElement!;
     strokeSection.style.display = allImage ? 'none' : '';
@@ -1142,6 +1200,7 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
     panel.querySelector('#cp-style-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
     panel.querySelector('#cp-roughness-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
     (panel.querySelector('#cp-linecap-section') as HTMLElement).style.display = hasLineCap ? '' : 'none';
+    (panel.querySelector('#cp-arrowhead-section') as HTMLElement).style.display = hasArrowHead ? '' : 'none';
     (panel.querySelector('#cp-shadow-section') as HTMLElement).style.display = allImage ? 'none' : '';
     panel.querySelector('#cp-border-presets')!.parentElement!.style.display = hasBorder ? '' : 'none';
 

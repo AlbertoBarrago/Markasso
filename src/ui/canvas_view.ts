@@ -5,13 +5,12 @@ import { HandTool } from '../tools/hand_tool';
 import { RectangleTool } from '../tools/rectangle_tool';
 import { EllipseTool } from '../tools/ellipse_tool';
 import { LineTool } from '../tools/line_tool';
-import { ArrowTool } from '../tools/arrow_tool';
 import { RomboTool } from '../tools/rombo_tool';
 import { PenTool } from '../tools/pen_tool';
 import { TextTool } from '../tools/text_tool';
 import { StickyTool } from '../tools/sticky_tool';
 import { EraserTool, type SlashPoint } from '../tools/eraser_tool';
-import type { TextElement, RectangleElement, EllipseElement, RhombusElement, ArrowElement } from '../elements/element';
+import type { TextElement, RectangleElement, EllipseElement, RhombusElement, LineElement } from '../elements/element';
 import { render } from '../rendering/renderer';
 import { drawElement } from '../rendering/draw_element';
 import { drawMarquee, drawHoverHighlight, drawSnapIndicator, drawAlignGuides } from '../rendering/draw_selection';
@@ -29,7 +28,6 @@ const TOOLS: Record<ActiveTool, Tool> = {
   rectangle: new RectangleTool(),
   ellipse: new EllipseTool(),
   line: new LineTool(),
-  arrow: new ArrowTool(),
   rombo: new RomboTool(),
   freehand: new PenTool(),
   text: textTool,
@@ -166,10 +164,10 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
         }
       }
 
-      if (el.type === 'arrow') {
-        const arrow = el as ArrowElement;
-        if (distPointToSegment(wx, wy, arrow.x, arrow.y, arrow.x2, arrow.y2) < arrow.strokeWidth / 2 + 8) {
-          openArrowLabelEditor(arrow, history, canvas);
+      if (el.type === 'arrow' || el.type === 'line') {
+        const line = el as LineElement;
+        if (distPointToSegment(wx, wy, line.x, line.y, line.x2, line.y2) < line.strokeWidth / 2 + 8) {
+          openArrowLabelEditor(line, history, canvas);
           needsRender = true;
           return;
         }
@@ -811,7 +809,7 @@ function distPointToSegment(px: number, py: number, x1: number, y1: number, x2: 
 }
 
 function openArrowLabelEditor(
-  el: ArrowElement,
+  el: LineElement,
   history: History,
   canvas: HTMLCanvasElement,
 ): void {

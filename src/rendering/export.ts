@@ -189,9 +189,7 @@ function elementToSVG(el: Element, ox: number, oy: number): string {
     case 'rectangle': return rectToSVG(el, ox, oy);
     case 'ellipse':   return ellipseToSVG(el, ox, oy);
     case 'rhombus':   return rhombusToSVG(el, ox, oy);
-    case 'line':      return el.cx !== undefined && el.cy !== undefined
-      ? `<path d="M ${round(el.x - ox)} ${round(el.y - oy)} Q ${round(el.cx - ox)} ${round(el.cy - oy)} ${round(el.x2 - ox)} ${round(el.y2 - oy)}" fill="none" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" opacity="${el.opacity}"${strokeDashAttr(el)}/>`
-      : lineToSVG(el, ox, oy);
+    case 'line':      return lineToSVG(el, ox, oy);
     case 'arrow':     return arrowToSVG(el, ox, oy);
     case 'freehand':  return freehandToSVG(el, ox, oy);
     case 'text':      return textToSVG(el, ox, oy);
@@ -285,8 +283,35 @@ function rhombusToSVG(el: RhombusElement, ox: number, oy: number): string {
   return `<polygon points="${pts}" ${shapeProps(el)}${rotateAttr(el, ox, oy)}/>`;
 }
 
+function lineArrowHeadSVG(x1: number, y1: number, x2: number, y2: number, sw: number, sp: string, rot: string): string {
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const headLen = Math.max(12, sw * 4);
+  const ax1 = x2 - headLen * Math.cos(angle - Math.PI / 6);
+  const ay1 = y2 - headLen * Math.sin(angle - Math.PI / 6);
+  const ax2 = x2 - headLen * Math.cos(angle + Math.PI / 6);
+  const ay2 = y2 - headLen * Math.sin(angle + Math.PI / 6);
+  return `<polyline points="${round(ax1)},${round(ay1)} ${round(x2)},${round(y2)} ${round(ax2)},${round(ay2)}" ${sp}${rot}/>`;
+}
+
 function lineToSVG(el: LineElement, ox: number, oy: number): string {
-  return `<line x1="${round(el.x + ox)}" y1="${round(el.y + oy)}" x2="${round(el.x2 + ox)}" y2="${round(el.y2 + oy)}" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" opacity="${el.opacity}"${strokeDashAttr(el)}${rotateAttr(el, ox, oy)}/>`;
+  const x1 = el.x + ox, y1 = el.y + oy;
+  const x2 = el.x2 + ox, y2 = el.y2 + oy;
+  const sp = `stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"${strokeDashAttr(el)}`;
+  const rot = rotateAttr(el, ox, oy);
+  const parts: string[] = [];
+  if (el.cx !== undefined && el.cy !== undefined) {
+    parts.push(`<path d="M ${round(x1)} ${round(y1)} Q ${round(el.cx + ox)} ${round(el.cy + oy)} ${round(x2)} ${round(y2)}" ${sp}${rot}/>`);
+  } else {
+    parts.push(`<line x1="${round(x1)}" y1="${round(y1)}" x2="${round(x2)}" y2="${round(y2)}" ${sp}${rot}/>`);
+  }
+  const arrowHead = el.arrowHead;
+  if (arrowHead === 'end' || arrowHead === 'both') {
+    parts.push(lineArrowHeadSVG(x1, y1, x2, y2, el.strokeWidth, sp, rot));
+  }
+  if (arrowHead === 'start' || arrowHead === 'both') {
+    parts.push(lineArrowHeadSVG(x2, y2, x1, y1, el.strokeWidth, sp, rot));
+  }
+  return parts.join('\n');
 }
 
 function arrowToSVG(el: ArrowElement, ox: number, oy: number): string {

@@ -167,7 +167,7 @@ export function reducer(scene: Scene, command: Command): Scene {
       return {
         ...scene,
         elements: scene.elements.map((el) =>
-          el.id === command.id && (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'rhombus' || el.type === 'arrow')
+          el.id === command.id && (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'rhombus' || el.type === 'arrow' || el.type === 'line')
             ? { ...el, label: command.label, labelFontSize: command.labelFontSize, labelFontFamily: command.labelFontFamily }
             : el
         ),
@@ -365,7 +365,7 @@ export function reducer(scene: Scene, command: Command): Scene {
       };
 
     case 'APPLY_STYLE': {
-      const { strokeColor, fillColor, strokeWidth, opacity, roughness, strokeStyle, lineCap, lineJoin, shadowBlur, shadowColor, shadowOffsetX, shadowOffsetY, cornerRadius, textAlign, bold, italic, underline, strikethrough } = command;
+      const { strokeColor, fillColor, strokeWidth, opacity, roughness, strokeStyle, lineCap, lineJoin, shadowBlur, shadowColor, shadowOffsetX, shadowOffsetY, cornerRadius, textAlign, bold, italic, underline, strikethrough, arrowHead } = command;
       const patch: Record<string, unknown> = {};
       if (strokeColor   !== undefined) patch['strokeColor']   = strokeColor;
       if (fillColor     !== undefined) patch['fillColor']     = fillColor;
@@ -385,6 +385,7 @@ export function reducer(scene: Scene, command: Command): Scene {
       if (italic        !== undefined) patch['italic']        = italic;
       if (underline     !== undefined) patch['underline']     = underline;
       if (strikethrough !== undefined) patch['strikethrough'] = strikethrough;
+      if (arrowHead     !== undefined) patch['arrowHead']     = arrowHead;
 
       // appState patch (only properties that belong to appState)
       const statePatch: Record<string, unknown> = {};

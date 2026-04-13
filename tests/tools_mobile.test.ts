@@ -20,7 +20,6 @@ import { PenTool } from '../src/tools/pen_tool';
 import { RectangleTool } from '../src/tools/rectangle_tool';
 import { EllipseTool } from '../src/tools/ellipse_tool';
 import { LineTool } from '../src/tools/line_tool';
-import { ArrowTool } from '../src/tools/arrow_tool';
 import { RomboTool } from '../src/tools/rombo_tool';
 import { EraserTool } from '../src/tools/eraser_tool';
 import { HandTool } from '../src/tools/hand_tool';
@@ -363,13 +362,13 @@ describe('RomboTool — mobile touch sequence', () => {
 });
 
 // ---------------------------------------------------------------------------
-// ArrowTool
+// LineTool (also covers arrowhead-capable lines, formerly ArrowTool)
 // ---------------------------------------------------------------------------
 
-describe('ArrowTool — mobile touch sequence', () => {
-  it('creates an arrow from a drag gesture', () => {
+describe('LineTool — snap/arrow mobile touch sequence', () => {
+  it('creates a line from a drag gesture', () => {
     const history = new History(createScene());
-    const tool = new ArrowTool();
+    const tool = new LineTool();
     const ctx = makeCtx(history);
 
     tool.onMouseDown(me(0, 0), 0, 0, ctx);
@@ -377,12 +376,12 @@ describe('ArrowTool — mobile touch sequence', () => {
     tool.onMouseUp(me(100, 0), 100, 0, ctx);
 
     expect(history.present.elements).toHaveLength(1);
-    expect(history.present.elements[0]?.type).toBe('arrow');
+    expect(history.present.elements[0]?.type).toBe('line');
   });
 
-  it('does not create an arrow for a tiny tap (< 2px)', () => {
+  it('does not create a line for a tiny tap (< 2px)', () => {
     const history = new History(createScene());
-    const tool = new ArrowTool();
+    const tool = new LineTool();
     const ctx = makeCtx(history);
 
     tool.onMouseDown(me(0, 0), 0, 0, ctx);

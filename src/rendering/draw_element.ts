@@ -131,13 +131,50 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
       const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
-      if (el.cx !== undefined && el.cy !== undefined) {
+      const arrowHead = el.arrowHead;
+      const drawEnd   = arrowHead === 'end'  || arrowHead === 'both';
+      const drawStart = arrowHead === 'start' || arrowHead === 'both';
+
+      if (el.label) {
+        // Draw shaft in two segments around the midpoint label gap
+        const fontSize = el.labelFontSize ?? 16;
+        const fontFamily = el.labelFontFamily ?? 'Arial, sans-serif';
+        const mx = (pts.x + pts.x2) / 2;
+        const my = (pts.y + pts.y2) / 2;
+        ctx.save();
+        ctx.setLineDash([]);
+        ctx.font = `${fontSize}px ${fontFamily}`;
+        const lines = el.label.split('\n');
+        const pad = fontSize * 0.4;
+        const labelW = Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2;
+        const labelH = lines.length * fontSize * 1.2 + pad * 2;
+        ctx.restore();
+        const totalLen = Math.hypot(pts.x2 - pts.x, pts.y2 - pts.y);
+        const dx = totalLen > 0 ? (pts.x2 - pts.x) / totalLen : 1;
+        const dy = totalLen > 0 ? (pts.y2 - pts.y) / totalLen : 0;
+        const gapHalf = Math.abs(dx) * labelW / 2 + Math.abs(dy) * labelH / 2;
+        const gapT = totalLen > 0 ? gapHalf / totalLen : 0;
+        const t1 = Math.max(0, 0.5 - gapT);
+        const t2 = Math.min(1, 0.5 + gapT);
+        drawArrowShaft(ctx, pts.x, pts.y, pts.x + (pts.x2 - pts.x) * t1, pts.y + (pts.y2 - pts.y) * t1, roughness, seed);
+        drawArrowShaft(ctx, pts.x + (pts.x2 - pts.x) * t2, pts.y + (pts.y2 - pts.y) * t2, pts.x2, pts.y2, roughness, seed);
+        if (drawEnd)   drawArrowHead(ctx, pts.x, pts.y, pts.x2, pts.y2, el.strokeWidth);
+        if (drawStart) drawArrowHead(ctx, pts.x2, pts.y2, pts.x, pts.y, el.strokeWidth);
+        ctx.save();
+        ctx.setLineDash([]);
+        drawArrowLabel(ctx, mx, my, el.label, fontSize, fontFamily, strokeColor);
+        ctx.restore();
+      } else if (el.cx !== undefined && el.cy !== undefined) {
         ctx.beginPath();
         ctx.moveTo(pts.x, pts.y);
         ctx.quadraticCurveTo(el.cx, el.cy, pts.x2, pts.y2);
         ctx.stroke();
+        if (drawEnd)   drawArrowHead(ctx, pts.x, pts.y, pts.x2, pts.y2, el.strokeWidth);
+        if (drawStart) drawArrowHead(ctx, pts.x2, pts.y2, pts.x, pts.y, el.strokeWidth);
       } else {
         drawLine(ctx, pts.x, pts.y, pts.x2, pts.y2, roughness, seed);
+        if (drawEnd)   drawArrowHead(ctx, pts.x, pts.y, pts.x2, pts.y2, el.strokeWidth);
+        if (drawStart) drawArrowHead(ctx, pts.x2, pts.y2, pts.x, pts.y, el.strokeWidth);
       }
       break;
     }
