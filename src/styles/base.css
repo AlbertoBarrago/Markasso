@@ -6,7 +6,7 @@
   --alert: #fa0101;
 
   --bg-island:     rgba(13, 7, 7, 0.98);
-  --island-border: rgb(87 87 87);
+  --island-border: rgba(255,255,255,0.18);
   --island-shadow: 0 2px 24px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04);
   --island-radius: 12px;
   --input-border: rgba(89, 89, 89, .4);

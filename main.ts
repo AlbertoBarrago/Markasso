@@ -37,11 +37,15 @@ async function bootstrap(): Promise<void> {
   }
 
   const session = loadSession();
-  const baseScene = sharedElements
-    ? { ...createScene(), elements: sharedElements, viewport: fitToElements(sharedElements, window.innerWidth, window.innerHeight) }
-    : session
+  let baseScene;
+  if (sharedElements) {
+    const vp = fitToElements(sharedElements, window.innerWidth, window.innerHeight);
+    baseScene = { ...createScene(), elements: sharedElements, viewport: { ...vp, zoom: Math.min(vp.zoom, 1) } };
+  } else {
+    baseScene = session
       ? { ...createScene(), elements: session.elements, viewport: session.viewport }
       : createScene();
+  }
   const hist = new History(baseScene);
 
   // Restore persisted UI settings before first paint
