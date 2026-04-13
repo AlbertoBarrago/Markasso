@@ -430,7 +430,7 @@
 }
 
 /* Layer and action buttons */
-.cp-layer-btn, .cp-action-btn {
+.cp-layer-btn, .cp-action-btn, .cp-shadow-btn {
   font-size: 16px;
   width: 36px;
   height: 36px;

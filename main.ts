@@ -10,8 +10,13 @@ import { initImageImport } from './src/ui/image_import';
 import { initMobileActionBar } from './src/ui/mobile_action_bar';
 import { initWelcome } from './src/ui/welcome';
 import { initShortcutsHelp } from './src/ui/shortcuts_help';
+import { initCommandPalette } from './src/ui/command_palette';
+import { initMinimap } from './src/ui/minimap';
+import { initElementSearch } from './src/ui/element_search';
+import { decodeScene, SHARE_HASH_PREFIX } from './src/io/share';
+import { fitToElements } from './src/core/viewport';
 
-function bootstrap(): void {
+async function bootstrap(): Promise<void> {
   const appEl    = document.getElementById('app')       as HTMLElement;
   const toolbar  = document.getElementById('toolbar')   as HTMLElement;
   const workspace= document.getElementById('workspace') as HTMLElement;
@@ -21,25 +26,40 @@ function bootstrap(): void {
     throw new Error('Missing required DOM elements');
   }
 
+  // Check for share link in URL hash — takes priority over session
+  let sharedElements = null;
+  if (location.hash.startsWith(SHARE_HASH_PREFIX)) {
+    sharedElements = await decodeScene(location.hash);
+    if (sharedElements) {
+      // Remove hash from URL without reloading to keep the URL clean after load
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+  }
+
   const session = loadSession();
-  const initialScene = session
-    ? { ...createScene(), elements: session.elements, viewport: session.viewport }
-    : createScene();
-  const history = new History(initialScene);
+  const baseScene = sharedElements
+    ? { ...createScene(), elements: sharedElements, viewport: fitToElements(sharedElements, window.innerWidth, window.innerHeight) }
+    : session
+      ? { ...createScene(), elements: session.elements, viewport: session.viewport }
+      : createScene();
+  const hist = new History(baseScene);
 
   // Restore persisted UI settings before first paint
   applySettings(appEl, loadSettings());
 
-  initToolbar(toolbar, history);
-  initSettings(appEl, toolbar, history);
-  initContextPanel(workspace, history);
-  initImageImport(workspace, history);
-  initMobileActionBar(workspace, history);
-  const { selectTool } = initCanvasView(canvas, history);
-  initShortcuts(history, selectTool);
+  initToolbar(toolbar, hist);
+  initSettings(appEl, toolbar, hist);
+  const { selectTool } = initCanvasView(canvas, hist);
+  initContextPanel(workspace, hist, (source) => selectTool.activateFormatPainter(source));
+  initImageImport(workspace, hist);
+  initMobileActionBar(workspace, hist);
+  initShortcuts(hist, selectTool);
+  initCommandPalette(hist, selectTool);
+  initMinimap(workspace, hist);
+  initElementSearch(workspace, hist);
   initShortcutsHelp(appEl);
-  initSession(history);
-  if (!session) initWelcome(appEl, history);
+  initSession(hist);
+  if (!session && !sharedElements) initWelcome(appEl, hist);
 }
 
 bootstrap();

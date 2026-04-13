@@ -13,7 +13,7 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     ['r', () => history.dispatch({ type: 'SET_TOOL', tool: 'rectangle' })],
     ['2', () => history.dispatch({ type: 'SET_TOOL', tool: 'rectangle' })],
     ['e', () => history.dispatch({ type: 'SET_TOOL', tool: 'ellipse' })],
-    ['3', () => history.dispatch({ type: 'SET_TOOL', tool: 'ellipse' })],
+    ['4', () => history.dispatch({ type: 'SET_TOOL', tool: 'ellipse' })],
     ['a', () => history.dispatch({ type: 'SET_TOOL', tool: 'arrow' })],
     ['5', () => history.dispatch({ type: 'SET_TOOL', tool: 'arrow' })],
     ['l', () => history.dispatch({ type: 'SET_TOOL', tool: 'line' })],
@@ -22,9 +22,12 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     ['7', () => history.dispatch({ type: 'SET_TOOL', tool: 'freehand' })],
     ['t', () => history.dispatch({ type: 'SET_TOOL', tool: 'text' })],
     ['8', () => history.dispatch({ type: 'SET_TOOL', tool: 'text' })],
+    ['n', () => history.dispatch({ type: 'SET_TOOL', tool: 'sticky' })],
     ['d', () => history.dispatch({ type: 'SET_TOOL', tool: 'rombo' })],
-    ['4', () => history.dispatch({ type: 'SET_TOOL', tool: 'rombo' })],
+    ['3', () => history.dispatch({ type: 'SET_TOOL', tool: 'rombo' })],
     ['0', () => history.dispatch({ type: 'SET_TOOL', tool: 'eraser' })],
+    ['c', () => history.dispatch({ type: 'SET_TOOL', tool: 'curve' })],
+    ['o', () => history.dispatch({ type: 'SET_TOOL', tool: 'polygon' })],
     ['g', () => history.dispatch({ type: 'TOGGLE_GRID' })],
   ]);
 
@@ -131,7 +134,7 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
         const idMap = new Map(elements.map((el) => [el.id, crypto.randomUUID()]));
         const newElements: Element[] = elements.map((el) => {
           const newId = idMap.get(el.id)!;
-          if (el.type === 'freehand') {
+          if (el.type === 'freehand' || el.type === 'polygon') {
             return { ...el, id: newId, x: el.x + offset, y: el.y + offset,
                      points: el.points.map(([px, py]) => [px + offset, py + offset] as const) };
           }

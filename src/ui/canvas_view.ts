@@ -9,13 +9,20 @@ import { ArrowTool } from '../tools/arrow_tool';
 import { RomboTool } from '../tools/rombo_tool';
 import { PenTool } from '../tools/pen_tool';
 import { TextTool } from '../tools/text_tool';
+import { StickyTool } from '../tools/sticky_tool';
 import { EraserTool, type SlashPoint } from '../tools/eraser_tool';
+import { CurveTool } from '../tools/curve_tool';
+import { PolygonTool } from '../tools/polygon_tool';
 import type { TextElement, RectangleElement, EllipseElement, RhombusElement, ArrowElement } from '../elements/element';
 import { render } from '../rendering/renderer';
 import { drawElement } from '../rendering/draw_element';
-import { drawMarquee, drawHoverHighlight, drawSnapIndicator } from '../rendering/draw_selection';
+import { drawMarquee, drawHoverHighlight, drawSnapIndicator, drawAlignGuides } from '../rendering/draw_selection';
 import { screenToWorld, worldToScreen } from '../core/viewport';
 import type { ActiveTool } from '../core/app_state';
+import { t } from '../i18n';
+
+const textTool = new TextTool();
+const stickyTool = new StickyTool();
 
 const TOOLS: Record<ActiveTool, Tool> = {
   select: new SelectTool(),
@@ -25,9 +32,12 @@ const TOOLS: Record<ActiveTool, Tool> = {
   ellipse: new EllipseTool(),
   line: new LineTool(),
   arrow: new ArrowTool(),
+  curve: new CurveTool(),
+  polygon: new PolygonTool(),
   rombo: new RomboTool(),
   freehand: new PenTool(),
-  text: new TextTool(),
+  text: textTool,
+  sticky: stickyTool,
 };
 
 export function initCanvasView(canvas: HTMLCanvasElement, history: History): { selectTool: SelectTool } {
@@ -49,11 +59,20 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
     return TOOLS[history.present.appState.activeTool];
   }
 
+  const SNAP_TOOLS = new Set(['rectangle', 'ellipse', 'rombo', 'arrow', 'line', 'freehand', 'text']);
+
+  function snapWorldCoords(wx: number, wy: number): [number, number] {
+    const { appState } = history.present;
+    if (!appState.gridVisible || !SNAP_TOOLS.has(appState.activeTool)) return [wx, wy];
+    const g = appState.gridSize;
+    return [Math.round(wx / g) * g, Math.round(wy / g) * g];
+  }
+
   function getWorldCoords(e: MouseEvent): [number, number] {
     const rect = canvas.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
-    return screenToWorld(history.present.viewport, sx, sy);
+    return snapWorldCoords(...screenToWorld(history.present.viewport, sx, sy));
   }
 
   function resizeCanvas(): void {
@@ -115,6 +134,15 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
 
   canvas.addEventListener('dblclick', (e) => {
     const [wx, wy] = getWorldCoords(e);
+
+    // Let active tool handle double-click first (e.g. polygon closing)
+    const activeTool = getActiveTool();
+    if (activeTool.onDblClick) {
+      activeTool.onDblClick(e, wx, wy, toolCtx);
+      needsRender = true;
+      return;
+    }
+
     const scene = history.present;
     // Find element under cursor (topmost first)
     for (let i = scene.elements.length - 1; i >= 0; i--) {
@@ -167,9 +195,98 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
   let prevInertiaX = 0;
   let prevInertiaY = 0;
 
+  // ── Long-press context menu ────────────────────────────────────────────────
+  let longPressTimer = 0;
+  let longPressClientX = 0;
+  let longPressClientY = 0;
+  let longPressMoved = false;
+  const LONG_PRESS_MS = 500;
+  const LONG_PRESS_MOVE_TOL = 8;
+
+  const ctxMenu = document.createElement('div');
+  ctxMenu.className = 'touch-ctx-menu';
+  ctxMenu.setAttribute('role', 'menu');
+  ctxMenu.setAttribute('aria-label', t('contextMenu'));
+  ctxMenu.style.display = 'none';
+  document.body.appendChild(ctxMenu);
+
+  function closeCtxMenu(): void {
+    ctxMenu.style.display = 'none';
+  }
+
+  function openCtxMenu(clientX: number, clientY: number): void {
+    const scene = history.present;
+    const selectedIds = [...scene.selectedIds];
+    if (selectedIds.length === 0) return;
+
+    ctxMenu.innerHTML = '';
+
+    const actions: Array<{ label: string; icon: string; action: () => void }> = [
+      {
+        label: t('duplicate'),
+        icon: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="9" height="9" rx="1.5"/><path d="M13 7V5.5A1.5 1.5 0 0 0 11.5 4h-7A1.5 1.5 0 0 0 3 5.5v7A1.5 1.5 0 0 0 4.5 14H7"/></svg>`,
+        action: () => {
+          const newIds: string[] = [];
+          const sc = history.present;
+          for (const id of [...sc.selectedIds]) {
+            const el = sc.elements.find((e) => e.id === id);
+            if (!el) continue;
+            const newId = crypto.randomUUID();
+            newIds.push(newId);
+            history.dispatch({ type: 'CREATE_ELEMENT', element: { ...el, id: newId } });
+            history.dispatch({ type: 'MOVE_ELEMENT', id: newId, dx: 20, dy: 20 });
+          }
+          if (newIds.length > 0) history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
+          closeCtxMenu();
+        },
+      },
+      {
+        label: t('delete'),
+        icon: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 17,6"/><path d="M8 6V4h4v2"/><rect x="5" y="6" width="10" height="10" rx="1"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="12" y1="10" x2="12" y2="14"/></svg>`,
+        action: () => {
+          const sc = history.present;
+          const ids = [...sc.selectedIds].filter((id) => {
+            const el = sc.elements.find((e) => e.id === id);
+            return el && !el.locked;
+          });
+          if (ids.length > 0) history.dispatch({ type: 'DELETE_ELEMENTS', ids });
+          closeCtxMenu();
+        },
+      },
+    ];
+
+    for (const item of actions) {
+      const btn = document.createElement('button');
+      btn.className = 'touch-ctx-menu-item';
+      btn.setAttribute('role', 'menuitem');
+      btn.innerHTML = `${item.icon}<span>${item.label}</span>`;
+      btn.addEventListener('pointerdown', (e) => { e.stopPropagation(); item.action(); });
+      ctxMenu.appendChild(btn);
+    }
+
+    ctxMenu.style.display = 'block';
+    requestAnimationFrame(() => {
+      const mw = ctxMenu.offsetWidth;
+      const mh = ctxMenu.offsetHeight;
+      let left = clientX - mw / 2;
+      let top = clientY - mh - 12;
+      left = Math.max(8, Math.min(left, window.innerWidth - mw - 8));
+      top = Math.max(8, Math.min(top, window.innerHeight - mh - 8));
+      ctxMenu.style.left = `${left}px`;
+      ctxMenu.style.top = `${top}px`;
+    });
+  }
+
+  // Close on outside tap
+  document.addEventListener('pointerdown', (e) => {
+    if (ctxMenu.style.display !== 'none' && !ctxMenu.contains(e.target as Node)) {
+      closeCtxMenu();
+    }
+  }, true);
+
   function getWorldCoordsFromTouch(touch: Touch): [number, number] {
     const rect = canvas.getBoundingClientRect();
-    return screenToWorld(history.present.viewport, touch.clientX - rect.left, touch.clientY - rect.top);
+    return snapWorldCoords(...screenToWorld(history.present.viewport, touch.clientX - rect.left, touch.clientY - rect.top));
   }
 
   function syntheticMouse(type: string, clientX: number, clientY: number): MouseEvent {
@@ -197,7 +314,20 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
       const [wx, wy] = getWorldCoordsFromTouch(t);
       getActiveTool().onMouseDown(syntheticMouse('mousedown', t.clientX, t.clientY), wx, wy, toolCtx);
       needsRender = true;
+
+      // Long-press timer
+      clearTimeout(longPressTimer);
+      longPressClientX = t.clientX;
+      longPressClientY = t.clientY;
+      longPressMoved = false;
+      longPressTimer = window.setTimeout(() => {
+        if (!longPressMoved && touch2Id === -1) {
+          openCtxMenu(longPressClientX, longPressClientY);
+        }
+      }, LONG_PRESS_MS);
     } else if (e.touches.length === 2) {
+      clearTimeout(longPressTimer);
+      longPressMoved = true;
       // Cancel any in-progress single-touch draw.
       // Use onCancel() when available (e.g. PenTool) so the tool can discard
       // the partial stroke rather than committing it — a second finger is
@@ -233,6 +363,11 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
       if (!t) return;
       lastTouchX = t.clientX;
       lastTouchY = t.clientY;
+      // Cancel long-press if finger moved too far
+      if (!longPressMoved && Math.hypot(t.clientX - longPressClientX, t.clientY - longPressClientY) > LONG_PRESS_MOVE_TOL) {
+        longPressMoved = true;
+        clearTimeout(longPressTimer);
+      }
       const now = performance.now();
       const dt = Math.max(1, now - lastTouchMoveTime);
       inertiaVX = (t.clientX - prevInertiaX) / dt;
@@ -272,6 +407,7 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
 
   canvas.addEventListener('touchend', (e) => {
     preventIfCancelable(e);
+    clearTimeout(longPressTimer);
     if (touch2Id === -1) {
       // Single-finger end
       const changedTouch = e.changedTouches[0];
@@ -500,9 +636,51 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
       const [x1, y1, x2, y2] = selectTool.getMarquee();
       drawMarquee(ctx2d, x1, y1, x2, y2);
     }
+
+    // Draw alignment guides during element move
+    if (selectTool.alignGuides.length > 0) {
+      drawAlignGuides(ctx2d, selectTool.alignGuides, scene.viewport, canvas.width, canvas.height);
+    }
+
+    // Draw curve control point handle when a single curve element is selected
+    if (scene.selectedIds.size === 1) {
+      const selId = [...scene.selectedIds][0]!;
+      const curveEl = scene.elements.find((el) => el.id === selId && el.type === 'curve');
+      if (curveEl && curveEl.type === 'curve') {
+        const dpr = window.devicePixelRatio;
+        const [scx, scy] = worldToScreen(scene.viewport, curveEl.cx, curveEl.cy);
+        const [sx1, sy1] = worldToScreen(scene.viewport, curveEl.x,  curveEl.y);
+        const [sx2, sy2] = worldToScreen(scene.viewport, curveEl.x2, curveEl.y2);
+        ctx2d.save();
+        ctx2d.resetTransform();
+        ctx2d.setLineDash([4, 3]);
+        ctx2d.strokeStyle = 'rgba(100,160,255,0.5)';
+        ctx2d.lineWidth = 1 * dpr;
+        ctx2d.beginPath();
+        ctx2d.moveTo(sx1 * dpr, sy1 * dpr);
+        ctx2d.lineTo(scx * dpr, scy * dpr);
+        ctx2d.lineTo(sx2 * dpr, sy2 * dpr);
+        ctx2d.stroke();
+        ctx2d.setLineDash([]);
+        ctx2d.fillStyle = '#ffffff';
+        ctx2d.strokeStyle = 'rgba(100,160,255,0.9)';
+        ctx2d.lineWidth = 1.5 * dpr;
+        ctx2d.beginPath();
+        ctx2d.arc(scx * dpr, scy * dpr, 5 * dpr, 0, Math.PI * 2);
+        ctx2d.fill();
+        ctx2d.stroke();
+        ctx2d.restore();
+      }
+    }
   }
 
   requestAnimationFrame(loop);
+
+  // Wire sticky tool to open text editor immediately after placing
+  stickyTool.onPlaced = (el, ctx) => {
+    textTool.editExisting(el, ctx);
+    needsRender = true;
+  };
 
   return { selectTool: TOOLS['select'] as SelectTool };
 }
@@ -563,6 +741,7 @@ function openShapeLabelEditor(
   const shapeW = bw * viewport.zoom;
 
   const ta = document.createElement('textarea');
+  ta.spellcheck = true;
   ta.value = el.label ?? '';
 
   ta.style.position    = 'fixed';
@@ -650,6 +829,7 @@ function openArrowLabelEditor(
   const fontFamily = el.labelFontFamily ?? appState.fontFamily;
 
   const ta = document.createElement('textarea');
+  ta.spellcheck = true;
   ta.value = el.label ?? '';
 
   ta.style.position    = 'fixed';

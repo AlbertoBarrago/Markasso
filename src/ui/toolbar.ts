@@ -1,6 +1,7 @@
 import type { History } from '../engine/history';
 import type { ActiveTool } from '../core/app_state';
-import { exportPNG, exportSVG } from '../rendering/export';
+import { exportPNG, exportSVG, exportPDF, exportHTML } from '../rendering/export';
+import { buildShareUrl } from '../io/share';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { importMermaid } from '../io/mermaid';
 import { fitToElements } from '../core/viewport';
@@ -34,19 +35,33 @@ const IC = {
   eraser:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h14"/><path d="M5 17l-2-4 9-8 4 4-7 8H5z"/><path d="M12 5l4 4"/></svg>`,
   toolbox:   `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="6" height="6" rx="1.5"/><rect x="12" y="2" width="6" height="6" rx="1.5"/><rect x="2" y="12" width="6" height="6" rx="1.5"/><rect x="12" y="12" width="6" height="6" rx="1.5"/></svg>`,
   close:     `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="2" y1="2" x2="14" y2="14"/><line x1="14" y1="2" x2="2" y2="14"/></svg>`,
+  sticky:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h12a1 1 0 011 1v9l-4 4H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M13 13v3.5L17 13h-4z" fill="currentColor" stroke="none"/><line x1="6" y1="7" x2="14" y2="7"/><line x1="6" y1="10" x2="11" y2="10"/></svg>`,
+  curve:     `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 16 Q10 2 17 16"/></svg>`,
+  polygon:   `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l7 6.5-2.5 7h-9L3 9.5z"/></svg>`,
 };
 
-const TOOLS: { tool: ActiveTool; icon: string; label: string; key: string; num: string }[] = [
+type ToolDef = { tool: ActiveTool; icon: string; label: string; key: string; num: string };
+
+// Line group flyout: line is the default (6), curve and polygon have no number
+const LINE_GROUP_TOOLS: ToolDef[] = [
+  { tool: 'line',    icon: IC.line,    label: t('line'),    key: 'L / 6', num: '6' },
+  { tool: 'curve',   icon: IC.curve,   label: t('curve'),   key: 'C',     num: '' },
+  { tool: 'polygon', icon: IC.polygon, label: t('polygon'), key: 'O',     num: '' },
+];
+const LINE_GROUP_NAMES = new Set<ActiveTool>(LINE_GROUP_TOOLS.map((s) => s.tool));
+
+// Main toolbar buttons — numbers 1–8 in order, then eraser (0)
+const TOOLS: ToolDef[] = [
   { tool: 'hand',      icon: IC.hand,      label: t('hand'),      key: 'H / Space', num: '' },
   { tool: 'select',    icon: IC.select,    label: t('select'),    key: 'V / 1',     num: '1' },
   { tool: 'rectangle', icon: IC.rectangle, label: t('rectangle'), key: 'R / 2',     num: '2' },
-  { tool: 'ellipse',   icon: IC.ellipse,   label: t('ellipse'),   key: 'E / 3',     num: '3' },
-  { tool: 'rombo',     icon: IC.rombo,     label: t('rhombus'),   key: 'D / 4',     num: '4' },
+  { tool: 'rombo',     icon: IC.rombo,     label: t('rhombus'),   key: 'D / 3',     num: '3' },
+  { tool: 'ellipse',   icon: IC.ellipse,   label: t('ellipse'),   key: 'E / 4',     num: '4' },
   { tool: 'arrow',     icon: IC.arrow,     label: t('arrow'),     key: 'A / 5',     num: '5' },
-  { tool: 'line',      icon: IC.line,      label: t('line'),      key: 'L / 6',     num: '6' },
+  // ↑ line (6) is rendered as a group button — see below ↑
   { tool: 'freehand',  icon: IC.freehand,  label: t('pen'),       key: 'P / 7',     num: '7' },
   { tool: 'text',      icon: IC.text,      label: t('textTool'),  key: 'T / 8',     num: '8' },
-  { tool: 'eraser',    icon: IC.eraser,    label: t('eraser'),    key: '0',          num: '0' },
+  { tool: 'eraser',    icon: IC.eraser,    label: t('eraser'),    key: '0',         num: '0' },
 ];
 
 export function initToolbar(container: HTMLElement, history: History): void {
@@ -76,20 +91,114 @@ export function initToolbar(container: HTMLElement, history: History): void {
   lockSep.className = 'tb-separator';
   centerPill.appendChild(lockSep);
 
-  TOOLS.forEach((t) => {
-    if (t.tool === 'eraser') {
+  // ── Line group button + flyout (line / curve / polygon) ──────────────────
+  // Split button: main area activates lastLineTool directly; chevron opens flyout.
+  let lastLineTool: ActiveTool = 'line';
+  let lineFlyoutOpen = false;
+
+  const lineWrap = document.createElement('div');
+  lineWrap.className = 'tb-group-wrap';
+
+  const lineSplit = document.createElement('div');
+  lineSplit.className = 'tb-split-inner';
+
+  // Main button — activates the last-used line-group tool directly
+  const lineBtn = document.createElement('button');
+  lineBtn.className = 'tb-btn tb-btn-group';
+  lineBtn.setAttribute('aria-pressed', 'false');
+
+  // Chevron button — opens/closes flyout
+  const lineChevron = document.createElement('button');
+  lineChevron.className = 'tb-group-chevron-btn';
+  lineChevron.innerHTML = '▾';
+  lineChevron.title = 'More line tools';
+  lineChevron.setAttribute('aria-haspopup', 'true');
+  lineChevron.setAttribute('aria-expanded', 'false');
+
+  const lineFlyout = document.createElement('div');
+  lineFlyout.className = 'tb-group-flyout';
+  lineFlyout.setAttribute('role', 'menu');
+
+  function updateLineBtn(activeTool: ActiveTool): void {
+    const def = LINE_GROUP_TOOLS.find((s) => s.tool === activeTool)
+      ?? LINE_GROUP_TOOLS.find((s) => s.tool === lastLineTool)
+      ?? LINE_GROUP_TOOLS[0]!;
+    const isActive = LINE_GROUP_NAMES.has(activeTool);
+    lineBtn.innerHTML = `${def.icon}${def.num ? `<span class="tb-btn-key">${def.num}</span>` : ''}`;
+    lineBtn.title = `${def.label} (${def.key})`;
+    lineBtn.setAttribute('aria-label', def.label);
+    lineBtn.classList.toggle('active', isActive);
+    lineBtn.setAttribute('aria-pressed', String(isActive));
+    lineChevron.classList.toggle('active', isActive);
+  }
+  updateLineBtn('line');
+
+  function closeFlyout(): void {
+    lineFlyoutOpen = false;
+    lineFlyout.classList.remove('open');
+    lineChevron.setAttribute('aria-expanded', 'false');
+  }
+
+  // Main click: activate tool directly, no flyout
+  lineBtn.addEventListener('click', () => {
+    history.dispatch({ type: 'SET_TOOL', tool: lastLineTool });
+    closeFlyout();
+  });
+
+  // Chevron click: toggle flyout
+  lineChevron.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!lineFlyoutOpen) {
+      lineFlyoutOpen = true;
+      lineFlyout.classList.add('open');
+      lineChevron.setAttribute('aria-expanded', 'true');
+    } else {
+      closeFlyout();
+    }
+  });
+
+  for (const ld of LINE_GROUP_TOOLS) {
+    const lb = document.createElement('button');
+    lb.className = 'tb-btn tb-group-flyout-btn';
+    lb.title = `${ld.label} (${ld.key})`;
+    lb.setAttribute('aria-label', ld.label);
+    lb.setAttribute('role', 'menuitem');
+    lb.innerHTML = `${ld.icon}${ld.num ? `<span class="tb-btn-key">${ld.num}</span>` : ''}`;
+    lb.addEventListener('click', (e) => {
+      e.stopPropagation();
+      lastLineTool = ld.tool;
+      history.dispatch({ type: 'SET_TOOL', tool: ld.tool });
+      closeFlyout();
+    });
+    lineFlyout.appendChild(lb);
+  }
+
+  document.addEventListener('pointerdown', (e) => {
+    if (lineFlyoutOpen && !lineWrap.contains(e.target as Node)) {
+      closeFlyout();
+    }
+  }, { capture: true });
+
+  lineSplit.append(lineBtn, lineChevron);
+  lineWrap.append(lineSplit, lineFlyout);
+
+  TOOLS.forEach((toolDef) => {
+    // Insert line group between arrow (5) and freehand (7)
+    if (toolDef.tool === 'freehand') centerPill.appendChild(lineWrap);
+
+    if (toolDef.tool === 'eraser') {
       const sep = document.createElement('span');
       sep.className = 'tb-separator';
       centerPill.appendChild(sep);
     }
     const b = document.createElement('button');
     b.className = 'tb-btn';
-    b.title = `${t.label} (${t.key})`;
-    b.setAttribute('aria-label', t.label);
+    b.title = `${toolDef.label} (${toolDef.key})`;
+    b.setAttribute('aria-label', toolDef.label);
     b.setAttribute('aria-pressed', 'false');
-    b.innerHTML = `${t.icon}${t.num ? `<span class="tb-btn-key">${t.num}</span>` : ''}`;
-    b.addEventListener('click', () => history.dispatch({ type: 'SET_TOOL', tool: t.tool }));
-    toolBtns.set(t.tool, b);
+    b.innerHTML = `${toolDef.icon}${toolDef.num ? `<span class="tb-btn-key">${toolDef.num}</span>` : ''}`;
+    b.addEventListener('click', () => history.dispatch({ type: 'SET_TOOL', tool: toolDef.tool }));
+    toolBtns.set(toolDef.tool, b);
     centerPill.appendChild(b);
   });
 
@@ -195,8 +304,10 @@ export function initToolbar(container: HTMLElement, history: History): void {
 
   const exportPNGItem      = menuItem(t('exportPNG'),      IC.imgPNG,   () => exportPNG(history.present, askBackground()));
   const exportSVGItem      = menuItem(t('exportSVG'),      IC.imgSVG,   () => exportSVG(history.present, askBackground()));
+  const exportPDFItem      = menuItem(t('exportPDF'),      IC.export,   () => exportPDF(history.present));
+  const exportHTMLItem     = menuItem(t('exportHTML'),     IC.export,   () => exportHTML(history.present));
   const exportMarkassoItem = menuItem(t('saveMarkasso'),   IC.markasso, () => exportMarkasso(history.present));
-  exportPanel.append(exportPNGItem, exportSVGItem, exportMarkassoItem);
+  exportPanel.append(exportPNGItem, exportSVGItem, exportPDFItem, exportHTMLItem, exportMarkassoItem);
 
   let panelOpen = false;
   exportTrigger.addEventListener('click', (e) => {
@@ -225,7 +336,83 @@ export function initToolbar(container: HTMLElement, history: History): void {
   });
   exportIsland.append(exportTrigger, exportPanel);
 
-  topRight.append(importIsland, exportIsland);
+  // Share island
+  const IC_SHARE = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="5" r="2"/><circle cx="5" cy="10" r="2"/><circle cx="15" cy="15" r="2"/><path d="M7 9l6-3M7 11l6 3"/></svg>`;
+  const shareIsland = div('tb-island');
+  const shareBtn = mkBtn(IC_SHARE, t('shareLink'));
+
+  /** Copy text to clipboard reliably: modern API first, textarea fallback second. */
+  function copyToClipboard(text: string): boolean {
+    if (navigator.clipboard && document.hasFocus()) {
+      // Fire-and-forget; if it rejects we fall through to execCommand
+      navigator.clipboard.writeText(text).catch(() => { /* handled below */ });
+    }
+    // execCommand fallback — works even after async awaits
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Show a small toast below the button. */
+  function showShareToast(success: boolean, url: string): void {
+    const existing = document.getElementById('share-toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.id = 'share-toast';
+    if (success) {
+      toast.className = 'share-toast share-toast--ok';
+      toast.textContent = t('shareLinkCopied');
+    } else {
+      // Show the URL so the user can copy it manually
+      toast.className = 'share-toast share-toast--fallback';
+      toast.innerHTML = `<span>${t('shareLink')}</span><input class="share-toast-input" readonly value="${url.replace(/"/g, '&quot;')}" />`;
+      requestAnimationFrame(() => {
+        const inp = toast.querySelector<HTMLInputElement>('.share-toast-input');
+        inp?.select();
+      });
+    }
+    document.body.appendChild(toast);
+    // Auto-dismiss after 4 s (ok) or keep until blur (fallback)
+    if (success) {
+      setTimeout(() => toast.remove(), 3000);
+    }
+    toast.addEventListener('click', (e) => { if (e.target === toast) toast.remove(); });
+  }
+
+  let shareCooldown = false;
+  shareBtn.addEventListener('click', async () => {
+    if (shareCooldown || history.present.elements.length === 0) return;
+    shareCooldown = true;
+    shareBtn.title = '…';
+
+    try {
+      const url = await buildShareUrl(history.present.elements);
+      const ok = copyToClipboard(url);
+      showShareToast(ok, url);
+      shareBtn.title = t('shareLinkCopied');
+      shareBtn.setAttribute('aria-label', t('shareLinkCopied'));
+    } catch {
+      shareBtn.title = t('shareLink');
+    }
+
+    setTimeout(() => {
+      shareCooldown = false;
+      shareBtn.title = t('shareLink');
+      shareBtn.setAttribute('aria-label', t('shareLink'));
+    }, 2000);
+  });
+  shareIsland.append(shareBtn);
+
+  topRight.append(importIsland, exportIsland, shareIsland);
 
   // Top-left: settings button injected by settings.ts
   const topLeft = div('tb-island-topleft');
@@ -242,7 +429,19 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const toolsPopup = document.createElement('div');
   toolsPopup.id = 'mobile-tools-popup';
 
+  // Build mobile tool list: expand line position with all line-group sub-tools
+  const mobileTools: ToolDef[] = [];
   for (const toolDef of TOOLS) {
+    mobileTools.push(toolDef);
+    if (toolDef.tool === 'arrow') {
+      // Insert line-group sub-tools (line, curve, polygon) after arrow
+      for (const ld of LINE_GROUP_TOOLS) {
+        mobileTools.push(ld);
+      }
+    }
+  }
+
+  for (const toolDef of mobileTools) {
     const b = document.createElement('button');
     b.className = 'mobile-tools-popup-btn';
     b.title = toolDef.label;
@@ -296,8 +495,19 @@ export function initToolbar(container: HTMLElement, history: History): void {
     lockBtn.classList.toggle('active', toolLocked);
     lockBtn.setAttribute('aria-pressed', String(toolLocked));
     lockBtn.innerHTML = toolLocked ? IC.lock : IC.lockOpen;
-    for (const [t, b] of toolBtns) {
-      const isActive = t === activeTool;
+    // Update line group button
+    if (LINE_GROUP_NAMES.has(activeTool)) lastLineTool = activeTool;
+    updateLineBtn(activeTool);
+    lineFlyout.querySelectorAll<HTMLButtonElement>('.tb-group-flyout-btn').forEach((lb, i) => {
+      const ld = LINE_GROUP_TOOLS[i];
+      if (ld) {
+        lb.classList.toggle('active', ld.tool === activeTool);
+        // Hide the currently active tool — already shown on the main button
+        lb.style.display = ld.tool === activeTool ? 'none' : '';
+      }
+    });
+    for (const [toolName, b] of toolBtns) {
+      const isActive = toolName === activeTool;
       b.classList.toggle('active', isActive);
       b.setAttribute('aria-pressed', String(isActive));
     }
@@ -315,7 +525,10 @@ export function initToolbar(container: HTMLElement, history: History): void {
     exportTrigger.disabled = !hasElements;
     exportPNGItem.disabled = !hasElements;
     exportSVGItem.disabled = !hasElements;
+    exportPDFItem.disabled = !hasElements;
+    exportHTMLItem.disabled = !hasElements;
     exportMarkassoItem.disabled = !hasElements;
+    shareBtn.disabled = !hasElements;
   }
 
   history.subscribe(sync);

@@ -46,6 +46,36 @@ function saveCustomColor(kind: 'stroke' | 'fill', color: string | null): void {
   localStorage.setItem(CUSTOM_COLORS_KEY, JSON.stringify(data));
 }
 
+// ── Style presets ───────────────────────────────────��──────────────────────────
+const STYLE_PRESETS_KEY = 'markasso-style-presets';
+const PRESET_SLOTS = 4;
+
+interface StylePreset {
+  strokeColor: string;
+  fillColor: string;
+  strokeWidth: number;
+  strokeStyle: 'solid' | 'dashed' | 'dotted';
+  roughness: number;
+  opacity: number;
+  cornerRadius?: number;
+}
+
+function loadStylePresets(): Array<StylePreset | null> {
+  try {
+    const raw = localStorage.getItem(STYLE_PRESETS_KEY);
+    if (!raw) return Array(PRESET_SLOTS).fill(null) as Array<null>;
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return Array(PRESET_SLOTS).fill(null) as Array<null>;
+    return parsed.map((p: unknown) => (p && typeof p === 'object' ? p as StylePreset : null));
+  } catch {
+    return Array(PRESET_SLOTS).fill(null) as Array<null>;
+  }
+}
+
+function saveStylePresets(presets: Array<StylePreset | null>): void {
+  localStorage.setItem(STYLE_PRESETS_KEY, JSON.stringify(presets));
+}
+
 function hexToHsl(hex: string): [number, number, number] {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
   const g = parseInt(hex.slice(3, 5), 16) / 255;
@@ -95,7 +125,7 @@ function computeShades(hex: string): string[] {
   }
 }
 
-export function initContextPanel(workspace: HTMLElement, history: History): void {
+export function initContextPanel(workspace: HTMLElement, history: History, onFormatPainter?: (source: Element) => void): void {
   const panel = document.createElement('div');
   panel.id = 'context-panel';
   panel.setAttribute('role', 'region');
@@ -129,6 +159,16 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       <div class="cp-btn-row" id="cp-style-presets" role="group" aria-label="${t('strokeStyle')}"></div>
     </div>
 
+    <div class="cp-section" id="cp-shadow-section">
+      <div class="cp-label">${t('shadow')}</div>
+      <div class="cp-btn-row" id="cp-shadow-toggle" role="group" aria-label="${t('shadow')}"></div>
+    </div>
+
+    <div class="cp-section" id="cp-linecap-section">
+      <div class="cp-label">${t('lineCap')}</div>
+      <div class="cp-btn-row" id="cp-linecap-presets" role="group" aria-label="${t('lineCap')}"></div>
+    </div>
+
     <div class="cp-section">
       <div class="cp-label">${t('roughness')}</div>
       <div class="cp-btn-row" id="cp-roughness-presets" role="group" aria-label="${t('roughness')}"></div>
@@ -148,8 +188,15 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       </div>
       <div class="cp-label" style="margin-top:4px">${t('fontFamily')}</div>
       <div class="cp-btn-row" id="cp-font-family-presets" role="group" aria-label="${t('fontFamily')}"></div>
+      <div class="cp-label" style="margin-top:4px">${t('style')}</div>
+      <div class="cp-btn-row" id="cp-text-format" role="group" aria-label="${t('style')}"></div>
       <div class="cp-label" style="margin-top:4px">${t('alignment')}</div>
       <div class="cp-btn-row" id="cp-align-presets" role="group" aria-label="${t('alignment')}"></div>
+    </div>
+
+    <div class="cp-section" id="cp-presets-section">
+      <div class="cp-label">${t('stylePresets')}</div>
+      <div class="cp-btn-row" id="cp-style-preset-row" role="group" aria-label="${t('stylePresets')}"></div>
     </div>
 
     <div class="cp-section">
@@ -487,6 +534,58 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     stylePresets.appendChild(btn);
   }
 
+  // ── Shadow toggle ──────────────────────────────────────────────────────────
+  const shadowToggle = panel.querySelector('#cp-shadow-toggle')!;
+  const shadowBtn = document.createElement('button');
+  shadowBtn.className = 'cp-btn cp-shadow-btn';
+  shadowBtn.title = t('shadow');
+  shadowBtn.setAttribute('aria-label', t('shadow'));
+  shadowBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="10" height="10" rx="2"/><rect x="6" y="5" width="10" height="10" rx="2" fill="currentColor" opacity="0.25" stroke="none"/></svg>`;
+  shadowBtn.dataset['shadow'] = 'on';
+  shadowBtn.addEventListener('click', () => {
+    const hasShadow = shadowBtn.classList.contains('active');
+    if (hasShadow) {
+      history.dispatch({ type: 'APPLY_STYLE', shadowBlur: 0, shadowOffsetX: 0, shadowOffsetY: 0 });
+    } else {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      const shadowColor = isLight ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.7)';
+      history.dispatch({ type: 'APPLY_STYLE', shadowBlur: 8, shadowColor, shadowOffsetX: 4, shadowOffsetY: 4 });
+    }
+  });
+  shadowToggle.appendChild(shadowBtn);
+
+  // ── Line cap presets ───────────────────────────────────────────────────────
+  const lineCapPresets = panel.querySelector('#cp-linecap-presets')!;
+  const LINE_CAPS: Array<{ value: 'butt' | 'round' | 'square'; label: string; icon: string }> = [
+    {
+      value: 'butt',
+      label: t('capButt'),
+      icon: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><line x1="4" y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="4" stroke-linecap="butt"/><line x1="4" y1="5" x2="4" y2="15" stroke="currentColor" stroke-width="1.2" opacity="0.4"/><line x1="16" y1="5" x2="16" y2="15" stroke="currentColor" stroke-width="1.2" opacity="0.4"/></svg>`,
+    },
+    {
+      value: 'round',
+      label: t('capRound'),
+      icon: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><line x1="4" y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>`,
+    },
+    {
+      value: 'square',
+      label: t('capSquare'),
+      icon: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><line x1="5" y1="10" x2="15" y2="10" stroke="currentColor" stroke-width="4" stroke-linecap="square"/></svg>`,
+    },
+  ];
+  for (const c of LINE_CAPS) {
+    const btn = document.createElement('button');
+    btn.className = 'cp-btn cp-linecap-btn';
+    btn.title = c.label;
+    btn.setAttribute('aria-label', c.label);
+    btn.innerHTML = c.icon;
+    btn.dataset['cap'] = c.value;
+    btn.addEventListener('click', () => {
+      history.dispatch({ type: 'APPLY_STYLE', lineCap: c.value });
+    });
+    lineCapPresets.appendChild(btn);
+  }
+
   // ── Roughness presets ──────────────────────────────────────────────────────
   const roughnessPresets = panel.querySelector('#cp-roughness-presets')!;
   const ROUGHNESS = [
@@ -574,6 +673,32 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     textModePresets.appendChild(btn);
   }
 
+  // ── Text format buttons (bold / italic / underline / strikethrough) ────────
+  const textFormatRow = panel.querySelector('#cp-text-format')!;
+  const TEXT_FORMATS: Array<{ key: 'bold' | 'italic' | 'underline' | 'strikethrough'; label: string; html: string }> = [
+    { key: 'bold',          label: t('bold'),          html: '<strong>B</strong>' },
+    { key: 'italic',        label: t('italic'),        html: '<em>I</em>' },
+    { key: 'underline',     label: t('underline'),     html: '<span style="text-decoration:underline">U</span>' },
+    { key: 'strikethrough', label: t('strikethrough'), html: '<span style="text-decoration:line-through">S</span>' },
+  ];
+  for (const f of TEXT_FORMATS) {
+    const btn = document.createElement('button');
+    btn.className = 'cp-btn cp-text-fmt-btn';
+    btn.title = f.label;
+    btn.innerHTML = f.html;
+    btn.dataset['fmt'] = f.key;
+    btn.addEventListener('click', () => {
+      // Toggle: read current value from first selected text element
+      const scene = history.present;
+      const firstText = [...scene.selectedIds]
+        .map((id) => scene.elements.find((el) => el.id === id))
+        .find((el) => el?.type === 'text');
+      const currentVal = firstText?.type === 'text' ? !!(firstText as { bold?: boolean; italic?: boolean; underline?: boolean; strikethrough?: boolean })[f.key] : false;
+      history.dispatch({ type: 'APPLY_STYLE', [f.key]: !currentVal });
+    });
+    textFormatRow.appendChild(btn);
+  }
+
   // ── Align presets ──────────────────────────────────────────────────────────
   const alignPresets = panel.querySelector('#cp-align-presets')!;
   const ALIGNS: { value: 'left' | 'center' | 'right'; label: string; icon: string }[] = [
@@ -591,6 +716,81 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       history.dispatch({ type: 'APPLY_STYLE', textAlign: a.value });
     });
     alignPresets.appendChild(btn);
+  }
+
+  // ── Saved style presets ────────────────────────────────────────────────────
+  let savedPresets = loadStylePresets();
+  const presetRow = panel.querySelector('#cp-style-preset-row')!;
+  const presetBtns: HTMLButtonElement[] = [];
+
+  function renderPresetBtn(btn: HTMLButtonElement, preset: StylePreset | null, index: number): void {
+    btn.className = 'cp-btn cp-style-preset-btn';
+    btn.dataset['presetIndex'] = String(index);
+    if (preset) {
+      const displayColor = preset.fillColor !== 'transparent' ? preset.fillColor : preset.strokeColor;
+      btn.style.background = displayColor;
+      btn.style.borderColor = preset.strokeColor;
+      btn.title = t('applyPreset');
+      btn.textContent = '';
+      btn.classList.add('cp-style-preset-filled');
+    } else {
+      btn.style.background = '';
+      btn.style.borderColor = '';
+      btn.title = t('savePreset');
+      btn.textContent = '+';
+      btn.classList.remove('cp-style-preset-filled');
+    }
+  }
+
+  for (let i = 0; i < PRESET_SLOTS; i++) {
+    const btn = document.createElement('button');
+    renderPresetBtn(btn, savedPresets[i] ?? null, i);
+    btn.addEventListener('click', () => {
+      const idx = Number(btn.dataset['presetIndex']);
+      const preset = savedPresets[idx] ?? null;
+      if (preset) {
+        // Apply preset
+        history.dispatch({
+          type: 'APPLY_STYLE',
+          strokeColor: preset.strokeColor,
+          fillColor: preset.fillColor,
+          strokeWidth: preset.strokeWidth,
+          strokeStyle: preset.strokeStyle,
+          roughness: preset.roughness,
+          opacity: preset.opacity,
+          ...(preset.cornerRadius !== undefined ? { cornerRadius: preset.cornerRadius } : {}),
+        });
+      } else {
+        // Save current style as preset
+        const { appState } = history.present;
+        const lastEl = appState.lastCreatedId
+          ? history.present.elements.find((e) => e.id === appState.lastCreatedId)
+          : undefined;
+        const newPreset: StylePreset = {
+          strokeColor: lastEl ? lastEl.strokeColor : appState.strokeColor,
+          fillColor: lastEl ? lastEl.fillColor : appState.fillColor,
+          strokeWidth: lastEl ? lastEl.strokeWidth : appState.strokeWidth,
+          strokeStyle: lastEl ? (lastEl.strokeStyle ?? 'solid') : appState.strokeStyle,
+          roughness: lastEl ? (lastEl.roughness ?? 0) : appState.roughness,
+          opacity: lastEl ? lastEl.opacity : appState.opacity,
+          ...((lastEl && (lastEl.type === 'rectangle' || lastEl.type === 'rhombus') && lastEl.cornerRadius !== undefined) ? { cornerRadius: lastEl.cornerRadius } : {}),
+        };
+        savedPresets[idx] = newPreset;
+        saveStylePresets(savedPresets);
+        renderPresetBtn(btn, newPreset, idx);
+      }
+    });
+    btn.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const idx = Number(btn.dataset['presetIndex']);
+      if (savedPresets[idx]) {
+        savedPresets[idx] = null;
+        saveStylePresets(savedPresets);
+        renderPresetBtn(btn, null, idx);
+      }
+    });
+    presetBtns.push(btn);
+    presetRow.appendChild(btn);
   }
 
   // ── Opacity slider ─────────────────────────────────────────────────────────
@@ -723,6 +923,22 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     actions.appendChild(btn);
   }
 
+  // ── Format painter button (single-selection only) ──────────────────────────
+  const formatPainterBtn = document.createElement('button');
+  formatPainterBtn.className = 'cp-btn cp-action-btn';
+  formatPainterBtn.id = 'cp-format-painter';
+  formatPainterBtn.title = t('formatPainter');
+  formatPainterBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h8a3 3 0 0 1 0 6H8"/><polyline points="8,7 8,17"/><line x1="6" y1="17" x2="10" y2="17"/></svg>`;
+  formatPainterBtn.addEventListener('click', () => {
+    const scene = history.present;
+    const ids = [...scene.selectedIds];
+    if (ids.length !== 1) return;
+    const el = scene.elements.find((e) => e.id === ids[0]);
+    if (!el) return;
+    onFormatPainter?.(el);
+  });
+  actions.appendChild(formatPainterBtn);
+
   const colorRowStroke = panel.querySelector<HTMLElement>('#cp-stroke-swatches')!.parentElement!;
   const colorRowFill   = panel.querySelector<HTMLElement>('#cp-fill-swatches')!.parentElement!;
 
@@ -793,9 +1009,17 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
         btn.classList.toggle('active', btn.dataset['roughness'] === String(roughness));
       });
       syncAriaPressed(panel.querySelector<HTMLElement>('#cp-roughness-presets')!, '.cp-btn');
+      const lineCapTool = lastEl ? (lastEl.lineCap ?? 'round') : 'round';
+      panel.querySelectorAll<HTMLButtonElement>('#cp-linecap-presets .cp-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset['cap'] === lineCapTool);
+      });
+      syncAriaPressed(panel.querySelector<HTMLElement>('#cp-linecap-presets')!, '.cp-btn');
+      shadowBtn.classList.toggle('active', !!(lastEl && (lastEl.shadowBlur ?? 0) > 0));
+      syncAriaPressed(panel.querySelector<HTMLElement>('#cp-shadow-toggle')!, '.cp-btn');
       opacitySlider.value = String(Math.round(opacity * 100));
       opacityVal.textContent = String(Math.round(opacity * 100));
 
+      const hasLineCap = activeTool === 'line' || activeTool === 'arrow' || activeTool === 'freehand';
       const strokeSection = panel.querySelector('#cp-stroke-swatches')!.parentElement!.parentElement!;
       strokeSection.style.display = '';
       (strokeSection.querySelector('.cp-label') as HTMLElement).textContent = isText ? t('color') : t('stroke');
@@ -803,7 +1027,9 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
       panel.querySelector('#cp-width-presets')!.parentElement!.style.display = isText ? 'none' : '';
       panel.querySelector('#cp-style-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
       panel.querySelector('#cp-roughness-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
-      panel.querySelector('#cp-border-presets')!.parentElement!.style.display = activeTool === 'rectangle' ? '' : 'none';
+      (panel.querySelector('#cp-linecap-section') as HTMLElement).style.display = hasLineCap ? '' : 'none';
+      (panel.querySelector('#cp-shadow-section') as HTMLElement).style.display = isText ? 'none' : '';
+      panel.querySelector('#cp-border-presets')!.parentElement!.style.display = (activeTool === 'rectangle' || activeTool === 'rombo') ? '' : 'none';
 
       const textPropsSection = panel.querySelector<HTMLElement>('#cp-text-props')!;
       textPropsSection.style.display = isText ? '' : 'none';
@@ -821,8 +1047,16 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
           btn.classList.toggle('active', btn.dataset['align'] === scene.appState.textAlign);
         });
         syncAriaPressed(panel.querySelector<HTMLElement>('#cp-align-presets')!, '.cp-btn');
+        // Text format — sync from lastCreatedId element if present, otherwise all off
+        const fmtEl = lastEl?.type === 'text' ? lastEl : null;
+        panel.querySelectorAll<HTMLButtonElement>('#cp-text-format .cp-btn').forEach((btn) => {
+          const k = btn.dataset['fmt'] as 'bold' | 'italic' | 'underline' | 'strikethrough' | undefined;
+          btn.classList.toggle('active', k ? !!(fmtEl as Record<string, unknown> | null)?.[k] : false);
+        });
+        syncAriaPressed(panel.querySelector<HTMLElement>('#cp-text-format')!, '.cp-btn');
       }
 
+      formatPainterBtn.style.display = 'none';
       panel.querySelector<HTMLElement>('#cp-actions')!.parentElement!.style.display = 'none';
       panel.querySelector<HTMLElement>('#cp-spatial-align-section')!.style.display = 'none';
       return;
@@ -831,6 +1065,7 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     // ── Restore sections visibility for selection mode ───────────────────────
     panel.querySelector<HTMLElement>('#cp-layer-actions')!.parentElement!.style.display = '';
     panel.querySelector<HTMLElement>('#cp-actions')!.parentElement!.style.display = '';
+    formatPainterBtn.style.display = selected.length === 1 ? '' : 'none';
 
     const first = selected[0]!;
     const allText = selected.every((el) => el.type === 'text');
@@ -868,8 +1103,18 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     });
     syncAriaPressed(panel.querySelector<HTMLElement>('#cp-roughness-presets')!, '.cp-btn');
 
+    // Update line cap presets
+    panel.querySelectorAll<HTMLButtonElement>('#cp-linecap-presets .cp-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset['cap'] === (first.lineCap ?? 'round'));
+    });
+    syncAriaPressed(panel.querySelector<HTMLElement>('#cp-linecap-presets')!, '.cp-btn');
+
+    // Update shadow toggle
+    shadowBtn.classList.toggle('active', (first.shadowBlur ?? 0) > 0);
+    syncAriaPressed(panel.querySelector<HTMLElement>('#cp-shadow-toggle')!, '.cp-btn');
+
     // Update border presets
-    const cr = first.type === 'rectangle' ? (first.cornerRadius ?? 0) : 0;
+    const cr = (first.type === 'rectangle' || first.type === 'rhombus') ? (first.cornerRadius ?? 0) : 0;
     panel.querySelectorAll<HTMLButtonElement>('#cp-border-presets .cp-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['border'] === (cr > 0 ? 'rounded' : 'sharp'));
     });
@@ -882,9 +1127,11 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     // Dynamic section visibility based on selected element types
     const FILL_TYPES = new Set(['rectangle', 'ellipse', 'rhombus', 'text']);
     const STYLE_TYPES = new Set(['rectangle', 'ellipse', 'rhombus', 'line', 'arrow']);
+    const CAP_TYPES = new Set(['line', 'arrow', 'freehand']);
     const hasFill = !allImage && selected.some((el) => FILL_TYPES.has(el.type));
     const hasStyle = !allImage && !allText && selected.some((el) => STYLE_TYPES.has(el.type));
-    const hasBorder = selected.some((el) => el.type === 'rectangle');
+    const hasLineCap = !allImage && !allText && selected.some((el) => CAP_TYPES.has(el.type));
+    const hasBorder = selected.some((el) => el.type === 'rectangle' || el.type === 'rhombus');
     const hasWidth = !allText && !allImage;
 
     const strokeSection = panel.querySelector('#cp-stroke-swatches')!.parentElement!.parentElement!;
@@ -894,6 +1141,8 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
     panel.querySelector('#cp-width-presets')!.parentElement!.style.display = hasWidth ? '' : 'none';
     panel.querySelector('#cp-style-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
     panel.querySelector('#cp-roughness-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
+    (panel.querySelector('#cp-linecap-section') as HTMLElement).style.display = hasLineCap ? '' : 'none';
+    (panel.querySelector('#cp-shadow-section') as HTMLElement).style.display = allImage ? 'none' : '';
     panel.querySelector('#cp-border-presets')!.parentElement!.style.display = hasBorder ? '' : 'none';
 
     // Spatial alignment section — only when ≥2 elements are selected
@@ -921,6 +1170,12 @@ export function initContextPanel(workspace: HTMLElement, history: History): void
         btn.classList.toggle('active', btn.dataset['align'] === (first.textAlign ?? 'left'));
       });
       syncAriaPressed(panel.querySelector<HTMLElement>('#cp-align-presets')!, '.cp-btn');
+      // Text format buttons
+      panel.querySelectorAll<HTMLButtonElement>('#cp-text-format .cp-btn').forEach((btn) => {
+        const k = btn.dataset['fmt'] as 'bold' | 'italic' | 'underline' | 'strikethrough' | undefined;
+        btn.classList.toggle('active', k ? !!(first as unknown as Record<string, unknown>)[k] : false);
+      });
+      syncAriaPressed(panel.querySelector<HTMLElement>('#cp-text-format')!, '.cp-btn');
     }
   }
 
