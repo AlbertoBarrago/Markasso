@@ -42,15 +42,17 @@ const IC = {
 
 type ToolDef = { tool: ActiveTool; icon: string; label: string; key: string; num: string };
 
-// Line group flyout: line (default, key 6) + curve
+// Line group: line is the main button (key 6); polygon lives in the flyout only.
+// Curve is a standalone button — never appears in the flyout.
 const LINE_GROUP_TOOLS: ToolDef[] = [
-  { tool: 'line',  icon: IC.line,  label: t('line'),  key: 'L / 6', num: '6' },
-  { tool: 'curve', icon: IC.curve, label: t('curve'), key: 'C',     num: '' },
+  { tool: 'line',    icon: IC.line,    label: t('line'),    key: 'L / 6', num: '6' },
+  { tool: 'polygon', icon: IC.polygon, label: t('polygon'), key: 'O',     num: '' },
 ];
-
-// Polygon — standalone button next to the line group
-const POLYGON_DEF: ToolDef = { tool: 'polygon', icon: IC.polygon, label: t('polygon'), key: 'O', num: '' };
+// Tools that make the split button "active" (line or polygon selected)
 const LINE_GROUP_NAMES = new Set<ActiveTool>(LINE_GROUP_TOOLS.map((s) => s.tool));
+
+// Curve — standalone button placed right after the line group
+const CURVE_DEF: ToolDef = { tool: 'curve', icon: IC.curve, label: t('curve'), key: 'C', num: '' };
 
 // Main toolbar buttons — numbers 1–8 in order, then eraser (0)
 const TOOLS: ToolDef[] = [
@@ -159,21 +161,22 @@ export function initToolbar(container: HTMLElement, history: History): void {
     }
   });
 
-  for (const ld of LINE_GROUP_TOOLS) {
-    const lb = document.createElement('button');
-    lb.className = 'tb-btn tb-group-flyout-btn';
-    lb.title = `${ld.label} (${ld.key})`;
-    lb.setAttribute('aria-label', ld.label);
-    lb.setAttribute('role', 'menuitem');
-    lb.innerHTML = `${ld.icon}${ld.num ? `<span class="tb-btn-key">${ld.num}</span>` : ''}`;
-    lb.addEventListener('click', (e) => {
-      e.stopPropagation();
-      lastLineTool = ld.tool;
-      history.dispatch({ type: 'SET_TOOL', tool: ld.tool });
-      closeFlyout();
-    });
-    lineFlyout.appendChild(lb);
-  }
+  // Flyout shows only polygon — line is already the main button, no duplication
+  const polygonFlyoutDef = LINE_GROUP_TOOLS.find((s) => s.tool === 'polygon')!;
+  const polygonFlyoutBtn = document.createElement('button');
+  polygonFlyoutBtn.className = 'tb-btn tb-group-flyout-btn';
+  polygonFlyoutBtn.title = `${polygonFlyoutDef.label} (${polygonFlyoutDef.key})`;
+  polygonFlyoutBtn.setAttribute('aria-label', polygonFlyoutDef.label);
+  polygonFlyoutBtn.setAttribute('role', 'menuitem');
+  polygonFlyoutBtn.dataset['tool'] = 'polygon';
+  polygonFlyoutBtn.innerHTML = polygonFlyoutDef.icon;
+  polygonFlyoutBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    lastLineTool = 'polygon';
+    history.dispatch({ type: 'SET_TOOL', tool: 'polygon' });
+    closeFlyout();
+  });
+  lineFlyout.appendChild(polygonFlyoutBtn);
 
   document.addEventListener('pointerdown', (e) => {
     if (lineFlyoutOpen && !lineWrap.contains(e.target as Node)) {
@@ -184,21 +187,21 @@ export function initToolbar(container: HTMLElement, history: History): void {
   lineSplit.append(lineBtn, lineChevron);
   lineWrap.append(lineSplit, lineFlyout);
 
-  // Polygon — standalone button, placed right after line group
-  const polygonBtn = document.createElement('button');
-  polygonBtn.className = 'tb-btn';
-  polygonBtn.title = `${POLYGON_DEF.label} (${POLYGON_DEF.key})`;
-  polygonBtn.setAttribute('aria-label', POLYGON_DEF.label);
-  polygonBtn.setAttribute('aria-pressed', 'false');
-  polygonBtn.innerHTML = POLYGON_DEF.icon;
-  polygonBtn.addEventListener('click', () => history.dispatch({ type: 'SET_TOOL', tool: 'polygon' }));
-  toolBtns.set('polygon', polygonBtn);
+  // Curve — standalone button, placed right after line group
+  const curveBtn = document.createElement('button');
+  curveBtn.className = 'tb-btn';
+  curveBtn.title = `${CURVE_DEF.label} (${CURVE_DEF.key})`;
+  curveBtn.setAttribute('aria-label', CURVE_DEF.label);
+  curveBtn.setAttribute('aria-pressed', 'false');
+  curveBtn.innerHTML = CURVE_DEF.icon;
+  curveBtn.addEventListener('click', () => history.dispatch({ type: 'SET_TOOL', tool: 'curve' }));
+  toolBtns.set('curve', curveBtn);
 
   TOOLS.forEach((toolDef) => {
-    // Insert line group + polygon between arrow (5) and freehand (7)
+    // Insert line group + curve between arrow (5) and freehand (7)
     if (toolDef.tool === 'freehand') {
       centerPill.appendChild(lineWrap);
-      centerPill.appendChild(polygonBtn);
+      centerPill.appendChild(curveBtn);
     }
 
     if (toolDef.tool === 'eraser') {
@@ -443,13 +446,15 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const toolsPopup = document.createElement('div');
   toolsPopup.id = 'mobile-tools-popup';
 
-  // Build mobile tool list: expand line group (line+curve) + polygon after arrow
+  // Build mobile tool list: line, curve, polygon after arrow
   const mobileTools: ToolDef[] = [];
   for (const toolDef of TOOLS) {
     mobileTools.push(toolDef);
     if (toolDef.tool === 'arrow') {
-      for (const ld of LINE_GROUP_TOOLS) mobileTools.push(ld);
-      mobileTools.push(POLYGON_DEF);
+      // line (from group), curve (standalone), polygon (from flyout)
+      mobileTools.push(LINE_GROUP_TOOLS[0]!); // line
+      mobileTools.push(CURVE_DEF);            // curve
+      mobileTools.push(LINE_GROUP_TOOLS.find((s) => s.tool === 'polygon')!); // polygon
     }
   }
 
@@ -510,14 +515,8 @@ export function initToolbar(container: HTMLElement, history: History): void {
     // Update line group button
     if (LINE_GROUP_NAMES.has(activeTool)) lastLineTool = activeTool;
     updateLineBtn(activeTool);
-    lineFlyout.querySelectorAll<HTMLButtonElement>('.tb-group-flyout-btn').forEach((lb, i) => {
-      const ld = LINE_GROUP_TOOLS[i];
-      if (ld) {
-        lb.classList.toggle('active', ld.tool === activeTool);
-        // Hide the currently active tool — already shown on the main button
-        lb.style.display = ld.tool === activeTool ? 'none' : '';
-      }
-    });
+    // Polygon flyout button: highlight when active; never hide (line isn't in flyout)
+    polygonFlyoutBtn.classList.toggle('active', activeTool === 'polygon');
     for (const [toolName, b] of toolBtns) {
       const isActive = toolName === activeTool;
       b.classList.toggle('active', isActive);
