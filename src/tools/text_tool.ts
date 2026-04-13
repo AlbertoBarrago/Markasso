@@ -110,6 +110,7 @@ export class TextTool implements Tool {
     const scaledWidth = width * viewport.zoom;
 
     const ta = document.createElement('textarea');
+    ta.spellcheck = true;
     ta.style.position   = 'fixed';
     ta.style.left       = `${screenX + canvasRect.left}px`;
     ta.style.top        = `${screenY + canvasRect.top}px`;
@@ -202,6 +203,7 @@ export class TextTool implements Tool {
     const scaledFont = appState.fontSize * viewport.zoom;
 
     const ta = document.createElement('textarea');
+    ta.spellcheck = true;
     ta.style.position    = 'fixed';
     ta.style.left        = `${screenX + canvasRect.left}px`;
     ta.style.top         = `${screenY + canvasRect.top}px`;
@@ -312,6 +314,7 @@ export class TextTool implements Tool {
     const scaledFont = appState.fontSize * viewport.zoom;
 
     const ta = document.createElement('textarea');
+    ta.spellcheck = true;
     ta.style.position     = 'fixed';
     ta.style.left         = `${screenX + canvasRect.left}px`;
     ta.style.top          = `${screenY + canvasRect.top}px`;
@@ -426,6 +429,7 @@ export class TextTool implements Tool {
     const canvasRect = ctx.canvas.getBoundingClientRect();
 
     const ta = document.createElement('textarea');
+    ta.spellcheck = true;
     ta.value = el.content;
 
     ta.style.position   = 'fixed';

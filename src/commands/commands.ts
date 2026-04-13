@@ -13,6 +13,7 @@ export type Command =
       x?: number; y?: number;
       width?: number; height?: number;
       x2?: number; y2?: number;
+      cx?: number; cy?: number;
       fontSize?: number;
       points?: ReadonlyArray<readonly [number, number]>;
       startElementId?: string | null;
@@ -62,6 +63,16 @@ export type Command =
       opacity?:       number;
       roughness?:     number;
       strokeStyle?:   'solid' | 'dashed' | 'dotted';
+      lineCap?:       'round' | 'butt' | 'square';
+      lineJoin?:      'round' | 'miter' | 'bevel';
+      shadowBlur?:    number;
+      shadowColor?:   string;
+      shadowOffsetX?: number;
+      shadowOffsetY?: number;
       cornerRadius?:  number;
       textAlign?:     'left' | 'center' | 'right';
+      bold?:          boolean;
+      italic?:        boolean;
+      underline?:     boolean;
+      strikethrough?: boolean;
     };

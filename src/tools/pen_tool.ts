@@ -8,13 +8,18 @@ const SMOOTHING_FACTOR = 0.5; // Higher = smoother but less responsive (0-1)
 export class PenTool implements Tool {
   private drawing = false;
   private points: [number, number][] = [];
+  private pressures: number[] = [];
   private smoothedPoints: [number, number][] = [];
+  private smoothedPressures: number[] = [];
   preview: FreehandElement | null = null;
 
-  onMouseDown(_e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+  onMouseDown(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
     this.drawing = true;
+    const pressure = (e as PointerEvent).pressure ?? 0.5;
     this.points = [[worldX, worldY]];
+    this.pressures = [pressure > 0 ? pressure : 0.5];
     this.smoothedPoints = [[worldX, worldY]];
+    this.smoothedPressures = [this.pressures[0]!];
     this.preview = null;
     const { selectedIds, appState } = ctx.history.present;
     if (selectedIds.size > 0 || appState.lastCreatedId != null) {
@@ -22,7 +27,7 @@ export class PenTool implements Tool {
     }
   }
 
-  onMouseMove(_e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+  onMouseMove(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
     if (!this.drawing) return;
 
     // Only record a point if it's far enough from the last one
@@ -31,25 +36,33 @@ export class PenTool implements Tool {
     const dy = worldY - last[1];
     if (dx * dx + dy * dy < MIN_DIST_SQ) return;
 
+    const rawPressure = (e as PointerEvent).pressure ?? 0;
+    const pressure = rawPressure > 0 ? rawPressure : 0.5;
     this.points.push([worldX, worldY]);
+    this.pressures.push(pressure);
 
     // Apply exponential moving average smoothing
     const prevSmoothed = this.smoothedPoints[this.smoothedPoints.length - 1]!;
     const smoothedX = prevSmoothed[0] + (worldX - prevSmoothed[0]) * SMOOTHING_FACTOR;
     const smoothedY = prevSmoothed[1] + (worldY - prevSmoothed[1]) * SMOOTHING_FACTOR;
+    const prevSmoothedP = this.smoothedPressures[this.smoothedPressures.length - 1]!;
+    const smoothedP = prevSmoothedP + (pressure - prevSmoothedP) * SMOOTHING_FACTOR;
     this.smoothedPoints.push([smoothedX, smoothedY]);
+    this.smoothedPressures.push(smoothedP);
 
     // Create preview as soon as we have at least 2 points
     if (this.smoothedPoints.length < 2) return;
 
     const { appState } = ctx.history.present;
     const origin = this.smoothedPoints[0] ?? [0, 0];
+    const hasPressure = this.smoothedPressures.some((p) => p !== 0.5);
     this.preview = {
       id: '__preview__',
       type: 'freehand',
       x: origin[0],
       y: origin[1],
       points: this.smoothedPoints.map((p) => p as [number, number]),
+      ...(hasPressure && { pressures: [...this.smoothedPressures] }),
       strokeColor: appState.strokeColor,
       fillColor: 'transparent',
       strokeWidth: appState.strokeWidth,
@@ -65,14 +78,18 @@ export class PenTool implements Tool {
     // or a touchcancel event fired). This prevents unwanted partial strokes on mobile.
     this.drawing = false;
     this.points = [];
+    this.pressures = [];
     this.smoothedPoints = [];
+    this.smoothedPressures = [];
     this.preview = null;
   }
 
   onDeactivate(_ctx: ToolContext): void {
     this.drawing = false;
     this.points = [];
+    this.pressures = [];
     this.smoothedPoints = [];
+    this.smoothedPressures = [];
     this.preview = null;
   }
 
@@ -84,8 +101,9 @@ export class PenTool implements Tool {
     if (this.smoothedPoints.length < 2) return;
 
     const { appState } = ctx.history.present;
-    const simplified = simplifyRDP(this.smoothedPoints, RDP_EPSILON);
-    const origin = simplified[0] ?? [0, 0];
+    const simplified = simplifyRDP(this.smoothedPoints, this.smoothedPressures, RDP_EPSILON);
+    const origin = simplified.points[0] ?? [0, 0];
+    const hasPressure = simplified.pressures.some((p) => p !== 0.5);
     ctx.history.dispatch({
       type: 'CREATE_ELEMENT',
       select: false,
@@ -94,7 +112,8 @@ export class PenTool implements Tool {
         type: 'freehand',
         x: origin[0],
         y: origin[1],
-        points: simplified.map((p) => p as [number, number]),
+        points: simplified.points.map((p) => p as [number, number]),
+        ...(hasPressure && { pressures: simplified.pressures }),
         strokeColor: appState.strokeColor,
         fillColor: 'transparent',
         strokeWidth: appState.strokeWidth,
@@ -110,9 +129,13 @@ export class PenTool implements Tool {
   }
 }
 
-/** Ramer-Douglas-Peucker stroke simplification */
-function simplifyRDP(points: [number, number][], epsilon: number): [number, number][] {
-  if (points.length <= 2) return points;
+/** Ramer-Douglas-Peucker stroke simplification (preserves corresponding pressure values) */
+function simplifyRDP(
+  points: [number, number][],
+  pressures: number[],
+  epsilon: number,
+): { points: [number, number][]; pressures: number[] } {
+  if (points.length <= 2) return { points, pressures };
 
   let maxDist = 0;
   let maxIdx = 0;
@@ -128,12 +151,15 @@ function simplifyRDP(points: [number, number][], epsilon: number): [number, numb
   }
 
   if (maxDist > epsilon) {
-    const left = simplifyRDP(points.slice(0, maxIdx + 1), epsilon);
-    const right = simplifyRDP(points.slice(maxIdx), epsilon);
-    return [...left.slice(0, -1), ...right];
+    const left = simplifyRDP(points.slice(0, maxIdx + 1), pressures.slice(0, maxIdx + 1), epsilon);
+    const right = simplifyRDP(points.slice(maxIdx), pressures.slice(maxIdx), epsilon);
+    return {
+      points: [...left.points.slice(0, -1), ...right.points],
+      pressures: [...left.pressures.slice(0, -1), ...right.pressures],
+    };
   }
 
-  return [first, last];
+  return { points: [first, last], pressures: [pressures[0]!, pressures[pressures.length - 1]!] };
 }
 
 function perpendicularDist(

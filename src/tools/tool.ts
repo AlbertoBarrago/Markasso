@@ -18,6 +18,7 @@ export interface Tool {
    * than committing a partial result.
    */
   onCancel?(ctx: ToolContext): void;
+  onDblClick?(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void;
   onKeyDown?(e: KeyboardEvent, ctx: ToolContext): void;
   onActivate?(ctx: ToolContext): void;
   onDeactivate?(ctx: ToolContext): void;

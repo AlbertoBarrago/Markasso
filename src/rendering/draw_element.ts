@@ -9,6 +9,25 @@ function resolveStrokeColorForTheme(strokeColor: string): string {
   return strokeColor.toLowerCase() === '#e2e2ef' ? '#000000' : strokeColor;
 }
 
+/**
+ * In dark mode a pure-black shadow is invisible against the dark canvas.
+ * Map it to a subtle white/light glow so it reads on both themes.
+ */
+function resolveShadowColorForTheme(shadowColor: string): string {
+  if (typeof document === 'undefined') return shadowColor;
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  if (isLight) return shadowColor;
+  // Convert black-based rgba to a white glow
+  const lc = shadowColor.toLowerCase().replace(/\s/g, '');
+  if (lc.startsWith('rgba(0,0,0') || lc === '#000' || lc === '#000000') {
+    // Extract alpha and use it for a white glow (capped at 0.25 to stay subtle)
+    const m = lc.match(/rgba\(0,0,0,([\d.]+)\)/);
+    const alpha = m?.[1] ? Math.min(parseFloat(m[1]) * 0.7, 0.25) : 0.15;
+    return `rgba(255,255,255,${alpha.toFixed(2)})`;
+  }
+  return shadowColor;
+}
+
 export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allElements?: ReadonlyArray<Element>, editingShapeLabelId?: string | null): void {
   ctx.save();
   const strokeColor = resolveStrokeColorForTheme(el.strokeColor);
@@ -16,8 +35,8 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
   ctx.strokeStyle = strokeColor;
   ctx.lineWidth = el.strokeWidth;
   ctx.fillStyle = el.fillColor === 'transparent' ? 'rgba(0,0,0,0)' : el.fillColor;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
+  ctx.lineCap = el.lineCap ?? 'round';
+  ctx.lineJoin = el.lineJoin ?? 'round';
 
   // Apply stroke style (dash pattern)
   const strokeStyle = el.strokeStyle ?? 'solid';
@@ -28,6 +47,13 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
     ctx.lineCap = 'round';
   } else {
     ctx.setLineDash([]);
+  }
+
+  if (el.shadowBlur && el.shadowBlur > 0) {
+    ctx.shadowBlur = el.shadowBlur;
+    ctx.shadowColor = resolveShadowColorForTheme(el.shadowColor ?? 'rgba(0,0,0,0.35)') as string;
+    ctx.shadowOffsetX = el.shadowOffsetX ?? 4;
+    ctx.shadowOffsetY = el.shadowOffsetY ?? 4;
   }
 
   if (el.rotation) {
@@ -60,7 +86,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
     case 'rhombus': {
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
-      drawRhombus(ctx, el.x, el.y, el.width, el.height, roughness, seed);
+      drawRhombus(ctx, el.x, el.y, el.width, el.height, roughness, seed, el.cornerRadius ?? 0);
       if (el.label && editingShapeLabelId !== el.id) {
         const rx = el.width < 0 ? el.x + el.width : el.x;
         const ry = el.height < 0 ? el.y + el.height : el.y;
@@ -147,15 +173,34 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       }
       break;
     }
+    case 'curve': {
+      ctx.beginPath();
+      ctx.moveTo(el.x, el.y);
+      ctx.quadraticCurveTo(el.cx, el.cy, el.x2, el.y2);
+      ctx.stroke();
+      break;
+    }
+    case 'polygon': {
+      if (el.points.length < 2) break;
+      ctx.beginPath();
+      ctx.moveTo(el.points[0]![0], el.points[0]![1]);
+      for (let i = 1; i < el.points.length; i++) {
+        ctx.lineTo(el.points[i]![0], el.points[i]![1]);
+      }
+      if (el.closed) ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      break;
+    }
     case 'freehand':
-      drawFreehand(ctx, el.points);
+      drawFreehand(ctx, el.points, el.strokeWidth, el.pressures);
       break;
     case 'text':
       ctx.setLineDash([]);
       if (el.isCode) {
         drawCode(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, strokeColor, el.width, el.height, el.textAlign ?? 'left');
       } else {
-        drawText(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, strokeColor, el.fillColor, el.width, el.height, el.textAlign ?? 'left');
+        drawText(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, strokeColor, el.fillColor, el.width, el.height, el.textAlign ?? 'left', el.bold, el.italic, el.underline, el.strikethrough);
       }
       break;
     case 'image':
@@ -280,6 +325,51 @@ function drawEllipse(
   ctx.stroke();
 }
 
+function drawRhombusPath(
+  ctx: CanvasRenderingContext2D,
+  rx: number,
+  ry: number,
+  rw: number,
+  rh: number,
+  cr: number,
+): void {
+  const top: [number, number]    = [rx + rw / 2, ry];
+  const right: [number, number]  = [rx + rw,     ry + rh / 2];
+  const bottom: [number, number] = [rx + rw / 2, ry + rh];
+  const left: [number, number]   = [rx,           ry + rh / 2];
+  const corners = [top, right, bottom, left];
+
+  ctx.beginPath();
+  if (cr <= 0) {
+    ctx.moveTo(top[0], top[1]);
+    for (let i = 1; i < 4; i++) ctx.lineTo(corners[i]![0], corners[i]![1]);
+    ctx.closePath();
+  } else {
+    // Draw each corner with arcTo for rounded corners
+    for (let i = 0; i < 4; i++) {
+      const prev = corners[(i + 3) % 4]!;
+      const curr = corners[i]!;
+      const next = corners[(i + 1) % 4]!;
+      // Direction vectors from curr to prev and curr to next
+      const d1x = prev[0] - curr[0];
+      const d1y = prev[1] - curr[1];
+      const d2x = next[0] - curr[0];
+      const d2y = next[1] - curr[1];
+      const len1 = Math.hypot(d1x, d1y);
+      const len2 = Math.hypot(d2x, d2y);
+      const r = Math.min(cr, len1 / 2, len2 / 2);
+      const startX = curr[0] + (d1x / len1) * r;
+      const startY = curr[1] + (d1y / len1) * r;
+      const endX   = curr[0] + (d2x / len2) * r;
+      const endY   = curr[1] + (d2y / len2) * r;
+      if (i === 0) ctx.moveTo(startX, startY);
+      else ctx.lineTo(startX, startY);
+      ctx.arcTo(curr[0], curr[1], endX, endY, r);
+    }
+    ctx.closePath();
+  }
+}
+
 function drawRhombus(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -288,24 +378,16 @@ function drawRhombus(
   height: number,
   roughness: number,
   seed: number,
+  cornerRadius = 0,
 ): void {
   const rx = width < 0 ? x + width : x;
   const ry = height < 0 ? y + height : y;
   const rw = Math.abs(width);
   const rh = Math.abs(height);
+  const cr = cornerRadius > 0 ? Math.min(cornerRadius, rw / 4, rh / 4) : 0;
 
-  const top: [number, number]    = [rx + rw / 2, ry];
-  const right: [number, number]  = [rx + rw,     ry + rh / 2];
-  const bottom: [number, number] = [rx + rw / 2, ry + rh];
-  const left: [number, number]   = [rx,           ry + rh / 2];
-
-  // Fill with clean diamond
-  ctx.beginPath();
-  ctx.moveTo(top[0], top[1]);
-  ctx.lineTo(right[0], right[1]);
-  ctx.lineTo(bottom[0], bottom[1]);
-  ctx.lineTo(left[0], left[1]);
-  ctx.closePath();
+  // Fill with clean diamond (supports corner radius)
+  drawRhombusPath(ctx, rx, ry, rw, rh, cr);
   ctx.fill();
 
   if (roughness < 0.05) {
@@ -313,7 +395,11 @@ function drawRhombus(
     return;
   }
 
-  // Wobbly stroke along 4 edges
+  // Wobbly stroke along 4 edges (no corner radius for rough mode)
+  const top: [number, number]    = [rx + rw / 2, ry];
+  const right: [number, number]  = [rx + rw,     ry + rh / 2];
+  const bottom: [number, number] = [rx + rw / 2, ry + rh];
+  const left: [number, number]   = [rx,           ry + rh / 2];
   const corners = [top, right, bottom, left];
   const amp = roughness * Math.min(rw, rh) * 0.03;
 
@@ -449,16 +535,33 @@ function drawArrow(
 
 function drawFreehand(
   ctx: CanvasRenderingContext2D,
-  points: ReadonlyArray<readonly [number, number]>
+  points: ReadonlyArray<readonly [number, number]>,
+  baseWidth: number,
+  pressures?: ReadonlyArray<number>,
 ): void {
   if (points.length < 2) return;
-  const p0 = points[0]!;
 
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
+  // With pressure: draw each segment separately with varying width
+  if (pressures && pressures.length === points.length) {
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i]!;
+      const p2 = points[i + 1]!;
+      const avgPressure = ((pressures[i] ?? 0.5) + (pressures[i + 1] ?? 0.5)) / 2;
+      ctx.lineWidth = Math.max(0.5, baseWidth * avgPressure * 2);
+      ctx.beginPath();
+      ctx.moveTo(p1[0], p1[1]);
+      ctx.lineTo(p2[0], p2[1]);
+      ctx.stroke();
+    }
+    return;
+  }
+
+  const p0 = points[0]!;
   ctx.beginPath();
   ctx.moveTo(p0[0], p0[1]);
 
@@ -527,21 +630,57 @@ function drawText(
   elWidth: number,
   elHeight: number,
   textAlign: 'left' | 'center' | 'right' = 'left',
+  bold?: boolean,
+  italic?: boolean,
+  underline?: boolean,
+  strikethrough?: boolean,
 ): void {
   if (bgColor !== 'transparent') {
     ctx.fillStyle = bgColor;
     ctx.fillRect(x, y, elWidth, elHeight);
   }
-  ctx.font = `${fontSize}px ${fontFamily}`;
+  const fontStyle = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${fontSize}px ${fontFamily}`;
+  ctx.font = fontStyle;
   ctx.fillStyle = color;
   ctx.textBaseline = 'top';
   ctx.textAlign = textAlign;
   const drawX = textAlign === 'center' ? x + elWidth / 2
     : textAlign === 'right'  ? x + elWidth
     : x;
+  const lineHeight = fontSize * 1.2;
   const lines = buildWrappedLines(ctx, content, elWidth);
   for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i] ?? '', drawX, y + i * fontSize * 1.2);
+    const lineY = y + i * lineHeight;
+    ctx.fillText(lines[i] ?? '', drawX, lineY);
+
+    if (underline || strikethrough) {
+      const lineText = lines[i] ?? '';
+      const lineW = ctx.measureText(lineText).width;
+      let lineX: number;
+      if (textAlign === 'center') lineX = drawX - lineW / 2;
+      else if (textAlign === 'right') lineX = drawX - lineW;
+      else lineX = drawX;
+
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = Math.max(1, fontSize * 0.06);
+      ctx.setLineDash([]);
+      if (underline) {
+        const uy = lineY + fontSize + ctx.lineWidth;
+        ctx.beginPath();
+        ctx.moveTo(lineX, uy);
+        ctx.lineTo(lineX + lineW, uy);
+        ctx.stroke();
+      }
+      if (strikethrough) {
+        const sy = lineY + fontSize * 0.55;
+        ctx.beginPath();
+        ctx.moveTo(lineX, sy);
+        ctx.lineTo(lineX + lineW, sy);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
   }
   ctx.textAlign = 'left';
 }

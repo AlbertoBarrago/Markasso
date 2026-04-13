@@ -45,7 +45,12 @@ export function reducer(scene: Scene, command: Command): Scene {
             return { ...el, x: el.x + command.dx, y: el.y + command.dy,
                            x2: el.x2 + command.dx, y2: el.y2 + command.dy };
           }
-          if (el.type === 'freehand') {
+          if (el.type === 'curve') {
+            return { ...el, x: el.x + command.dx, y: el.y + command.dy,
+                           x2: el.x2 + command.dx, y2: el.y2 + command.dy,
+                           cx: el.cx + command.dx, cy: el.cy + command.dy };
+          }
+          if (el.type === 'freehand' || el.type === 'polygon') {
             return {
               ...el,
               x: el.x + command.dx,
@@ -62,7 +67,7 @@ export function reducer(scene: Scene, command: Command): Scene {
         ...scene,
         elements: scene.elements.map((el) => {
           if (el.id !== command.id) return el;
-          const { x, y, width, height, x2, y2, fontSize, points } = command;
+          const { x, y, width, height, x2, y2, cx, cy, fontSize, points } = command;
           if (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'rhombus' || el.type === 'text' || el.type === 'image') {
             return {
               ...el,
@@ -72,6 +77,16 @@ export function reducer(scene: Scene, command: Command): Scene {
               ...(height   !== undefined && { height }),
               ...(fontSize !== undefined && el.type === 'text' && { fontSize }),
             };
+          }
+          if (el.type === 'curve') {
+            const patch: Record<string, unknown> = {};
+            if (x  !== undefined) patch['x']  = x;
+            if (y  !== undefined) patch['y']  = y;
+            if (x2 !== undefined) patch['x2'] = x2;
+            if (y2 !== undefined) patch['y2'] = y2;
+            if (cx !== undefined) patch['cx'] = cx;
+            if (cy !== undefined) patch['cy'] = cy;
+            return { ...el, ...patch } as Element;
           }
           if (el.type === 'line' || el.type === 'arrow') {
             const { startElementId, endElementId } = command;
@@ -103,7 +118,7 @@ export function reducer(scene: Scene, command: Command): Scene {
             }
             return base;
           }
-          if (el.type === 'freehand') {
+          if (el.type === 'freehand' || el.type === 'polygon') {
             return {
               ...el,
               ...(x      !== undefined && { x }),
@@ -346,7 +361,7 @@ export function reducer(scene: Scene, command: Command): Scene {
       };
 
     case 'APPLY_STYLE': {
-      const { strokeColor, fillColor, strokeWidth, opacity, roughness, strokeStyle, cornerRadius, textAlign } = command;
+      const { strokeColor, fillColor, strokeWidth, opacity, roughness, strokeStyle, lineCap, lineJoin, shadowBlur, shadowColor, shadowOffsetX, shadowOffsetY, cornerRadius, textAlign, bold, italic, underline, strikethrough } = command;
       const patch: Record<string, unknown> = {};
       if (strokeColor   !== undefined) patch['strokeColor']   = strokeColor;
       if (fillColor     !== undefined) patch['fillColor']     = fillColor;
@@ -354,8 +369,18 @@ export function reducer(scene: Scene, command: Command): Scene {
       if (opacity       !== undefined) patch['opacity']       = opacity;
       if (roughness     !== undefined) patch['roughness']     = roughness;
       if (strokeStyle   !== undefined) patch['strokeStyle']   = strokeStyle;
+      if (lineCap       !== undefined) patch['lineCap']       = lineCap;
+      if (lineJoin      !== undefined) patch['lineJoin']      = lineJoin;
+      if (shadowBlur    !== undefined) patch['shadowBlur']    = shadowBlur;
+      if (shadowColor   !== undefined) patch['shadowColor']   = shadowColor;
+      if (shadowOffsetX !== undefined) patch['shadowOffsetX'] = shadowOffsetX;
+      if (shadowOffsetY !== undefined) patch['shadowOffsetY'] = shadowOffsetY;
       if (cornerRadius  !== undefined) patch['cornerRadius']  = cornerRadius;
       if (textAlign     !== undefined) patch['textAlign']     = textAlign;
+      if (bold          !== undefined) patch['bold']          = bold;
+      if (italic        !== undefined) patch['italic']        = italic;
+      if (underline     !== undefined) patch['underline']     = underline;
+      if (strikethrough !== undefined) patch['strikethrough'] = strikethrough;
 
       // appState patch (only properties that belong to appState)
       const statePatch: Record<string, unknown> = {};

@@ -169,7 +169,16 @@ export function getElementBounds(el: Element, allElements?: ReadonlyArray<Elemen
         h: Math.abs(pts.y2 - pts.y),
       };
     }
-    case 'freehand': {
+    case 'curve': {
+      // Tight bounds of quadratic bezier including control point
+      const minX = Math.min(el.x, el.x2, el.cx);
+      const minY = Math.min(el.y, el.y2, el.cy);
+      const maxX = Math.max(el.x, el.x2, el.cx);
+      const maxY = Math.max(el.y, el.y2, el.cy);
+      return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+    }
+    case 'freehand':
+    case 'polygon': {
       if (el.points.length === 0) return { x: el.x, y: el.y, w: 0, h: 0 };
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       for (const [px, py] of el.points) {
@@ -501,4 +510,38 @@ export function hitTestHandle(
     }
   }
   return null;
+}
+
+export function drawAlignGuides(
+  ctx: CanvasRenderingContext2D,
+  guides: Array<{ axis: 'x' | 'y'; worldPos: number }>,
+  viewport: Viewport,
+  canvasWidth: number,
+  canvasHeight: number,
+): void {
+  if (guides.length === 0) return;
+  const dpr = window.devicePixelRatio;
+  ctx.save();
+  ctx.resetTransform();
+  ctx.strokeStyle = '#4d96ff';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.globalAlpha = 0.85;
+
+  for (const guide of guides) {
+    const [sx, sy] = worldToScreen(viewport, guide.worldPos, guide.worldPos);
+    ctx.beginPath();
+    if (guide.axis === 'x') {
+      const px = sx * dpr;
+      ctx.moveTo(px, 0);
+      ctx.lineTo(px, canvasHeight);
+    } else {
+      const py = sy * dpr;
+      ctx.moveTo(0, py);
+      ctx.lineTo(canvasWidth, py);
+    }
+    ctx.stroke();
+  }
+
+  ctx.restore();
 }
