@@ -15,7 +15,7 @@ import {
 } from '../rendering/draw_selection';
 import { worldToScreen } from '../core/viewport';
 
-type DragMode = 'none' | 'move' | 'marquee' | 'resize' | 'rotate' | 'endpoint';
+type DragMode = 'none' | 'move' | 'marquee' | 'resize' | 'rotate' | 'endpoint' | 'curve-cp';
 
 const SNAP_RADIUS_PX = 20;
 
@@ -56,6 +56,9 @@ export class SelectTool implements Tool {
   // Original bounds per element for multi-selection resize (keyed by element id)
   private resizeOrigElBounds = new Map<string, { x: number; y: number; w: number; h: number }>();
 
+  // Curve control-point drag state
+  private curveCpElId: string | null = null;
+
   // Endpoint drag state
   private endpointSide: 'start' | 'end' | null = null;
   private endpointElId: string | null = null;
@@ -82,7 +85,55 @@ export class SelectTool implements Tool {
     return [this.marqueeX1, this.marqueeY1, this.marqueeX2, this.marqueeY2];
   }
 
+  /** Alignment guides computed during element move. Each guide is a world-space x or y coordinate. */
+  alignGuides: Array<{ axis: 'x' | 'y'; worldPos: number }> = [];
+
+  /**
+   * Format painter: when active, next click on an element applies `formatPainterStyle` to it.
+   * Call `activateFormatPainter()` to start, or Escape to cancel.
+   */
+  formatPainterActive = false;
+  private formatPainterStyle: Record<string, unknown> = {};
+
+  activateFormatPainter(sourceElement: Element): void {
+    this.formatPainterStyle = {
+      strokeColor: sourceElement.strokeColor,
+      fillColor: sourceElement.fillColor,
+      strokeWidth: sourceElement.strokeWidth,
+      opacity: sourceElement.opacity,
+      roughness: sourceElement.roughness,
+      strokeStyle: sourceElement.strokeStyle,
+      lineCap: sourceElement.lineCap,
+      lineJoin: sourceElement.lineJoin,
+      shadowBlur: sourceElement.shadowBlur,
+      shadowColor: sourceElement.shadowColor,
+      shadowOffsetX: sourceElement.shadowOffsetX,
+      shadowOffsetY: sourceElement.shadowOffsetY,
+      ...(sourceElement.type === 'rectangle' || sourceElement.type === 'rhombus' ? { cornerRadius: sourceElement.cornerRadius } : {}),
+    };
+    this.formatPainterActive = true;
+  }
+
   onMouseDown(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+    // Format painter mode: apply captured style to clicked element
+    if (this.formatPainterActive) {
+      const scene = ctx.history.present;
+      const hit = hitTest(scene.elements, worldX, worldY);
+      if (hit) {
+        // Build APPLY_STYLE command from captured style — only defined keys
+        const style = this.formatPainterStyle;
+        const cmd: Record<string, unknown> = { type: 'APPLY_STYLE' };
+        for (const [k, v] of Object.entries(style)) {
+          if (v !== undefined) cmd[k] = v;
+        }
+        ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
+        ctx.history.dispatch(cmd as Parameters<typeof ctx.history.dispatch>[0]);
+      }
+      this.formatPainterActive = false;
+      this.formatPainterStyle = {};
+      return;
+    }
+
     this.lastWorldX = worldX;
     this.lastWorldY = worldY;
 
@@ -95,6 +146,21 @@ export class SelectTool implements Tool {
     this.mouseDownScreenX = screenX;
     this.mouseDownScreenY = screenY;
     this.dragThresholdMet = false;
+
+    // 1a. Check curve control-point handle (single curve selected)
+    if (selectedEls.length === 1) {
+      const el = selectedEls[0]!;
+      if (el.type === 'curve') {
+        const [scx, scy] = worldToScreen(scene.viewport, el.cx, el.cy);
+        const dist = Math.hypot(screenX - scx, screenY - scy);
+        if (dist <= 10) {
+          this.dragMode = 'curve-cp';
+          this.curveCpElId = el.id;
+          ctx.history.beginDrag();
+          return;
+        }
+      }
+    }
 
     // 1. Check endpoint handles (single line/arrow selected)
     if (selectedEls.length === 1) {
@@ -216,6 +282,16 @@ export class SelectTool implements Tool {
   }
 
   onMouseMove(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+    if (this.dragMode === 'curve-cp' && this.curveCpElId) {
+      ctx.history.dispatch({
+        type: 'RESIZE_ELEMENT',
+        id: this.curveCpElId,
+        cx: worldX,
+        cy: worldY,
+      });
+      ctx.onPreviewUpdate?.();
+      return;
+    }
     if (this.dragMode === 'endpoint') {
       const scene = ctx.history.present;
       const el = scene.elements.find((el) => el.id === this.endpointElId);
@@ -263,7 +339,12 @@ export class SelectTool implements Tool {
     if (this.dragMode === 'rotate') {
       const [cx, cy] = this.rotateCenter;
       const angle = Math.atan2(worldY - cy, worldX - cx);
-      const rotation = this.rotateInitialRotation + (angle - this.rotateInitialAngle);
+      let rotation = this.rotateInitialRotation + (angle - this.rotateInitialAngle);
+      if (e.shiftKey) {
+        const SNAP_DEG = 15;
+        const snapRad = (SNAP_DEG * Math.PI) / 180;
+        rotation = Math.round(rotation / snapRad) * snapRad;
+      }
       if (this.rotateElId) {
         ctx.history.dispatch({ type: 'SET_ROTATION', id: this.rotateElId, rotation });
       }
@@ -359,6 +440,9 @@ export class SelectTool implements Tool {
       }
       this.lastWorldX = worldX;
       this.lastWorldY = worldY;
+
+      // Compute alignment guides from updated scene state
+      this.alignGuides = computeAlignGuides(ctx.history.present.elements, ctx.history.present.selectedIds, ctx.history.present.viewport.zoom);
       return;
     }
 
@@ -439,6 +523,11 @@ export class SelectTool implements Tool {
       }
     }
 
+    if (this.dragMode === 'curve-cp') {
+      ctx.history.endDrag();
+      this.curveCpElId = null;
+    }
+
     if (this.dragMode === 'resize' || this.dragMode === 'move' ||
         this.dragMode === 'rotate' || this.dragMode === 'endpoint') {
       ctx.history.endDrag();
@@ -447,6 +536,7 @@ export class SelectTool implements Tool {
     this.endpointSnapTarget = null;
     this.endpointSnapIndicator = null;
     this.endpointSnapElementId = null;
+    this.alignGuides = [];
     this.dragMode = 'none';
     this.resizeHandle = null;
     this.resizeOrigEl = null;
@@ -468,6 +558,11 @@ export class SelectTool implements Tool {
 
   onKeyDown(e: KeyboardEvent, ctx: ToolContext): void {
     if (e.key === 'Escape') {
+      if (this.formatPainterActive) {
+        this.formatPainterActive = false;
+        this.formatPainterStyle = {};
+        return;
+      }
       if (this.activeGroupId) {
         // Exit entered group: re-select whole group
         const scene = ctx.history.present;
@@ -514,11 +609,20 @@ export class SelectTool implements Tool {
   }
 
   getCursor(worldX: number, worldY: number, ctx: ToolContext): string {
+    if (this.formatPainterActive) return 'crosshair';
     const scene = ctx.history.present;
     const selectedEls = scene.elements.filter((el) => scene.selectedIds.has(el.id));
     const [screenX, screenY] = worldToScreen(scene.viewport, worldX, worldY);
 
     if (selectedEls.length > 0) {
+      // Check curve control-point handle
+      if (selectedEls.length === 1) {
+        const el = selectedEls[0]!;
+        if (el.type === 'curve') {
+          const [scx, scy] = worldToScreen(scene.viewport, el.cx, el.cy);
+          if (Math.hypot(screenX - scx, screenY - scy) <= 10) return 'move';
+        }
+      }
       // Check endpoint handles for single line/arrow
       if (selectedEls.length === 1) {
         const el = selectedEls[0]!;
@@ -552,6 +656,7 @@ type ResizePayload = {
   x?: number; y?: number;
   width?: number; height?: number;
   x2?: number; y2?: number;
+  cx?: number; cy?: number;
   fontSize?: number;
   points?: ReadonlyArray<readonly [number, number]>;
 };
@@ -636,7 +741,20 @@ function scaleElement(
       const oy2 = newY + (el.y2 - origB.y) * scaleY;
       return { x: ox, y: oy, x2: ox2, y2: oy2 };
     }
-    case 'freehand': {
+    case 'curve': {
+      const origB = getElementBounds(el);
+      const scaleX = origB.w > 0 ? newW / origB.w : 1;
+      const scaleY = origB.h > 0 ? newH / origB.h : 1;
+      const ox = newX + (el.x - origB.x) * scaleX;
+      const oy = newY + (el.y - origB.y) * scaleY;
+      const ox2 = newX + (el.x2 - origB.x) * scaleX;
+      const oy2 = newY + (el.y2 - origB.y) * scaleY;
+      const ocx = newX + (el.cx - origB.x) * scaleX;
+      const ocy = newY + (el.cy - origB.y) * scaleY;
+      return { x: ox, y: oy, x2: ox2, y2: oy2, cx: ocx, cy: ocy };
+    }
+    case 'freehand':
+    case 'polygon': {
       const origB = getElementBounds(el);
       if (origB.w === 0 || origB.h === 0) return null;
       const scaleX = newW / origB.w;
@@ -725,11 +843,21 @@ function hitTestElement(el: Element, wx: number, wy: number): boolean {
     case 'line':
     case 'arrow':
       return distToSegment(lx, ly, el.x, el.y, el.x2, el.y2) < el.strokeWidth / 2 + PAD;
-    case 'freehand': {
+    case 'curve':
+      // Approximate hit test: check distance to the two segments endpoint→control→endpoint
+      return distToSegment(lx, ly, el.x, el.y, el.cx, el.cy) < el.strokeWidth / 2 + PAD + 6 ||
+             distToSegment(lx, ly, el.cx, el.cy, el.x2, el.y2) < el.strokeWidth / 2 + PAD + 6;
+    case 'freehand':
+    case 'polygon': {
       for (let i = 1; i < el.points.length; i++) {
         const p1 = el.points[i - 1]!;
         const p2 = el.points[i]!;
         if (distToSegment(lx, ly, p1[0], p1[1], p2[0], p2[1]) < el.strokeWidth / 2 + PAD) return true;
+      }
+      if (el.type === 'polygon' && el.closed && el.points.length >= 3) {
+        const first = el.points[0]!;
+        const last = el.points[el.points.length - 1]!;
+        if (distToSegment(lx, ly, last[0], last[1], first[0], first[1]) < el.strokeWidth / 2 + PAD) return true;
       }
       return false;
     }
@@ -742,5 +870,65 @@ function distToSegment(px: number, py: number, x1: number, y1: number, x2: numbe
   if (lenSq === 0) return Math.hypot(px - x1, py - y1);
   const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
   return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+
+// ── Alignment guide computation ───────────────────────────────────────────────
+
+function computeAlignGuides(
+  elements: ReadonlyArray<Element>,
+  selectedIds: ReadonlySet<string>,
+  zoom: number,
+): Array<{ axis: 'x' | 'y'; worldPos: number }> {
+  const selected = elements.filter((el) => selectedIds.has(el.id));
+  const others = elements.filter((el) => !selectedIds.has(el.id) && el.visible !== false);
+  if (selected.length === 0 || others.length === 0) return [];
+
+  // Compute bounding box of all selected elements
+  let selMinX = Infinity, selMinY = Infinity, selMaxX = -Infinity, selMaxY = -Infinity;
+  for (const el of selected) {
+    const b = getElementBounds(el);
+    selMinX = Math.min(selMinX, b.x);
+    selMinY = Math.min(selMinY, b.y);
+    selMaxX = Math.max(selMaxX, b.x + b.w);
+    selMaxY = Math.max(selMaxY, b.y + b.h);
+  }
+  const selCX = (selMinX + selMaxX) / 2;
+  const selCY = (selMinY + selMaxY) / 2;
+  const selXEdges = [selMinX, selCX, selMaxX];
+  const selYEdges = [selMinY, selCY, selMaxY];
+
+  // Tolerance: 5px in screen space
+  const tol = 5 / zoom;
+  const guides: Array<{ axis: 'x' | 'y'; worldPos: number }> = [];
+
+  for (const other of others) {
+    const b = getElementBounds(other);
+    const otherXEdges = [b.x, b.x + b.w / 2, b.x + b.w];
+    const otherYEdges = [b.y, b.y + b.h / 2, b.y + b.h];
+
+    for (const sx of selXEdges) {
+      for (const ox of otherXEdges) {
+        if (Math.abs(sx - ox) <= tol) {
+          const pos = Math.round(ox * 100) / 100;
+          if (!guides.some((g) => g.axis === 'x' && Math.abs(g.worldPos - pos) < tol)) {
+            guides.push({ axis: 'x', worldPos: pos });
+          }
+        }
+      }
+    }
+
+    for (const sy of selYEdges) {
+      for (const oy of otherYEdges) {
+        if (Math.abs(sy - oy) <= tol) {
+          const pos = Math.round(oy * 100) / 100;
+          if (!guides.some((g) => g.axis === 'y' && Math.abs(g.worldPos - pos) < tol)) {
+            guides.push({ axis: 'y', worldPos: pos });
+          }
+        }
+      }
+    }
+  }
+
+  return guides;
 }
 
