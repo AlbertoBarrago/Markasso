@@ -27,3 +27,6 @@ CLAUDE.md
 .dev.vars*
 !.dev.vars.example
 !.env.example
+
+# agent
+memory
