@@ -24,11 +24,21 @@ Select a tool from the toolbar or press its keyboard shortcut.
 | Rhombus    | `D` or `4` | Draw diamond/rhombus shapes |
 | Arrow      | `A` or `5` | Draw arrows |
 | Line       | `L` or `6` | Draw straight lines |
+| Curve      | `C` | Draw quadratic bezier curves |
+| Polygon    | `O` | Draw multi-point polygons and polylines |
 | Pen        | `P` or `7` | Freehand drawing |
 | Text       | `T` or `8` | Add text |
+| Sticky     | `N` | Add a sticky note |
 | Eraser     | `0` | Erase elements by clicking or dragging over them |
 
 Press `Escape` to return to the Select tool at any time.
+
+### Line Group (Line / Curve / Polygon)
+
+Line, Curve, and Polygon share a single toolbar slot (position 6).
+
+- **Click the icon** to activate the last-used tool in the group directly.
+- **Click the `▾` chevron** to open the flyout and switch to a different tool in the group.
 
 ### Tool Lock
 
@@ -53,14 +63,25 @@ Hold `Shift` to snap the angle to 45° increments.
 
 **Connecting arrows to shapes (Smart Links):** hover the arrow tool over any shape — a highlight and cyan ring appear on the nearest border point. Click and drag to start from that point. Move the end near another shape to connect it. The arrow attaches to the border (not the center) and follows the shapes as they move.
 
+### Curve
+Click to set the start point, drag to the end point, release to place the curve. A control point (diamond handle) appears at the midpoint — drag it to adjust the curve's bend. Select the curve and drag any of the three handles to reshape it.
+
+### Polygon
+Click to place each vertex. **Double-click** the last vertex (or click the first vertex again) to close the polygon. Press `Escape` to finish as an open polyline. Polygons support fill, stroke style, and opacity.
+
 ### Pen (Freehand)
-Hold and drag to draw. The stroke is automatically smoothed when you release. The pen tool stays active after each stroke so you can keep drawing without re-selecting.
+Hold and drag to draw. The stroke is automatically smoothed when you release. The pen tool stays active after each stroke so you can keep drawing without re-selecting. Stylus pressure is recorded when available.
+
+### Sticky Note
+Click anywhere to place a sticky note. Type your content and click outside (or press `Escape`) to confirm. Double-click an existing sticky to edit it. Choose the note color from the properties panel.
 
 ### Eraser
 Select the Eraser tool (`0`) then click or drag over elements to delete them. The topmost element under the cursor is erased first. Locked elements are skipped. A glowing slash trail follows the cursor for visual feedback. Elements highlight as the eraser passes over them.
 
 ### Text
 Click anywhere to place a text box and start typing. Press `Enter` to confirm, `Escape` to cancel. Double-click existing text to edit it.
+
+**Formatting:** with a text element selected, the properties panel exposes **Bold**, **Italic**, **Underline**, and **Strikethrough** toggles.
 
 **Code mode:** toggle Code mode in the properties panel to create a monospace block with dark background. Use `Tab` for indentation and `Shift+Enter` to commit.
 
@@ -200,12 +221,16 @@ With an element selected, the **Properties panel** (slider icon in the context t
 - **Stroke color** and **fill color**
 - **Stroke width**
 - **Stroke style:** solid, dashed, dotted
+- **Line cap:** flat / round / square (lines, arrows, curves, freehand)
 - **Opacity** (0–100%)
 - **Roughness** — 0 = crisp, higher = hand-drawn / sketchy look
+- **Shadow** — blur, color, and offset for a drop shadow
 - **Corners** — Sharp or Rounded (rectangles only)
 - **Font** and **font size** (text elements)
+- **Formatting** — Bold, Italic, Underline, Strikethrough (text elements)
 - **Alignment** — left / center / right (text elements)
 - **Code mode** — monospace block with dark background (text elements)
+- **Note color** — preset palette (sticky notes)
 
 ---
 
@@ -227,6 +252,31 @@ With an element selected, the **Properties panel** (slider icon in the context t
 | Fit all elements | `F` |
 | Reset zoom to 100% | `Shift+0` |
 | Toggle all panels | `\` (backslash) |
+| Minimap | Bottom-right corner — click or drag the minimap to pan |
+
+---
+
+## Command Palette
+
+Press `Ctrl+K` to open the command palette. Type to fuzzy-search all available actions — export formats, tool switches, zoom levels, theme changes, language settings, and alignment operations. Use `↑` / `↓` to navigate and `Enter` to execute. Press `Escape` to dismiss.
+
+---
+
+## Element Search
+
+Press `Ctrl+F` to search elements on the canvas by their label or text content. Select a result to pan the viewport to that element and select it. Press `Escape` to close. Hidden on touch/mobile devices.
+
+---
+
+## Minimap
+
+A small overview panel in the bottom-right corner shows all elements at a reduced scale. The blue rectangle represents the current viewport. Click anywhere on the minimap to jump there; drag to pan continuously. Collapse or expand it with the toggle button.
+
+---
+
+## Share Link
+
+Click the **share icon** in the top-right toolbar to encode the entire scene into a URL. The link is copied to your clipboard automatically. Share it — anyone who opens the URL sees the same canvas, ready to continue editing.
 
 ---
 
@@ -247,6 +297,7 @@ Switch between **Dark**, **Light**, and **System** themes from the Settings pane
   - The viewport auto-fits to the imported diagram after conversion.
 - **Export PNG:** downloads a 2× PNG cropped to the bounding box of all elements.
 - **Export SVG:** downloads a clean SVG cropped to the bounding box.
+- **Export HTML:** downloads a standalone `.html` file with the canvas embedded as an image.
 - **Auto-save:** the canvas saves automatically to `localStorage` — your work survives page refreshes.
 
 ---
@@ -262,8 +313,11 @@ Switch between **Dark**, **Light**, and **System** themes from the Settings pane
 | `D` / `4` | Rhombus (Diamond) |
 | `A` / `5` | Arrow |
 | `L` / `6` | Line |
+| `C` | Curve |
+| `O` | Polygon |
 | `P` / `7` | Pen |
 | `T` / `8` | Text |
+| `N` | Sticky note |
 | `0` | Eraser |
 | `?` | Open keyboard shortcuts help dialog |
 | `Escape` | Back to Select / exit group / deselect |
@@ -271,6 +325,8 @@ Switch between **Dark**, **Light**, and **System** themes from the Settings pane
 | `F` | Fit canvas to elements |
 | `Shift+0` | Reset zoom to 100% |
 | `\` | Toggle all UI panels |
+| `Ctrl+K` | Open command palette |
+| `Ctrl+F` | Open element search |
 | `Ctrl+Z` | Undo |
 | `Ctrl+Y` | Redo |
 | `Ctrl+A` | Select all |

@@ -62,8 +62,11 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 | Rhombus (Diamond) | `D` / `4` |
 | Arrow | `A` / `5` |
 | Line | `L` / `6` |
+| Curve (bezier) | `C` |
+| Polygon / Polyline | `O` |
 | Pen (freehand) | `P` / `7` |
 | Text | `T` / `8` |
+| Sticky note | `N` |
 | Eraser | `0` |
 
 ### Canvas & Navigation
@@ -117,9 +120,13 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 | Feature | Description |
 |---|---|
 | **Floating glass UI** | Excalidraw-style islands: lock · hand · tools · eraser, top-right import + export; mobile gets a compact bottom-right action bar |
-| **Properties panel** | Stroke color, fill color, stroke width, stroke style, opacity, roughness, rounded corners; font size + family for text |
+| **Properties panel** | Stroke color, fill color, stroke width, stroke style, linecap icons, opacity, roughness, shadow, rounded corners; font size + family + bold/italic/underline/strikethrough for text |
 | **Tool lock** | Lock button keeps the active drawing tool after placing a shape instead of reverting to Select |
 | **Panel toggle** | `\` (backslash) shows/hides all UI panels for a distraction-free canvas |
+| **Command palette** | `Ctrl+K` — fuzzy-search and run any action without touching the mouse |
+| **Element search** | `Ctrl+F` — search elements by label/content, click to pan and select |
+| **Minimap** | Collapsible canvas overview; click or drag to pan the viewport |
+| **Share link** | Encode the full scene into a URL hash for instant one-click sharing |
 | **Keyboard navigation** | Full Tab-based keyboard navigation through all panels |
 | **About modal** | Info panel with version, links, and credits |
 
@@ -131,7 +138,8 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 | **`.markasso` format** | Save and reload your full scene as a `.markasso` file (JSON) — images included |
 | **Image import** | Drag-and-drop, file picker, or `Ctrl+V` paste; `.markasso` files can also be dropped directly |
 | **Mermaid import** | Import `.mmd` / `.mermaid` files via drag-and-drop or the toolbar button; paste Mermaid text from the clipboard — `graph`, `flowchart`, and `sequenceDiagram` are converted to native elements |
-| **Export PNG / SVG** | Download the canvas as a 2× PNG or a clean SVG — bounding-box auto-fit |
+| **Export PNG / SVG / HTML** | Download as 2× PNG, clean SVG, or standalone HTML — all respect the current canvas background color |
+| **Share link** | One-click URL encoding of the full scene — no server, no account |
 
 ### History & Undo
 
@@ -186,8 +194,11 @@ No `.env` files. No API keys. No containerization required.
 | `D` / `4` | Rhombus (Diamond) |
 | `A` / `5` | Arrow |
 | `L` / `6` | Line |
+| `C` | Curve |
+| `O` | Polygon |
 | `P` / `7` | Pen (freehand) |
 | `T` / `8` | Text |
+| `N` | Sticky note |
 | `0` | Eraser |
 
 ### Navigation
@@ -201,6 +212,13 @@ No `.env` files. No API keys. No containerization required.
 | `Scroll` | Pan |
 | `Middle-click drag` / `Alt+drag` | Pan |
 | `Ctrl+scroll` | Zoom to cursor |
+
+### Search & Commands
+
+| Key | Action |
+|---|---|
+| `Ctrl+K` | Open command palette |
+| `Ctrl+F` | Open element search |
 
 ### Editing
 
@@ -282,31 +300,38 @@ src/
 ├── io/
 │   ├── markasso.ts         # .markasso save / load (exportMarkasso, importMarkasso)
 │   ├── mermaid.ts          # Mermaid parser + layout engine → Markasso elements
-│   └── session.ts          # localStorage auto-save / restore + quota warning toast
+│   ├── session.ts          # localStorage auto-save / restore + quota warning toast
+│   └── share.ts            # URL-hash scene encoding / decoding for share links
 ├── rendering/
 │   ├── renderer.ts         # rAF render loop entry point
 │   ├── draw_element.ts     # Per-type draw dispatch (with rotation + shape labels)
 │   ├── draw_grid.ts        # Dot / line / mm graph-paper grids
 │   ├── draw_selection.ts   # Selection box, resize/rotation/endpoint handles + hit testing
-│   └── export.ts           # exportPNG / exportSVG (bounding-box auto-fit)
+│   └── export.ts           # exportPNG / exportSVG / exportHTML (bounding-box auto-fit)
 ├── tools/
 │   ├── tool.ts             # Tool interface
 │   ├── select_tool.ts      # Hit test, marquee, drag-move, resize
 │   ├── rectangle_tool.ts
 │   ├── ellipse_tool.ts
+│   ├── rhombus_tool.ts
 │   ├── line_tool.ts
 │   ├── arrow_tool.ts
-│   ├── pen_tool.ts         # Freehand with Catmull-Rom smoothing
-│   └── text_tool.ts        # Invisible overlay textarea + in-place editing
+│   ├── curve_tool.ts       # Quadratic bezier with draggable control point
+│   ├── polygon_tool.ts     # Multi-point open/closed polygon
+│   ├── pen_tool.ts         # Freehand with Catmull-Rom smoothing + stylus pressure
+│   ├── text_tool.ts        # Invisible overlay textarea + in-place editing
+│   └── sticky_tool.ts      # Sticky note with editable text and color picker
 └── ui/
     ├── canvas_view.ts       # DOM event hub → world coords → tool
-    ├── toolbar.ts           # Floating islands: tools · undo/zoom · import · export · settings
-    ├── properties_panel.ts  # Floating panel, anchored next to the context panel
-    ├── context_panel.ts     # Left-side action panel (layer order, style, import image)
+    ├── toolbar.ts           # Floating islands: tools · undo/zoom · import · export · share
+    ├── context_panel.ts     # Properties panel (style, formatting, shadow, alignment)
+    ├── command_palette.ts   # Ctrl+K fuzzy-search command launcher
+    ├── element_search.ts    # Ctrl+F canvas element search overlay
+    ├── minimap.ts           # Collapsible canvas overview + viewport panning
     ├── image_import.ts      # File picker, drag-and-drop, paste — images + .markasso
-    ├── settings.ts          # Hamburger panel: grid, accent color, version
-    ├── eraser_tool.ts       # Eraser: hit-test + delete on drag, sword-slash trail effect
-    └── shortcuts.ts         # Global keyboard map (letters + numeric 1–7, 0 for eraser)
+    ├── settings.ts          # Hamburger panel: grid, accent color, theme, language
+    ├── mobile_action_bar.ts # Compact bottom-right action bar for touch devices
+    └── shortcuts.ts         # Global keyboard map
 ```
 
 ---

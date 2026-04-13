@@ -4,6 +4,36 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.1.0] — 2026-04-13
+
+### Added
+- **Curve tool** (`C`) — quadratic bezier with draggable control point; supports stroke style, linecap, opacity, roughness
+- **Polygon tool** (`O`) — click to place vertices, double-click to close; open or closed polyline/polygon with fill
+- **Sticky notes tool** (`N`) — colored sticky with editable text; pick from preset note colors in the properties panel
+- **Command palette** (`Ctrl+K`) — fuzzy-search all commands (tools, export, zoom, theme, language, alignment)
+- **Element search** (`Ctrl+F`) — search canvas elements by label/content; click result to pan and select
+- **Minimap** — collapsible overview panel (bottom-right); click or drag to pan the viewport in real time
+- **Share link** — encode the full scene into a URL hash; one click to copy, recipients open the same canvas
+- **HTML export** — export canvas as a standalone `.html` file with embedded image
+- **Text formatting** — bold, italic, underline, strikethrough for text elements
+- **Shadow** — optional drop-shadow on any element (blur, color, offset)
+- **Stylus pressure** — freehand strokes record per-point pressure for future variable-width rendering
+- **Linecap icons** — flat/round/square linecap buttons now show SVG icons instead of text labels
+
+### Changed
+- **Line group button** — split into main (activates last-used tool directly) and chevron (opens flyout to switch curve/polygon/line); no more forced dropdown on every click
+- **Mobile tool popup** — curve and polygon now appear after arrow in the mobile tools popup
+- **Export dark mode** — all export formats (PNG, SVG, HTML) now read `--canvas-bg` and render the correct background instead of forcing white
+
+### Removed
+- **PDF export** — browser `window.print()` approach proved unreliable (blank output) across browsers; removed from toolbar and command palette
+
+### Fixed
+- Split button active outline bled onto chevron border causing a double red bar; active indicator moved to the container
+- Share toast position adjusted to clear the toolbar island
+
+---
+
 ## [1.0.0] — 2026-04-10
 
 First stable release.
