@@ -50,8 +50,8 @@ const TOOLS: ToolDef[] = [
   { tool: 'rombo',     icon: IC.rombo,     label: t('rhombus'),   key: 'D / 3',     num: '3' },
   { tool: 'ellipse',   icon: IC.ellipse,   label: t('ellipse'),   key: 'E / 4',     num: '4' },
   { tool: 'line',      icon: IC.line,      label: t('line'),      key: 'A / L / 5', num: '5' },
-  { tool: 'freehand',  icon: IC.freehand,  label: t('pen'),       key: 'P / 7',     num: '6' },
-  { tool: 'text',      icon: IC.text,      label: t('textTool'),  key: 'T / 8',     num: '7' },
+  { tool: 'freehand',  icon: IC.freehand,  label: t('pen'),       key: 'P / 6',     num: '6' },
+  { tool: 'text',      icon: IC.text,      label: t('textTool'),  key: 'T / 7',     num: '7' },
   { tool: 'eraser',    icon: IC.eraser,    label: t('eraser'),    key: '0',         num: '0' },
 ];
 

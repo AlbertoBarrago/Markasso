@@ -612,7 +612,7 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
     {
       value: 'both',
       label: t('arrowBoth'),
-      icon: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="10" x2="15" y2="10"/><path d="M9 6L5 10l4 4"/><path d="M11 6l4 4-4 4"/></svg>`,
+      icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="10" x2="14" y2="10"/><path d="M8 5L3.5 10 8 15"/><path d="M12 5l4.5 5-4.5 5"/></svg>`,
     },
   ];
   for (const ah of ARROW_HEADS) {
