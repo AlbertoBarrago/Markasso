@@ -11,8 +11,6 @@ import { PenTool } from '../tools/pen_tool';
 import { TextTool } from '../tools/text_tool';
 import { StickyTool } from '../tools/sticky_tool';
 import { EraserTool, type SlashPoint } from '../tools/eraser_tool';
-import { CurveTool } from '../tools/curve_tool';
-import { PolygonTool } from '../tools/polygon_tool';
 import type { TextElement, RectangleElement, EllipseElement, RhombusElement, ArrowElement } from '../elements/element';
 import { render } from '../rendering/renderer';
 import { drawElement } from '../rendering/draw_element';
@@ -32,8 +30,6 @@ const TOOLS: Record<ActiveTool, Tool> = {
   ellipse: new EllipseTool(),
   line: new LineTool(),
   arrow: new ArrowTool(),
-  curve: new CurveTool(),
-  polygon: new PolygonTool(),
   rombo: new RomboTool(),
   freehand: new PenTool(),
   text: textTool,

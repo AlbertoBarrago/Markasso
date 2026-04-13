@@ -1,6 +1,6 @@
 import type { ElementType } from '../elements/element';
 
-export type DrawableTool = Exclude<ElementType, 'image' | 'rhombus'>;
+export type DrawableTool = Exclude<ElementType, 'image' | 'rhombus' | 'curve' | 'polygon'>;
 export type ActiveTool = 'select' | 'hand' | 'eraser' | DrawableTool | 'rombo' | 'sticky';
 export type GridType   = 'dot' | 'line' | 'mm';
 

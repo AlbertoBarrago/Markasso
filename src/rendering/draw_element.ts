@@ -131,7 +131,14 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
       const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
-      drawLine(ctx, pts.x, pts.y, pts.x2, pts.y2, roughness, seed);
+      if (el.cx !== undefined && el.cy !== undefined) {
+        ctx.beginPath();
+        ctx.moveTo(pts.x, pts.y);
+        ctx.quadraticCurveTo(el.cx, el.cy, pts.x2, pts.y2);
+        ctx.stroke();
+      } else {
+        drawLine(ctx, pts.x, pts.y, pts.x2, pts.y2, roughness, seed);
+      }
       break;
     }
     case 'arrow': {

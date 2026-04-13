@@ -69,6 +69,9 @@ export interface LineElement extends BaseElement {
   readonly y2: number;
   readonly startElementId?: string;
   readonly endElementId?: string;
+  /** Optional quadratic bezier control point — when set the line renders as a curve */
+  readonly cx?: number;
+  readonly cy?: number;
 }
 
 export interface ArrowElement extends BaseElement {

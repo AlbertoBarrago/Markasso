@@ -42,18 +42,6 @@ const IC = {
 
 type ToolDef = { tool: ActiveTool; icon: string; label: string; key: string; num: string };
 
-// Line group: line is the main button (key 6); polygon lives in the flyout only.
-// Curve is a standalone button — never appears in the flyout.
-const LINE_GROUP_TOOLS: ToolDef[] = [
-  { tool: 'line',    icon: IC.line,    label: t('line'),    key: 'L / 6', num: '6' },
-  { tool: 'polygon', icon: IC.polygon, label: t('polygon'), key: 'O',     num: '' },
-];
-// Tools that make the split button "active" (line or polygon selected)
-const LINE_GROUP_NAMES = new Set<ActiveTool>(LINE_GROUP_TOOLS.map((s) => s.tool));
-
-// Curve — standalone button placed right after the line group
-const CURVE_DEF: ToolDef = { tool: 'curve', icon: IC.curve, label: t('curve'), key: 'C', num: '' };
-
 // Main toolbar buttons — numbers 1–8 in order, then eraser (0)
 const TOOLS: ToolDef[] = [
   { tool: 'hand',      icon: IC.hand,      label: t('hand'),      key: 'H / Space', num: '' },
@@ -62,7 +50,7 @@ const TOOLS: ToolDef[] = [
   { tool: 'rombo',     icon: IC.rombo,     label: t('rhombus'),   key: 'D / 3',     num: '3' },
   { tool: 'ellipse',   icon: IC.ellipse,   label: t('ellipse'),   key: 'E / 4',     num: '4' },
   { tool: 'arrow',     icon: IC.arrow,     label: t('arrow'),     key: 'A / 5',     num: '5' },
-  // ↑ line (6) is rendered as a group button — see below ↑
+  { tool: 'line',      icon: IC.line,      label: t('line'),      key: 'L / 6',     num: '6' },
   { tool: 'freehand',  icon: IC.freehand,  label: t('pen'),       key: 'P / 7',     num: '7' },
   { tool: 'text',      icon: IC.text,      label: t('textTool'),  key: 'T / 8',     num: '8' },
   { tool: 'eraser',    icon: IC.eraser,    label: t('eraser'),    key: '0',         num: '0' },
@@ -95,115 +83,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   lockSep.className = 'tb-separator';
   centerPill.appendChild(lockSep);
 
-  // ── Line group button + flyout (line / curve / polygon) ──────────────────
-  // Split button: main area activates lastLineTool directly; chevron opens flyout.
-  let lastLineTool: ActiveTool = 'line';
-  let lineFlyoutOpen = false;
-
-  const lineWrap = document.createElement('div');
-  lineWrap.className = 'tb-group-wrap';
-
-  const lineSplit = document.createElement('div');
-  lineSplit.className = 'tb-split-inner';
-
-  // Main button — activates the last-used line-group tool directly
-  const lineBtn = document.createElement('button');
-  lineBtn.className = 'tb-btn tb-btn-group';
-  lineBtn.setAttribute('aria-pressed', 'false');
-
-  // Chevron button — opens/closes flyout
-  const lineChevron = document.createElement('button');
-  lineChevron.className = 'tb-group-chevron-btn';
-  lineChevron.innerHTML = '▾';
-  lineChevron.title = 'More line tools';
-  lineChevron.setAttribute('aria-haspopup', 'true');
-  lineChevron.setAttribute('aria-expanded', 'false');
-
-  const lineFlyout = document.createElement('div');
-  lineFlyout.className = 'tb-group-flyout';
-  lineFlyout.setAttribute('role', 'menu');
-
-  function updateLineBtn(activeTool: ActiveTool): void {
-    const def = LINE_GROUP_TOOLS.find((s) => s.tool === activeTool)
-      ?? LINE_GROUP_TOOLS.find((s) => s.tool === lastLineTool)
-      ?? LINE_GROUP_TOOLS[0]!;
-    const isActive = LINE_GROUP_NAMES.has(activeTool);
-    lineBtn.innerHTML = `${def.icon}${def.num ? `<span class="tb-btn-key">${def.num}</span>` : ''}`;
-    lineBtn.title = `${def.label} (${def.key})`;
-    lineBtn.setAttribute('aria-label', def.label);
-    lineBtn.classList.toggle('active', isActive);
-    lineBtn.setAttribute('aria-pressed', String(isActive));
-    lineChevron.classList.toggle('active', isActive);
-  }
-  updateLineBtn('line');
-
-  function closeFlyout(): void {
-    lineFlyoutOpen = false;
-    lineFlyout.classList.remove('open');
-    lineChevron.setAttribute('aria-expanded', 'false');
-  }
-
-  // Main click: activate tool directly, no flyout
-  lineBtn.addEventListener('click', () => {
-    history.dispatch({ type: 'SET_TOOL', tool: lastLineTool });
-    closeFlyout();
-  });
-
-  // Chevron click: toggle flyout
-  lineChevron.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (!lineFlyoutOpen) {
-      lineFlyoutOpen = true;
-      lineFlyout.classList.add('open');
-      lineChevron.setAttribute('aria-expanded', 'true');
-    } else {
-      closeFlyout();
-    }
-  });
-
-  // Flyout shows only polygon — line is already the main button, no duplication
-  const polygonFlyoutDef = LINE_GROUP_TOOLS.find((s) => s.tool === 'polygon')!;
-  const polygonFlyoutBtn = document.createElement('button');
-  polygonFlyoutBtn.className = 'tb-btn tb-group-flyout-btn';
-  polygonFlyoutBtn.title = `${polygonFlyoutDef.label} (${polygonFlyoutDef.key})`;
-  polygonFlyoutBtn.setAttribute('aria-label', polygonFlyoutDef.label);
-  polygonFlyoutBtn.setAttribute('role', 'menuitem');
-  polygonFlyoutBtn.dataset['tool'] = 'polygon';
-  polygonFlyoutBtn.innerHTML = polygonFlyoutDef.icon;
-  polygonFlyoutBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    lastLineTool = 'polygon';
-    history.dispatch({ type: 'SET_TOOL', tool: 'polygon' });
-    closeFlyout();
-  });
-  lineFlyout.appendChild(polygonFlyoutBtn);
-
-  document.addEventListener('pointerdown', (e) => {
-    if (lineFlyoutOpen && !lineWrap.contains(e.target as Node)) {
-      closeFlyout();
-    }
-  }, { capture: true });
-
-  lineSplit.append(lineBtn, lineChevron);
-  lineWrap.append(lineSplit, lineFlyout);
-
-  // Curve — standalone button, placed right after line group
-  const curveBtn = document.createElement('button');
-  curveBtn.className = 'tb-btn';
-  curveBtn.title = `${CURVE_DEF.label} (${CURVE_DEF.key})`;
-  curveBtn.setAttribute('aria-label', CURVE_DEF.label);
-  curveBtn.setAttribute('aria-pressed', 'false');
-  curveBtn.innerHTML = CURVE_DEF.icon;
-  curveBtn.addEventListener('click', () => history.dispatch({ type: 'SET_TOOL', tool: 'curve' }));
-  toolBtns.set('curve', curveBtn);
-
   TOOLS.forEach((toolDef) => {
-    // Insert line group + curve between arrow (5) and freehand (7)
-    if (toolDef.tool === 'freehand') {
-      centerPill.appendChild(lineWrap);
-      centerPill.appendChild(curveBtn);
-    }
-
     if (toolDef.tool === 'eraser') {
       const sep = document.createElement('span');
       sep.className = 'tb-separator';
@@ -447,16 +327,8 @@ export function initToolbar(container: HTMLElement, history: History): void {
   toolsPopup.id = 'mobile-tools-popup';
 
   // Build mobile tool list: line, curve, polygon after arrow
-  const mobileTools: ToolDef[] = [];
-  for (const toolDef of TOOLS) {
-    mobileTools.push(toolDef);
-    if (toolDef.tool === 'arrow') {
-      // line (from group), curve (standalone), polygon (from flyout)
-      mobileTools.push(LINE_GROUP_TOOLS[0]!); // line
-      mobileTools.push(CURVE_DEF);            // curve
-      mobileTools.push(LINE_GROUP_TOOLS.find((s) => s.tool === 'polygon')!); // polygon
-    }
-  }
+  // Mobile tools mirror TOOLS exactly (line is now a plain entry in TOOLS)
+  const mobileTools: ToolDef[] = [...TOOLS];
 
   for (const toolDef of mobileTools) {
     const b = document.createElement('button');
@@ -512,11 +384,6 @@ export function initToolbar(container: HTMLElement, history: History): void {
     lockBtn.classList.toggle('active', toolLocked);
     lockBtn.setAttribute('aria-pressed', String(toolLocked));
     lockBtn.innerHTML = toolLocked ? IC.lock : IC.lockOpen;
-    // Update line group button
-    if (LINE_GROUP_NAMES.has(activeTool)) lastLineTool = activeTool;
-    updateLineBtn(activeTool);
-    // Polygon flyout button: highlight when active; never hide (line isn't in flyout)
-    polygonFlyoutBtn.classList.toggle('active', activeTool === 'polygon');
     for (const [toolName, b] of toolBtns) {
       const isActive = toolName === activeTool;
       b.classList.toggle('active', isActive);

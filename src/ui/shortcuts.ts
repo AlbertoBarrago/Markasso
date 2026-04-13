@@ -26,8 +26,6 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     ['d', () => history.dispatch({ type: 'SET_TOOL', tool: 'rombo' })],
     ['3', () => history.dispatch({ type: 'SET_TOOL', tool: 'rombo' })],
     ['0', () => history.dispatch({ type: 'SET_TOOL', tool: 'eraser' })],
-    ['c', () => history.dispatch({ type: 'SET_TOOL', tool: 'curve' })],
-    ['o', () => history.dispatch({ type: 'SET_TOOL', tool: 'polygon' })],
     ['g', () => history.dispatch({ type: 'TOGGLE_GRID' })],
   ]);
 
@@ -134,13 +132,15 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
         const idMap = new Map(elements.map((el) => [el.id, crypto.randomUUID()]));
         const newElements: Element[] = elements.map((el) => {
           const newId = idMap.get(el.id)!;
-          if (el.type === 'freehand' || el.type === 'polygon') {
+          if (el.type === 'freehand') {
             return { ...el, id: newId, x: el.x + offset, y: el.y + offset,
                      points: el.points.map(([px, py]) => [px + offset, py + offset] as const) };
           }
           if (el.type === 'line' || el.type === 'arrow') {
             return { ...el, id: newId, x: el.x + offset, y: el.y + offset,
-                     x2: el.x2 + offset, y2: el.y2 + offset };
+                     x2: el.x2 + offset, y2: el.y2 + offset,
+                     ...(el.type === 'line' && el.cx !== undefined && { cx: el.cx + offset }),
+                     ...(el.type === 'line' && el.cy !== undefined && { cy: el.cy + offset }) };
           }
           return { ...el, id: newId, x: el.x + offset, y: el.y + offset };
         });

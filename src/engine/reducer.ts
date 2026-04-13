@@ -43,7 +43,9 @@ export function reducer(scene: Scene, command: Command): Scene {
           if (el.id !== command.id) return el;
           if (el.type === 'line' || el.type === 'arrow') {
             return { ...el, x: el.x + command.dx, y: el.y + command.dy,
-                           x2: el.x2 + command.dx, y2: el.y2 + command.dy };
+                           x2: el.x2 + command.dx, y2: el.y2 + command.dy,
+                           ...(el.type === 'line' && el.cx !== undefined && { cx: el.cx + command.dx }),
+                           ...(el.type === 'line' && el.cy !== undefined && { cy: el.cy + command.dy }) };
           }
           if (el.type === 'curve') {
             return { ...el, x: el.x + command.dx, y: el.y + command.dy,
@@ -96,6 +98,8 @@ export function reducer(scene: Scene, command: Command): Scene {
             if (y  !== undefined) patch['y']  = y;
             if (x2 !== undefined) patch['x2'] = x2;
             if (y2 !== undefined) patch['y2'] = y2;
+            if (cx !== undefined) patch['cx'] = cx;
+            if (cy !== undefined) patch['cy'] = cy;
             if (startElementId !== undefined) {
               if (startElementId === null) { delete (patch as { startElementId?: string })['startElementId']; }
               else { patch['startElementId'] = startElementId; }

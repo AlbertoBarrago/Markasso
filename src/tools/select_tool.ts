@@ -15,7 +15,7 @@ import {
 } from '../rendering/draw_selection';
 import { worldToScreen } from '../core/viewport';
 
-type DragMode = 'none' | 'move' | 'marquee' | 'resize' | 'rotate' | 'endpoint' | 'curve-cp';
+type DragMode = 'none' | 'move' | 'marquee' | 'resize' | 'rotate' | 'endpoint' | 'curve-cp' | 'line-cp';
 
 const SNAP_RADIUS_PX = 20;
 
@@ -56,8 +56,10 @@ export class SelectTool implements Tool {
   // Original bounds per element for multi-selection resize (keyed by element id)
   private resizeOrigElBounds = new Map<string, { x: number; y: number; w: number; h: number }>();
 
-  // Curve control-point drag state
+  // Curve control-point drag state (legacy CurveElement)
   private curveCpElId: string | null = null;
+  // Line control-point drag state (LineElement with optional cx/cy)
+  private lineCpElId: string | null = null;
 
   // Endpoint drag state
   private endpointSide: 'start' | 'end' | null = null;
@@ -147,7 +149,7 @@ export class SelectTool implements Tool {
     this.mouseDownScreenY = screenY;
     this.dragThresholdMet = false;
 
-    // 1a. Check curve control-point handle (single curve selected)
+    // 1a. Check curve control-point handle (single curve selected — legacy CurveElement)
     if (selectedEls.length === 1) {
       const el = selectedEls[0]!;
       if (el.type === 'curve') {
@@ -156,6 +158,22 @@ export class SelectTool implements Tool {
         if (dist <= 10) {
           this.dragMode = 'curve-cp';
           this.curveCpElId = el.id;
+          ctx.history.beginDrag();
+          return;
+        }
+      }
+    }
+
+    // 1b. Check line midpoint control-point handle (single line selected)
+    if (selectedEls.length === 1) {
+      const el = selectedEls[0]!;
+      if (el.type === 'line') {
+        const cpX = el.cx ?? (el.x + el.x2) / 2;
+        const cpY = el.cy ?? (el.y + el.y2) / 2;
+        const [scx, scy] = worldToScreen(scene.viewport, cpX, cpY);
+        if (Math.hypot(screenX - scx, screenY - scy) <= 10) {
+          this.dragMode = 'line-cp';
+          this.lineCpElId = el.id;
           ctx.history.beginDrag();
           return;
         }
@@ -286,6 +304,16 @@ export class SelectTool implements Tool {
       ctx.history.dispatch({
         type: 'RESIZE_ELEMENT',
         id: this.curveCpElId,
+        cx: worldX,
+        cy: worldY,
+      });
+      ctx.onPreviewUpdate?.();
+      return;
+    }
+    if (this.dragMode === 'line-cp' && this.lineCpElId) {
+      ctx.history.dispatch({
+        type: 'RESIZE_ELEMENT',
+        id: this.lineCpElId,
         cx: worldX,
         cy: worldY,
       });
@@ -528,6 +556,11 @@ export class SelectTool implements Tool {
       this.curveCpElId = null;
     }
 
+    if (this.dragMode === 'line-cp') {
+      ctx.history.endDrag();
+      this.lineCpElId = null;
+    }
+
     if (this.dragMode === 'resize' || this.dragMode === 'move' ||
         this.dragMode === 'rotate' || this.dragMode === 'endpoint') {
       ctx.history.endDrag();
@@ -615,11 +648,21 @@ export class SelectTool implements Tool {
     const [screenX, screenY] = worldToScreen(scene.viewport, worldX, worldY);
 
     if (selectedEls.length > 0) {
-      // Check curve control-point handle
+      // Check curve control-point handle (legacy CurveElement)
       if (selectedEls.length === 1) {
         const el = selectedEls[0]!;
         if (el.type === 'curve') {
           const [scx, scy] = worldToScreen(scene.viewport, el.cx, el.cy);
+          if (Math.hypot(screenX - scx, screenY - scy) <= 10) return 'move';
+        }
+      }
+      // Check line midpoint control-point handle
+      if (selectedEls.length === 1) {
+        const el = selectedEls[0]!;
+        if (el.type === 'line') {
+          const cpX = el.cx ?? (el.x + el.x2) / 2;
+          const cpY = el.cy ?? (el.y + el.y2) / 2;
+          const [scx, scy] = worldToScreen(scene.viewport, cpX, cpY);
           if (Math.hypot(screenX - scx, screenY - scy) <= 10) return 'move';
         }
       }

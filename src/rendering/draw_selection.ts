@@ -381,6 +381,20 @@ export function drawSelection(
       ctx.arc(x2s, y2s, 5, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+
+      // Midpoint control-point handle for lines (always visible; position = cx/cy if set, else geometric midpoint)
+      if (el.type === 'line') {
+        const cpX = el.cx ?? (pts.x + pts.x2) / 2;
+        const cpY = el.cy ?? (pts.y + pts.y2) / 2;
+        const [scpx, scpy] = worldToScreen(viewport, cpX, cpY);
+        ctx.fillStyle = 'rgba(180, 160, 255, 0.85)';
+        ctx.strokeStyle = '#1c1c2a';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(scpx, scpy, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
     }
   }
 

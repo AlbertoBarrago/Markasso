@@ -141,6 +141,11 @@ function computeBounds(elements: ReadonlyArray<Element>): { minX: number; minY: 
         break;
       }
       case 'line':
+        minX = Math.min(minX, el.x, el.x2, ...(el.cx !== undefined ? [el.cx] : []));
+        minY = Math.min(minY, el.y, el.y2, ...(el.cy !== undefined ? [el.cy] : []));
+        maxX = Math.max(maxX, el.x, el.x2, ...(el.cx !== undefined ? [el.cx] : []));
+        maxY = Math.max(maxY, el.y, el.y2, ...(el.cy !== undefined ? [el.cy] : []));
+        break;
       case 'arrow':
         minX = Math.min(minX, el.x, el.x2);
         minY = Math.min(minY, el.y, el.y2);
@@ -184,7 +189,9 @@ function elementToSVG(el: Element, ox: number, oy: number): string {
     case 'rectangle': return rectToSVG(el, ox, oy);
     case 'ellipse':   return ellipseToSVG(el, ox, oy);
     case 'rhombus':   return rhombusToSVG(el, ox, oy);
-    case 'line':      return lineToSVG(el, ox, oy);
+    case 'line':      return el.cx !== undefined && el.cy !== undefined
+      ? `<path d="M ${round(el.x - ox)} ${round(el.y - oy)} Q ${round(el.cx - ox)} ${round(el.cy - oy)} ${round(el.x2 - ox)} ${round(el.y2 - oy)}" fill="none" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" opacity="${el.opacity}"${strokeDashAttr(el)}/>`
+      : lineToSVG(el, ox, oy);
     case 'arrow':     return arrowToSVG(el, ox, oy);
     case 'freehand':  return freehandToSVG(el, ox, oy);
     case 'text':      return textToSVG(el, ox, oy);
