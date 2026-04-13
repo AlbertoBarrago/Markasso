@@ -4,7 +4,9 @@ import { t } from '../i18n';
 const isMac = navigator.platform.toUpperCase().includes('MAC');
 const mod   = isMac ? '⌘' : 'Ctrl+';
 
-const SHORTCUTS: { icon: string; label: string; key: string }[] = [
+const SHORTCUTS: { icon: string; label: string; key: string; iconClass?: string }[] = [
+  { icon: '⌘',  label: t('commandPalette'), key: `${mod}K` },
+  { icon: '⌕',  label: t('search'),         key: `${mod}F`, iconClass: 'wl-shortcut-icon--search' },
   { icon: '📂', label: t('openFile'),  key: `${mod}O` },
   { icon: '💾', label: t('saveFile'),  key: `${mod}S` },
   { icon: '↩',  label: t('undoLabel'), key: `${mod}Z` },
@@ -29,7 +31,7 @@ export function initWelcome(appEl: HTMLElement, history: History): void {
       <ul class="wl-shortcuts">
         ${SHORTCUTS.map(s => `
           <li class="wl-shortcut-row">
-            <span class="wl-shortcut-icon">${s.icon}</span>
+            <span class="wl-shortcut-icon${s.iconClass ? ` ${s.iconClass}` : ''}">${s.icon}</span>
             <span class="wl-shortcut-label">${s.label}</span>
             <kbd class="wl-kbd">${s.key}</kbd>
           </li>

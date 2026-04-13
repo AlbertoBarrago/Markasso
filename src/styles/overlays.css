@@ -90,6 +90,11 @@
   flex-shrink: 0;
 }
 
+.wl-shortcut-icon--search {
+  font-size: 19px;
+  line-height: 1;
+}
+
 .wl-shortcut-label {
   flex: 1;
   font-size: 13px;
