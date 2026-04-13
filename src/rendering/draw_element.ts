@@ -1,6 +1,7 @@
 import type { Element } from '../elements/element';
 import { getElementCenter, resolveArrowEndpoints } from './draw_selection';
 import { getCachedImage } from './image_cache';
+import { getArrowHeadVector, getQuadraticLength, getQuadraticPoint, getQuadraticSegment, getQuadraticTangent } from './connector_geometry';
 
 function resolveStrokeColorForTheme(strokeColor: string): string {
   if (typeof document === 'undefined') return strokeColor;
@@ -136,11 +137,8 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       const drawStart = arrowHead === 'start' || arrowHead === 'both';
 
       if (el.label) {
-        // Draw shaft in two segments around the midpoint label gap
         const fontSize = el.labelFontSize ?? 16;
         const fontFamily = el.labelFontFamily ?? 'Arial, sans-serif';
-        const mx = (pts.x + pts.x2) / 2;
-        const my = (pts.y + pts.y2) / 2;
         ctx.save();
         ctx.setLineDash([]);
         ctx.font = `${fontSize}px ${fontFamily}`;
@@ -149,17 +147,47 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         const labelW = Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2;
         const labelH = lines.length * fontSize * 1.2 + pad * 2;
         ctx.restore();
-        const totalLen = Math.hypot(pts.x2 - pts.x, pts.y2 - pts.y);
-        const dx = totalLen > 0 ? (pts.x2 - pts.x) / totalLen : 1;
-        const dy = totalLen > 0 ? (pts.y2 - pts.y) / totalLen : 0;
+
+        let mx = (pts.x + pts.x2) / 2;
+        let my = (pts.y + pts.y2) / 2;
+        let totalLen = Math.hypot(pts.x2 - pts.x, pts.y2 - pts.y);
+        let dx = totalLen > 0 ? (pts.x2 - pts.x) / totalLen : 1;
+        let dy = totalLen > 0 ? (pts.y2 - pts.y) / totalLen : 0;
+
+        if (el.cx !== undefined && el.cy !== undefined) {
+          const midPoint = getQuadraticPoint(pts.x, pts.y, el.cx, el.cy, pts.x2, pts.y2, 0.5);
+          const tangent = getQuadraticTangent(pts.x, pts.y, el.cx, el.cy, pts.x2, pts.y2, 0.5);
+          const tangentLen = Math.hypot(tangent.x, tangent.y);
+          mx = midPoint.x;
+          my = midPoint.y;
+          totalLen = getQuadraticLength(pts.x, pts.y, el.cx, el.cy, pts.x2, pts.y2);
+          if (tangentLen > 0.001) {
+            dx = tangent.x / tangentLen;
+            dy = tangent.y / tangentLen;
+          }
+        }
+
         const gapHalf = Math.abs(dx) * labelW / 2 + Math.abs(dy) * labelH / 2;
         const gapT = totalLen > 0 ? gapHalf / totalLen : 0;
         const t1 = Math.max(0, 0.5 - gapT);
         const t2 = Math.min(1, 0.5 + gapT);
-        drawArrowShaft(ctx, pts.x, pts.y, pts.x + (pts.x2 - pts.x) * t1, pts.y + (pts.y2 - pts.y) * t1, roughness, seed);
-        drawArrowShaft(ctx, pts.x + (pts.x2 - pts.x) * t2, pts.y + (pts.y2 - pts.y) * t2, pts.x2, pts.y2, roughness, seed);
-        if (drawEnd)   drawArrowHead(ctx, pts.x, pts.y, pts.x2, pts.y2, el.strokeWidth);
-        if (drawStart) drawArrowHead(ctx, pts.x2, pts.y2, pts.x, pts.y, el.strokeWidth);
+
+        if (el.cx !== undefined && el.cy !== undefined) {
+          drawQuadraticSegment(ctx, pts.x, pts.y, el.cx, el.cy, pts.x2, pts.y2, 0, t1);
+          drawQuadraticSegment(ctx, pts.x, pts.y, el.cx, el.cy, pts.x2, pts.y2, t2, 1);
+        } else {
+          drawArrowShaft(ctx, pts.x, pts.y, pts.x + (pts.x2 - pts.x) * t1, pts.y + (pts.y2 - pts.y) * t1, roughness, seed);
+          drawArrowShaft(ctx, pts.x + (pts.x2 - pts.x) * t2, pts.y + (pts.y2 - pts.y) * t2, pts.x2, pts.y2, roughness, seed);
+        }
+
+        if (drawEnd) {
+          const head = getArrowHeadVector(pts, el, 'end');
+          drawArrowHead(ctx, head.fromX, head.fromY, head.tipX, head.tipY, el.strokeWidth);
+        }
+        if (drawStart) {
+          const head = getArrowHeadVector(pts, el, 'start');
+          drawArrowHead(ctx, head.fromX, head.fromY, head.tipX, head.tipY, el.strokeWidth);
+        }
         ctx.save();
         ctx.setLineDash([]);
         drawArrowLabel(ctx, mx, my, el.label, fontSize, fontFamily, strokeColor);
@@ -169,12 +197,24 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         ctx.moveTo(pts.x, pts.y);
         ctx.quadraticCurveTo(el.cx, el.cy, pts.x2, pts.y2);
         ctx.stroke();
-        if (drawEnd)   drawArrowHead(ctx, pts.x, pts.y, pts.x2, pts.y2, el.strokeWidth);
-        if (drawStart) drawArrowHead(ctx, pts.x2, pts.y2, pts.x, pts.y, el.strokeWidth);
+        if (drawEnd) {
+          const head = getArrowHeadVector(pts, el, 'end');
+          drawArrowHead(ctx, head.fromX, head.fromY, head.tipX, head.tipY, el.strokeWidth);
+        }
+        if (drawStart) {
+          const head = getArrowHeadVector(pts, el, 'start');
+          drawArrowHead(ctx, head.fromX, head.fromY, head.tipX, head.tipY, el.strokeWidth);
+        }
       } else {
         drawLine(ctx, pts.x, pts.y, pts.x2, pts.y2, roughness, seed);
-        if (drawEnd)   drawArrowHead(ctx, pts.x, pts.y, pts.x2, pts.y2, el.strokeWidth);
-        if (drawStart) drawArrowHead(ctx, pts.x2, pts.y2, pts.x, pts.y, el.strokeWidth);
+        if (drawEnd) {
+          const head = getArrowHeadVector(pts, el, 'end');
+          drawArrowHead(ctx, head.fromX, head.fromY, head.tipX, head.tipY, el.strokeWidth);
+        }
+        if (drawStart) {
+          const head = getArrowHeadVector(pts, el, 'start');
+          drawArrowHead(ctx, head.fromX, head.fromY, head.tipX, head.tipY, el.strokeWidth);
+        }
       }
       break;
     }
@@ -536,6 +576,25 @@ function drawArrowShaft(
     }
     ctx.stroke();
   }
+}
+
+function drawQuadraticSegment(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  cx: number,
+  cy: number,
+  x2: number,
+  y2: number,
+  tStart: number,
+  tEnd: number,
+): void {
+  const seg = getQuadraticSegment(x, y, cx, cy, x2, y2, tStart, tEnd);
+  if (!seg) return;
+  ctx.beginPath();
+  ctx.moveTo(seg.x, seg.y);
+  ctx.quadraticCurveTo(seg.cx, seg.cy, seg.x2, seg.y2);
+  ctx.stroke();
 }
 
 function drawArrowHead(

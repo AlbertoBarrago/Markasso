@@ -20,25 +20,25 @@ Select a tool from the toolbar or press its keyboard shortcut.
 | Hand       | `H` or `Space` | Pan the canvas |
 | Select     | `V` or `1` | Select, move, resize, rotate elements |
 | Rectangle  | `R` or `2` | Draw rectangles |
-| Ellipse    | `E` or `3` | Draw ellipses and circles |
-| Rhombus    | `D` or `4` | Draw diamond/rhombus shapes |
-| Arrow      | `A` or `5` | Draw arrows |
-| Line       | `L` or `6` | Draw straight lines |
+| Rhombus    | `D` or `3` | Draw diamond/rhombus shapes |
+| Ellipse    | `E` or `4` | Draw ellipses and circles |
+| Line       | `A` / `L` or `5` | Draw straight lines and lines with arrowheads |
 | Curve      | `C` | Draw quadratic bezier curves |
 | Polygon    | `O` | Draw multi-point polygons and polylines |
 | Pen        | `P` or `7` | Freehand drawing |
 | Text       | `T` or `8` | Add text |
-| Sticky     | `N` | Add a sticky note |
 | Eraser     | `0` | Erase elements by clicking or dragging over them |
 
 Press `Escape` to return to the Select tool at any time.
 
-### Line Group (Line / Curve / Polygon)
+### Connector Editing
 
-Line, Curve, and Polygon share a single toolbar slot (position 6).
+The main numbered connector slot is **Line** (toolbar position `5`).
 
-- **Click the icon** to activate the last-used tool in the group directly.
-- **Click the `▾` chevron** to open the flyout and switch to a different tool in the group.
+- `A`, `L`, and `5` all select the same connector tool.
+- Arrowheads are a style of line elements, configurable from the properties panel.
+- Drag the midpoint control handle after placement to bend a line into a quadratic bezier.
+- Labels on curved connectors now reserve their gap along the actual curve, not along the straight chord.
 
 ### Tool Lock
 
@@ -57,11 +57,11 @@ Click and drag to draw. Hold `Shift` while dragging to constrain to a square or 
 ### Rhombus (Diamond)
 Click and drag to draw a diamond shape. Hold `Shift` to constrain to an equilateral rhombus. Supports fill, stroke, opacity, and roughness like other shapes.
 
-### Line / Arrow
+### Line / Arrowheads
 Click to set the start point, drag to the end point, release to confirm.
 Hold `Shift` to snap the angle to 45° increments.
 
-**Connecting arrows to shapes (Smart Links):** hover the arrow tool over any shape — a highlight and cyan ring appear on the nearest border point. Click and drag to start from that point. Move the end near another shape to connect it. The arrow attaches to the border (not the center) and follows the shapes as they move.
+**Connecting lines to shapes (Smart Links):** hover the line tool over any shape — a highlight and cyan ring appear on the nearest border point. Click and drag to start from that point. Move the end near another shape to connect it. The connector attaches to the border (not the center) and follows the shapes as they move. If you enable arrowheads, the tip follows the final tangent of the bend.
 
 ### Curve
 Click to set the start point, drag to the end point, release to place the curve. A control point (diamond handle) appears at the midpoint — drag it to adjust the curve's bend. Select the curve and drag any of the three handles to reshape it.
@@ -71,9 +71,6 @@ Click to place each vertex. **Double-click** the last vertex (or click the first
 
 ### Pen (Freehand)
 Hold and drag to draw. The stroke is automatically smoothed when you release. The pen tool stays active after each stroke so you can keep drawing without re-selecting. Stylus pressure is recorded when available.
-
-### Sticky Note
-Click anywhere to place a sticky note. Type your content and click outside (or press `Escape`) to confirm. Double-click an existing sticky to edit it. Choose the note color from the properties panel.
 
 ### Eraser
 Select the Eraser tool (`0`) then click or drag over elements to delete them. The topmost element under the cursor is erased first. Locked elements are skipped. A glowing slash trail follows the cursor for visual feedback. Elements highlight as the eraser passes over them.
@@ -90,8 +87,8 @@ Click anywhere to place a text box and start typing. Press `Enter` to confirm, `
 ### Shape Labels
 Double-click any rectangle or ellipse to add a text label inside it. The label is clipped to the shape's bounds.
 
-### Arrow Labels
-Double-click any arrow to add a label along its path.
+### Connector Labels
+Double-click any line with arrowheads to add a label along its path. On curved connectors, the blank gap follows the bezier bend.
 
 ---
 
@@ -169,14 +166,14 @@ Locked elements:
 
 ## Smart Arrow Links
 
-Arrows (and lines) can be permanently connected to shapes.
+Lines with or without arrowheads can be permanently connected to shapes.
 
 **Creating a link:**
-1. Select the Arrow tool (`A`).
+1. Select the line tool with `A`, `L`, or `5`.
 2. Hover over a shape — it highlights and shows a cyan ring on the border. Click to start from that border point.
 3. Drag to another shape — its border highlights too. Release to connect.
-4. The arrow is now live: move either shape and the arrow follows, always attaching at the correct border point.
-5. After the arrow is placed the tool automatically returns to Select.
+4. The connector is now live: move either shape and the line follows, always attaching at the correct border point.
+5. After the connector is placed the tool automatically returns to Select.
 
 **Editing a link:**
 Select the arrow → drag either cyan endpoint handle. Drag near a shape to reconnect, or drag away from all shapes to disconnect.
@@ -309,10 +306,9 @@ Switch between **Dark**, **Light**, and **System** themes from the Settings pane
 | `H` / `Space` | Hand (pan) |
 | `V` / `1` | Select tool |
 | `R` / `2` | Rectangle |
-| `E` / `3` | Ellipse |
-| `D` / `4` | Rhombus (Diamond) |
-| `A` / `5` | Arrow |
-| `L` / `6` | Line |
+| `D` / `3` | Rhombus (Diamond) |
+| `E` / `4` | Ellipse |
+| `A` / `L` / `5` | Line + arrowheads |
 | `C` | Curve |
 | `O` | Polygon |
 | `P` / `7` | Pen |

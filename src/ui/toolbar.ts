@@ -42,16 +42,16 @@ const IC = {
 
 type ToolDef = { tool: ActiveTool; icon: string; label: string; key: string; num: string };
 
-// Main toolbar buttons — numbers 1–8 in order, then eraser (0)
+// Main toolbar buttons — sequential ordinal badges on the main row; eraser keeps its 0 shortcut badge.
 const TOOLS: ToolDef[] = [
   { tool: 'hand',      icon: IC.hand,      label: t('hand'),      key: 'H / Space', num: '' },
   { tool: 'select',    icon: IC.select,    label: t('select'),    key: 'V / 1',     num: '1' },
   { tool: 'rectangle', icon: IC.rectangle, label: t('rectangle'), key: 'R / 2',     num: '2' },
   { tool: 'rombo',     icon: IC.rombo,     label: t('rhombus'),   key: 'D / 3',     num: '3' },
   { tool: 'ellipse',   icon: IC.ellipse,   label: t('ellipse'),   key: 'E / 4',     num: '4' },
-  { tool: 'line',      icon: IC.line,      label: t('line'),      key: 'A / L / 5 / 6', num: '5' },
-  { tool: 'freehand',  icon: IC.freehand,  label: t('pen'),       key: 'P / 7',     num: '7' },
-  { tool: 'text',      icon: IC.text,      label: t('textTool'),  key: 'T / 8',     num: '8' },
+  { tool: 'line',      icon: IC.line,      label: t('line'),      key: 'A / L / 5', num: '5' },
+  { tool: 'freehand',  icon: IC.freehand,  label: t('pen'),       key: 'P / 7',     num: '6' },
+  { tool: 'text',      icon: IC.text,      label: t('textTool'),  key: 'T / 8',     num: '7' },
   { tool: 'eraser',    icon: IC.eraser,    label: t('eraser'),    key: '0',         num: '0' },
 ];
 
@@ -325,8 +325,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const toolsPopup = document.createElement('div');
   toolsPopup.id = 'mobile-tools-popup';
 
-  // Build mobile tool list: line, curve, polygon after arrow
-  // Mobile tools mirror TOOLS exactly (line is now a plain entry in TOOLS)
+  // Mobile tools mirror the desktop toolbar exactly.
   const mobileTools: ToolDef[] = [...TOOLS];
 
   for (const toolDef of mobileTools) {

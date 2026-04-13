@@ -20,7 +20,7 @@
 
 <br/>
 
-[User Manual](./MANUAL.md) · [Contributing](./CONTRIBUTORS.md) · [Report an Issue](https://github.com/AlbertoBarrago/Markasso/issues)
+[User Manual](./MANUAL.md) · [Guide](./GUIDA.md) · [Contributing](./CONTRIBUTORS.md) · [Report an Issue](https://github.com/AlbertoBarrago/Markasso/issues)
 
 </div>
 
@@ -58,15 +58,13 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 | Hand | `H` / `Space` |
 | Select | `V` / `1` |
 | Rectangle | `R` / `2` |
-| Ellipse | `E` / `3` |
-| Rhombus (Diamond) | `D` / `4` |
-| Arrow | `A` / `5` |
-| Line | `L` / `6` |
+| Rhombus (Diamond) | `D` / `3` |
+| Ellipse | `E` / `4` |
+| Line + arrowheads | `A` / `L` / `5` |
 | Curve (bezier) | `C` |
 | Polygon / Polyline | `O` |
 | Pen (freehand) | `P` / `7` |
 | Text | `T` / `8` |
-| Sticky note | `N` |
 | Eraser | `0` |
 
 ### Canvas & Navigation
@@ -103,7 +101,7 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 |---|---|
 | **Groups** | `Ctrl+G` to group · click selects all members · click again enters group for individual editing |
 | **Shape labels** | Double-click any rectangle or ellipse to type a label, clipped inside the shape |
-| **Arrow labels** | Add labels to arrow elements |
+| **Connector labels** | Add labels to lines with arrowheads and keep the gap aligned to the bezier bend |
 | **Text scaling** | Dragging a text handle scales the font size, not just the box |
 | **Double-click to edit** | Open any existing text element for inline editing |
 
@@ -190,10 +188,9 @@ No `.env` files. No API keys. No containerization required.
 | `H` / `Space` | Hand (pan) |
 | `V` / `1` | Select |
 | `R` / `2` | Rectangle |
-| `E` / `3` | Ellipse |
-| `D` / `4` | Rhombus (Diamond) |
-| `A` / `5` | Arrow |
-| `L` / `6` | Line |
+| `D` / `3` | Rhombus (Diamond) |
+| `E` / `4` | Ellipse |
+| `A` / `L` / `5` | Line + arrowheads |
 | `C` | Curve |
 | `O` | Polygon |
 | `P` / `7` | Pen (freehand) |
@@ -313,11 +310,8 @@ src/
 │   ├── select_tool.ts      # Hit test, marquee, drag-move, resize
 │   ├── rectangle_tool.ts
 │   ├── ellipse_tool.ts
-│   ├── rhombus_tool.ts
-│   ├── line_tool.ts
-│   ├── arrow_tool.ts
-│   ├── curve_tool.ts       # Quadratic bezier with draggable control point
-│   ├── polygon_tool.ts     # Multi-point open/closed polygon
+│   ├── rombo_tool.ts       # Rhombus tool
+│   ├── line_tool.ts        # Line tool; arrowheads are a style on line elements
 │   ├── pen_tool.ts         # Freehand with Catmull-Rom smoothing + stylus pressure
 │   ├── text_tool.ts        # Invisible overlay textarea + in-place editing
 │   └── sticky_tool.ts      # Sticky note with editable text and color picker

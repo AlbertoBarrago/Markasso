@@ -14,6 +14,7 @@ import {
   ROTATION_HANDLE_R,
 } from '../rendering/draw_selection';
 import { worldToScreen } from '../core/viewport';
+import { distToQuadraticCurve } from '../rendering/connector_geometry';
 
 type DragMode = 'none' | 'move' | 'marquee' | 'resize' | 'rotate' | 'endpoint' | 'curve-cp' | 'line-cp';
 
@@ -884,6 +885,10 @@ function hitTestElement(el: Element, wx: number, wy: number): boolean {
       return Math.abs(nx) + Math.abs(ny) <= 1;
     }
     case 'line':
+      if (el.cx !== undefined && el.cy !== undefined) {
+        return distToQuadraticCurve(lx, ly, el.x, el.y, el.cx, el.cy, el.x2, el.y2) < el.strokeWidth / 2 + PAD + 4;
+      }
+      return distToSegment(lx, ly, el.x, el.y, el.x2, el.y2) < el.strokeWidth / 2 + PAD;
     case 'arrow':
       return distToSegment(lx, ly, el.x, el.y, el.x2, el.y2) < el.strokeWidth / 2 + PAD;
     case 'curve':
@@ -974,4 +979,3 @@ function computeAlignGuides(
 
   return guides;
 }
-

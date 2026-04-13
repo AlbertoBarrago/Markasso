@@ -1,6 +1,7 @@
 import type { Element } from '../elements/element';
 import type { Viewport } from '../core/viewport';
 import { worldToScreen } from '../core/viewport';
+import { getQuadraticBounds } from './connector_geometry';
 
 /**
  * Returns the distance from (px, py) to the actual visual boundary of an element.
@@ -162,6 +163,15 @@ export function getElementBounds(el: Element, allElements?: ReadonlyArray<Elemen
     case 'line':
     case 'arrow': {
       const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
+      if (el.type === 'line' && el.cx !== undefined && el.cy !== undefined) {
+        const bounds = getQuadraticBounds(pts.x, pts.y, el.cx, el.cy, pts.x2, pts.y2);
+        return {
+          x: bounds.minX,
+          y: bounds.minY,
+          w: bounds.maxX - bounds.minX,
+          h: bounds.maxY - bounds.minY,
+        };
+      }
       return {
         x: Math.min(pts.x, pts.x2),
         y: Math.min(pts.y, pts.y2),

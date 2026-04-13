@@ -2,6 +2,7 @@ import type { Scene } from '../core/scene';
 import type { Element, RectangleElement, EllipseElement, RhombusElement, LineElement, ArrowElement, FreehandElement, TextElement, ImageElement } from '../elements/element';
 import { drawElement } from './draw_element';
 import { getElementBounds } from './draw_selection';
+import { getArrowHeadVector } from './connector_geometry';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -306,10 +307,12 @@ function lineToSVG(el: LineElement, ox: number, oy: number): string {
   }
   const arrowHead = el.arrowHead;
   if (arrowHead === 'end' || arrowHead === 'both') {
-    parts.push(lineArrowHeadSVG(x1, y1, x2, y2, el.strokeWidth, sp, rot));
+    const head = getArrowHeadVector(el, el, 'end');
+    parts.push(lineArrowHeadSVG(head.fromX + ox, head.fromY + oy, head.tipX + ox, head.tipY + oy, el.strokeWidth, sp, rot));
   }
   if (arrowHead === 'start' || arrowHead === 'both') {
-    parts.push(lineArrowHeadSVG(x2, y2, x1, y1, el.strokeWidth, sp, rot));
+    const head = getArrowHeadVector(el, el, 'start');
+    parts.push(lineArrowHeadSVG(head.fromX + ox, head.fromY + oy, head.tipX + ox, head.tipY + oy, el.strokeWidth, sp, rot));
   }
   return parts.join('\n');
 }

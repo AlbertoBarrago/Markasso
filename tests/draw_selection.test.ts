@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolveArrowEndpoints, getElementBounds } from '../src/rendering/draw_selection';
-import type { ArrowElement, RectangleElement } from '../src/elements/element';
+import type { ArrowElement, RectangleElement, LineElement } from '../src/elements/element';
 
 function makeRect(id: string, x: number, y: number, w = 100, h = 60): RectangleElement {
   return {
@@ -14,6 +14,16 @@ function makeArrow(overrides: Partial<ArrowElement> = {}): ArrowElement {
   return {
     id: 'a1', type: 'arrow',
     x: 0, y: 0, x2: 200, y2: 200,
+    strokeColor: '#000', fillColor: 'transparent',
+    strokeWidth: 2, opacity: 1, roughness: 0,
+    ...overrides,
+  };
+}
+
+function makeLine(overrides: Partial<LineElement> = {}): LineElement {
+  return {
+    id: 'l1', type: 'line',
+    x: 0, y: 0, x2: 100, y2: 0,
     strokeColor: '#000', fillColor: 'transparent',
     strokeWidth: 2, opacity: 1, roughness: 0,
     ...overrides,
@@ -96,5 +106,14 @@ describe('getElementBounds with arrow connections', () => {
     expect(b.y).toBe(60);
     expect(b.w).toBe(160);
     expect(b.h).toBe(240);
+  });
+
+  it('uses quadratic bounds for bent lines', () => {
+    const line = makeLine({ cx: 50, cy: 100 });
+    const b = getElementBounds(line);
+    expect(b.x).toBe(0);
+    expect(b.y).toBe(0);
+    expect(b.w).toBe(100);
+    expect(b.h).toBe(50);
   });
 });
