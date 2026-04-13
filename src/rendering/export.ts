@@ -3,6 +3,12 @@ import type { Element, RectangleElement, EllipseElement, RhombusElement, LineEle
 import { drawElement } from './draw_element';
 import { getElementBounds } from './draw_selection';
 
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function getCanvasBg(): string {
+  return getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg').trim() || '#080808';
+}
+
 // ── PNG export ─────────────────────────────────────────────────────────────────
 
 export function exportPNG(scene: Scene, withBackground = true): void {
@@ -21,7 +27,7 @@ export function exportPNG(scene: Scene, withBackground = true): void {
   const ctx = canvas.getContext('2d')!;
 
   if (withBackground) {
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = getCanvasBg();
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
@@ -34,6 +40,95 @@ export function exportPNG(scene: Scene, withBackground = true): void {
 
   const url = canvas.toDataURL('image/png');
   triggerDownload(url, 'markasso-export.png');
+}
+
+// ── PDF export ─────────────────────────────────────────────────────────────────
+
+export function exportPDF(scene: Scene): void {
+  const { elements } = scene;
+  if (elements.length === 0) return;
+
+  const { minX, minY, maxX, maxY } = computeBounds(elements);
+  const PAD = 24;
+  const w = maxX - minX + PAD * 2;
+  const h = maxY - minY + PAD * 2;
+  const scale = 2;
+
+  const offscreen = document.createElement('canvas');
+  offscreen.width = w * scale;
+  offscreen.height = h * scale;
+  const ctx = offscreen.getContext('2d')!;
+  ctx.fillStyle = getCanvasBg();
+  ctx.fillRect(0, 0, offscreen.width, offscreen.height);
+  ctx.scale(scale, scale);
+  ctx.translate(PAD - minX, PAD - minY);
+  for (const el of elements) drawElement(ctx, el);
+
+  const dataUrl = offscreen.toDataURL('image/png');
+  const bg = getCanvasBg();
+
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;';
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument!;
+  doc.open();
+  doc.write(`<!DOCTYPE html><html><head><style>
+    @page{margin:0;background:${bg}}
+    html,body{margin:0;padding:0;background:${bg};print-color-adjust:exact;-webkit-print-color-adjust:exact}
+    body{display:flex;justify-content:center;align-items:flex-start}
+    img{max-width:100%;height:auto;display:block}
+  </style></head><body><img src="${dataUrl}"/></body></html>`);
+  doc.close();
+  iframe.contentWindow!.focus();
+  iframe.contentWindow!.print();
+  setTimeout(() => document.body.removeChild(iframe), 2000);
+}
+
+// ── HTML embed export ──────────────────────────────────────────────────────────
+
+export function exportHTML(scene: Scene): void {
+  const { elements } = scene;
+  if (elements.length === 0) return;
+
+  const { minX, minY, maxX, maxY } = computeBounds(elements);
+  const PAD = 24;
+  const w = maxX - minX + PAD * 2;
+  const h = maxY - minY + PAD * 2;
+  const scale = 2;
+
+  const offscreen = document.createElement('canvas');
+  offscreen.width = w * scale;
+  offscreen.height = h * scale;
+  const ctx = offscreen.getContext('2d')!;
+  ctx.fillStyle = getCanvasBg();
+  ctx.fillRect(0, 0, offscreen.width, offscreen.height);
+  ctx.scale(scale, scale);
+  ctx.translate(PAD - minX, PAD - minY);
+  for (const el of elements) drawElement(ctx, el);
+
+  const dataUrl = offscreen.toDataURL('image/png');
+  const title = 'Markasso export';
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${title}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f5f5f5;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:24px}
+  img{max-width:100%;height:auto;border-radius:4px;box-shadow:0 2px 16px rgba(0,0,0,.15)}
+</style>
+</head>
+<body>
+<img src="${dataUrl}" alt="${title}" width="${round(w)}" height="${round(h)}"/>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  triggerDownload(url, 'markasso-embed.html');
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 // ── SVG export ─────────────────────────────────────────────────────────────────
@@ -53,7 +148,7 @@ export function exportSVG(scene: Scene, withBackground = true): void {
     `<svg xmlns="http://www.w3.org/2000/svg" width="${round(w)}" height="${round(h)}" viewBox="0 0 ${round(w)} ${round(h)}">`,
   ];
   if (withBackground) {
-    parts.push(`<rect width="${round(w)}" height="${round(h)}" fill="white"/>`);
+    parts.push(`<rect width="${round(w)}" height="${round(h)}" fill="${getCanvasBg()}"/>`);
   }
 
   for (const el of elements) {
@@ -95,12 +190,19 @@ function computeBounds(elements: ReadonlyArray<Element>): { minX: number; minY: 
         maxY = Math.max(maxY, el.y, el.y2);
         break;
       case 'freehand':
+      case 'polygon':
         for (const [px, py] of el.points) {
           minX = Math.min(minX, px);
           minY = Math.min(minY, py);
           maxX = Math.max(maxX, px);
           maxY = Math.max(maxY, py);
         }
+        break;
+      case 'curve':
+        minX = Math.min(minX, el.x, el.x2, el.cx);
+        minY = Math.min(minY, el.y, el.y2, el.cy);
+        maxX = Math.max(maxX, el.x, el.x2, el.cx);
+        maxY = Math.max(maxY, el.y, el.y2, el.cy);
         break;
       case 'image': {
         const ix = el.width < 0 ? el.x + el.width : el.x;
@@ -129,6 +231,27 @@ function elementToSVG(el: Element, ox: number, oy: number): string {
     case 'freehand':  return freehandToSVG(el, ox, oy);
     case 'text':      return textToSVG(el, ox, oy);
     case 'image':     return imageToSVG(el, ox, oy);
+    case 'polygon': {
+      if (el.points.length < 2) return '';
+      const stroke = el.strokeColor;
+      const fill = el.fillColor === 'transparent' ? 'none' : el.fillColor;
+      const sw = el.strokeWidth;
+      const dash = el.strokeStyle === 'dashed' ? `stroke-dasharray="${sw * 4},${sw * 2}"` :
+                   el.strokeStyle === 'dotted' ? `stroke-dasharray="${sw},${sw * 2}"` : '';
+      const pts = el.points.map(([x, y]) => `${x - ox},${y - oy}`).join(' ');
+      const tag = el.closed ? 'polygon' : 'polyline';
+      return `<${tag} points="${pts}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" opacity="${el.opacity}" ${dash}/>`;
+    }
+    case 'curve': {
+      const stroke = el.strokeColor;
+      const sw = el.strokeWidth;
+      const dash = el.strokeStyle === 'dashed' ? `stroke-dasharray="${sw * 4},${sw * 2}"` :
+                   el.strokeStyle === 'dotted' ? `stroke-dasharray="${sw},${sw * 2}"` : '';
+      const x = el.x - ox; const y = el.y - oy;
+      const x2 = el.x2 - ox; const y2 = el.y2 - oy;
+      const cx = el.cx - ox; const cy = el.cy - oy;
+      return `<path d="M ${x} ${y} Q ${cx} ${cy} ${x2} ${y2}" fill="none" stroke="${stroke}" stroke-width="${sw}" opacity="${el.opacity}" ${dash}/>`;
+    }
   }
 }
 
