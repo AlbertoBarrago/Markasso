@@ -32,6 +32,8 @@ Markasso is a fast, minimal, keyboard-first whiteboard engine that runs entirely
 
 Built with vanilla TypeScript and the Canvas 2D API — no framework dependencies. Just you, a canvas, and JavaScript doing exactly what it was invented to do.
 
+This repository is the source of truth for the production deployment.
+
 While Excalidraw excels at freehand sketching and Draw.io offers comprehensive diagramming, **Markasso occupies a different niche**: smaller, faster, and requiring no sign-in, cookies, or workspace creation.
 
 ---
