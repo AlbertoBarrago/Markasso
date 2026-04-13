@@ -40,18 +40,39 @@ export function pan(viewport: Viewport, dx: number, dy: number): Viewport {
   };
 }
 
+export interface FitInsets {
+  top?: number;
+  bottom?: number;
+  left?: number;
+  right?: number;
+}
+
+/**
+ * Compute a viewport that fits all elements into the usable area.
+ * insets accounts for fixed toolbar islands so content is never hidden behind them.
+ * Defaults: top/bottom 70px (toolbar height + buffer), left/right 20px.
+ */
 export function fitToElements(
   elements: ReadonlyArray<Element>,
   canvasWidth: number,
   canvasHeight: number,
-  padding = 40,
+  insets: FitInsets = {},
 ): Viewport {
   if (elements.length === 0) return createViewport();
+
+  const iTop    = insets.top    ?? 70;
+  const iBottom = insets.bottom ?? 70;
+  const iLeft   = insets.left   ?? 20;
+  const iRight  = insets.right  ?? 20;
 
   let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
 
   for (const el of elements) {
-    if (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'text' || el.type === 'rhombus') {
+    if (
+      el.type === 'rectangle' || el.type === 'ellipse' ||
+      el.type === 'text'      || el.type === 'rhombus' ||
+      el.type === 'image'
+    ) {
       const x1 = Math.min(el.x, el.x + el.width);
       const y1 = Math.min(el.y, el.y + el.height);
       const x2 = Math.max(el.x, el.x + el.width);
@@ -61,6 +82,15 @@ export function fitToElements(
     } else if (el.type === 'line' || el.type === 'arrow') {
       left = Math.min(left, el.x, el.x2); top = Math.min(top, el.y, el.y2);
       right = Math.max(right, el.x, el.x2); bottom = Math.max(bottom, el.y, el.y2);
+    } else if (el.type === 'curve') {
+      // Conservative: union of both endpoints + control point
+      left = Math.min(left, el.x, el.x2, el.cx); top = Math.min(top, el.y, el.y2, el.cy);
+      right = Math.max(right, el.x, el.x2, el.cx); bottom = Math.max(bottom, el.y, el.y2, el.cy);
+    } else if (el.type === 'polygon') {
+      for (const [px, py] of el.points) {
+        left = Math.min(left, px); top = Math.min(top, py);
+        right = Math.max(right, px); bottom = Math.max(bottom, py);
+      }
     } else if (el.type === 'freehand') {
       for (const [px, py] of el.points) {
         left = Math.min(left, px); top = Math.min(top, py);
@@ -71,12 +101,17 @@ export function fitToElements(
 
   const bbW = Math.max(right - left, 1);
   const bbH = Math.max(bottom - top, 1);
+  const availW = canvasWidth  - iLeft - iRight;
+  const availH = canvasHeight - iTop  - iBottom;
   const newZoom = Math.min(Math.max(
-    Math.min((canvasWidth - 2 * padding) / bbW, (canvasHeight - 2 * padding) / bbH),
+    Math.min(availW / bbW, availH / bbH),
     0.05,
   ), 30);
-  const offsetX = canvasWidth / 2 - (left + bbW / 2) * newZoom;
-  const offsetY = canvasHeight / 2 - (top + bbH / 2) * newZoom;
+  // Center of the usable area (below top toolbar, above bottom toolbar)
+  const centerX = iLeft + availW / 2;
+  const centerY = iTop  + availH / 2;
+  const offsetX = centerX - (left + bbW / 2) * newZoom;
+  const offsetY = centerY - (top  + bbH / 2) * newZoom;
   return { zoom: newZoom, offsetX, offsetY };
 }
 
