@@ -185,6 +185,78 @@ html, body {
 }
 .tb-btn.active .tb-btn-key { color: var(--accent); }
 
+/* ── Tool group (line / curve / polygon flyout) ───────────────────── */
+.tb-group-wrap {
+  position: relative;  /* anchor for the absolute flyout */
+  display: flex;       /* behaves as a flex item inside the toolbar pill */
+}
+
+/* Split button: main activates tool, chevron opens flyout */
+.tb-split-inner {
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+/* Active state lives on the container, not the individual buttons */
+.tb-split-inner:has(.active) {
+  background: var(--accent-light);
+  outline: 2px solid var(--accent);
+}
+
+.tb-btn-group {
+  /* main part — icon stays centered; container owns active outline */
+  border-radius: var(--radius) 0 0 var(--radius) !important;
+}
+/* Override individual active outline — container handles it */
+.tb-split-inner .tb-btn-group.active,
+.tb-split-inner .tb-btn-group.active:focus-visible {
+  background: transparent;
+  outline: none;
+  color: var(--accent);
+}
+
+.tb-group-chevron-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-left: 1px solid rgba(255,255,255,0.1);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  cursor: pointer;
+  color: var(--text-muted);
+  opacity: 0.7;
+  font-size: 7px;
+  line-height: 1;
+  transition: opacity .1s, background .1s;
+}
+.tb-group-chevron-btn:hover { opacity: 1; background: rgba(255,255,255,0.07); }
+.tb-group-chevron-btn.active { opacity: 1; color: var(--accent); }
+[data-theme="light"] .tb-group-chevron-btn { border-left-color: rgba(0,0,0,0.12); }
+[data-theme="light"] .tb-group-chevron-btn.active { color: var(--accent); }
+
+.tb-group-flyout {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;             /* aligns left edge to the button */
+  background: var(--bg-island);
+  border: 1px solid var(--island-border);
+  border-radius: 10px;
+  box-shadow: var(--island-shadow);
+  padding: 4px;
+  gap: 2px;
+  flex-direction: column;
+  z-index: 200;
+  min-width: 44px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.tb-group-flyout.open { display: flex; }
+
 /* Zoom percentage label */
 .tb-zoom {
   font-size: 12px;

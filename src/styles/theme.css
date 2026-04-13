@@ -95,6 +95,17 @@
   outline-offset: -2px;
   color: var(--accent);
 }
+/* Split button: container owns active outline in light theme too */
+[data-theme="light"] .tb-split-inner .tb-btn-group.active {
+  background: transparent;
+  outline: none;
+  color: var(--accent);
+}
+[data-theme="light"] .tb-split-inner:has(.active) {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: var(--accent-light);
+}
 [data-theme="light"] .tb-separator {
   background: linear-gradient(
     to bottom,
