@@ -42,12 +42,14 @@ const IC = {
 
 type ToolDef = { tool: ActiveTool; icon: string; label: string; key: string; num: string };
 
-// Line group flyout: line is the default (6), curve and polygon have no number
+// Line group flyout: line (default, key 6) + curve
 const LINE_GROUP_TOOLS: ToolDef[] = [
-  { tool: 'line',    icon: IC.line,    label: t('line'),    key: 'L / 6', num: '6' },
-  { tool: 'curve',   icon: IC.curve,   label: t('curve'),   key: 'C',     num: '' },
-  { tool: 'polygon', icon: IC.polygon, label: t('polygon'), key: 'O',     num: '' },
+  { tool: 'line',  icon: IC.line,  label: t('line'),  key: 'L / 6', num: '6' },
+  { tool: 'curve', icon: IC.curve, label: t('curve'), key: 'C',     num: '' },
 ];
+
+// Polygon — standalone button next to the line group
+const POLYGON_DEF: ToolDef = { tool: 'polygon', icon: IC.polygon, label: t('polygon'), key: 'O', num: '' };
 const LINE_GROUP_NAMES = new Set<ActiveTool>(LINE_GROUP_TOOLS.map((s) => s.tool));
 
 // Main toolbar buttons — numbers 1–8 in order, then eraser (0)
@@ -182,9 +184,22 @@ export function initToolbar(container: HTMLElement, history: History): void {
   lineSplit.append(lineBtn, lineChevron);
   lineWrap.append(lineSplit, lineFlyout);
 
+  // Polygon — standalone button, placed right after line group
+  const polygonBtn = document.createElement('button');
+  polygonBtn.className = 'tb-btn';
+  polygonBtn.title = `${POLYGON_DEF.label} (${POLYGON_DEF.key})`;
+  polygonBtn.setAttribute('aria-label', POLYGON_DEF.label);
+  polygonBtn.setAttribute('aria-pressed', 'false');
+  polygonBtn.innerHTML = POLYGON_DEF.icon;
+  polygonBtn.addEventListener('click', () => history.dispatch({ type: 'SET_TOOL', tool: 'polygon' }));
+  toolBtns.set('polygon', polygonBtn);
+
   TOOLS.forEach((toolDef) => {
-    // Insert line group between arrow (5) and freehand (7)
-    if (toolDef.tool === 'freehand') centerPill.appendChild(lineWrap);
+    // Insert line group + polygon between arrow (5) and freehand (7)
+    if (toolDef.tool === 'freehand') {
+      centerPill.appendChild(lineWrap);
+      centerPill.appendChild(polygonBtn);
+    }
 
     if (toolDef.tool === 'eraser') {
       const sep = document.createElement('span');
@@ -428,15 +443,13 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const toolsPopup = document.createElement('div');
   toolsPopup.id = 'mobile-tools-popup';
 
-  // Build mobile tool list: expand line position with all line-group sub-tools
+  // Build mobile tool list: expand line group (line+curve) + polygon after arrow
   const mobileTools: ToolDef[] = [];
   for (const toolDef of TOOLS) {
     mobileTools.push(toolDef);
     if (toolDef.tool === 'arrow') {
-      // Insert line-group sub-tools (line, curve, polygon) after arrow
-      for (const ld of LINE_GROUP_TOOLS) {
-        mobileTools.push(ld);
-      }
+      for (const ld of LINE_GROUP_TOOLS) mobileTools.push(ld);
+      mobileTools.push(POLYGON_DEF);
     }
   }
 
