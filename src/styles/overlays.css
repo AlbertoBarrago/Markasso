@@ -837,17 +837,17 @@
   top: 64px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 100;
-  font-size: 12px;
+  z-index: 200;
+  font-size: 11px;
   color: var(--text-muted);
   pointer-events: none;
   white-space: nowrap;
   letter-spacing: 0.01em;
   opacity: 0;
-  transition: opacity 0.5s ease;
+  transition: opacity .6s ease;
 }
 #hint-bar.hint-bar--visible {
-  opacity: 0.5;
+  opacity: 0.35;
 }
 #hint-bar kbd {
   font-size: 10px;
