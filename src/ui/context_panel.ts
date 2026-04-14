@@ -46,35 +46,7 @@ function saveCustomColor(kind: 'stroke' | 'fill', color: string | null): void {
   localStorage.setItem(CUSTOM_COLORS_KEY, JSON.stringify(data));
 }
 
-// ── Style presets ───────────────────────────────────��──────────────────────────
-const STYLE_PRESETS_KEY = 'markasso-style-presets';
-const PRESET_SLOTS = 4;
 
-interface StylePreset {
-  strokeColor: string;
-  fillColor: string;
-  strokeWidth: number;
-  strokeStyle: 'solid' | 'dashed' | 'dotted';
-  roughness: number;
-  opacity: number;
-  cornerRadius?: number;
-}
-
-function loadStylePresets(): Array<StylePreset | null> {
-  try {
-    const raw = localStorage.getItem(STYLE_PRESETS_KEY);
-    if (!raw) return Array(PRESET_SLOTS).fill(null) as Array<null>;
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return Array(PRESET_SLOTS).fill(null) as Array<null>;
-    return parsed.map((p: unknown) => (p && typeof p === 'object' ? p as StylePreset : null));
-  } catch {
-    return Array(PRESET_SLOTS).fill(null) as Array<null>;
-  }
-}
-
-function saveStylePresets(presets: Array<StylePreset | null>): void {
-  localStorage.setItem(STYLE_PRESETS_KEY, JSON.stringify(presets));
-}
 
 function hexToHsl(hex: string): [number, number, number] {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -197,11 +169,6 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
       <div class="cp-btn-row" id="cp-text-format" role="group" aria-label="${t('style')}"></div>
       <div class="cp-label" style="margin-top:4px">${t('alignment')}</div>
       <div class="cp-btn-row" id="cp-align-presets" role="group" aria-label="${t('alignment')}"></div>
-    </div>
-
-    <div class="cp-section" id="cp-presets-section">
-      <div class="cp-label">${t('stylePresets')}</div>
-      <div class="cp-btn-row" id="cp-style-preset-row" role="group" aria-label="${t('stylePresets')}"></div>
     </div>
 
     <div class="cp-section">
@@ -758,81 +725,6 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
       history.dispatch({ type: 'APPLY_STYLE', textAlign: a.value });
     });
     alignPresets.appendChild(btn);
-  }
-
-  // ── Saved style presets ────────────────────────────────────────────────────
-  let savedPresets = loadStylePresets();
-  const presetRow = panel.querySelector('#cp-style-preset-row')!;
-  const presetBtns: HTMLButtonElement[] = [];
-
-  function renderPresetBtn(btn: HTMLButtonElement, preset: StylePreset | null, index: number): void {
-    btn.className = 'cp-btn cp-style-preset-btn';
-    btn.dataset['presetIndex'] = String(index);
-    if (preset) {
-      const displayColor = preset.fillColor !== 'transparent' ? preset.fillColor : preset.strokeColor;
-      btn.style.background = displayColor;
-      btn.style.borderColor = preset.strokeColor;
-      btn.title = t('applyPreset');
-      btn.textContent = '';
-      btn.classList.add('cp-style-preset-filled');
-    } else {
-      btn.style.background = '';
-      btn.style.borderColor = '';
-      btn.title = t('savePreset');
-      btn.textContent = '+';
-      btn.classList.remove('cp-style-preset-filled');
-    }
-  }
-
-  for (let i = 0; i < PRESET_SLOTS; i++) {
-    const btn = document.createElement('button');
-    renderPresetBtn(btn, savedPresets[i] ?? null, i);
-    btn.addEventListener('click', () => {
-      const idx = Number(btn.dataset['presetIndex']);
-      const preset = savedPresets[idx] ?? null;
-      if (preset) {
-        // Apply preset
-        history.dispatch({
-          type: 'APPLY_STYLE',
-          strokeColor: preset.strokeColor,
-          fillColor: preset.fillColor,
-          strokeWidth: preset.strokeWidth,
-          strokeStyle: preset.strokeStyle,
-          roughness: preset.roughness,
-          opacity: preset.opacity,
-          ...(preset.cornerRadius !== undefined ? { cornerRadius: preset.cornerRadius } : {}),
-        });
-      } else {
-        // Save current style as preset
-        const { appState } = history.present;
-        const lastEl = appState.lastCreatedId
-          ? history.present.elements.find((e) => e.id === appState.lastCreatedId)
-          : undefined;
-        const newPreset: StylePreset = {
-          strokeColor: lastEl ? lastEl.strokeColor : appState.strokeColor,
-          fillColor: lastEl ? lastEl.fillColor : appState.fillColor,
-          strokeWidth: lastEl ? lastEl.strokeWidth : appState.strokeWidth,
-          strokeStyle: lastEl ? (lastEl.strokeStyle ?? 'solid') : appState.strokeStyle,
-          roughness: lastEl ? (lastEl.roughness ?? 0) : appState.roughness,
-          opacity: lastEl ? lastEl.opacity : appState.opacity,
-          ...((lastEl && (lastEl.type === 'rectangle' || lastEl.type === 'rhombus') && lastEl.cornerRadius !== undefined) ? { cornerRadius: lastEl.cornerRadius } : {}),
-        };
-        savedPresets[idx] = newPreset;
-        saveStylePresets(savedPresets);
-        renderPresetBtn(btn, newPreset, idx);
-      }
-    });
-    btn.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      const idx = Number(btn.dataset['presetIndex']);
-      if (savedPresets[idx]) {
-        savedPresets[idx] = null;
-        saveStylePresets(savedPresets);
-        renderPresetBtn(btn, null, idx);
-      }
-    });
-    presetBtns.push(btn);
-    presetRow.appendChild(btn);
   }
 
   // ── Opacity slider ─────────────────────────────────────────────────────────
