@@ -115,5 +115,18 @@
   "elementSearchNoResults": "要素が見つかりません",
   "curve": "曲線",
   "polygon": "ポリゴン",
-  "showMinimap": "ミニマップを表示"
+  "showMinimap": "ミニマップを表示",
+  "hintSelect": "クリックで選択 · ドラッグでマルキー · [[Del]] で削除",
+  "hintHand": "ドラッグでパン · スクロールでズーム · [[Space]] でもパン",
+  "hintEraser": "要素の上でドラッグして消去",
+  "hintRectangle": "ドラッグで描画 · [[Shift]] で正方形",
+  "hintEllipse": "ドラッグで描画 · [[Shift]] で円",
+  "hintLine": "クリックで点を追加 · ダブルクリックで完了",
+  "hintArrow": "クリックで点を追加 · ダブルクリックで完了",
+  "hintRombo": "ドラッグでひし形を描画",
+  "hintFreehand": "自由に描画 · 離すとストローク完了",
+  "hintText": "クリックで配置 · [[Esc]] で確定",
+  "hintSticky": "クリックでメモを配置 · [[Esc]] でキャンセル",
+  "hintCurve": "クリックで制御点を追加 · ダブルクリックで完了",
+  "hintPolygon": "クリックで頂点を追加 · ダブルクリックで閉じる"
 }

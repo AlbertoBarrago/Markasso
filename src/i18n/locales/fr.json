@@ -115,5 +115,18 @@
   "elementSearchNoResults": "Aucun élément trouvé",
   "curve": "Courbe",
   "polygon": "Polygone",
-  "showMinimap": "Afficher la minimap"
+  "showMinimap": "Afficher la minimap",
+  "hintSelect": "Clic pour sélectionner · Glisser pour la sélection · [[Suppr]] pour supprimer",
+  "hintHand": "Glisser pour déplacer · Défiler pour zoomer · [[Espace]] déplace aussi",
+  "hintEraser": "Glissez sur les éléments pour les effacer",
+  "hintRectangle": "Glisser pour dessiner · [[Shift]] maintenu pour un carré",
+  "hintEllipse": "Glisser pour dessiner · [[Shift]] maintenu pour un cercle",
+  "hintLine": "Clic pour ajouter des points · Double-clic pour terminer",
+  "hintArrow": "Clic pour ajouter des points · Double-clic pour terminer",
+  "hintRombo": "Glisser pour dessiner un losange",
+  "hintFreehand": "Dessinez librement · Relâchez pour terminer le tracé",
+  "hintText": "Clic pour placer · [[Échap]] pour confirmer",
+  "hintSticky": "Clic pour placer une note · [[Échap]] pour annuler",
+  "hintCurve": "Clic pour les points de contrôle · Double-clic pour terminer",
+  "hintPolygon": "Clic pour les sommets · Double-clic pour fermer"
 }

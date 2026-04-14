@@ -115,5 +115,18 @@
   "elementSearchNoResults": "Keine Elemente gefunden",
   "curve": "Kurve",
   "polygon": "Polygon",
-  "showMinimap": "Minimap anzeigen"
+  "showMinimap": "Minimap anzeigen",
+  "hintSelect": "Klicken zum Auswählen · Ziehen für Marquee · [[Entf]] zum Löschen",
+  "hintHand": "Ziehen zum Schwenken · Scrollen zum Zoomen · [[Leertaste]] schwenkt auch",
+  "hintEraser": "Über Elemente ziehen zum Löschen",
+  "hintRectangle": "Ziehen zum Zeichnen · [[Shift]] gedrückt für Quadrat",
+  "hintEllipse": "Ziehen zum Zeichnen · [[Shift]] gedrückt für Kreis",
+  "hintLine": "Klicken für Punkte · Doppelklick zum Beenden",
+  "hintArrow": "Klicken für Punkte · Doppelklick zum Beenden",
+  "hintRombo": "Ziehen zum Zeichnen einer Raute",
+  "hintFreehand": "Frei zeichnen · Loslassen zum Beenden",
+  "hintText": "Klicken zum Platzieren · [[Esc]] zum Bestätigen",
+  "hintSticky": "Klicken für eine Notiz · [[Esc]] zum Abbrechen",
+  "hintCurve": "Klicken für Kontrollpunkte · Doppelklick zum Beenden",
+  "hintPolygon": "Klicken für Eckpunkte · Doppelklick zum Schließen"
 }

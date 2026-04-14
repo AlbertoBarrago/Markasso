@@ -120,5 +120,18 @@
   "elementSearchNoResults": "No elements found",
   "curve": "Curve",
   "polygon": "Polygon",
-  "showMinimap": "Show minimap"
+  "showMinimap": "Show minimap",
+  "hintSelect": "Click to select · Drag for marquee · [[Del]] to delete",
+  "hintHand": "Drag to pan · Scroll to zoom · [[Space]] also pans",
+  "hintEraser": "Drag over elements to erase them",
+  "hintRectangle": "Drag to draw · Hold [[Shift]] for a square",
+  "hintEllipse": "Drag to draw · Hold [[Shift]] for a circle",
+  "hintLine": "Click to add points · Double-click to finish",
+  "hintArrow": "Click to add points · Double-click to finish",
+  "hintRombo": "Drag to draw a rhombus",
+  "hintFreehand": "Draw freely · Release to finish the stroke",
+  "hintText": "Click to place · [[Esc]] to confirm",
+  "hintSticky": "Click to place a sticky note · [[Esc]] to cancel",
+  "hintCurve": "Click to add control points · Double-click to finish",
+  "hintPolygon": "Click to add vertices · Double-click to close"
 }

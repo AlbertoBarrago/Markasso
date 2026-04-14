@@ -115,5 +115,18 @@
   "elementSearchNoResults": "未找到元素",
   "curve": "曲线",
   "polygon": "多边形",
-  "showMinimap": "显示缩略图"
+  "showMinimap": "显示缩略图",
+  "hintSelect": "单击选择 · 拖动框选 · [[Del]] 删除",
+  "hintHand": "拖动平移 · 滚动缩放 · [[空格]] 也可平移",
+  "hintEraser": "拖动擦除元素",
+  "hintRectangle": "拖动绘制 · 按住 [[Shift]] 绘制正方形",
+  "hintEllipse": "拖动绘制 · 按住 [[Shift]] 绘制圆形",
+  "hintLine": "单击添加点 · 双击完成",
+  "hintArrow": "单击添加点 · 双击完成",
+  "hintRombo": "拖动绘制菱形",
+  "hintFreehand": "自由绘制 · 松开完成笔画",
+  "hintText": "单击放置 · [[Esc]] 确认",
+  "hintSticky": "单击放置便签 · [[Esc]] 取消",
+  "hintCurve": "单击添加控制点 · 双击完成",
+  "hintPolygon": "单击添加顶点 · 双击关闭"
 }

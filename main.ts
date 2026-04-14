@@ -10,6 +10,7 @@ import { initImageImport } from './src/ui/image_import';
 import { initMobileActionBar } from './src/ui/mobile_action_bar';
 import { initWelcome } from './src/ui/welcome';
 import { initShortcutsHelp } from './src/ui/shortcuts_help';
+import { initHintBar } from './src/ui/hint_bar';
 import { initCommandPalette } from './src/ui/command_palette';
 import { initMinimap } from './src/ui/minimap';
 import { initElementSearch } from './src/ui/element_search';
@@ -62,6 +63,7 @@ async function bootstrap(): Promise<void> {
   initMinimap(workspace, hist);
   initElementSearch(workspace, hist);
   initShortcutsHelp(appEl);
+  initHintBar(appEl, hist);
   initSession(hist);
   if (!session && !sharedElements) initWelcome(appEl, hist);
 }

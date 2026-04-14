@@ -831,6 +831,44 @@
   color: var(--text);
 }
 
+/* ── Hint bar ──────────────────────────────────────────────────────────────── */
+#hint-bar {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  font-size: 12px;
+  color: var(--text-muted);
+  pointer-events: none;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+#hint-bar.hint-bar--visible {
+  opacity: 0.5;
+}
+#hint-bar kbd {
+  font-size: 10px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+[data-theme="light"] #hint-bar kbd {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+@media (pointer: coarse), (max-width: 600px) {
+  #hint-bar { display: none; }
+}
+
 /* ── Quota warning toast ───────────────────────────────────────────────────── */
 .quota-toast {
   position: fixed;
