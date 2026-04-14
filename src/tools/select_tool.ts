@@ -59,8 +59,12 @@ export class SelectTool implements Tool {
 
   // Curve control-point drag state (legacy CurveElement)
   private curveCpElId: string | null = null;
+  private curveCpDragOffsetX = 0;
+  private curveCpDragOffsetY = 0;
   // Line control-point drag state (LineElement with optional cx/cy)
   private lineCpElId: string | null = null;
+  private lineCpDragOffsetX = 0;
+  private lineCpDragOffsetY = 0;
 
   // Endpoint drag state
   private endpointSide: 'start' | 'end' | null = null;
@@ -159,6 +163,8 @@ export class SelectTool implements Tool {
         if (dist <= 10) {
           this.dragMode = 'curve-cp';
           this.curveCpElId = el.id;
+          this.curveCpDragOffsetX = worldX - el.cx;
+          this.curveCpDragOffsetY = worldY - el.cy;
           ctx.history.beginDrag();
           return;
         }
@@ -175,6 +181,8 @@ export class SelectTool implements Tool {
         if (Math.hypot(screenX - scx, screenY - scy) <= 10) {
           this.dragMode = 'line-cp';
           this.lineCpElId = el.id;
+          this.lineCpDragOffsetX = worldX - cpX;
+          this.lineCpDragOffsetY = worldY - cpY;
           ctx.history.beginDrag();
           return;
         }
@@ -305,8 +313,8 @@ export class SelectTool implements Tool {
       ctx.history.dispatch({
         type: 'RESIZE_ELEMENT',
         id: this.curveCpElId,
-        cx: worldX,
-        cy: worldY,
+        cx: worldX - this.curveCpDragOffsetX,
+        cy: worldY - this.curveCpDragOffsetY,
       });
       ctx.onPreviewUpdate?.();
       return;
@@ -315,8 +323,8 @@ export class SelectTool implements Tool {
       ctx.history.dispatch({
         type: 'RESIZE_ELEMENT',
         id: this.lineCpElId,
-        cx: worldX,
-        cy: worldY,
+        cx: worldX - this.lineCpDragOffsetX,
+        cy: worldY - this.lineCpDragOffsetY,
       });
       ctx.onPreviewUpdate?.();
       return;

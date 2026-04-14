@@ -392,18 +392,44 @@ export function drawSelection(
       ctx.fill();
       ctx.stroke();
 
-      // Midpoint control-point handle for lines (always visible; position = cx/cy if set, else geometric midpoint)
+      // Midpoint control-point handle for lines
+      // cx/cy set → full handle (curve active); undefined → ghost handle (drag to curve)
       if (el.type === 'line') {
+        const curveActive = el.cx !== undefined && el.cy !== undefined;
         const cpX = el.cx ?? (pts.x + pts.x2) / 2;
         const cpY = el.cy ?? (pts.y + pts.y2) / 2;
         const [scpx, scpy] = worldToScreen(viewport, cpX, cpY);
-        ctx.fillStyle = 'rgba(180, 160, 255, 0.85)';
-        ctx.strokeStyle = '#1c1c2a';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(scpx, scpy, 5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+
+        if (curveActive) {
+          // Guide lines from endpoints to control point
+          ctx.strokeStyle = 'rgba(180, 160, 255, 0.3)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(x1s, y1s);
+          ctx.lineTo(scpx, scpy);
+          ctx.lineTo(x2s, y2s);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Solid handle
+          ctx.fillStyle = 'rgba(180, 160, 255, 0.9)';
+          ctx.strokeStyle = '#1c1c2a';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(scpx, scpy, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          // Ghost handle — hint that the line can be curved
+          ctx.fillStyle = 'rgba(180, 160, 255, 0.25)';
+          ctx.strokeStyle = 'rgba(180, 160, 255, 0.5)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(scpx, scpy, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
       }
     }
   }
