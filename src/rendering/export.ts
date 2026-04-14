@@ -36,7 +36,7 @@ export function exportPNG(scene: Scene, withBackground = true): void {
   ctx.translate(PAD - minX, PAD - minY);
 
   for (const el of elements) {
-    drawElement(ctx, el);
+    drawElement(ctx, el, elements);
   }
 
   const url = canvas.toDataURL('image/png');
@@ -63,7 +63,7 @@ export function exportHTML(scene: Scene): void {
   ctx.fillRect(0, 0, offscreen.width, offscreen.height);
   ctx.scale(scale, scale);
   ctx.translate(PAD - minX, PAD - minY);
-  for (const el of elements) drawElement(ctx, el);
+  for (const el of elements) drawElement(ctx, el, elements);
 
   const dataUrl = offscreen.toDataURL('image/png');
   const title = 'Markasso export';
@@ -202,7 +202,7 @@ function elementToSVG(el: Element, ox: number, oy: number): string {
       const sw = el.strokeWidth;
       const dash = el.strokeStyle === 'dashed' ? `stroke-dasharray="${sw * 4},${sw * 2}"` :
                    el.strokeStyle === 'dotted' ? `stroke-dasharray="${sw},${sw * 2}"` : '';
-      const pts = el.points.map(([x, y]) => `${x - ox},${y - oy}`).join(' ');
+      const pts = el.points.map(([x, y]) => `${x + ox},${y + oy}`).join(' ');
       const tag = el.closed ? 'polygon' : 'polyline';
       return `<${tag} points="${pts}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" opacity="${el.opacity}" ${dash}/>`;
     }
@@ -211,9 +211,9 @@ function elementToSVG(el: Element, ox: number, oy: number): string {
       const sw = el.strokeWidth;
       const dash = el.strokeStyle === 'dashed' ? `stroke-dasharray="${sw * 4},${sw * 2}"` :
                    el.strokeStyle === 'dotted' ? `stroke-dasharray="${sw},${sw * 2}"` : '';
-      const x = el.x - ox; const y = el.y - oy;
-      const x2 = el.x2 - ox; const y2 = el.y2 - oy;
-      const cx = el.cx - ox; const cy = el.cy - oy;
+      const x = el.x + ox; const y = el.y + oy;
+      const x2 = el.x2 + ox; const y2 = el.y2 + oy;
+      const cx = el.cx + ox; const cy = el.cy + oy;
       return `<path d="M ${x} ${y} Q ${cx} ${cy} ${x2} ${y2}" fill="none" stroke="${stroke}" stroke-width="${sw}" opacity="${el.opacity}" ${dash}/>`;
     }
   }
