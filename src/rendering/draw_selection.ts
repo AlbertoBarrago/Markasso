@@ -447,23 +447,72 @@ export function drawHoverHighlight(
   ctx.resetTransform();
   ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-  const { x, y, w, h } = getElementBounds(element);
-  const [sx, sy] = worldToScreen(viewport, x, y);
-  const [ex, ey] = worldToScreen(viewport, x + w, y + h);
-
-  const rotation = element.rotation ?? 0;
-  if (rotation) {
-    const [cx, cy] = getElementCenter(element);
-    const [scx, scy] = worldToScreen(viewport, cx, cy);
-    ctx.translate(scx, scy);
-    ctx.rotate(rotation);
-    ctx.translate(-scx, -scy);
-  }
-
-  ctx.strokeStyle = 'rgba(120, 180, 255, 0.45)';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(120, 180, 255, 0.55)';
+  ctx.lineWidth = 2;
   ctx.setLineDash([]);
-  ctx.strokeRect(sx - 2, sy - 2, ex - sx + 4, ey - sy + 4);
+
+  const s = (wx: number, wy: number) => worldToScreen(viewport, wx, wy);
+
+  switch (element.type) {
+    case 'line':
+    case 'arrow': {
+      const [x1s, y1s] = s(element.x, element.y);
+      const [x2s, y2s] = s(element.x2, element.y2);
+      ctx.beginPath();
+      if (element.type === 'line' && element.cx !== undefined && element.cy !== undefined) {
+        const [cxs, cys] = s(element.cx, element.cy);
+        ctx.moveTo(x1s, y1s);
+        ctx.quadraticCurveTo(cxs, cys, x2s, y2s);
+      } else {
+        ctx.moveTo(x1s, y1s);
+        ctx.lineTo(x2s, y2s);
+      }
+      ctx.stroke();
+      break;
+    }
+    case 'curve': {
+      const [x1s, y1s] = s(element.x, element.y);
+      const [cxs, cys] = s(element.cx, element.cy);
+      const [x2s, y2s] = s(element.x2, element.y2);
+      ctx.beginPath();
+      ctx.moveTo(x1s, y1s);
+      ctx.quadraticCurveTo(cxs, cys, x2s, y2s);
+      ctx.stroke();
+      break;
+    }
+    case 'freehand':
+    case 'polygon': {
+      if (element.points.length < 2) break;
+      ctx.beginPath();
+      const [p0x, p0y] = s(element.points[0]![0], element.points[0]![1]);
+      ctx.moveTo(p0x, p0y);
+      for (let i = 1; i < element.points.length; i++) {
+        const [px, py] = s(element.points[i]![0], element.points[i]![1]);
+        ctx.lineTo(px, py);
+      }
+      if (element.type === 'polygon' && element.closed) ctx.closePath();
+      ctx.stroke();
+      break;
+    }
+    default: {
+      // Rectangular elements: draw a padded rect (with rotation if needed)
+      const { x, y, w, h } = getElementBounds(element);
+      const [sx, sy] = s(x, y);
+      const [ex, ey] = s(x + w, y + h);
+
+      const rotation = element.rotation ?? 0;
+      if (rotation) {
+        const [cx, cy] = getElementCenter(element);
+        const [scx, scy] = s(cx, cy);
+        ctx.translate(scx, scy);
+        ctx.rotate(rotation);
+        ctx.translate(-scx, -scy);
+      }
+
+      ctx.strokeRect(sx - 2, sy - 2, ex - sx + 4, ey - sy + 4);
+      break;
+    }
+  }
 
   ctx.restore();
 }

@@ -74,6 +74,9 @@ export default {
     }
 
     // Everything else → static assets
+    if (!env.ASSETS) {
+      return new Response('Not found', { status: 404, headers: CORS_HEADERS });
+    }
     return env.ASSETS.fetch(request);
   },
 };
