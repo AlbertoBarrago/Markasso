@@ -646,8 +646,6 @@ function drawFreehand(
 
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
 
   // With pressure: draw each segment separately with varying width
   if (pressures && pressures.length === points.length) {
