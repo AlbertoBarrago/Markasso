@@ -184,7 +184,7 @@ export class TextTool implements Tool {
         e.stopPropagation();
         ta.removeEventListener('blur', onBlur);
         if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
-        ta.remove();
+        doCommit();
         return;
       }
     });
