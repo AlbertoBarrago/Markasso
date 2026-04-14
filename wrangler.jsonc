@@ -2,6 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "markasso",
   "compatibility_date": "2026-04-07",
+  "main": "src/worker.ts",
   "observability": {
     "enabled": true
   },
@@ -10,5 +11,11 @@
   },
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "SHARE_LINKS",
+      "id": "ba266ca029f34cc2998e017067eca662"
+    }
   ]
 }

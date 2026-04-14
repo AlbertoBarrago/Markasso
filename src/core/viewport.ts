@@ -45,6 +45,7 @@ export interface FitInsets {
   bottom?: number;
   left?: number;
   right?: number;
+  maxZoom?: number;
 }
 
 /**
@@ -106,7 +107,7 @@ export function fitToElements(
   const newZoom = Math.min(Math.max(
     Math.min(availW / bbW, availH / bbH),
     0.05,
-  ), 30);
+  ), insets.maxZoom ?? 30);
   // Center of the usable area (below top toolbar, above bottom toolbar)
   const centerX = iLeft + availW / 2;
   const centerY = iTop  + availH / 2;

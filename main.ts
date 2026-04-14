@@ -13,7 +13,7 @@ import { initShortcutsHelp } from './src/ui/shortcuts_help';
 import { initCommandPalette } from './src/ui/command_palette';
 import { initMinimap } from './src/ui/minimap';
 import { initElementSearch } from './src/ui/element_search';
-import { decodeScene, SHARE_HASH_PREFIX } from './src/io/share';
+import { decodeScene, isShareHash } from './src/io/share';
 import { fitToElements } from './src/core/viewport';
 
 async function bootstrap(): Promise<void> {
@@ -28,7 +28,7 @@ async function bootstrap(): Promise<void> {
 
   // Check for share link in URL hash — takes priority over session
   let sharedElements = null;
-  if (location.hash.startsWith(SHARE_HASH_PREFIX)) {
+  if (isShareHash(location.hash)) {
     sharedElements = await decodeScene(location.hash);
     if (sharedElements) {
       // Remove hash from URL without reloading to keep the URL clean after load
@@ -39,8 +39,8 @@ async function bootstrap(): Promise<void> {
   const session = loadSession();
   let baseScene;
   if (sharedElements) {
-    const vp = fitToElements(sharedElements, window.innerWidth, window.innerHeight);
-    baseScene = { ...createScene(), elements: sharedElements, viewport: { ...vp, zoom: Math.min(vp.zoom, 1) } };
+    const vp = fitToElements(sharedElements, window.innerWidth, window.innerHeight, { maxZoom: 1 });
+    baseScene = { ...createScene(), elements: sharedElements, viewport: vp };
   } else {
     baseScene = session
       ? { ...createScene(), elements: session.elements, viewport: session.viewport }
