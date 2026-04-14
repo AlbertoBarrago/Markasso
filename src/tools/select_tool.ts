@@ -80,6 +80,10 @@ export class SelectTool implements Tool {
   private shiftClonePending = false;
   private shiftCloneTarget: Element | null = null;
 
+  // Alt+drag clone state
+  private altClonePending = false;
+  private altCloneTarget: Element | null = null;
+
   // Rotation state
   private rotateCenter: [number, number] = [0, 0];
   private rotateInitialAngle = 0;
@@ -266,7 +270,15 @@ export class SelectTool implements Tool {
     // 4. Hit-test elements
     const hit = hitTest(scene.elements, worldX, worldY);
     if (hit) {
-      if (e.shiftKey) {
+      if (e.altKey && !e.shiftKey) {
+        // Alt+drag → clone
+        this.altClonePending = true;
+        this.altCloneTarget = hit;
+        if (!scene.selectedIds.has(hit.id)) {
+          ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
+        }
+        this.dragMode = hit.locked ? 'none' : 'move';
+      } else if (e.shiftKey) {
         // Shift+drag → clone; Shift+click → toggle (decided on mouseUp)
         this.shiftClonePending = true;
         this.shiftCloneTarget = hit;
@@ -445,6 +457,25 @@ export class SelectTool implements Tool {
     }
 
     if (this.dragMode === 'move') {
+      if (this.altClonePending) {
+        const dist = Math.hypot(worldX - this.lastWorldX, worldY - this.lastWorldY);
+        if (dist < 2) return;
+        // drag: clone the selection and move clones
+        this.altClonePending = false;
+        const altScene = ctx.history.present;
+        const altHit = this.altCloneTarget!;
+        this.altCloneTarget = null;
+        const altIds = altScene.selectedIds.has(altHit.id)
+          ? [...altScene.selectedIds]
+          : [altHit.id];
+        const altEls = altScene.elements.filter((el) => altIds.includes(el.id) && !el.locked);
+        if (altEls.length > 0) {
+          const newElements = altEls.map((el) => ({ ...el, id: crypto.randomUUID() } as Element));
+          ctx.history.dispatch({ type: 'CREATE_ELEMENTS', elements: newElements });
+        }
+        // fall through to move the newly selected clones
+      }
+
       if (this.shiftClonePending) {
         const dist = Math.hypot(worldX - this.lastWorldX, worldY - this.lastWorldY);
         if (dist < 2) return;
@@ -517,6 +548,10 @@ export class SelectTool implements Tool {
     }
     this.shiftClonePending = false;
     this.shiftCloneTarget = null;
+
+    // Alt+click (no drag): just clear pending state (element already selected on mousedown)
+    this.altClonePending = false;
+    this.altCloneTarget = null;
 
     if (this.dragMode === 'marquee') {
       this.marqueeActive = false;
@@ -596,6 +631,8 @@ export class SelectTool implements Tool {
     this.marqueeActive = false;
     this.shiftClonePending = false;
     this.shiftCloneTarget = null;
+    this.altClonePending = false;
+    this.altCloneTarget = null;
   }
 
   onKeyDown(e: KeyboardEvent, ctx: ToolContext): void {

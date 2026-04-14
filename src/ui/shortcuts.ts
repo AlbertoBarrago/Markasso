@@ -108,8 +108,19 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       return;
     }
 
+    // Ctrl+Alt+C (Cmd+Alt+C) — copy style of first selected element (format painter)
+    if ((e.ctrlKey || e.metaKey) && e.altKey && e.key === 'c') {
+      e.preventDefault();
+      const scene = history.present;
+      const selected = scene.elements.filter((el) => scene.selectedIds.has(el.id));
+      if (selected.length > 0 && selected[0]) {
+        selectTool.activateFormatPainter(selected[0]);
+      }
+      return;
+    }
+
     // Ctrl+C — copy selected elements to internal clipboard
-    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key === 'c') {
       if (window.getSelection()?.toString()) return; // let browser handle text selection copy
       const scene = history.present;
       const selected = scene.elements.filter((el) => scene.selectedIds.has(el.id));
