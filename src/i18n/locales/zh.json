@@ -117,5 +117,6 @@
   "elementSearchPlaceholder": "按类型、文字或颜色搜索…",
   "elementSearchNoResults": "未找到元素",
   "curve": "曲线",
-  "polygon": "多边形"
+  "polygon": "多边形",
+  "showMinimap": "显示缩略图"
 }

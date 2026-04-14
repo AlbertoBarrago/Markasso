@@ -117,5 +117,6 @@
   "elementSearchPlaceholder": "種類・テキスト・色で検索…",
   "elementSearchNoResults": "要素が見つかりません",
   "curve": "曲線",
-  "polygon": "ポリゴン"
+  "polygon": "ポリゴン",
+  "showMinimap": "ミニマップを表示"
 }

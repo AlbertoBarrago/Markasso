@@ -29,6 +29,7 @@ applyTheme(getThemeMode());
 
 export interface UISettings {
   bgColor: string;
+  showMinimap: boolean;
 }
 
 const STORAGE_KEY = 'markasso-ui-settings';
@@ -41,17 +42,18 @@ export function loadSettings(): UISettings {
   const defaultBg = isResolvedLight() ? '#ffffff' : '#080808';
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { bgColor: defaultBg, ...(JSON.parse(raw) as Partial<UISettings>) };
+    if (raw) return { bgColor: defaultBg, showMinimap: true, ...(JSON.parse(raw) as Partial<UISettings>) };
   } catch { /* ignore */ }
-  return { bgColor: defaultBg };
+  return { bgColor: defaultBg, showMinimap: true };
 }
 
 export function saveSettings(s: UISettings): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
 }
 
-export function applySettings(_appEl: HTMLElement, s: UISettings): void {
+export function applySettings(appEl: HTMLElement, s: UISettings): void {
   document.documentElement.style.setProperty('--canvas-bg', s.bgColor);
+  appEl.classList.toggle('minimap-hidden', !s.showMinimap);
 }
 
 const GRID_TYPES: { type: GridType; label: string; desc: string }[] = [
@@ -176,6 +178,12 @@ export function initSettings(
             ).join('')}
           </div>
         </div>
+        <div class="pref-check-row">
+          <label class="pref-check-label">
+            <input type="checkbox" id="sp-minimap-visible" />
+            ${t('showMinimap')}
+          </label>
+        </div>
         <button class="pref-btn" id="sp-fit-to-content">${t('fitToContent')}</button>
         <button class="pref-btn" id="sp-reset-zoom">${t('resetZoom100')}</button>
       </div>
@@ -278,6 +286,9 @@ export function initSettings(
     const gridVis = panel.querySelector<HTMLInputElement>('#sp-grid-visible')!;
     gridVis.checked = history.present.appState.gridVisible;
 
+    const minimapVis = panel.querySelector<HTMLInputElement>('#sp-minimap-visible')!;
+    minimapVis.checked = current.showMinimap;
+
     panel.querySelectorAll<HTMLButtonElement>('.sp-grid-btn').forEach((b) => {
       const isActive = b.dataset['grid'] === history.present.appState.gridType;
       b.classList.toggle('active', isActive);
@@ -360,6 +371,11 @@ export function initSettings(
   });
   panel.querySelector<HTMLInputElement>('#sp-grid-visible')!.addEventListener('change', () => {
     history.dispatch({ type: 'TOGGLE_GRID' });
+  });
+  panel.querySelector<HTMLInputElement>('#sp-minimap-visible')!.addEventListener('change', (e) => {
+    current = { ...current, showMinimap: (e.target as HTMLInputElement).checked };
+    saveSettings(current);
+    applySettings(appEl, current);
   });
   panel.querySelectorAll<HTMLButtonElement>('.sp-grid-btn').forEach((b) => {
     b.addEventListener('click', () => {

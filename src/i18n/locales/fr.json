@@ -117,5 +117,6 @@
   "elementSearchPlaceholder": "Rechercher par type, texte ou couleur…",
   "elementSearchNoResults": "Aucun élément trouvé",
   "curve": "Courbe",
-  "polygon": "Polygone"
+  "polygon": "Polygone",
+  "showMinimap": "Afficher la minimap"
 }

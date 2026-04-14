@@ -441,6 +441,8 @@
   #minimap { display: none; }
 }
 
+.minimap-hidden #minimap { display: none; }
+
 /* ── Command palette ───────────────────────────────────────────────────────── */
 #cmd-palette-overlay {
   position: fixed;

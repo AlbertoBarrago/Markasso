@@ -122,5 +122,6 @@
   "elementSearchPlaceholder": "Search by type, text, or color…",
   "elementSearchNoResults": "No elements found",
   "curve": "Curve",
-  "polygon": "Polygon"
+  "polygon": "Polygon",
+  "showMinimap": "Show minimap"
 }
