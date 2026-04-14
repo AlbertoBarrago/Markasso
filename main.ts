@@ -42,10 +42,21 @@ async function bootstrap(): Promise<void> {
   if (sharedElements) {
     const vp = fitToElements(sharedElements, window.innerWidth, window.innerHeight, { maxZoom: 1 });
     baseScene = { ...createScene(), elements: sharedElements, viewport: vp };
+  } else if (session) {
+    const base = createScene();
+    baseScene = {
+      ...base,
+      elements: session.elements,
+      viewport: session.viewport,
+      appState: {
+        ...base.appState,
+        gridVisible: session.gridVisible,
+        gridSize: session.gridSize,
+        gridType: session.gridType,
+      },
+    };
   } else {
-    baseScene = session
-      ? { ...createScene(), elements: session.elements, viewport: session.viewport }
-      : createScene();
+    baseScene = createScene();
   }
   const hist = new History(baseScene);
 

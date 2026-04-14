@@ -1,5 +1,6 @@
 import type { Element } from '../elements/element';
 import type { Viewport } from '../core/viewport';
+import type { GridType } from '../core/app_state';
 import type { History } from '../engine/history';
 
 const STORAGE_KEY = 'markasso-session';
@@ -7,7 +8,15 @@ const DEBOUNCE_MS = 500;
 
 // ── Load (called before History is created) ─────────────────────────────────
 
-export function loadSession(): { elements: Element[]; viewport: Viewport } | null {
+export interface SessionData {
+  elements: Element[];
+  viewport: Viewport;
+  gridVisible: boolean;
+  gridSize: number;
+  gridType: GridType;
+}
+
+export function loadSession(): SessionData | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
@@ -21,7 +30,13 @@ export function loadSession(): { elements: Element[]; viewport: Viewport } | nul
         viewport = { offsetX: v['offsetX'], offsetY: v['offsetY'], zoom: v['zoom'] };
       }
     }
-    return { elements, viewport };
+    const VALID_GRID_TYPES: GridType[] = ['dot', 'line', 'mm'];
+    const gridVisible = typeof d['gridVisible'] === 'boolean' ? d['gridVisible'] : false;
+    const gridSize = typeof d['gridSize'] === 'number' && d['gridSize'] > 0 ? d['gridSize'] : 20;
+    const gridType: GridType = VALID_GRID_TYPES.includes(d['gridType'] as GridType)
+      ? (d['gridType'] as GridType)
+      : 'dot';
+    return { elements, viewport, gridVisible, gridSize, gridType };
   } catch {
     return null;
   }
@@ -43,6 +58,9 @@ export function initSession(history: History): void {
           version: 1,
           viewport: scene.viewport,
           elements: scene.elements,
+          gridVisible: scene.appState.gridVisible,
+          gridSize: scene.appState.gridSize,
+          gridType: scene.appState.gridType,
         }));
       } catch (e) {
         if (e instanceof DOMException && (
