@@ -128,5 +128,12 @@
   "hintText": "单击放置 · [[Esc]] 确认",
   "hintSticky": "单击放置便签 · [[Esc]] 取消",
   "hintCurve": "单击添加控制点 · 双击完成",
-  "hintPolygon": "单击添加顶点 · 双击关闭"
+  "hintPolygon": "单击添加顶点 · 双击关闭",
+  "lockElements": "锁定元素",
+  "unlockElements": "解锁元素",
+  "arrowHead": "箭头样式",
+  "arrowNone": "无",
+  "arrowEnd": "末端",
+  "arrowStart": "起端",
+  "arrowBoth": "两端"
 }

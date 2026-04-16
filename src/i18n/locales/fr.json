@@ -128,5 +128,12 @@
   "hintText": "Clic pour placer · [[Échap]] pour confirmer",
   "hintSticky": "Clic pour placer une note · [[Échap]] pour annuler",
   "hintCurve": "Clic pour les points de contrôle · Double-clic pour terminer",
-  "hintPolygon": "Clic pour les sommets · Double-clic pour fermer"
+  "hintPolygon": "Clic pour les sommets · Double-clic pour fermer",
+  "lockElements": "Verrouiller les éléments",
+  "unlockElements": "Déverrouiller les éléments",
+  "arrowHead": "Tête de flèche",
+  "arrowNone": "Aucune",
+  "arrowEnd": "Fin",
+  "arrowStart": "Début",
+  "arrowBoth": "Les deux"
 }

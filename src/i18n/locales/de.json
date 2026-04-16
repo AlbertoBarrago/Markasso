@@ -128,5 +128,12 @@
   "hintText": "Klicken zum Platzieren · [[Esc]] zum Bestätigen",
   "hintSticky": "Klicken für eine Notiz · [[Esc]] zum Abbrechen",
   "hintCurve": "Klicken für Kontrollpunkte · Doppelklick zum Beenden",
-  "hintPolygon": "Klicken für Eckpunkte · Doppelklick zum Schließen"
+  "hintPolygon": "Klicken für Eckpunkte · Doppelklick zum Schließen",
+  "lockElements": "Elemente sperren",
+  "unlockElements": "Elemente entsperren",
+  "arrowHead": "Pfeilspitze",
+  "arrowNone": "Keine",
+  "arrowEnd": "Ende",
+  "arrowStart": "Anfang",
+  "arrowBoth": "Beide"
 }

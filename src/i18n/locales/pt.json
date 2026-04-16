@@ -128,5 +128,12 @@
   "hintText": "Clique para colocar · [[Esc]] para confirmar",
   "hintSticky": "Clique para colocar nota · [[Esc]] para cancelar",
   "hintCurve": "Clique para pontos de controle · Duplo clique para terminar",
-  "hintPolygon": "Clique para vértices · Duplo clique para fechar"
+  "hintPolygon": "Clique para vértices · Duplo clique para fechar",
+  "lockElements": "Bloquear elementos",
+  "unlockElements": "Desbloquear elementos",
+  "arrowHead": "Ponta de seta",
+  "arrowNone": "Nenhuma",
+  "arrowEnd": "Final",
+  "arrowStart": "Início",
+  "arrowBoth": "Ambas"
 }

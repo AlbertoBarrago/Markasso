@@ -128,5 +128,12 @@
   "hintText": "クリックで配置 · [[Esc]] で確定",
   "hintSticky": "クリックでメモを配置 · [[Esc]] でキャンセル",
   "hintCurve": "クリックで制御点を追加 · ダブルクリックで完了",
-  "hintPolygon": "クリックで頂点を追加 · ダブルクリックで閉じる"
+  "hintPolygon": "クリックで頂点を追加 · ダブルクリックで閉じる",
+  "lockElements": "要素をロック",
+  "unlockElements": "要素のロック解除",
+  "arrowHead": "矢印の先端",
+  "arrowNone": "なし",
+  "arrowEnd": "終点",
+  "arrowStart": "始点",
+  "arrowBoth": "両端"
 }

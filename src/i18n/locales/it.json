@@ -128,5 +128,12 @@
   "hintText": "Clic per inserire · [[Esc]] per confermare",
   "hintSticky": "Clic per inserire un post-it · [[Esc]] per annullare",
   "hintCurve": "Clic per aggiungere punti di controllo · Doppio clic per finire",
-  "hintPolygon": "Clic per aggiungere vertici · Doppio clic per chiudere"
+  "hintPolygon": "Clic per aggiungere vertici · Doppio clic per chiudere",
+  "lockElements": "Blocca elementi",
+  "unlockElements": "Sblocca elementi",
+  "arrowHead": "Punta freccia",
+  "arrowNone": "Nessuna",
+  "arrowEnd": "Fine",
+  "arrowStart": "Inizio",
+  "arrowBoth": "Entrambe"
 }

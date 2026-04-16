@@ -133,5 +133,7 @@
   "hintText": "Click to place · [[Esc]] to confirm",
   "hintSticky": "Click to place a sticky note · [[Esc]] to cancel",
   "hintCurve": "Click to add control points · Double-click to finish",
-  "hintPolygon": "Click to add vertices · Double-click to close"
+  "hintPolygon": "Click to add vertices · Double-click to close",
+  "lockElements": "Lock elements",
+  "unlockElements": "Unlock elements"
 }

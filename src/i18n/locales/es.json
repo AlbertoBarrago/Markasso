@@ -128,5 +128,12 @@
   "hintText": "Clic para colocar · [[Esc]] para confirmar",
   "hintSticky": "Clic para colocar nota · [[Esc]] para cancelar",
   "hintCurve": "Clic para puntos de control · Doble clic para terminar",
-  "hintPolygon": "Clic para vértices · Doble clic para cerrar"
+  "hintPolygon": "Clic para vértices · Doble clic para cerrar",
+  "lockElements": "Bloquear elementos",
+  "unlockElements": "Desbloquear elementos",
+  "arrowHead": "Punta de flecha",
+  "arrowNone": "Ninguna",
+  "arrowEnd": "Final",
+  "arrowStart": "Inicio",
+  "arrowBoth": "Ambas"
 }

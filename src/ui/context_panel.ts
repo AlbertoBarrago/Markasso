@@ -131,11 +131,6 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
       <div class="cp-btn-row" id="cp-style-presets" role="group" aria-label="${t('strokeStyle')}"></div>
     </div>
 
-    <div class="cp-section" id="cp-shadow-section">
-      <div class="cp-label">${t('shadow')}</div>
-      <div class="cp-btn-row" id="cp-shadow-toggle" role="group" aria-label="${t('shadow')}"></div>
-    </div>
-
     <div class="cp-section" id="cp-linecap-section">
       <div class="cp-label">${t('lineCap')}</div>
       <div class="cp-btn-row" id="cp-linecap-presets" role="group" aria-label="${t('lineCap')}"></div>
@@ -506,26 +501,6 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
     stylePresets.appendChild(btn);
   }
 
-  // ── Shadow toggle ──────────────────────────────────────────────────────────
-  const shadowToggle = panel.querySelector('#cp-shadow-toggle')!;
-  const shadowBtn = document.createElement('button');
-  shadowBtn.className = 'cp-btn cp-shadow-btn';
-  shadowBtn.title = t('shadow');
-  shadowBtn.setAttribute('aria-label', t('shadow'));
-  shadowBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="10" height="10" rx="2"/><rect x="6" y="5" width="10" height="10" rx="2" fill="currentColor" opacity="0.25" stroke="none"/></svg>`;
-  shadowBtn.dataset['shadow'] = 'on';
-  shadowBtn.addEventListener('click', () => {
-    const hasShadow = shadowBtn.classList.contains('active');
-    if (hasShadow) {
-      history.dispatch({ type: 'APPLY_STYLE', shadowBlur: 0, shadowOffsetX: 0, shadowOffsetY: 0 });
-    } else {
-      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-      const shadowColor = isLight ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.7)';
-      history.dispatch({ type: 'APPLY_STYLE', shadowBlur: 8, shadowColor, shadowOffsetX: 4, shadowOffsetY: 4 });
-    }
-  });
-  shadowToggle.appendChild(shadowBtn);
-
   // ── Line cap presets ───────────────────────────────────────────────────────
   const lineCapPresets = panel.querySelector('#cp-linecap-presets')!;
   const LINE_CAPS: Array<{ value: 'butt' | 'round' | 'square'; label: string; icon: string }> = [
@@ -873,6 +848,27 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
   });
   actions.appendChild(formatPainterBtn);
 
+  // ── Lock / Unlock button ───────────────────────────────────────────────────
+  const lockBtn = document.createElement('button');
+  lockBtn.className = 'cp-btn cp-action-btn';
+  lockBtn.id = 'cp-lock-btn';
+  const LOCK_ICON   = `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="9" width="10" height="8" rx="1.5"/><path d="M7 9V6a3 3 0 0 1 6 0v3"/></svg>`;
+  const UNLOCK_ICON = `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="9" width="10" height="8" rx="1.5"/><path d="M7 9V6a3 3 0 0 1 6 0"/></svg>`;
+  lockBtn.innerHTML = LOCK_ICON;
+  lockBtn.title = t('lockElements');
+  lockBtn.addEventListener('click', () => {
+    const scene = history.present;
+    const ids = [...scene.selectedIds];
+    if (ids.length === 0) return;
+    const allLocked = ids.every((id) => scene.elements.find((el) => el.id === id)?.locked);
+    if (allLocked) {
+      history.dispatch({ type: 'UNLOCK_ELEMENTS', ids });
+    } else {
+      history.dispatch({ type: 'LOCK_ELEMENTS', ids });
+    }
+  });
+  actions.appendChild(lockBtn);
+
   const colorRowStroke = panel.querySelector<HTMLElement>('#cp-stroke-swatches')!.parentElement!;
   const colorRowFill   = panel.querySelector<HTMLElement>('#cp-fill-swatches')!.parentElement!;
 
@@ -948,8 +944,6 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
         btn.classList.toggle('active', btn.dataset['cap'] === lineCapTool);
       });
       syncAriaPressed(panel.querySelector<HTMLElement>('#cp-linecap-presets')!, '.cp-btn');
-      shadowBtn.classList.toggle('active', !!(lastEl && (lastEl.shadowBlur ?? 0) > 0));
-      syncAriaPressed(panel.querySelector<HTMLElement>('#cp-shadow-toggle')!, '.cp-btn');
       opacitySlider.value = String(Math.round(opacity * 100));
       opacityVal.textContent = String(Math.round(opacity * 100));
 
@@ -969,7 +963,6 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
       panel.querySelector('#cp-roughness-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
       (panel.querySelector('#cp-linecap-section') as HTMLElement).style.display = hasLineCap ? '' : 'none';
       (panel.querySelector('#cp-arrowhead-section') as HTMLElement).style.display = hasArrowHead ? '' : 'none';
-      (panel.querySelector('#cp-shadow-section') as HTMLElement).style.display = isText ? 'none' : '';
       panel.querySelector('#cp-border-presets')!.parentElement!.style.display = (activeTool === 'rectangle' || activeTool === 'rombo') ? '' : 'none';
 
       const textPropsSection = panel.querySelector<HTMLElement>('#cp-text-props')!;
@@ -1050,10 +1043,6 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
     });
     syncAriaPressed(panel.querySelector<HTMLElement>('#cp-linecap-presets')!, '.cp-btn');
 
-    // Update shadow toggle
-    shadowBtn.classList.toggle('active', (first.shadowBlur ?? 0) > 0);
-    syncAriaPressed(panel.querySelector<HTMLElement>('#cp-shadow-toggle')!, '.cp-btn');
-
     // Update border presets
     const cr = (first.type === 'rectangle' || first.type === 'rhombus') ? (first.cornerRadius ?? 0) : 0;
     panel.querySelectorAll<HTMLButtonElement>('#cp-border-presets .cp-btn').forEach((btn) => {
@@ -1093,7 +1082,6 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
     panel.querySelector('#cp-roughness-presets')!.parentElement!.style.display = hasStyle ? '' : 'none';
     (panel.querySelector('#cp-linecap-section') as HTMLElement).style.display = hasLineCap ? '' : 'none';
     (panel.querySelector('#cp-arrowhead-section') as HTMLElement).style.display = hasArrowHead ? '' : 'none';
-    (panel.querySelector('#cp-shadow-section') as HTMLElement).style.display = allImage ? 'none' : '';
     panel.querySelector('#cp-border-presets')!.parentElement!.style.display = hasBorder ? '' : 'none';
 
     // Spatial alignment section — only when ≥2 elements are selected
@@ -1102,6 +1090,17 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
 
     // Layer + action groups always present when selection exists
     syncAriaPressed(panel.querySelector<HTMLElement>('#cp-layer-actions')!, '.cp-btn');
+
+    // Sync lock button state
+    const lockButton = panel.querySelector<HTMLButtonElement>('#cp-lock-btn');
+    if (lockButton) {
+      const ids = [...scene.selectedIds];
+      const allLocked = ids.length > 0 && ids.every((id) => scene.elements.find((el) => el.id === id)?.locked);
+      lockButton.classList.toggle('active', allLocked);
+      lockButton.innerHTML = allLocked ? UNLOCK_ICON : LOCK_ICON;
+      lockButton.title = allLocked ? t('unlockElements') : t('lockElements');
+    }
+
     syncAriaPressed(panel.querySelector<HTMLElement>('#cp-actions')!, '.cp-btn');
 
     // Show/sync text-specific controls
