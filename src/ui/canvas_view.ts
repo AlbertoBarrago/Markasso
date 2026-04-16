@@ -166,8 +166,10 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
 
       if (el.type === 'arrow' || el.type === 'line') {
         const line = el as LineElement;
-        if (distPointToSegment(wx, wy, line.x, line.y, line.x2, line.y2) < line.strokeWidth / 2 + 8) {
-          openArrowLabelEditor(line, history, canvas);
+        const hitLabel = isPointInArrowLabel(wx, wy, line);
+        const hitShaft = distPointToSegment(wx, wy, line.x, line.y, line.x2, line.y2) < line.strokeWidth / 2 + 8;
+        if (hitLabel || hitShaft) {
+          openArrowLabelEditor(line, history, canvas, (id) => { editingShapeLabelId = id; needsRender = true; });
           needsRender = true;
           return;
         }
@@ -800,6 +802,20 @@ function openShapeLabelEditor(
   ta.select();
 }
 
+function isPointInArrowLabel(wx: number, wy: number, el: LineElement): boolean {
+  if (!el.label) return false;
+  const mx = (el.x + el.x2) / 2;
+  const my = (el.y + el.y2) / 2;
+  const fontSize = el.labelFontSize ?? 12;
+  const lines = el.label.split('\n');
+  const maxLen = Math.max(...lines.map((l) => l.length));
+  const pad = fontSize * 0.8;
+  const labelW = maxLen * fontSize * 0.6 + pad;
+  const labelH = lines.length * fontSize * 1.2 + pad;
+  return wx >= mx - labelW / 2 && wx <= mx + labelW / 2 &&
+         wy >= my - labelH / 2 && wy <= my + labelH / 2;
+}
+
 function distPointToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
   const dx = x2 - x1, dy = y2 - y1;
   const lenSq = dx * dx + dy * dy;
@@ -812,6 +828,7 @@ function openArrowLabelEditor(
   el: LineElement,
   history: History,
   canvas: HTMLCanvasElement,
+  onEditingChange?: (id: string | null) => void,
 ): void {
   const { viewport, appState } = history.present;
   const mx = (el.x + el.x2) / 2;
@@ -819,7 +836,7 @@ function openArrowLabelEditor(
   const [screenX, screenY] = worldToScreen(viewport, mx, my);
   const canvasRect = canvas.getBoundingClientRect();
 
-  const fontSize = el.labelFontSize ?? appState.fontSize;
+  const fontSize = el.labelFontSize ?? Math.min(appState.fontSize, 12);
   const fontFamily = el.labelFontFamily ?? appState.fontFamily;
 
   const ta = document.createElement('textarea');
@@ -856,6 +873,7 @@ function openArrowLabelEditor(
   grow();
 
   const doCommit = (): void => {
+    onEditingChange?.(null);
     const content = ta.value.trim();
     ta.remove();
     if (content !== (el.label ?? '')) {
@@ -869,6 +887,7 @@ function openArrowLabelEditor(
     if (e.key === 'Escape') {
       e.stopPropagation();
       ta.removeEventListener('blur', doCommit);
+      onEditingChange?.(null);
       ta.remove();
       return;
     }
@@ -879,6 +898,7 @@ function openArrowLabelEditor(
     }
   });
 
+  onEditingChange?.(el.id);
   document.body.appendChild(ta);
   ta.focus();
   ta.select();

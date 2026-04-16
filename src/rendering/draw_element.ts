@@ -136,8 +136,8 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       const drawEnd   = arrowHead === 'end'  || arrowHead === 'both';
       const drawStart = arrowHead === 'start' || arrowHead === 'both';
 
-      if (el.label) {
-        const fontSize = el.labelFontSize ?? 16;
+      if (el.label && editingShapeLabelId !== el.id) {
+        const fontSize = el.labelFontSize ?? 12;
         const fontFamily = el.labelFontFamily ?? 'Arial, sans-serif';
         ctx.save();
         ctx.setLineDash([]);
@@ -222,8 +222,8 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
       const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
-      if (el.label) {
-        const fontSize = el.labelFontSize ?? 16;
+      if (el.label && editingShapeLabelId !== el.id) {
+        const fontSize = el.labelFontSize ?? 12;
         const fontFamily = el.labelFontFamily ?? 'Arial, sans-serif';
         const mx = (pts.x + pts.x2) / 2;
         const my = (pts.y + pts.y2) / 2;
