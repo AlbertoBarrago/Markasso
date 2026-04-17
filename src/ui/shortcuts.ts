@@ -208,6 +208,18 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       return;
     }
 
+    // Ctrl+Shift+L — toggle lock on selected elements (e.code = layout-independent)
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyL') {
+      e.preventDefault();
+      const scene = history.present;
+      const ids = [...scene.selectedIds];
+      if (ids.length > 0) {
+        const allLocked = ids.every(id => scene.elements.find(el => el.id === id)?.locked);
+        history.dispatch({ type: allLocked ? 'UNLOCK_ELEMENTS' : 'LOCK_ELEMENTS', ids });
+      }
+      return;
+    }
+
     if (e.key === '\\') {
       document.body.classList.toggle('ui-hidden');
       return;
@@ -223,8 +235,10 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       return;
     }
 
-    const fn = shortcuts.get(e.key.toLowerCase());
-    if (fn) fn();
+    if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+      const fn = shortcuts.get(e.key.toLowerCase());
+      if (fn) fn();
+    }
   });
 
   // Release space bar: restore previous tool

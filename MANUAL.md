@@ -42,10 +42,12 @@ The main numbered connector slot is **Line** (toolbar position `5`).
 
 ### Tool Lock
 
-The **lock button** at the far left of the toolbar controls what happens after you finish drawing a shape:
+The **pin button** (thumbtack icon) at the far left of the toolbar controls what happens after you finish drawing a shape:
 
-- **Unlocked (default):** the tool reverts to Select and the new element is selected — the properties panel opens automatically so you can style it immediately.
-- **Locked:** the drawing tool stays active so you can place the next shape without re-selecting the tool. Useful for drawing many shapes of the same type in a row.
+- **Unpinned (default):** the tool reverts to Select and the new element is selected — the properties panel opens automatically so you can style it immediately.
+- **Pinned:** the drawing tool stays active so you can place the next shape without re-selecting the tool. Useful for drawing many shapes of the same type in a row.
+
+> **Note:** The pin icon (tool lock) is intentionally different from the padlock icon (element lock) to avoid confusion — pin = keep tool active, padlock = element cannot be edited.
 
 ---
 
@@ -154,8 +156,10 @@ With two or more elements selected, the **alignment toolbar** appears above the 
 
 Lock elements to protect them from accidental edits.
 
-- **Lock:** select elements → click the lock button in the context toolbar.
-- **Unlock:** select the locked element → click the unlock button.
+- **Lock:** select elements → click the lock button in the context toolbar, or press `Ctrl+Shift+L` (`⌘⇧L` on Mac).
+- **Unlock:** select the locked element → click the unlock button, or press `Ctrl+Shift+L` again.
+
+When the selection contains locked elements, a **padlock indicator** appears at the right end of the toolbar pill. Clicking it unlocks the locked elements in the selection directly.
 
 Locked elements:
 - Remain fully visible
@@ -208,6 +212,9 @@ Control which elements appear on top.
 | Duplicate | `Ctrl+D` |
 | Delete | `Delete` / `Backspace` |
 | Select all | `Ctrl+A` |
+| Lock / Unlock elements | `Ctrl+Shift+L` (`⌘⇧L`) |
+| Group | `Ctrl+G` (`⌘G`) |
+| Ungroup | `Ctrl+Shift+G` (`⌘⇧G`) |
 
 ---
 

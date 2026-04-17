@@ -4,6 +4,18 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.2.1] — 2026-04-17
+
+### Added
+- **Lock / Unlock shortcut** (`Ctrl+Shift+L` / `⌘⇧L`) — toggle element lock directly from the keyboard
+- **Locked-elements toolbar indicator** — padlock badge appears at the right of the tools pill when locked elements are selected; clicking it unlocks them immediately
+
+### Changed
+- **Tool-lock icon** — changed from padlock to pin/thumbtack to distinguish it visually from the element-lock padlock
+- **Single-key shortcuts guard** — tool hotkeys (`L`, `R`, `A`, etc.) no longer fire when modifier keys (Ctrl/Cmd/Alt) are held, preventing accidental tool switches during modifier combos
+
+---
+
 ## [1.1.0] — 2026-04-13
 
 ### Added

@@ -173,6 +173,15 @@ html, body {
 .tb-btn:disabled{ opacity: .3; cursor: default; }
 .tb-btn svg     { pointer-events: none; }
 
+.tb-locked-indicator {
+  color: var(--warning, #f59e0b) !important;
+  width: 28px !important;
+}
+.tb-locked-indicator:hover {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: var(--warning, #f59e0b) !important;
+}
+
 /* Subscript shortcut number */
 .tb-btn-key {
   position: absolute;

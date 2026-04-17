@@ -38,6 +38,7 @@ const SECTIONS: ShortcutSection[] = [
       { label: 'Send to back',   key: `${mod}⇧[` },
       { label: 'Group',          key: `${mod}G` },
       { label: 'Ungroup',        key: `${mod}⇧G` },
+      { label: 'Lock / Unlock',  key: `${mod}⇧L` },
     ],
   },
   {

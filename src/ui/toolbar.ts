@@ -9,8 +9,9 @@ import { t } from '../i18n';
 
 // ── SVG icons ──────────────────────────────────────────────────────────────────
 const IC = {
-  lock:       `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="12" height="9" rx="2"/><path d="M7 9V6a3 3 0 016 0v3"/></svg>`,
-  lockOpen:   `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="12" height="9" rx="2"/><path d="M7 9V6a3 3 0 016 0"/></svg>`,
+  lock:         `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 3.75l-3.33 3.33-3.33 1.25-1.25 1.25 5.83 5.83 1.25-1.25 1.25-3.33 3.33-3.33z" fill="currentColor" stroke="none"/><line x1="7.5" y1="12.5" x2="3.75" y2="16.25"/><line x1="12.08" y1="3.33" x2="16.67" y2="7.92"/></svg>`,
+  lockOpen:     `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 3.75l-3.33 3.33-3.33 1.25-1.25 1.25 5.83 5.83 1.25-1.25 1.25-3.33 3.33-3.33z"/><line x1="7.5" y1="12.5" x2="3.75" y2="16.25"/><line x1="12.08" y1="3.33" x2="16.67" y2="7.92"/></svg>`,
+  elemLocked:   `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="9" width="10" height="8" rx="1.5"/><path d="M7 9V6a3 3 0 0 1 6 0v3"/></svg>`,
   hand:       `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 13v-7.5a1.5 1.5 0 0 1 3 0v6.5"/><path d="M11 5.5v-2a1.5 1.5 0 1 1 3 0v8.5"/><path d="M14 5.5a1.5 1.5 0 0 1 3 0v6.5"/><path d="M17 7.5a1.5 1.5 0 0 1 3 0v8.5a6 6 0 0 1 -6 6h-2h.208a6 6 0 0 1 -5.012 -2.7a69.74 69.74 0 0 1 -.196 -.3c-.312 -.479 -1.407 -2.388 -3.286 -5.728a1.5 1.5 0 0 1 .536 -2.022a1.867 1.867 0 0 1 2.28 .28l1.47 1.47"/></svg>`,
   select:    `<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M5.5 3v12.8l2.9-2.9 2.4 5.4 2.1-.95-2.4-5.4 3.8.001z"/></svg>`,
   rectangle: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="14" height="10" rx="1.5"/></svg>`,
@@ -98,6 +99,22 @@ export function initToolbar(container: HTMLElement, history: History): void {
     toolBtns.set(toolDef.tool, b);
     centerPill.appendChild(b);
   });
+
+  // Locked-elements indicator — shown when selection contains locked elements
+  const lockedSep = document.createElement('span');
+  lockedSep.className = 'tb-separator';
+  lockedSep.style.display = 'none';
+  const lockedIndicator = document.createElement('button');
+  lockedIndicator.className = 'tb-btn tb-locked-indicator';
+  lockedIndicator.innerHTML = IC.elemLocked;
+  lockedIndicator.style.display = 'none';
+  lockedIndicator.addEventListener('click', () => {
+    const scene = history.present;
+    const ids = [...scene.selectedIds].filter(id => scene.elements.find(el => el.id === id)?.locked);
+    if (ids.length > 0) history.dispatch({ type: 'UNLOCK_ELEMENTS', ids });
+  });
+  centerPill.appendChild(lockedSep);
+  centerPill.appendChild(lockedIndicator);
 
   // ── Bottom-right: undo/redo ────────────────────────────────────────────────
   const bottomRight = div('tb-island-bottomright');
@@ -405,6 +422,17 @@ export function initToolbar(container: HTMLElement, history: History): void {
     exportHTMLItem.disabled = !hasElements;
     exportMarkassoItem.disabled = !hasElements;
     shareBtn.disabled = !hasElements;
+
+    // Locked-elements indicator
+    const scene = history.present;
+    const hasLockedSelected = scene.selectedIds.size > 0 &&
+      [...scene.selectedIds].some(id => scene.elements.find(el => el.id === id)?.locked);
+    lockedSep.style.display = hasLockedSelected ? '' : 'none';
+    lockedIndicator.style.display = hasLockedSelected ? '' : 'none';
+    if (hasLockedSelected) {
+      const allLocked = [...scene.selectedIds].every(id => scene.elements.find(el => el.id === id)?.locked);
+      lockedIndicator.title = allLocked ? t('unlockElements') : t('unlockElements');
+    }
   }
 
   history.subscribe(sync);
