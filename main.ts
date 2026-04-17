@@ -14,6 +14,7 @@ import { initHintBar } from './src/ui/hint_bar';
 import { initCommandPalette } from './src/ui/command_palette';
 import { initMinimap } from './src/ui/minimap';
 import { initElementSearch } from './src/ui/element_search';
+import { initStarCta } from './src/ui/star_cta';
 import { decodeScene, isShareHash } from './src/io/share';
 import { fitToElements } from './src/core/viewport';
 
@@ -65,6 +66,7 @@ async function bootstrap(): Promise<void> {
 
   initToolbar(toolbar, hist);
   initSettings(appEl, toolbar, hist);
+  initStarCta(appEl, toolbar);
   const { selectTool } = initCanvasView(canvas, hist);
   initContextPanel(workspace, hist, (source) => selectTool.activateFormatPainter(source));
   initImageImport(workspace, hist);
