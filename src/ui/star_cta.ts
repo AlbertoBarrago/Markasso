@@ -52,12 +52,20 @@ export function initStarCta(appEl: HTMLElement, toolbarEl: HTMLElement): void {
           and the legendary <strong>Claude Code</strong> keeping the neurons from exploding.
           If it's useful to you, a star on GitHub means the world to us.
         </p>
-        <a class="star-cta-btn" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">
-          <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0">
-            <path d="M10 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L10 14.4l-4.8 2.5.9-5.4L2.2 7.7l5.4-.8z"/>
-          </svg>
-          Star on GitHub
-        </a>
+        <div class="star-actions">
+          <a class="star-cta-btn" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0">
+              <path d="M10 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L10 14.4l-4.8 2.5.9-5.4L2.2 7.7l5.4-.8z"/>
+            </svg>
+            Star on GitHub
+          </a>
+          <a class="star-coffee-btn" href="https://buymeacoffee.com/albz" target="_blank" rel="noopener noreferrer">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
+              <path d="M6 2v3M10 2v3M14 2v3M4 7h12l-1.5 9a2 2 0 01-2 1.5h-5a2 2 0 01-2-1.5zM16 9h2a2 2 0 010 4h-2"/>
+            </svg>
+            Buy me a coffee
+          </a>
+        </div>
         <p class="star-sub">It takes 2 seconds and helps us grow.</p>
       </div>
     `;
