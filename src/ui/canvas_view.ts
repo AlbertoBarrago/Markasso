@@ -53,7 +53,7 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
     return TOOLS[history.present.appState.activeTool];
   }
 
-  const SNAP_TOOLS = new Set(['rectangle', 'ellipse', 'rombo', 'arrow', 'line', 'freehand', 'text']);
+  const SNAP_TOOLS = new Set(['rectangle', 'ellipse', 'rombo', 'arrow', 'line', 'text']);
 
   function snapWorldCoords(wx: number, wy: number): [number, number] {
     const { appState } = history.present;

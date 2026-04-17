@@ -660,9 +660,8 @@ export class SelectTool implements Tool {
       return;
     }
 
-    if (e.key === 'Delete' || e.key === 'Backspace') {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Delete') {
       const scene = ctx.history.present;
-      // Don't delete locked elements
       const ids = [...scene.selectedIds].filter((id) => {
         const el = scene.elements.find((e) => e.id === id);
         return el && !el.locked;
