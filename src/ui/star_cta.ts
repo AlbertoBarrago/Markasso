@@ -48,7 +48,8 @@ export function initStarCta(appEl: HTMLElement, toolbarEl: HTMLElement): void {
           and zero external dependencies. No login. No tracking. Just drawing.
         </p>
         <p class="star-thanks">
-          Built with care by <strong>Lorenzo Cataldi</strong> and <strong>Claude Code</strong>.
+          Made by <strong>albz</strong>, with style courtesy of <strong>Lorenzo Cataldi</strong>
+          and the legendary <strong>Claude Code</strong> keeping the neurons from exploding.
           If it's useful to you, a star on GitHub means the world to us.
         </p>
         <a class="star-cta-btn" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">
