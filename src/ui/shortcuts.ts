@@ -32,9 +32,9 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
   let previousTool: string | null = null;
 
   window.addEventListener('keydown', (e) => {
-    // Don't capture shortcuts when typing in an input/textarea/select
+    // Don't capture shortcuts when typing in an input/textarea/select/contenteditable
     const target = e.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable) return;
     // Block single-key shortcuts when focus is inside a UI panel; allow modifier combos (Ctrl/Cmd+…)
     if (isFocusInPanel() && !e.ctrlKey && !e.metaKey) return;
 
@@ -78,16 +78,16 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       return;
     }
 
-    // Delete alone — close panels, clear selection, back to select tool
-    if (e.key === 'Delete' && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+    // Delete/Backspace alone — close panels, clear selection, back to select tool
+    if ((e.key === 'Delete' || e.key === 'Backspace') && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
       e.preventDefault();
       history.dispatch({ type: 'CLEAR_SELECTION' });
       history.dispatch({ type: 'SET_TOOL', tool: 'select' });
       return;
     }
 
-    // Cmd/Ctrl+Delete — delete selected elements regardless of active tool
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Delete') {
+    // Cmd/Ctrl+Delete/Backspace — delete selected elements regardless of active tool
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'Delete' || e.key === 'Backspace')) {
       const scene = history.present;
       const ids = [...scene.selectedIds].filter((id) => {
         const el = scene.elements.find((el) => el.id === id);

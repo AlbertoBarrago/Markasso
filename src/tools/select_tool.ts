@@ -660,15 +660,6 @@ export class SelectTool implements Tool {
       return;
     }
 
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Delete') {
-      const scene = ctx.history.present;
-      const ids = [...scene.selectedIds].filter((id) => {
-        const el = scene.elements.find((e) => e.id === id);
-        return el && !el.locked;
-      });
-      if (ids.length > 0) ctx.history.dispatch({ type: 'DELETE_ELEMENTS', ids });
-      return;
-    }
 
     // Arrow key nudge — 1px normally, 10px with Shift
     const NUDGE = e.shiftKey ? 10 : 1;
