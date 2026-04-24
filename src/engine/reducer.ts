@@ -365,10 +365,11 @@ export function reducer(scene: Scene, command: Command): Scene {
       };
 
     case 'APPLY_STYLE': {
-      const { strokeColor, fillColor, strokeWidth, opacity, roughness, strokeStyle, lineCap, lineJoin, shadowBlur, shadowColor, shadowOffsetX, shadowOffsetY, cornerRadius, textAlign, bold, italic, underline, strikethrough, arrowHead } = command;
+      const { strokeColor, fillColor, labelColor, strokeWidth, opacity, roughness, strokeStyle, lineCap, lineJoin, shadowBlur, shadowColor, shadowOffsetX, shadowOffsetY, cornerRadius, textAlign, bold, italic, underline, strikethrough, arrowHead } = command;
       const patch: Record<string, unknown> = {};
       if (strokeColor   !== undefined) patch['strokeColor']   = strokeColor;
       if (fillColor     !== undefined) patch['fillColor']     = fillColor;
+      if (labelColor    !== undefined) patch['labelColor']    = labelColor;
       if (strokeWidth   !== undefined) patch['strokeWidth']   = strokeWidth;
       if (opacity       !== undefined) patch['opacity']       = opacity;
       if (roughness     !== undefined) patch['roughness']     = roughness;

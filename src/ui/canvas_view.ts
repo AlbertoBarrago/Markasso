@@ -12,7 +12,7 @@ import { StickyTool } from '../tools/sticky_tool';
 import { EraserTool, type SlashPoint } from '../tools/eraser_tool';
 import type { TextElement, RectangleElement, EllipseElement, RhombusElement, LineElement } from '../elements/element';
 import { render } from '../rendering/renderer';
-import { drawElement } from '../rendering/draw_element';
+import { drawElement, contrastColor } from '../rendering/draw_element';
 import { drawMarquee, drawHoverHighlight, drawSnapIndicator, drawAlignGuides } from '../rendering/draw_selection';
 import { screenToWorld, worldToScreen } from '../core/viewport';
 import type { ActiveTool } from '../core/app_state';
@@ -746,7 +746,7 @@ function openShapeLabelEditor(
   ta.style.width       = `${shapeW}px`;
   ta.style.minHeight   = `${fontSize * viewport.zoom * 1.2}px`;
   ta.style.font        = `${fontSize * viewport.zoom}px ${fontFamily}`;
-  ta.style.color       = el.strokeColor;
+  ta.style.color       = el.labelColor ?? contrastColor(el.fillColor, el.strokeColor);
   ta.style.caretColor  = 'var(--accent, #7c63d4)';
   ta.style.textAlign   = 'center';
   ta.style.lineHeight  = '1.2';
@@ -785,16 +785,11 @@ function openShapeLabelEditor(
   ta.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       e.stopPropagation();
-      ta.removeEventListener('blur', doCommit);
-      onEditingChange(null);
-      ta.remove();
-      return;
-    }
-    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       ta.removeEventListener('blur', doCommit);
       doCommit();
     }
+    // Enter inserts newline (default textarea behavior)
   });
 
   document.body.appendChild(ta);
@@ -849,7 +844,7 @@ function openArrowLabelEditor(
   ta.style.width       = '160px';
   ta.style.minHeight   = `${fontSize * viewport.zoom * 1.2}px`;
   ta.style.font        = `${fontSize * viewport.zoom}px ${fontFamily}`;
-  ta.style.color       = el.strokeColor;
+  ta.style.color       = el.labelColor ?? el.strokeColor;
   ta.style.caretColor  = 'var(--accent, #7c63d4)';
   ta.style.textAlign   = 'center';
   ta.style.lineHeight  = '1.2';

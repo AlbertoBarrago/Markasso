@@ -59,6 +59,7 @@ export type Command =
       type: 'APPLY_STYLE';
       strokeColor?:   string;
       fillColor?:     string;
+      labelColor?:    string;
       strokeWidth?:   number;
       opacity?:       number;
       roughness?:     number;

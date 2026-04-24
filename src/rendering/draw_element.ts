@@ -3,6 +3,18 @@ import { getElementCenter, resolveArrowEndpoints } from './draw_selection';
 import { getCachedImage } from './image_cache';
 import { getArrowHeadVector, getQuadraticLength, getQuadraticPoint, getQuadraticSegment, getQuadraticTangent } from './connector_geometry';
 
+export function contrastColor(fill: string, fallback: string): string {
+  if (!fill || fill === 'transparent' || fill === 'none') return fallback;
+  const hex = fill.replace('#', '').slice(0, 6);
+  if (hex.length < 6) return fallback;
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return fallback;
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.55 ? '#111111' : '#ffffff';
+}
+
 function resolveStrokeColorForTheme(strokeColor: string): string {
   if (typeof document === 'undefined') return strokeColor;
   const resolvedTheme = document.documentElement.getAttribute('data-theme');
@@ -79,7 +91,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         ctx.beginPath();
         ctx.rect(rx, ry, rw, rh);
         ctx.clip();
-        drawShapeLabel(ctx, rx + rw / 2, ry + rh / 2, rw, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', strokeColor);
+        drawShapeLabel(ctx, rx + rw / 2, ry + rh / 2, rw, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', el.labelColor ?? contrastColor(el.fillColor, strokeColor));
         ctx.restore();
       }
       break;
@@ -104,7 +116,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         ctx.lineTo(rx, cy);
         ctx.closePath();
         ctx.clip();
-        drawShapeLabel(ctx, cx, cy, rw * 0.7, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', strokeColor);
+        drawShapeLabel(ctx, cx, cy, rw * 0.7, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', el.labelColor ?? contrastColor(el.fillColor, strokeColor));
         ctx.restore();
       }
       break;
@@ -123,7 +135,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         ctx.beginPath();
         ctx.ellipse(cx, cy, erx, ery, 0, 0, Math.PI * 2);
         ctx.clip();
-        drawShapeLabel(ctx, cx, cy, erx * 2 * 0.7, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', strokeColor);
+        drawShapeLabel(ctx, cx, cy, erx * 2 * 0.7, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', el.labelColor ?? contrastColor(el.fillColor, strokeColor));
         ctx.restore();
       }
       break;
@@ -190,7 +202,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         }
         ctx.save();
         ctx.setLineDash([]);
-        drawArrowLabel(ctx, mx, my, el.label, fontSize, fontFamily, strokeColor);
+        drawArrowLabel(ctx, mx, my, el.label, fontSize, fontFamily, el.labelColor ?? strokeColor);
         ctx.restore();
       } else if (el.cx !== undefined && el.cy !== undefined) {
         ctx.beginPath();
@@ -250,7 +262,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         drawArrowHead(ctx, pts.x, pts.y, pts.x2, pts.y2, el.strokeWidth);
         ctx.save();
         ctx.setLineDash([]);
-        drawArrowLabel(ctx, mx, my, el.label, fontSize, fontFamily, strokeColor);
+        drawArrowLabel(ctx, mx, my, el.label, fontSize, fontFamily, el.labelColor ?? strokeColor);
         ctx.restore();
       } else {
         drawArrow(ctx, pts.x, pts.y, pts.x2, pts.y2, el.strokeWidth, roughness, seed);

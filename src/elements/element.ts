@@ -42,6 +42,7 @@ export interface RectangleElement extends BaseElement {
   readonly label?: string;
   readonly labelFontSize?: number;
   readonly labelFontFamily?: string;
+  readonly labelColor?: string;
 }
 
 export interface EllipseElement extends BaseElement {
@@ -51,6 +52,7 @@ export interface EllipseElement extends BaseElement {
   readonly label?: string;
   readonly labelFontSize?: number;
   readonly labelFontFamily?: string;
+  readonly labelColor?: string;
 }
 
 export interface RhombusElement extends BaseElement {
@@ -61,6 +63,7 @@ export interface RhombusElement extends BaseElement {
   readonly label?: string;
   readonly labelFontSize?: number;
   readonly labelFontFamily?: string;
+  readonly labelColor?: string;
 }
 
 export interface LineElement extends BaseElement {
@@ -77,6 +80,7 @@ export interface LineElement extends BaseElement {
   readonly label?: string;
   readonly labelFontSize?: number;
   readonly labelFontFamily?: string;
+  readonly labelColor?: string;
 }
 
 export interface ArrowElement extends BaseElement {
@@ -88,6 +92,7 @@ export interface ArrowElement extends BaseElement {
   readonly label?: string;
   readonly labelFontSize?: number;
   readonly labelFontFamily?: string;
+  readonly labelColor?: string;
 }
 
 export interface CurveElement extends BaseElement {
