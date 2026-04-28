@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  distToPerimeterBounds,
-  snap45,
-} from '../src/tools/line_tool';
+import { distToPerimeterBounds, snap45 } from '../src/tools/line_tool';
 
 describe('snap45', () => {
   it('snaps to 0° (right) — output y is zero', () => {

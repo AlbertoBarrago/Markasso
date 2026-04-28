@@ -10,7 +10,11 @@ const nullCtx = null as unknown as ToolContext;
 
 describe('EllipseTool', () => {
   it('getCursor returns a string', () => {
-    expect(typeof (new EllipseTool() as unknown as { getCursor(): string }).getCursor()).toBe('string');
+    expect(
+      typeof (
+        new EllipseTool() as unknown as { getCursor(): string }
+      ).getCursor(),
+    ).toBe('string');
   });
 
   it('onDeactivate resets preview to null', () => {
@@ -23,7 +27,11 @@ describe('EllipseTool', () => {
 
 describe('RectangleTool', () => {
   it('getCursor returns a string', () => {
-    expect(typeof (new RectangleTool() as unknown as { getCursor(): string }).getCursor()).toBe('string');
+    expect(
+      typeof (
+        new RectangleTool() as unknown as { getCursor(): string }
+      ).getCursor(),
+    ).toBe('string');
   });
 
   it('onDeactivate resets preview to null', () => {
@@ -36,7 +44,11 @@ describe('RectangleTool', () => {
 
 describe('RomboTool', () => {
   it('getCursor returns a string', () => {
-    expect(typeof (new RomboTool() as unknown as { getCursor(): string }).getCursor()).toBe('string');
+    expect(
+      typeof (
+        new RomboTool() as unknown as { getCursor(): string }
+      ).getCursor(),
+    ).toBe('string');
   });
 
   it('onDeactivate resets preview to null', () => {
@@ -48,13 +60,19 @@ describe('RomboTool', () => {
 
 describe('EraserTool', () => {
   it('getCursor returns a string', () => {
-    expect(typeof (new EraserTool() as unknown as { getCursor(): string }).getCursor()).toBe('string');
+    expect(
+      typeof (
+        new EraserTool() as unknown as { getCursor(): string }
+      ).getCursor(),
+    ).toBe('string');
   });
 });
 
 describe('PenTool', () => {
   it('getCursor returns a string', () => {
-    expect(typeof (new PenTool() as unknown as { getCursor(): string }).getCursor()).toBe('string');
+    expect(
+      typeof (new PenTool() as unknown as { getCursor(): string }).getCursor(),
+    ).toBe('string');
   });
 
   it('onCancel resets all stroke state', () => {

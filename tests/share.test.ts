@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Element } from '../src/elements/element';
-import { buildShareUrl, decodeScene, encodeScene, isShareHash } from '../src/io/share';
+import {
+  buildShareUrl,
+  decodeScene,
+  encodeScene,
+  isShareHash,
+} from '../src/io/share';
 
 function encodeLegacyHash(elements: ReadonlyArray<Element>): string {
   const json = JSON.stringify(elements);

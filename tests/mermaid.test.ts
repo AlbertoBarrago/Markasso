@@ -537,7 +537,9 @@ describe('buildSequenceElements', () => {
   });
 
   it('creates a line+arrow bracket for a self-message', () => {
-    const d = parseSequenceDiagram('sequenceDiagram\n  participant A\n  A->>A: loop back')!;
+    const d = parseSequenceDiagram(
+      'sequenceDiagram\n  participant A\n  A->>A: loop back',
+    )!;
     const els = buildSequenceElements(d, STROKE);
     // Self-message: 1 lifeline (dashed line) + 1 bracket leg (line) + 1 bracket leg (arrow)
     const lines = els.filter((e) => e.type === 'line');
@@ -547,7 +549,9 @@ describe('buildSequenceElements', () => {
   });
 
   it('creates a line+arrow bracket for a dashed self-message', () => {
-    const d = parseSequenceDiagram('sequenceDiagram\n  participant A\n  A-->>A: dashed self')!;
+    const d = parseSequenceDiagram(
+      'sequenceDiagram\n  participant A\n  A-->>A: dashed self',
+    )!;
     const els = buildSequenceElements(d, STROKE);
     const lines = els.filter((e) => e.type === 'line');
     const arrows = els.filter((e) => e.type === 'arrow');

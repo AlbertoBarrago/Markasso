@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { createViewport } from '../src/core/viewport';
 import type {
   ArrowElement,
   LineElement,
   RectangleElement,
 } from '../src/elements/element';
-import { createViewport } from '../src/core/viewport';
 import type { Handle } from '../src/rendering/draw_selection';
 import {
   distToShapeBoundary,
