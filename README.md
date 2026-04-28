@@ -30,7 +30,7 @@
 
 ## Project Status
 
-Markasso is **feature-complete**. Active development of new features is paused — the tool does what it was designed to do. Bug fixes, performance improvements, and small refinements are welcome. Large feature PRs are unlikely to be merged; open an issue first to discuss.
+Markasso is **feature-complete**. Active development of new features is paused. The tool does what it was designed to do. Bug fixes, performance improvements, and small refinements are welcome. Large feature PRs are unlikely to be merged; open an issue first to discuss.
 
 ---
 
@@ -38,7 +38,7 @@ Markasso is **feature-complete**. Active development of new features is paused �
 
 Markasso is a fast, minimal, keyboard-first whiteboard engine that runs entirely in the browser.
 
-Built with vanilla TypeScript and the Canvas 2D API — no framework dependencies. Just you, a canvas, and JavaScript doing exactly what it was invented to do.
+Built with vanilla TypeScript and the Canvas 2D API, no framework dependencies. Just you, a canvas, and JavaScript doing exactly what it was invented to do.
 
 This repository is the source of truth for the production deployment.
 
@@ -48,14 +48,13 @@ While Excalidraw excels at freehand sketching and Draw.io offers comprehensive d
 
 ## Motivation
 
-Markasso was born from a simple frustration: wanting to sketch a quick diagram shouldn't require:
+Markasso started as a game. I wanted to stay sharp with LLMs, actually use them, not just read about them. So I picked a project small enough to finish and complex enough to be honest: a whiteboard from scratch, vanilla TypeScript, zero dependencies.
 
-1. Waiting for a heavy application to load
-2. Dismissing cookie consent banners
-3. Creating an account for "free" features
-4. Risking lost work due to forgotten exports
+It didn't stay small.
 
-**Markasso is the alternative.** Open, draw, export, done.
+Colleagues started using it. Then people I work with remotely. Then people I've never met. What was a personal experiment to keep up with the tools of the moment became something a real team depends on to sketch ideas, run retrospectives, and think out loud together.
+
+That surprised me. And it's the only reason this repository exists in its current form rather than sitting half-finished in a private repo somewhere.
 
 ---
 
@@ -189,7 +188,7 @@ No `.env` files. No API keys. No containerization required.
 
 ### Test Coverage
 
-205 tests across 9 files — `pnpm coverage` runs the suite and updates this badge automatically. UI/rendering modules require a browser and are excluded from Node tests by design.
+205 tests across 9 files. `pnpm coverage` runs the suite and updates this badge automatically. UI/rendering modules require a browser and are excluded from Node tests by design.
 
 ---
 
@@ -263,7 +262,7 @@ No `.env` files. No API keys. No containerization required.
 
 ## Architecture
 
-Markasso follows a **Redux-style unidirectional data flow** — no mutable state, no event spaghetti, no surprises.
+Markasso follows a **Redux-style unidirectional data flow**: no mutable state, no event spaghetti, no surprises.
 
 ```
 User event
@@ -372,6 +371,6 @@ See [CONTRIBUTORS.md](./CONTRIBUTORS.md) for guidelines.
 
 ## License
 
-MIT — © 2026 Alberto Barrago
+MIT · © 2026 Alberto Barrago
 
 _Draw things. Ship things. Touch grass._
