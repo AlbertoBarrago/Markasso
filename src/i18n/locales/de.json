@@ -141,5 +141,10 @@
   "arrowNone": "Keine",
   "arrowEnd": "Ende",
   "arrowStart": "Anfang",
-  "arrowBoth": "Beide"
+  "arrowBoth": "Beide",
+  "presets": "Vorlagen",
+  "presetFlowchart": "Flussdiagramm",
+  "presetMindMap": "Mindmap",
+  "presetSwot": "SWOT-Analyse",
+  "presetSequence": "Sequenz"
 }

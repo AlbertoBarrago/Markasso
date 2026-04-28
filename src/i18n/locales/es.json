@@ -141,5 +141,10 @@
   "arrowNone": "Ninguna",
   "arrowEnd": "Final",
   "arrowStart": "Inicio",
-  "arrowBoth": "Ambas"
+  "arrowBoth": "Ambas",
+  "presets": "Plantillas",
+  "presetFlowchart": "Diagrama de flujo",
+  "presetMindMap": "Mapa mental",
+  "presetSwot": "Análisis SWOT",
+  "presetSequence": "Secuencia"
 }

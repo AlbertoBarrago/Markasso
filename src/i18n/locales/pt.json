@@ -141,5 +141,10 @@
   "arrowNone": "Nenhuma",
   "arrowEnd": "Final",
   "arrowStart": "Início",
-  "arrowBoth": "Ambas"
+  "arrowBoth": "Ambas",
+  "presets": "Modelos",
+  "presetFlowchart": "Fluxograma",
+  "presetMindMap": "Mapa mental",
+  "presetSwot": "Análise SWOT",
+  "presetSequence": "Sequência"
 }

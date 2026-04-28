@@ -4,6 +4,7 @@ import { exportPNG, exportSVG, exportHTML } from '../rendering/export';
 import { buildShareUrl } from '../io/share';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { importMermaid } from '../io/mermaid';
+import { PRESETS } from '../io/presets';
 import { fitToElements } from '../core/viewport';
 import { t } from '../i18n';
 
@@ -368,7 +369,82 @@ export function initToolbar(container: HTMLElement, history: History): void {
   });
   shareIsland.append(shareBtn, sharePanel);
 
-  topRight.append(importIsland, exportIsland, shareIsland);
+  // Presets dropdown
+  const presetsIsland = div('tb-island');
+  presetsIsland.style.position = 'relative';
+  const presetsTrigger = mkBtn(IC.toolbox, t('presets'));
+  presetsTrigger.setAttribute('aria-expanded', 'false');
+  const presetsPanel = document.createElement('div');
+  presetsPanel.setAttribute('role', 'menu');
+  presetsPanel.style.cssText = [
+    'position:absolute', 'right:0', 'top:calc(100% + 6px)',
+    'background:rgba(26,26,40,0.98)', 'border:1px solid rgba(255,255,255,0.1)',
+    'border-radius:10px', 'padding:8px', 'display:none',
+    'grid-template-columns:1fr 1fr', 'gap:6px', 'min-width:260px',
+    'box-shadow:0 4px 24px rgba(0,0,0,0.6)', 'z-index:1000',
+    'backdrop-filter:blur(16px)',
+  ].join(';');
+
+  for (const def of PRESETS) {
+    const card = document.createElement('button');
+    card.setAttribute('role', 'menuitem');
+    card.style.cssText = [
+      'display:flex', 'flex-direction:column', 'align-items:center', 'gap:6px',
+      'padding:10px 8px', 'border-radius:8px', 'cursor:pointer',
+      'background:rgba(255,255,255,0.04)', 'border:1px solid rgba(255,255,255,0.08)',
+      'color:inherit', 'font:11px/1.2 inherit', 'text-align:center',
+      'transition:background .1s,border-color .1s', 'white-space:nowrap',
+    ].join(';');
+    card.innerHTML = `${def.icon}<span>${t(def.labelKey)}</span>`;
+    card.addEventListener('mouseenter', () => {
+      card.style.background = 'rgba(255,255,255,0.09)';
+      card.style.borderColor = 'var(--accent, #c42059)';
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.background = 'rgba(255,255,255,0.04)';
+      card.style.borderColor = 'rgba(255,255,255,0.08)';
+    });
+    card.addEventListener('click', () => {
+      const vp = history.present.viewport;
+      const cx = (window.innerWidth  / 2 - vp.offsetX) / vp.zoom;
+      const cy = (window.innerHeight / 2 - vp.offsetY) / vp.zoom;
+      const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+      const elements = def.buildElements(cx, cy, isDark);
+      history.dispatch({ type: 'CREATE_ELEMENTS', elements });
+      history.dispatch({ type: 'GROUP_ELEMENTS', ids: elements.map((e) => e.id), groupId: crypto.randomUUID() });
+      presetsPanelOpen = false;
+      presetsPanel.style.display = 'none';
+      presetsTrigger.setAttribute('aria-expanded', 'false');
+    });
+    presetsPanel.appendChild(card);
+  }
+
+  let presetsPanelOpen = false;
+  presetsTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    presetsPanelOpen = !presetsPanelOpen;
+    presetsPanel.style.display = presetsPanelOpen ? 'grid' : 'none';
+    presetsTrigger.setAttribute('aria-expanded', String(presetsPanelOpen));
+    if (presetsPanelOpen) presetsPanel.querySelector<HTMLButtonElement>('button')?.focus();
+  });
+  presetsIsland.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && presetsPanelOpen) {
+      presetsPanelOpen = false;
+      presetsPanel.style.display = 'none';
+      presetsTrigger.setAttribute('aria-expanded', 'false');
+      presetsTrigger.focus();
+    }
+  });
+  document.addEventListener('click', () => {
+    if (presetsPanelOpen) {
+      presetsPanelOpen = false;
+      presetsPanel.style.display = 'none';
+      presetsTrigger.setAttribute('aria-expanded', 'false');
+    }
+  });
+  presetsIsland.append(presetsTrigger, presetsPanel);
+
+  topRight.append(importIsland, presetsIsland, exportIsland, shareIsland);
 
   // Top-left: settings button injected by settings.ts
   const topLeft = div('tb-island-topleft');

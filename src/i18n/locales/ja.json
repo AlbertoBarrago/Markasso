@@ -141,5 +141,10 @@
   "arrowNone": "なし",
   "arrowEnd": "終点",
   "arrowStart": "始点",
-  "arrowBoth": "両端"
+  "arrowBoth": "両端",
+  "presets": "テンプレート",
+  "presetFlowchart": "フローチャート",
+  "presetMindMap": "マインドマップ",
+  "presetSwot": "SWOT分析",
+  "presetSequence": "シーケンス図"
 }

@@ -141,5 +141,10 @@
   "arrowNone": "Aucune",
   "arrowEnd": "Fin",
   "arrowStart": "Début",
-  "arrowBoth": "Les deux"
+  "arrowBoth": "Les deux",
+  "presets": "Modèles",
+  "presetFlowchart": "Organigramme",
+  "presetMindMap": "Carte mentale",
+  "presetSwot": "Analyse SWOT",
+  "presetSequence": "Séquence"
 }

@@ -141,5 +141,10 @@
   "arrowNone": "无",
   "arrowEnd": "末端",
   "arrowStart": "起端",
-  "arrowBoth": "两端"
+  "arrowBoth": "两端",
+  "presets": "模板",
+  "presetFlowchart": "流程图",
+  "presetMindMap": "思维导图",
+  "presetSwot": "SWOT分析",
+  "presetSequence": "序列图"
 }

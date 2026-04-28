@@ -141,5 +141,10 @@
   "arrowNone": "Nessuna",
   "arrowEnd": "Fine",
   "arrowStart": "Inizio",
-  "arrowBoth": "Entrambe"
+  "arrowBoth": "Entrambe",
+  "presets": "Modelli",
+  "presetFlowchart": "Diagramma di flusso",
+  "presetMindMap": "Mappa mentale",
+  "presetSwot": "Analisi SWOT",
+  "presetSequence": "Sequenza"
 }

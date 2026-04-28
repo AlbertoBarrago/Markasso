@@ -141,5 +141,10 @@
   "hintCurve": "Click to add control points · Double-click to finish",
   "hintPolygon": "Click to add vertices · Double-click to close",
   "lockElements": "Lock elements",
-  "unlockElements": "Unlock elements"
+  "unlockElements": "Unlock elements",
+  "presets": "Presets",
+  "presetFlowchart": "Flowchart",
+  "presetMindMap": "Mind Map",
+  "presetSwot": "SWOT Analysis",
+  "presetSequence": "Sequence"
 }
