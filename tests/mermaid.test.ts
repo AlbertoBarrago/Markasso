@@ -1,6 +1,17 @@
-import { describe, it, expect } from 'vitest';
-import { parseDiagram, buildElements, parseSequenceDiagram, buildSequenceElements } from '../src/io/mermaid';
-import type { ArrowElement, LineElement, RectangleElement, EllipseElement, RhombusElement } from '../src/elements/element';
+import { describe, expect, it } from 'vitest';
+import type {
+  ArrowElement,
+  EllipseElement,
+  LineElement,
+  RectangleElement,
+  RhombusElement,
+} from '../src/elements/element';
+import {
+  buildElements,
+  buildSequenceElements,
+  parseDiagram,
+  parseSequenceDiagram,
+} from '../src/io/mermaid';
 
 const STROKE = '#e2e2ef';
 
@@ -43,32 +54,52 @@ describe('parseDiagram', () => {
 
   it('parses rectangle node [label]', () => {
     const d = parseDiagram('graph TD\n  A[My Label]');
-    expect(d!.nodes.get('A')).toMatchObject({ id: 'A', label: 'My Label', shape: 'rectangle' });
+    expect(d!.nodes.get('A')).toMatchObject({
+      id: 'A',
+      label: 'My Label',
+      shape: 'rectangle',
+    });
   });
 
   it('parses ellipse node (label)', () => {
     const d = parseDiagram('graph TD\n  A(Rounded)');
-    expect(d!.nodes.get('A')).toMatchObject({ shape: 'ellipse', label: 'Rounded' });
+    expect(d!.nodes.get('A')).toMatchObject({
+      shape: 'ellipse',
+      label: 'Rounded',
+    });
   });
 
   it('parses circle node ((label))', () => {
     const d = parseDiagram('graph TD\n  A((Circle))');
-    expect(d!.nodes.get('A')).toMatchObject({ shape: 'ellipse', label: 'Circle' });
+    expect(d!.nodes.get('A')).toMatchObject({
+      shape: 'ellipse',
+      label: 'Circle',
+    });
   });
 
   it('parses rhombus node {label}', () => {
     const d = parseDiagram('graph TD\n  A{Decision}');
-    expect(d!.nodes.get('A')).toMatchObject({ shape: 'rhombus', label: 'Decision' });
+    expect(d!.nodes.get('A')).toMatchObject({
+      shape: 'rhombus',
+      label: 'Decision',
+    });
   });
 
   it('parses asymmetric node >label]', () => {
     const d = parseDiagram('graph TD\n  A>Asymmetric]');
-    expect(d!.nodes.get('A')).toMatchObject({ shape: 'rectangle', label: 'Asymmetric' });
+    expect(d!.nodes.get('A')).toMatchObject({
+      shape: 'rectangle',
+      label: 'Asymmetric',
+    });
   });
 
   it('parses bare id node', () => {
     const d = parseDiagram('graph TD\n  A --> B');
-    expect(d!.nodes.get('A')).toMatchObject({ id: 'A', label: 'A', shape: 'rectangle' });
+    expect(d!.nodes.get('A')).toMatchObject({
+      id: 'A',
+      label: 'A',
+      shape: 'rectangle',
+    });
   });
 
   it('strips surrounding quotes from labels', () => {
@@ -81,7 +112,13 @@ describe('parseDiagram', () => {
   it('parses --> as arrow', () => {
     const d = parseDiagram('graph TD\n  A --> B');
     expect(d!.edges).toHaveLength(1);
-    expect(d!.edges[0]).toMatchObject({ from: 'A', to: 'B', edgeKind: 'arrow', dashed: false, label: '' });
+    expect(d!.edges[0]).toMatchObject({
+      from: 'A',
+      to: 'B',
+      edgeKind: 'arrow',
+      dashed: false,
+      label: '',
+    });
   });
 
   it('parses --- as line', () => {
@@ -106,7 +143,11 @@ describe('parseDiagram', () => {
 
   it('parses -- label --> edge label', () => {
     const d = parseDiagram('graph TD\n  A -- my label --> B');
-    expect(d!.edges[0]).toMatchObject({ from: 'A', to: 'B', label: 'my label' });
+    expect(d!.edges[0]).toMatchObject({
+      from: 'A',
+      to: 'B',
+      label: 'my label',
+    });
   });
 
   it('parses chained edges on one line', () => {
@@ -119,8 +160,14 @@ describe('parseDiagram', () => {
 
   it('parses inline shape declarations on edge lines', () => {
     const d = parseDiagram('graph TD\n  A[Start] --> B{Decision}');
-    expect(d!.nodes.get('A')).toMatchObject({ shape: 'rectangle', label: 'Start' });
-    expect(d!.nodes.get('B')).toMatchObject({ shape: 'rhombus', label: 'Decision' });
+    expect(d!.nodes.get('A')).toMatchObject({
+      shape: 'rectangle',
+      label: 'Start',
+    });
+    expect(d!.nodes.get('B')).toMatchObject({
+      shape: 'rhombus',
+      label: 'Decision',
+    });
     expect(d!.edges).toHaveLength(1);
   });
 
@@ -151,23 +198,25 @@ describe('buildElements', () => {
   it('produces one shape element per node', () => {
     const d = parseDiagram('graph TD\n  A[Rect] --> B{Diamond}')!;
     const els = buildElements(d, STROKE);
-    const shapes = els.filter(e => e.type === 'rectangle' || e.type === 'rhombus');
+    const shapes = els.filter(
+      (e) => e.type === 'rectangle' || e.type === 'rhombus',
+    );
     expect(shapes).toHaveLength(2);
   });
 
   it('produces one connector per edge', () => {
     const d = parseDiagram('graph TD\n  A --> B\n  B --> C')!;
     const els = buildElements(d, STROKE);
-    const arrows = els.filter(e => e.type === 'arrow' || e.type === 'line');
+    const arrows = els.filter((e) => e.type === 'arrow' || e.type === 'line');
     expect(arrows).toHaveLength(2);
   });
 
   it('maps node shapes to correct element types', () => {
     const d = parseDiagram('graph TD\n  R[Rect]\n  E(Ellipse)\n  D{Diamond}')!;
     const els = buildElements(d, STROKE);
-    expect(els.find(e => e.type === 'rectangle')).toBeDefined();
-    expect(els.find(e => e.type === 'ellipse')).toBeDefined();
-    expect(els.find(e => e.type === 'rhombus')).toBeDefined();
+    expect(els.find((e) => e.type === 'rectangle')).toBeDefined();
+    expect(els.find((e) => e.type === 'ellipse')).toBeDefined();
+    expect(els.find((e) => e.type === 'rhombus')).toBeDefined();
   });
 
   it('sets label on shape elements', () => {
@@ -180,28 +229,33 @@ describe('buildElements', () => {
   it('sets label on arrow elements', () => {
     const d = parseDiagram('graph TD\n  A -->|Yes| B')!;
     const els = buildElements(d, STROKE);
-    const arrow = els.find(e => e.type === 'arrow') as ArrowElement;
+    const arrow = els.find((e) => e.type === 'arrow') as ArrowElement;
     expect(arrow.label).toBe('Yes');
   });
 
   it('creates line element for --- edge', () => {
     const d = parseDiagram('graph TD\n  A --- B')!;
     const els = buildElements(d, STROKE);
-    expect(els.find(e => e.type === 'line')).toBeDefined();
+    expect(els.find((e) => e.type === 'line')).toBeDefined();
   });
 
   it('sets dashed strokeStyle for -.-> edge', () => {
     const d = parseDiagram('graph TD\n  A -.-> B')!;
     const els = buildElements(d, STROKE);
-    const arrow = els.find(e => e.type === 'arrow') as ArrowElement;
+    const arrow = els.find((e) => e.type === 'arrow') as ArrowElement;
     expect(arrow.strokeStyle).toBe('dashed');
   });
 
   it('uses palette colors on shapes and provided strokeColor on connectors', () => {
     const d = parseDiagram('graph TD\n  A --> B')!;
     const els = buildElements(d, '#ff0000');
-    const shapes = els.filter(e => e.type === 'rectangle' || e.type === 'ellipse' || e.type === 'rhombus');
-    const connectors = els.filter(e => e.type === 'arrow' || e.type === 'line');
+    const shapes = els.filter(
+      (e) =>
+        e.type === 'rectangle' || e.type === 'ellipse' || e.type === 'rhombus',
+    );
+    const connectors = els.filter(
+      (e) => e.type === 'arrow' || e.type === 'line',
+    );
     // Shapes use the built-in palette, not the passed strokeColor
     for (const el of shapes) {
       expect(el.strokeColor).not.toBe('#ff0000');
@@ -216,9 +270,13 @@ describe('buildElements', () => {
   it('connectors reference the correct element ids', () => {
     const d = parseDiagram('graph TD\n  A --> B')!;
     const els = buildElements(d, STROKE);
-    const shapeA = els.find(e => e.type === 'rectangle' && (e as RectangleElement).label === 'A');
-    const shapeB = els.find(e => e.type === 'rectangle' && (e as RectangleElement).label === 'B');
-    const arrow = els.find(e => e.type === 'arrow') as ArrowElement;
+    const shapeA = els.find(
+      (e) => e.type === 'rectangle' && (e as RectangleElement).label === 'A',
+    );
+    const shapeB = els.find(
+      (e) => e.type === 'rectangle' && (e as RectangleElement).label === 'B',
+    );
+    const arrow = els.find((e) => e.type === 'arrow') as ArrowElement;
     expect(arrow.startElementId).toBe(shapeA!.id);
     expect(arrow.endElementId).toBe(shapeB!.id);
   });
@@ -226,7 +284,9 @@ describe('buildElements', () => {
   it('LR layout places nodes on the horizontal axis', () => {
     const d = parseDiagram('graph LR\n  A --> B')!;
     const els = buildElements(d, STROKE);
-    const [a, b] = els.filter(e => e.type === 'rectangle') as RectangleElement[];
+    const [a, b] = els.filter(
+      (e) => e.type === 'rectangle',
+    ) as RectangleElement[];
     // In LR, B should be to the right of A
     expect(b!.x).toBeGreaterThan(a!.x);
   });
@@ -234,7 +294,9 @@ describe('buildElements', () => {
   it('TD layout places nodes on the vertical axis', () => {
     const d = parseDiagram('graph TD\n  A --> B')!;
     const els = buildElements(d, STROKE);
-    const [a, b] = els.filter(e => e.type === 'rectangle') as RectangleElement[];
+    const [a, b] = els.filter(
+      (e) => e.type === 'rectangle',
+    ) as RectangleElement[];
     // In TD, B should be below A
     expect(b!.y).toBeGreaterThan(a!.y);
   });
@@ -242,18 +304,18 @@ describe('buildElements', () => {
   it('shapes have unique ids', () => {
     const d = parseDiagram('graph TD\n  A --> B\n  B --> C')!;
     const els = buildElements(d, STROKE);
-    const ids = els.map(e => e.id);
+    const ids = els.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
   it('terminates and produces elements for a cyclic diagram', () => {
     // D --> B creates a back edge; the BFS must not loop infinitely
     const d = parseDiagram(
-      'flowchart TD\n  A[User Action] --> B[Frontend]\n  B --> C[Mock API]\n  C --> D[Mock Response]\n  D --> B\n  B --> E[UI Update]'
+      'flowchart TD\n  A[User Action] --> B[Frontend]\n  B --> C[Mock API]\n  C --> D[Mock Response]\n  D --> B\n  B --> E[UI Update]',
     )!;
     const els = buildElements(d, STROKE);
     expect(els.length).toBeGreaterThan(0);
-    const shapes = els.filter(e => e.type === 'rectangle');
+    const shapes = els.filter((e) => e.type === 'rectangle');
     expect(shapes).toHaveLength(5); // A, B, C, D, E
   });
 });
@@ -273,13 +335,16 @@ describe('parseSequenceDiagram', () => {
   });
 
   it('parses explicit participant declarations in order', () => {
-    const text = 'sequenceDiagram\n  participant Client\n  participant API\n  participant DB';
+    const text =
+      'sequenceDiagram\n  participant Client\n  participant API\n  participant DB';
     const d = parseSequenceDiagram(text)!;
-    expect(d.participants.map(p => p.id)).toEqual(['Client', 'API', 'DB']);
+    expect(d.participants.map((p) => p.id)).toEqual(['Client', 'API', 'DB']);
   });
 
   it('parses participant alias (as)', () => {
-    const d = parseSequenceDiagram('sequenceDiagram\n  participant C as Client App')!;
+    const d = parseSequenceDiagram(
+      'sequenceDiagram\n  participant C as Client App',
+    )!;
     expect(d.participants[0]).toMatchObject({ id: 'C', label: 'Client App' });
   });
 
@@ -290,12 +355,13 @@ describe('parseSequenceDiagram', () => {
 
   it('auto-registers participants seen only in messages', () => {
     const d = parseSequenceDiagram('sequenceDiagram\n  A->>B: hi')!;
-    expect(d.participants.map(p => p.id)).toContain('A');
-    expect(d.participants.map(p => p.id)).toContain('B');
+    expect(d.participants.map((p) => p.id)).toContain('A');
+    expect(d.participants.map((p) => p.id)).toContain('B');
   });
 
   it('preserves participant order from declarations', () => {
-    const text = 'sequenceDiagram\n  participant X\n  participant Y\n  X->>Y: msg';
+    const text =
+      'sequenceDiagram\n  participant X\n  participant Y\n  X->>Y: msg';
     const d = parseSequenceDiagram(text)!;
     expect(d.participants[0]!.id).toBe('X');
     expect(d.participants[1]!.id).toBe('Y');
@@ -303,7 +369,12 @@ describe('parseSequenceDiagram', () => {
 
   it('parses solid arrow (->>) as non-dashed', () => {
     const d = parseSequenceDiagram('sequenceDiagram\n  A->>B: call')!;
-    expect(d.messages[0]).toMatchObject({ from: 'A', to: 'B', dashed: false, label: 'call' });
+    expect(d.messages[0]).toMatchObject({
+      from: 'A',
+      to: 'B',
+      dashed: false,
+      label: 'call',
+    });
   });
 
   it('parses dashed arrow (-->>) as dashed', () => {
@@ -347,11 +418,17 @@ describe('parseSequenceDiagram', () => {
     const d = parseSequenceDiagram(text)!;
     // block keywords (loop, end, Note) are skipped; messages inside blocks are kept
     expect(d.messages).toHaveLength(3);
-    expect(d.messages.map(m => m.label)).toEqual(['start', 'inside loop', 'finish']);
+    expect(d.messages.map((m) => m.label)).toEqual([
+      'start',
+      'inside loop',
+      'finish',
+    ]);
   });
 
   it('ignores comment lines', () => {
-    const d = parseSequenceDiagram('sequenceDiagram\n  %% comment\n  A->>B: msg')!;
+    const d = parseSequenceDiagram(
+      'sequenceDiagram\n  %% comment\n  A->>B: msg',
+    )!;
     expect(d.messages).toHaveLength(1);
   });
 
@@ -371,7 +448,7 @@ describe('parseSequenceDiagram', () => {
       '    API-->>Client: 201 Created',
     ].join('\n');
     const d = parseSequenceDiagram(text)!;
-    expect(d.participants.map(p => p.id)).toEqual(['Client', 'API', 'DB']);
+    expect(d.participants.map((p) => p.id)).toEqual(['Client', 'API', 'DB']);
     expect(d.messages).toHaveLength(8);
   });
 });
@@ -380,18 +457,18 @@ describe('parseSequenceDiagram', () => {
 
 describe('buildSequenceElements', () => {
   const simple = parseSequenceDiagram(
-    'sequenceDiagram\n  participant A\n  participant B\n  A->>B: hello'
+    'sequenceDiagram\n  participant A\n  participant B\n  A->>B: hello',
   )!;
 
   it('creates one rectangle per participant', () => {
     const els = buildSequenceElements(simple, STROKE);
-    const rects = els.filter(e => e.type === 'rectangle');
+    const rects = els.filter((e) => e.type === 'rectangle');
     expect(rects).toHaveLength(2);
   });
 
   it('creates one lifeline (dashed line) per participant', () => {
     const els = buildSequenceElements(simple, STROKE);
-    const lifelines = els.filter(e => e.type === 'line');
+    const lifelines = els.filter((e) => e.type === 'line');
     expect(lifelines).toHaveLength(2);
     const ll = lifelines[0] as LineElement;
     expect(ll.strokeStyle).toBe('dashed');
@@ -399,55 +476,55 @@ describe('buildSequenceElements', () => {
 
   it('creates one arrow per non-self message', () => {
     const els = buildSequenceElements(simple, STROKE);
-    const arrows = els.filter(e => e.type === 'arrow');
+    const arrows = els.filter((e) => e.type === 'arrow');
     expect(arrows).toHaveLength(1);
   });
 
   it('sets label on message arrows', () => {
     const els = buildSequenceElements(simple, STROKE);
-    const arrow = els.find(e => e.type === 'arrow') as ArrowElement;
+    const arrow = els.find((e) => e.type === 'arrow') as ArrowElement;
     expect(arrow.label).toBe('hello');
   });
 
   it('sets dashed strokeStyle for dashed messages', () => {
     const d = parseSequenceDiagram('sequenceDiagram\n  A-->>B: resp')!;
     const els = buildSequenceElements(d, STROKE);
-    const arrow = els.find(e => e.type === 'arrow') as ArrowElement;
+    const arrow = els.find((e) => e.type === 'arrow') as ArrowElement;
     expect(arrow.strokeStyle).toBe('dashed');
   });
 
   it('places participants at different x positions', () => {
     const els = buildSequenceElements(simple, STROKE);
-    const rects = els.filter(e => e.type === 'rectangle');
+    const rects = els.filter((e) => e.type === 'rectangle');
     expect(rects[0]!.x).not.toBe(rects[1]!.x);
   });
 
   it('lifelines are vertical (same x, different y)', () => {
     const els = buildSequenceElements(simple, STROKE);
-    const [ll] = els.filter(e => e.type === 'line') as LineElement[];
+    const [ll] = els.filter((e) => e.type === 'line') as LineElement[];
     expect(ll!.x).toBe(ll!.x2);
     expect(ll!.y2).toBeGreaterThan(ll!.y);
   });
 
   it('message arrows are horizontal (same y)', () => {
     const els = buildSequenceElements(simple, STROKE);
-    const [arrow] = els.filter(e => e.type === 'arrow') as ArrowElement[];
+    const [arrow] = els.filter((e) => e.type === 'arrow') as ArrowElement[];
     expect(arrow!.y).toBe(arrow!.y2);
   });
 
   it('all elements have unique ids', () => {
     const d = parseSequenceDiagram(
-      'sequenceDiagram\n  participant A\n  participant B\n  participant C\n  A->>B: 1\n  B->>C: 2'
+      'sequenceDiagram\n  participant A\n  participant B\n  participant C\n  A->>B: 1\n  B->>C: 2',
     )!;
     const els = buildSequenceElements(d, STROKE);
-    const ids = els.map(e => e.id);
+    const ids = els.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
   it('uses palette colors on participant boxes and provided strokeColor on message arrows', () => {
     const els = buildSequenceElements(simple, '#abcdef');
-    const boxes = els.filter(e => e.type === 'rectangle');
-    const arrows = els.filter(e => e.type === 'arrow');
+    const boxes = els.filter((e) => e.type === 'rectangle');
+    const arrows = els.filter((e) => e.type === 'arrow');
     // Participant boxes use the cycling palette
     for (const el of boxes) {
       expect(el.strokeColor).not.toBe('#abcdef');

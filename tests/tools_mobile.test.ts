@@ -13,19 +13,19 @@
  * These tests guard against that regression being reintroduced.
  */
 
-import { describe, it, expect } from 'vitest';
-import { History } from '../src/engine/history';
+import { describe, expect, it } from 'vitest';
 import { createScene } from '../src/core/scene';
-import { PenTool } from '../src/tools/pen_tool';
-import { RectangleTool } from '../src/tools/rectangle_tool';
+import type { RectangleElement } from '../src/elements/element';
+import { History } from '../src/engine/history';
 import { EllipseTool } from '../src/tools/ellipse_tool';
-import { LineTool } from '../src/tools/line_tool';
-import { RomboTool } from '../src/tools/rombo_tool';
 import { EraserTool } from '../src/tools/eraser_tool';
 import { HandTool } from '../src/tools/hand_tool';
+import { LineTool } from '../src/tools/line_tool';
+import { PenTool } from '../src/tools/pen_tool';
+import { RectangleTool } from '../src/tools/rectangle_tool';
+import { RomboTool } from '../src/tools/rombo_tool';
 import { SelectTool } from '../src/tools/select_tool';
 import type { ToolContext } from '../src/tools/tool';
-import type { RectangleElement } from '../src/elements/element';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -38,7 +38,12 @@ import type { RectangleElement } from '../src/elements/element';
  * Tools that do (hand, select, rect shiftKey) only read the listed props.
  */
 function me(clientX = 0, clientY = 0, shiftKey = false): MouseEvent {
-  return { clientX, clientY, shiftKey, preventDefault: () => {} } as unknown as MouseEvent;
+  return {
+    clientX,
+    clientY,
+    shiftKey,
+    preventDefault: () => {},
+  } as unknown as MouseEvent;
 }
 
 /**
@@ -51,7 +56,14 @@ function makeCtx(history: History): ToolContext {
     history,
     canvas: {
       getBoundingClientRect: () =>
-        ({ left: 0, top: 0, width: 800, height: 600, right: 800, bottom: 600 }) as DOMRect,
+        ({
+          left: 0,
+          top: 0,
+          width: 800,
+          height: 600,
+          right: 800,
+          bottom: 600,
+        }) as DOMRect,
     } as HTMLCanvasElement,
     onPreviewUpdate: () => {},
   };
@@ -449,8 +461,8 @@ describe('EraserTool — mobile touch sequence', () => {
     const tool = new EraserTool();
     const ctx = makeCtx(history);
 
-    tool.onMouseDown(me(50, 50), 50, 50, ctx);   // erases el-1
-    tool.onMouseUp();                             // stops erasing
+    tool.onMouseDown(me(50, 50), 50, 50, ctx); // erases el-1
+    tool.onMouseUp(); // stops erasing
 
     // Moving over el-2 after touchend must not erase it
     tool.onMouseMove(me(250, 250), 250, 250, ctx);

@@ -1,31 +1,66 @@
-import { describe, it, expect } from 'vitest';
-import { resolveArrowEndpoints, getElementBounds } from '../src/rendering/draw_selection';
-import type { ArrowElement, RectangleElement, LineElement } from '../src/elements/element';
+import { describe, expect, it } from 'vitest';
+import type {
+  ArrowElement,
+  LineElement,
+  RectangleElement,
+} from '../src/elements/element';
+import {
+  getElementBounds,
+  resolveArrowEndpoints,
+} from '../src/rendering/draw_selection';
 
-function makeRect(id: string, x: number, y: number, w = 100, h = 60): RectangleElement {
+function makeRect(
+  id: string,
+  x: number,
+  y: number,
+  w = 100,
+  h = 60,
+): RectangleElement {
   return {
-    id, type: 'rectangle', x, y, width: w, height: h,
-    strokeColor: '#000', fillColor: 'transparent',
-    strokeWidth: 2, opacity: 1, roughness: 0,
+    id,
+    type: 'rectangle',
+    x,
+    y,
+    width: w,
+    height: h,
+    strokeColor: '#000',
+    fillColor: 'transparent',
+    strokeWidth: 2,
+    opacity: 1,
+    roughness: 0,
   };
 }
 
 function makeArrow(overrides: Partial<ArrowElement> = {}): ArrowElement {
   return {
-    id: 'a1', type: 'arrow',
-    x: 0, y: 0, x2: 200, y2: 200,
-    strokeColor: '#000', fillColor: 'transparent',
-    strokeWidth: 2, opacity: 1, roughness: 0,
+    id: 'a1',
+    type: 'arrow',
+    x: 0,
+    y: 0,
+    x2: 200,
+    y2: 200,
+    strokeColor: '#000',
+    fillColor: 'transparent',
+    strokeWidth: 2,
+    opacity: 1,
+    roughness: 0,
     ...overrides,
   };
 }
 
 function makeLine(overrides: Partial<LineElement> = {}): LineElement {
   return {
-    id: 'l1', type: 'line',
-    x: 0, y: 0, x2: 100, y2: 0,
-    strokeColor: '#000', fillColor: 'transparent',
-    strokeWidth: 2, opacity: 1, roughness: 0,
+    id: 'l1',
+    type: 'line',
+    x: 0,
+    y: 0,
+    x2: 100,
+    y2: 0,
+    strokeColor: '#000',
+    fillColor: 'transparent',
+    strokeWidth: 2,
+    opacity: 1,
+    roughness: 0,
     ...overrides,
   };
 }
@@ -46,8 +81,8 @@ describe('resolveArrowEndpoints', () => {
     const arrow = makeArrow({ x: 999, y: 999, startElementId: 'r1' });
     const result = resolveArrowEndpoints(arrow, [rect]);
     expect(result.x).toBeCloseTo(1300 / 17, 5); // ≈ 76.47
-    expect(result.y).toBe(60);                   // bottom edge
-    expect(result.x2).toBe(200);                 // end unchanged
+    expect(result.y).toBe(60); // bottom edge
+    expect(result.x2).toBe(200); // end unchanged
   });
 
   it('resolves endElementId to element border facing the other endpoint', () => {
@@ -59,8 +94,8 @@ describe('resolveArrowEndpoints', () => {
     const arrow = makeArrow({ x2: 999, y2: 999, endElementId: 'r2' });
     const result = resolveArrowEndpoints(arrow, [rect]);
     expect(result.x2).toBeCloseTo(1400 / 11, 5); // ≈ 127.27
-    expect(result.y2).toBe(200);                  // top edge
-    expect(result.x).toBe(0);                     // start unchanged
+    expect(result.y2).toBe(200); // top edge
+    expect(result.x).toBe(0); // start unchanged
   });
 
   it('resolves both endpoints to their respective borders facing each other', () => {
@@ -72,10 +107,10 @@ describe('resolveArrowEndpoints', () => {
     const r2 = makeRect('r2', 300, 400, 60, 40);
     const arrow = makeArrow({ startElementId: 'r1', endElementId: 'r2' });
     const result = resolveArrowEndpoints(arrow, [r1, r2]);
-    expect(result.x).toBeCloseTo(930 / 13, 5);       // ≈ 71.54 (r1 bottom-right)
-    expect(result.y).toBe(60);                        // r1 bottom edge
-    expect(result.x2).toBeCloseTo(12310 / 39, 5);    // ≈ 315.64 (r2 top-left)
-    expect(result.y2).toBe(400);                      // r2 top edge
+    expect(result.x).toBeCloseTo(930 / 13, 5); // ≈ 71.54 (r1 bottom-right)
+    expect(result.y).toBe(60); // r1 bottom edge
+    expect(result.x2).toBeCloseTo(12310 / 39, 5); // ≈ 315.64 (r2 top-left)
+    expect(result.y2).toBe(400); // r2 top edge
   });
 
   it('falls back to stored position if connected element not found', () => {
@@ -100,7 +135,14 @@ describe('getElementBounds with arrow connections', () => {
     // bounds: x=70, y=60, w=160, h=240
     const r1 = makeRect('r1', 0, 0, 100, 60);
     const r2 = makeRect('r2', 200, 300, 100, 60);
-    const arrow = makeArrow({ x: 999, y: 999, x2: 999, y2: 999, startElementId: 'r1', endElementId: 'r2' });
+    const arrow = makeArrow({
+      x: 999,
+      y: 999,
+      x2: 999,
+      y2: 999,
+      startElementId: 'r1',
+      endElementId: 'r2',
+    });
     const b = getElementBounds(arrow, [r1, r2, arrow]);
     expect(b.x).toBe(70);
     expect(b.y).toBe(60);

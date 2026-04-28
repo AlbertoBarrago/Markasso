@@ -69,7 +69,12 @@ const SAMPLE_ELEMENTS: Element[] = [
     type: 'freehand',
     x: 0,
     y: 0,
-    points: [[12, 14], [26, 32], [44, 38], [58, 52]],
+    points: [
+      [12, 14],
+      [26, 32],
+      [44, 38],
+      [58, 52],
+    ],
     pressures: [0.4, 0.7, 0.5, 0.8],
     strokeColor: '#ff5500',
     fillColor: 'transparent',

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { distToQuadraticCurve, getArrowHeadVector, getQuadraticBounds, getQuadraticPoint, getQuadraticSegment, getQuadraticTangent } from '../src/rendering/connector_geometry';
+import {
+  distToQuadraticCurve,
+  getArrowHeadVector,
+  getQuadraticBounds,
+  getQuadraticPoint,
+  getQuadraticSegment,
+  getQuadraticTangent,
+} from '../src/rendering/connector_geometry';
 
 describe('getArrowHeadVector', () => {
   it('uses the control point to orient the arrowhead at the end of a quadratic line', () => {

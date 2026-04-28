@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
-import { History } from '../src/engine/history';
+import { describe, expect, it, vi } from 'vitest';
 import { createScene } from '../src/core/scene';
+import { History } from '../src/engine/history';
 
 describe('History', () => {
   it('dispatch adds to past', () => {
@@ -11,9 +11,15 @@ describe('History', () => {
       element: {
         id: '1',
         type: 'rectangle',
-        x: 0, y: 0, width: 10, height: 10,
-        strokeColor: '#000', fillColor: 'transparent',
-        strokeWidth: 1, opacity: 1, roughness: 0,
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+        strokeColor: '#000',
+        fillColor: 'transparent',
+        strokeWidth: 1,
+        opacity: 1,
+        roughness: 0,
       },
     });
     expect(h.present.elements).toHaveLength(1);
@@ -27,9 +33,15 @@ describe('History', () => {
       element: {
         id: '1',
         type: 'rectangle',
-        x: 0, y: 0, width: 10, height: 10,
-        strokeColor: '#000', fillColor: 'transparent',
-        strokeWidth: 1, opacity: 1, roughness: 0,
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+        strokeColor: '#000',
+        fillColor: 'transparent',
+        strokeWidth: 1,
+        opacity: 1,
+        roughness: 0,
       },
     });
     expect(h.present.elements).toHaveLength(1);
@@ -56,9 +68,15 @@ describe('History', () => {
       element: {
         id: '1',
         type: 'rectangle',
-        x: 0, y: 0, width: 10, height: 10,
-        strokeColor: '#000', fillColor: 'transparent',
-        strokeWidth: 1, opacity: 1, roughness: 0,
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+        strokeColor: '#000',
+        fillColor: 'transparent',
+        strokeWidth: 1,
+        opacity: 1,
+        roughness: 0,
       },
     });
     h.undo();
@@ -68,9 +86,15 @@ describe('History', () => {
       element: {
         id: '2',
         type: 'ellipse',
-        x: 0, y: 0, width: 10, height: 10,
-        strokeColor: '#000', fillColor: 'transparent',
-        strokeWidth: 1, opacity: 1, roughness: 0,
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+        strokeColor: '#000',
+        fillColor: 'transparent',
+        strokeWidth: 1,
+        opacity: 1,
+        roughness: 0,
       },
     });
     expect(h.canRedo()).toBe(false);

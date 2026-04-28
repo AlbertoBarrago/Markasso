@@ -34,8 +34,6 @@ export function initStarCta(appEl: HTMLElement, toolbarEl: HTMLElement): void {
   function openModal(): void {
     if (modalEl) return;
 
-
-
     modalEl = document.createElement('div');
     modalEl.id = 'star-modal';
 

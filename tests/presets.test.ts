@@ -1,25 +1,46 @@
-import { describe, it, expect } from 'vitest';
-import { PRESETS } from '../src/io/presets';
+import { describe, expect, it } from 'vitest';
 import type { Element } from '../src/elements/element';
+import { PRESETS } from '../src/io/presets';
 
 const REQUIRED_FIELDS: (keyof Element)[] = [
-  'id', 'type', 'strokeColor', 'fillColor', 'strokeWidth', 'opacity', 'roughness',
+  'id',
+  'type',
+  'strokeColor',
+  'fillColor',
+  'strokeWidth',
+  'opacity',
+  'roughness',
 ];
 
-function getBBox(els: Element[]): { minX: number; minY: number; maxX: number; maxY: number } {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+function getBBox(els: Element[]): {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+} {
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
   for (const el of els) {
     if (
-      el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'rhombus' ||
-      el.type === 'text' || el.type === 'image'
+      el.type === 'rectangle' ||
+      el.type === 'ellipse' ||
+      el.type === 'rhombus' ||
+      el.type === 'text' ||
+      el.type === 'image'
     ) {
       const w = 'width' in el ? el.width : 0;
       const h = 'height' in el ? el.height : 0;
-      minX = Math.min(minX, el.x); minY = Math.min(minY, el.y);
-      maxX = Math.max(maxX, el.x + w); maxY = Math.max(maxY, el.y + h);
+      minX = Math.min(minX, el.x);
+      minY = Math.min(minY, el.y);
+      maxX = Math.max(maxX, el.x + w);
+      maxY = Math.max(maxY, el.y + h);
     } else if (el.type === 'arrow' || el.type === 'line') {
-      minX = Math.min(minX, el.x, el.x2); minY = Math.min(minY, el.y, el.y2);
-      maxX = Math.max(maxX, el.x, el.x2); maxY = Math.max(maxY, el.y, el.y2);
+      minX = Math.min(minX, el.x, el.x2);
+      minY = Math.min(minY, el.y, el.y2);
+      maxX = Math.max(maxX, el.x, el.x2);
+      maxY = Math.max(maxY, el.y, el.y2);
     }
   }
   return { minX, minY, maxX, maxY };
@@ -28,7 +49,12 @@ function getBBox(els: Element[]): { minX: number; minY: number; maxX: number; ma
 describe('PRESETS', () => {
   it('has 4 entries with correct ids', () => {
     expect(PRESETS).toHaveLength(4);
-    expect(PRESETS.map((p) => p.id)).toEqual(['flowchart', 'mindmap', 'swot', 'sequence']);
+    expect(PRESETS.map((p) => p.id)).toEqual([
+      'flowchart',
+      'mindmap',
+      'swot',
+      'sequence',
+    ]);
   });
 
   it('each preset returns elements for both dark and light', () => {
@@ -117,7 +143,12 @@ describe('PRESETS', () => {
       const rects = els.filter((e) => e.type === 'rectangle');
       expect(rects).toHaveLength(4);
       const labels = rects.map((r) => (r as { label?: string }).label);
-      expect(labels).toEqual(['Strengths', 'Weaknesses', 'Opportunities', 'Threats']);
+      expect(labels).toEqual([
+        'Strengths',
+        'Weaknesses',
+        'Opportunities',
+        'Threats',
+      ]);
     });
   });
 
@@ -131,7 +162,9 @@ describe('PRESETS', () => {
     it('has 2 dashed lifelines', () => {
       const els = sequence.buildElements(0, 0, true);
       const lifelines = els.filter(
-        (e) => e.type === 'line' && (e as { strokeStyle?: string }).strokeStyle === 'dashed',
+        (e) =>
+          e.type === 'line' &&
+          (e as { strokeStyle?: string }).strokeStyle === 'dashed',
       );
       expect(lifelines).toHaveLength(2);
     });
@@ -162,10 +195,14 @@ describe('PRESETS', () => {
   describe('dark vs light colors', () => {
     it('dark and light produce different fillColors on shape elements', () => {
       for (const p of PRESETS) {
-        const dark  = p.buildElements(0, 0, true);
+        const dark = p.buildElements(0, 0, true);
         const light = p.buildElements(0, 0, false);
-        const darkShapes  = dark.filter((e) => ['rectangle','ellipse','rhombus'].includes(e.type));
-        const lightShapes = light.filter((e) => ['rectangle','ellipse','rhombus'].includes(e.type));
+        const darkShapes = dark.filter((e) =>
+          ['rectangle', 'ellipse', 'rhombus'].includes(e.type),
+        );
+        const lightShapes = light.filter((e) =>
+          ['rectangle', 'ellipse', 'rhombus'].includes(e.type),
+        );
         if (darkShapes.length === 0 || lightShapes.length === 0) continue;
         expect(darkShapes[0]!.fillColor).not.toBe(lightShapes[0]!.fillColor);
       }
