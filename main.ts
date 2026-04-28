@@ -18,7 +18,22 @@ import { initStarCta } from './src/ui/star_cta';
 import { decodeScene, isShareHash } from './src/io/share';
 import { fitToElements } from './src/core/viewport';
 
+function printConsoleGreeting(): void {
+  const reset  = 'color: inherit; font-size: 13px;';
+  const title  = 'color: #a78bfa; font-size: 18px; font-weight: bold;';
+  const accent = 'color: #60a5fa; font-size: 13px;';
+  const muted  = 'color: #6b7280; font-size: 12px;';
+
+  console.log('%cMarkasso', title);
+  console.log('%cHey nerd 👋  Welcome to the console.', accent);
+  console.log('%cI\'m Alberto (alBz) — the creator of this little whiteboard.', reset);
+  console.log('%cIf you have ideas, spot a bug, or just want to say hi — open an issue or a PR:', reset);
+  console.log('%c→ https://github.com/AlbertoBarrago/Markasso', accent);
+  console.log('%cAll contributions are welcome. Let\'s build something cool together.', muted);
+}
+
 async function bootstrap(): Promise<void> {
+  printConsoleGreeting();
   const appEl    = document.getElementById('app')       as HTMLElement;
   const toolbar  = document.getElementById('toolbar')   as HTMLElement;
   const workspace= document.getElementById('workspace') as HTMLElement;

@@ -1,5 +1,3 @@
-const STAR_SEEN_KEY = 'markasso-star-hint';
-
 const STAR_ICON = `<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
   <path d="M10 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L10 14.4l-4.8 2.5.9-5.4L2.2 7.7l5.4-.8z"/>
 </svg>`;
@@ -14,13 +12,21 @@ export function initStarCta(appEl: HTMLElement, toolbarEl: HTMLElement): void {
   starBtn.setAttribute('aria-label', 'Support Markasso on GitHub');
   starBtn.innerHTML = STAR_ICON;
 
-  // Pulse on first visit
-  if (!localStorage.getItem(STAR_SEEN_KEY)) {
+  const leftSection = toolbarEl.querySelector<HTMLElement>('.tb-left');
+  (leftSection ?? toolbarEl).appendChild(starBtn);
+
+  function triggerPulse(): void {
+    starBtn.classList.remove('pulse');
+    void starBtn.offsetWidth;
     starBtn.classList.add('pulse');
   }
 
-  const leftSection = toolbarEl.querySelector<HTMLElement>('.tb-left');
-  (leftSection ?? toolbarEl).appendChild(starBtn);
+  triggerPulse();
+  let pulseCount = 1;
+  const pulseTimer = setInterval(() => {
+    triggerPulse();
+    if (++pulseCount >= 2) clearInterval(pulseTimer);
+  }, 7000);
 
   // ── Modal ───────────────────────────────────────────────────────────────────
   let modalEl: HTMLElement | null = null;
@@ -28,8 +34,7 @@ export function initStarCta(appEl: HTMLElement, toolbarEl: HTMLElement): void {
   function openModal(): void {
     if (modalEl) return;
 
-    localStorage.setItem(STAR_SEEN_KEY, '1');
-    starBtn.classList.remove('pulse');
+
 
     modalEl = document.createElement('div');
     modalEl.id = 'star-modal';
@@ -38,9 +43,7 @@ export function initStarCta(appEl: HTMLElement, toolbarEl: HTMLElement): void {
       <div class="star-card" role="dialog" aria-modal="true" aria-label="Support Markasso">
         <button class="star-close" aria-label="Close">&times;</button>
         <div class="star-logo">
-          <svg width="40" height="40" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M10 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L10 14.4l-4.8 2.5.9-5.4L2.2 7.7l5.4-.8z"/>
-          </svg>
+          <img src="markasso-logo-icon.svg" width="40" height="40" alt="Markasso" style="border-radius:6px">
         </div>
         <h2 class="star-title">Love Markasso?</h2>
         <p class="star-desc">
@@ -48,9 +51,8 @@ export function initStarCta(appEl: HTMLElement, toolbarEl: HTMLElement): void {
           and zero external dependencies. No login. No tracking. Just drawing.
         </p>
         <p class="star-thanks">
-          Made by <strong>albz</strong>, with style courtesy of <strong>Lorenzo Cataldi</strong>
-          and the legendary <strong>Claude Code</strong> keeping the neurons from exploding.
-          If it's useful to you, a star on GitHub means the world to us.
+          Made by <strong>albz</strong>. Heartfelt thanks to <strong>Lorenzo Cataldi</strong>
+          for the style, and to <strong>Claude Code</strong> for its unbearable absence of fatigue.
         </p>
         <div class="star-actions">
           <a class="star-cta-btn" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">

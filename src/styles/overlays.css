@@ -1186,7 +1186,6 @@
   color: #fbbf24 !important;
 }
 
-/* Pulse on first visit */
 @keyframes star-pulse {
   0%,
   100% {
@@ -1197,5 +1196,5 @@
   }
 }
 .tb-star-btn.pulse {
-  animation: star-pulse 1.6s ease-in-out 3;
+  animation: star-pulse 1.6s ease-in-out 2;
 }

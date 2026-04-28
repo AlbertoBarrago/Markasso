@@ -275,48 +275,9 @@ export function initSettings(
 
       <div class="menu-divider"></div>
 
-      <button class="menu-item" id="menu-about">
-        ${ICONS.about}<span class="menu-item-label">${t('menuAbout')}</span>
-      </button>
+      <div class="menu-version">v${pkg.version}</div>
     </div>
   `;
-
-  // ── About modal ──────────────────────────────────────────────────────────
-  const aboutModal = document.createElement('div');
-  aboutModal.className = 'about-modal';
-  aboutModal.setAttribute('role', 'dialog');
-  aboutModal.setAttribute('aria-modal', 'true');
-  aboutModal.setAttribute('aria-label', 'About Markasso');
-  aboutModal.setAttribute('aria-hidden', 'true');
-  aboutModal.innerHTML = `
-    <div class="about-modal-box">
-      <img class="about-modal-logo" width="64" height="64" src="markasso-logo-icon.svg" alt="Markasso"/>
-      <h2 class="about-modal-name">Markasso</h2>
-      <p class="about-modal-desc">${t('aboutDescription')}</p>
-      <p class="about-modal-author">by <strong>alBz</strong></p>
-      <a class="about-modal-coffee" href="https://buymeacoffee.com/albz" target="_blank" rel="noopener noreferrer">
-        ${ICONS.coffee} Buy me a coffee
-      </a>
-      <span class="about-modal-version">v${pkg.version}</span>
-    </div>
-  `;
-  document.body.appendChild(aboutModal);
-
-  function openAbout(): void {
-    aboutModal.classList.add('open');
-    aboutModal.setAttribute('aria-hidden', 'false');
-  }
-  function closeAbout(): void {
-    aboutModal.classList.remove('open');
-    aboutModal.setAttribute('aria-hidden', 'true');
-  }
-
-  aboutModal.addEventListener('click', (e) => {
-    if (e.target === aboutModal) closeAbout();
-  });
-  aboutModal.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeAbout();
-  });
 
   // ── Panel state ──────────────────────────────────────────────────────────
   let prefsOpen = false;
@@ -428,12 +389,6 @@ export function initSettings(
         '_blank',
       );
       close();
-    });
-  panel
-    .querySelector<HTMLButtonElement>('#menu-about')!
-    .addEventListener('click', () => {
-      close();
-      openAbout();
     });
   panel
     .querySelector<HTMLButtonElement>('#menu-clear')!

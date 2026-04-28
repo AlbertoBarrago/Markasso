@@ -4,6 +4,39 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.4.1] — 2026-04-28
+
+### Changed
+- **Menu** — "About" CTA replaced with inline version number; About modal removed
+- **Star CTA modal** — header now shows the Markasso logo instead of a star; credits text updated
+- **Star button pulse** — pulses twice on load and once more after 7 seconds, then stops
+
+---
+
+## [1.4.0] — 2026-04-28
+
+### Added
+- **Diagram presets panel** — one-click presets for flowchart, mind map, SWOT, and sequence diagrams
+- **Social share dropdown** — share the canvas link to Reddit, LinkedIn, Facebook, and Instagram
+- **GitHub star CTA** — toolbar button with support modal (includes Buy Me a Coffee link)
+- **Contextual hint bar** — per-tool hints displayed at the bottom of the canvas
+- **Lock/unlock button in context panel** — toggle element lock directly from the properties panel
+- **Google Analytics** — lightweight usage tracking via GA script
+
+### Changed
+- **Menu** — "About" entry replaced with the current version number displayed inline
+- **Arrow label UX** — smaller text size, click-on-label to edit, no ghost element on edit start
+- **Grid persistence** — grid type and visibility are now persisted across sessions
+
+### Fixed
+- Label color decoupled from stroke color; Enter/Esc and text resize behavior corrected
+- Backspace delete handler: double-dispatch guard and `contenteditable` protection added
+- Mobile: freehand zigzag, style panel rendering, and delete behavior
+- Wrong bounding-box calculation for polygon in PNG/SVG export
+- `lineCap` control removed from line tool mode panel (not applicable to lines)
+
+---
+
 ## [1.2.1] — 2026-04-17
 
 ### Added
