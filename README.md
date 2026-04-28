@@ -16,6 +16,7 @@
 ![Vite](https://img.shields.io/badge/Vite-5.x-646cff?logo=vite&logoColor=white)
 ![Vitest](https://img.shields.io/badge/Tested-Vitest-6e9f18?logo=vitest&logoColor=white)
 ![Coverage](https://img.shields.io/badge/coverage-83%25-brightgreen)
+![Status](https://img.shields.io/badge/status-stable-blue)
 ![Zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -24,6 +25,12 @@
 [User Manual](./MANUAL.md) · [Guide](./GUIDA.md) · [Contributing](./CONTRIBUTORS.md) · [Report an Issue](https://github.com/AlbertoBarrago/Markasso/issues)
 
 </div>
+
+---
+
+## Project Status
+
+Markasso is **feature-complete**. Active development of new features is paused — the tool does what it was designed to do. Bug fixes, performance improvements, and small refinements are welcome. Large feature PRs are unlikely to be merged; open an issue first to discuss.
 
 ---
 
