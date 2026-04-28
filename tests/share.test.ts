@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Element } from '../src/elements/element';
-import { decodeScene, encodeScene, isShareHash } from '../src/io/share';
+import { buildShareUrl, decodeScene, encodeScene, isShareHash } from '../src/io/share';
 
 function encodeLegacyHash(elements: ReadonlyArray<Element>): string {
   const json = JSON.stringify(elements);
@@ -107,5 +107,50 @@ describe('share codec', () => {
     const current = await encodeScene(SAMPLE_ELEMENTS);
     const legacy = encodeLegacyHash(SAMPLE_ELEMENTS).slice('#share='.length);
     expect(current.length).toBeLessThan(legacy.length);
+  });
+});
+
+describe('buildShareUrl', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('returns the server URL when the API responds successfully', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 'abc', url: 'https://short.link/abc' }),
+      }),
+    );
+    vi.stubGlobal('location', {
+      origin: 'https://markasso.it',
+      pathname: '/',
+      hash: '',
+    });
+    const url = await buildShareUrl(SAMPLE_ELEMENTS);
+    expect(url).toBe('https://short.link/abc');
+  });
+
+  it('falls back to inline hash when fetch throws', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    vi.stubGlobal('location', {
+      origin: 'https://markasso.it',
+      pathname: '/',
+      hash: '',
+    });
+    const url = await buildShareUrl(SAMPLE_ELEMENTS);
+    expect(url).toMatch(/#s=/);
+  });
+
+  it('falls back to inline hash when API returns non-ok', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+    vi.stubGlobal('location', {
+      origin: 'https://markasso.it',
+      pathname: '/',
+      hash: '',
+    });
+    const url = await buildShareUrl(SAMPLE_ELEMENTS);
+    expect(url).toMatch(/#s=/);
   });
 });

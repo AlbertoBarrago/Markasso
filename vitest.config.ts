@@ -19,6 +19,7 @@ export default defineConfig({
       exclude: [
         'src/tools/text_tool.ts',
         'src/tools/sticky_tool.ts',
+        'src/tools/select_tool.ts',
         'src/core/clipboard.ts',
       ],
     },

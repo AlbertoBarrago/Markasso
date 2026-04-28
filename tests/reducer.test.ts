@@ -509,6 +509,45 @@ describe('reducer', () => {
       expect(el.x2).toBe(40); // 50 + (0 - 10)
       expect(el.y2).toBe(30); // 40 + (0 - 10)
     });
+
+    it('shifts freehand points by the move delta', () => {
+      const scene = makeScene();
+      const fh: FreehandElement = {
+        id: 'fh1',
+        type: 'freehand',
+        x: 0,
+        y: 0,
+        points: [
+          [0, 0],
+          [50, 80],
+        ],
+        strokeColor: '#000',
+        fillColor: 'transparent',
+        strokeWidth: 2,
+        opacity: 1,
+        roughness: 0,
+      };
+      const next = reducer(
+        { ...scene, elements: [fh] },
+        { type: 'ALIGN_ELEMENTS', moves: [{ id: 'fh1', x: 10, y: 10 }] },
+      );
+      const el = next.elements[0]! as FreehandElement;
+      expect(el.x).toBe(10);
+      expect(el.y).toBe(10);
+      expect(el.points[0]).toEqual([10, 10]);
+      expect(el.points[1]).toEqual([60, 90]);
+    });
+
+    it('skips elements with zero-delta move', () => {
+      const scene = makeScene();
+      const r = makeRect({ id: 'r1', x: 0, y: 0 });
+      const s: Scene = { ...scene, elements: [r] };
+      const next = reducer(s, {
+        type: 'ALIGN_ELEMENTS',
+        moves: [{ id: 'r1', x: 0, y: 0 }],
+      });
+      expect(next.elements[0]).toBe(s.elements[0]);
+    });
   });
 
   it('ZOOM_VIEWPORT zooms to cursor', () => {

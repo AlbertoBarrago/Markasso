@@ -4,8 +4,17 @@ import type {
   LineElement,
   RectangleElement,
 } from '../src/elements/element';
+import { createViewport } from '../src/core/viewport';
+import type { Handle } from '../src/rendering/draw_selection';
 import {
+  distToShapeBoundary,
+  getElementBorderPoint,
   getElementBounds,
+  getElementCenter,
+  getRotationHandleScreen,
+  getSelectionHandles,
+  hitTestEndpoint,
+  hitTestHandle,
   resolveArrowEndpoints,
 } from '../src/rendering/draw_selection';
 
@@ -157,5 +166,256 @@ describe('getElementBounds with arrow connections', () => {
     expect(b.y).toBe(0);
     expect(b.w).toBe(100);
     expect(b.h).toBe(50);
+  });
+});
+
+// ── getSelectionHandles ───────────────────────────────────────────────────────
+
+describe('getSelectionHandles', () => {
+  const vp = createViewport(); // zoom=1, offset=(0,0)
+
+  it('returns empty array for no elements', () => {
+    expect(getSelectionHandles([], vp)).toEqual([]);
+  });
+
+  it('returns 8 handles for a single rect', () => {
+    const rect = makeRect('r1', 100, 100, 200, 100);
+    const handles = getSelectionHandles([rect], vp);
+    expect(handles).toHaveLength(8);
+  });
+
+  it('handles cover all 8 positions', () => {
+    const rect = makeRect('r1', 0, 0, 100, 60);
+    const positions = getSelectionHandles([rect], vp).map((h) => h.position);
+    expect(positions).toEqual(
+      expect.arrayContaining(['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se']),
+    );
+  });
+
+  it('nw handle is at top-left corner in screen space', () => {
+    const rect = makeRect('r1', 50, 30, 100, 60);
+    const handles = getSelectionHandles([rect], vp);
+    const nw = handles.find((h) => h.position === 'nw')!;
+    expect(nw.screenX).toBe(50);
+    expect(nw.screenY).toBe(30);
+  });
+
+  it('se handle is at bottom-right corner in screen space', () => {
+    const rect = makeRect('r1', 50, 30, 100, 60);
+    const handles = getSelectionHandles([rect], vp);
+    const se = handles.find((h) => h.position === 'se')!;
+    expect(se.screenX).toBe(150);
+    expect(se.screenY).toBe(90);
+  });
+
+  it('multi-element selection returns handles covering union bounds', () => {
+    const r1 = makeRect('r1', 0, 0, 50, 50);
+    const r2 = makeRect('r2', 100, 100, 50, 50);
+    const handles = getSelectionHandles([r1, r2], vp);
+    const nw = handles.find((h) => h.position === 'nw')!;
+    const se = handles.find((h) => h.position === 'se')!;
+    expect(nw.screenX).toBe(0);
+    expect(nw.screenY).toBe(0);
+    expect(se.screenX).toBe(150);
+    expect(se.screenY).toBe(150);
+  });
+
+  it('respects viewport zoom', () => {
+    const rect = makeRect('r1', 0, 0, 100, 60);
+    const zoomed = { offsetX: 0, offsetY: 0, zoom: 2 };
+    const handles = getSelectionHandles([rect], zoomed);
+    const se = handles.find((h) => h.position === 'se')!;
+    expect(se.screenX).toBe(200);
+    expect(se.screenY).toBe(120);
+  });
+
+  it('rotated single element has handles different from unrotated', () => {
+    const base = makeRect('r1', 0, 0, 100, 100);
+    const rotated: RectangleElement = { ...base, rotation: Math.PI / 4 };
+    const baseHandles = getSelectionHandles([base], vp);
+    const rotHandles = getSelectionHandles([rotated], vp);
+    const baseNW = baseHandles.find((h) => h.position === 'nw')!;
+    const rotNW = rotHandles.find((h) => h.position === 'nw')!;
+    // After rotation the nw handle should move
+    expect(rotNW.screenX).not.toBeCloseTo(baseNW.screenX, 0);
+  });
+});
+
+// ── hitTestHandle ─────────────────────────────────────────────────────────────
+
+describe('hitTestHandle', () => {
+  const handles: Handle[] = [
+    { position: 'nw', screenX: 0, screenY: 0 },
+    { position: 'se', screenX: 100, screenY: 100 },
+  ];
+
+  it('returns the position of a directly hit handle', () => {
+    expect(hitTestHandle(handles, 0, 0)).toBe('nw');
+    expect(hitTestHandle(handles, 100, 100)).toBe('se');
+  });
+
+  it('returns null when no handle is hit', () => {
+    expect(hitTestHandle(handles, 50, 50)).toBeNull();
+  });
+
+  it('returns handle when within default tolerance', () => {
+    expect(hitTestHandle(handles, 7, 7)).toBe('nw');
+  });
+
+  it('returns null just outside default tolerance', () => {
+    expect(hitTestHandle(handles, 13, 13)).toBeNull();
+  });
+
+  it('respects custom tolerance', () => {
+    expect(hitTestHandle(handles, 20, 0, 16)).toBe('nw');
+    expect(hitTestHandle(handles, 21, 0, 16)).toBeNull();
+  });
+
+  it('returns null for empty handle array', () => {
+    expect(hitTestHandle([], 0, 0)).toBeNull();
+  });
+});
+
+// ── hitTestEndpoint ───────────────────────────────────────────────────────────
+
+describe('hitTestEndpoint', () => {
+  const vp = createViewport();
+
+  it('returns null for non-line/arrow elements', () => {
+    const rect = makeRect('r1', 0, 0, 100, 60);
+    expect(hitTestEndpoint(rect, vp, 0, 0)).toBeNull();
+  });
+
+  it('returns "start" when clicking near the start endpoint', () => {
+    const line = makeLine({ x: 50, y: 50, x2: 200, y2: 200 });
+    expect(hitTestEndpoint(line, vp, 50, 50)).toBe('start');
+  });
+
+  it('returns "end" when clicking near the end endpoint', () => {
+    const line = makeLine({ x: 50, y: 50, x2: 200, y2: 200 });
+    expect(hitTestEndpoint(line, vp, 200, 200)).toBe('end');
+  });
+
+  it('returns null when clicking in the middle', () => {
+    const line = makeLine({ x: 0, y: 0, x2: 100, y2: 0 });
+    expect(hitTestEndpoint(line, vp, 50, 0)).toBeNull();
+  });
+});
+
+// ── getElementCenter ──────────────────────────────────────────────────────────
+
+describe('getElementCenter', () => {
+  it('returns center of a rectangle', () => {
+    const rect = makeRect('r1', 0, 0, 100, 60);
+    expect(getElementCenter(rect)).toEqual([50, 30]);
+  });
+
+  it('returns center with non-zero origin', () => {
+    const rect = makeRect('r1', 20, 10, 80, 40);
+    expect(getElementCenter(rect)).toEqual([60, 30]);
+  });
+});
+
+// ── getRotationHandleScreen ───────────────────────────────────────────────────
+
+describe('getRotationHandleScreen', () => {
+  const vp = createViewport();
+
+  it('returns null for empty selection', () => {
+    expect(getRotationHandleScreen([], vp)).toBeNull();
+  });
+
+  it('returns handle above the bounding box center', () => {
+    const rect = makeRect('r1', 0, 0, 100, 60);
+    const h = getRotationHandleScreen([rect], vp)!;
+    expect(h).not.toBeNull();
+    expect(h.screenX).toBeCloseTo(50, 1);
+    expect(h.screenY).toBeLessThan(0);
+  });
+
+  it('returns null-safe value for multi-element (no rotation)', () => {
+    const r1 = makeRect('r1', 0, 0, 50, 50);
+    const r2 = makeRect('r2', 100, 0, 50, 50);
+    const h = getRotationHandleScreen([r1, r2], vp)!;
+    expect(h).not.toBeNull();
+    expect(h.screenX).toBeCloseTo(75, 1);
+  });
+});
+
+// ── getElementBorderPoint ─────────────────────────────────────────────────────
+
+describe('getElementBorderPoint', () => {
+  it('returns right-border point for rect when target is to the right', () => {
+    const rect = makeRect('r1', 0, 0, 100, 60);
+    const [x, y] = getElementBorderPoint(rect, 200, 30);
+    expect(x).toBe(100);
+    expect(y).toBeCloseTo(30, 1);
+  });
+
+  it('returns top-border point for rect when target is above', () => {
+    const rect = makeRect('r1', 0, 0, 100, 60);
+    const [x, y] = getElementBorderPoint(rect, 50, -100);
+    expect(y).toBe(0);
+    expect(x).toBeCloseTo(50, 1);
+  });
+
+  it('falls back to top-center when target is exactly at center', () => {
+    const rect = makeRect('r1', 0, 0, 100, 60);
+    const [, y] = getElementBorderPoint(rect, 50, 30);
+    expect(y).toBe(0);
+  });
+
+  it('works for ellipse elements', () => {
+    const ellipse = {
+      id: 'e1',
+      type: 'ellipse' as const,
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 60,
+      strokeColor: '#000',
+      fillColor: 'transparent',
+      strokeWidth: 2,
+      opacity: 1,
+      roughness: 0,
+    };
+    const [bx, by] = getElementBorderPoint(ellipse, 100, 30);
+    expect(bx).toBeGreaterThan(50);
+    expect(by).toBeCloseTo(30, 0);
+  });
+});
+
+// ── distToShapeBoundary ───────────────────────────────────────────────────────
+
+describe('distToShapeBoundary', () => {
+  const b = { x: 0, y: 0, w: 100, h: 60 };
+
+  it('returns 0 for point on rect edge', () => {
+    const rect = makeRect('r1', 0, 0, 100, 60);
+    expect(distToShapeBoundary(rect, b, 0, 30)).toBeCloseTo(0, 1);
+    expect(distToShapeBoundary(rect, b, 50, 0)).toBeCloseTo(0, 1);
+  });
+
+  it('returns small value for point inside rect (near edge)', () => {
+    const rect = makeRect('r1', 0, 0, 100, 60);
+    expect(distToShapeBoundary(rect, b, 1, 30)).toBeCloseTo(1, 1);
+  });
+
+  it('returns positive value for ellipse at center', () => {
+    const ellipse = {
+      id: 'e1',
+      type: 'ellipse' as const,
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 60,
+      strokeColor: '#000',
+      fillColor: 'transparent',
+      strokeWidth: 2,
+      opacity: 1,
+      roughness: 0,
+    };
+    const dist = distToShapeBoundary(ellipse, b, 50, 30);
+    expect(dist).toBeGreaterThan(0);
   });
 });

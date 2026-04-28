@@ -243,7 +243,7 @@ export class LineTool implements Tool {
   }
 }
 
-function snap45(
+export function snap45(
   startX: number,
   startY: number,
   x: number,
@@ -255,4 +255,14 @@ function snap45(
   const snapped = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
   const dist = Math.hypot(dx, dy);
   return [startX + dist * Math.cos(snapped), startY + dist * Math.sin(snapped)];
+}
+
+export function distToPerimeterBounds(
+  b: { x: number; y: number; w: number; h: number },
+  px: number,
+  py: number,
+): number {
+  const nearX = Math.max(b.x, Math.min(b.x + b.w, px));
+  const nearY = Math.max(b.y, Math.min(b.y + b.h, py));
+  return Math.hypot(px - nearX, py - nearY);
 }
