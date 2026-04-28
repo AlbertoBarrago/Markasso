@@ -939,15 +939,10 @@ export function initContextPanel(workspace: HTMLElement, history: History, onFor
         btn.classList.toggle('active', btn.dataset['roughness'] === String(roughness));
       });
       syncAriaPressed(panel.querySelector<HTMLElement>('#cp-roughness-presets')!, '.cp-btn');
-      const lineCapTool = lastEl ? (lastEl.lineCap ?? 'round') : 'round';
-      panel.querySelectorAll<HTMLButtonElement>('#cp-linecap-presets .cp-btn').forEach((btn) => {
-        btn.classList.toggle('active', btn.dataset['cap'] === lineCapTool);
-      });
-      syncAriaPressed(panel.querySelector<HTMLElement>('#cp-linecap-presets')!, '.cp-btn');
       opacitySlider.value = String(Math.round(opacity * 100));
       opacityVal.textContent = String(Math.round(opacity * 100));
 
-      const hasLineCap = activeTool === 'line' || activeTool === 'freehand';
+      const hasLineCap = false;
       const hasArrowHead = activeTool === 'line';
       const toolArrowHead = (lastEl?.type === 'line' ? lastEl.arrowHead : undefined) ?? 'none';
       panel.querySelectorAll<HTMLButtonElement>('#cp-arrowhead-presets .cp-btn').forEach((btn) => {
