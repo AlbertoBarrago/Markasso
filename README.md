@@ -15,6 +15,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5.x-646cff?logo=vite&logoColor=white)
 ![Vitest](https://img.shields.io/badge/Tested-Vitest-6e9f18?logo=vitest&logoColor=white)
+![Coverage](https://img.shields.io/badge/coverage->80%25-brightgreen)
 ![Zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -128,7 +129,7 @@ Markasso was born from a simple frustration: wanting to sketch a quick diagram s
 | **Minimap** | Collapsible canvas overview; click or drag to pan the viewport |
 | **Share link** | Encode the full scene into a URL hash for instant one-click sharing |
 | **Keyboard navigation** | Full Tab-based keyboard navigation through all panels |
-| **About modal** | Info panel with version, links, and credits |
+| **Version display** | Current version shown inline in the menu |
 
 ### Persistence & Export
 
@@ -178,6 +179,10 @@ pnpm test       # Run Vitest unit tests
 ```
 
 No `.env` files. No API keys. No containerization required.
+
+### Test Coverage
+
+162 tests across 9 files — `pnpm test --coverage` (UI/rendering modules require a browser and are excluded from Node tests by design).
 
 ---
 
