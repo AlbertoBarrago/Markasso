@@ -1,9 +1,10 @@
+import type { ActiveTool } from '../core/app_state';
+import { elementClipboard } from '../core/clipboard';
+import { fitToElements } from '../core/viewport';
+import type { Element } from '../elements/element';
 import type { History } from '../engine/history';
 import type { SelectTool } from '../tools/select_tool';
-import type { Element } from '../elements/element';
-import { fitToElements } from '../core/viewport';
 import { isFocusInPanel } from './keyboard_utils';
-import { elementClipboard } from '../core/clipboard';
 
 export function initShortcuts(history: History, selectTool: SelectTool): void {
   const shortcuts = new Map<string, () => void>([
@@ -29,12 +30,18 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
 
   // Space bar handling: hold to activate hand tool temporarily
   let spacePressed = false;
-  let previousTool: string | null = null;
+  let previousTool: ActiveTool | null = null;
 
   window.addEventListener('keydown', (e) => {
     // Don't capture shortcuts when typing in an input/textarea/select/contenteditable
     const target = e.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable) return;
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.tagName === 'SELECT' ||
+      target.isContentEditable
+    )
+      return;
     // Block single-key shortcuts when focus is inside a UI panel; allow modifier combos (Ctrl/Cmd+…)
     if (isFocusInPanel() && !e.ctrlKey && !e.metaKey) return;
 
@@ -66,7 +73,10 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       history.undo();
       return;
     }
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+    if (
+      (e.ctrlKey || e.metaKey) &&
+      (e.key === 'y' || (e.shiftKey && e.key === 'z'))
+    ) {
       e.preventDefault();
       history.redo();
       return;
@@ -79,7 +89,13 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     }
 
     // Delete/Backspace alone — close panels, clear selection, back to select tool
-    if ((e.key === 'Delete' || e.key === 'Backspace') && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+    if (
+      (e.key === 'Delete' || e.key === 'Backspace') &&
+      !e.metaKey &&
+      !e.ctrlKey &&
+      !e.shiftKey &&
+      !e.altKey
+    ) {
       e.preventDefault();
       history.dispatch({ type: 'CLEAR_SELECTION' });
       history.dispatch({ type: 'SET_TOOL', tool: 'select' });
@@ -87,7 +103,10 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     }
 
     // Cmd/Ctrl+Delete/Backspace — delete selected elements regardless of active tool
-    if ((e.metaKey || e.ctrlKey) && (e.key === 'Delete' || e.key === 'Backspace')) {
+    if (
+      (e.metaKey || e.ctrlKey) &&
+      (e.key === 'Delete' || e.key === 'Backspace')
+    ) {
       const scene = history.present;
       const ids = [...scene.selectedIds].filter((id) => {
         const el = scene.elements.find((el) => el.id === id);
@@ -104,15 +123,21 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
       e.preventDefault();
       const scene = history.present;
-      const selectedEls = scene.elements.filter((el) => scene.selectedIds.has(el.id));
+      const selectedEls = scene.elements.filter((el) =>
+        scene.selectedIds.has(el.id),
+      );
       const newIds: string[] = [];
       for (const el of selectedEls) {
         const newId = crypto.randomUUID();
         newIds.push(newId);
-        history.dispatch({ type: 'CREATE_ELEMENT', element: { ...el, id: newId } });
+        history.dispatch({
+          type: 'CREATE_ELEMENT',
+          element: { ...el, id: newId },
+        });
         history.dispatch({ type: 'MOVE_ELEMENT', id: newId, dx: 20, dy: 20 });
       }
-      if (newIds.length > 0) history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
+      if (newIds.length > 0)
+        history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
       return;
     }
 
@@ -120,7 +145,9 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     if ((e.ctrlKey || e.metaKey) && e.altKey && e.key === 'c') {
       e.preventDefault();
       const scene = history.present;
-      const selected = scene.elements.filter((el) => scene.selectedIds.has(el.id));
+      const selected = scene.elements.filter((el) =>
+        scene.selectedIds.has(el.id),
+      );
       if (selected.length > 0 && selected[0]) {
         selectTool.activateFormatPainter(selected[0]);
       }
@@ -131,7 +158,9 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key === 'c') {
       if (window.getSelection()?.toString()) return; // let browser handle text selection copy
       const scene = history.present;
-      const selected = scene.elements.filter((el) => scene.selectedIds.has(el.id));
+      const selected = scene.elements.filter((el) =>
+        scene.selectedIds.has(el.id),
+      );
       if (selected.length > 0) {
         elementClipboard.elements = selected;
         elementClipboard.pasteCount = 0;
@@ -146,18 +175,35 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
         e.preventDefault();
         elementClipboard.pasteCount += 1;
         const offset = elementClipboard.pasteCount * 20;
-        const idMap = new Map(elements.map((el) => [el.id, crypto.randomUUID()]));
+        const idMap = new Map(
+          elements.map((el) => [el.id, crypto.randomUUID()]),
+        );
         const newElements: Element[] = elements.map((el) => {
           const newId = idMap.get(el.id)!;
           if (el.type === 'freehand') {
-            return { ...el, id: newId, x: el.x + offset, y: el.y + offset,
-                     points: el.points.map(([px, py]) => [px + offset, py + offset] as const) };
+            return {
+              ...el,
+              id: newId,
+              x: el.x + offset,
+              y: el.y + offset,
+              points: el.points.map(
+                ([px, py]) => [px + offset, py + offset] as const,
+              ),
+            };
           }
           if (el.type === 'line' || el.type === 'arrow') {
-            return { ...el, id: newId, x: el.x + offset, y: el.y + offset,
-                     x2: el.x2 + offset, y2: el.y2 + offset,
-                     ...(el.type === 'line' && el.cx !== undefined && { cx: el.cx + offset }),
-                     ...(el.type === 'line' && el.cy !== undefined && { cy: el.cy + offset }) };
+            return {
+              ...el,
+              id: newId,
+              x: el.x + offset,
+              y: el.y + offset,
+              x2: el.x2 + offset,
+              y2: el.y2 + offset,
+              ...(el.type === 'line' &&
+                el.cx !== undefined && { cx: el.cx + offset }),
+              ...(el.type === 'line' &&
+                el.cy !== undefined && { cy: el.cy + offset }),
+            };
           }
           return { ...el, id: newId, x: el.x + offset, y: el.y + offset };
         });
@@ -173,7 +219,11 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       const scene = history.present;
       const ids = [...scene.selectedIds];
       if (ids.length > 0) {
-        history.dispatch({ type: 'REORDER_ELEMENTS', ids, targetIndex: scene.elements.length });
+        history.dispatch({
+          type: 'REORDER_ELEMENTS',
+          ids,
+          targetIndex: scene.elements.length,
+        });
       }
       return;
     }
@@ -194,7 +244,11 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       e.preventDefault();
       const ids = [...history.present.selectedIds];
       if (ids.length > 1) {
-        history.dispatch({ type: 'GROUP_ELEMENTS', ids, groupId: crypto.randomUUID() });
+        history.dispatch({
+          type: 'GROUP_ELEMENTS',
+          ids,
+          groupId: crypto.randomUUID(),
+        });
       }
       return;
     }
@@ -206,7 +260,7 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       const groupIds = new Set(
         [...scene.selectedIds]
           .map((id) => scene.elements.find((el) => el.id === id)?.groupId)
-          .filter((gid): gid is string => gid !== undefined)
+          .filter((gid): gid is string => gid !== undefined),
       );
       for (const groupId of groupIds) {
         history.dispatch({ type: 'UNGROUP_ELEMENTS', groupId });
@@ -222,8 +276,13 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       const scene = history.present;
       const ids = [...scene.selectedIds];
       if (ids.length > 0) {
-        const allLocked = ids.every(id => scene.elements.find(el => el.id === id)?.locked);
-        history.dispatch({ type: allLocked ? 'UNLOCK_ELEMENTS' : 'LOCK_ELEMENTS', ids });
+        const allLocked = ids.every(
+          (id) => scene.elements.find((el) => el.id === id)?.locked,
+        );
+        history.dispatch({
+          type: allLocked ? 'UNLOCK_ELEMENTS' : 'LOCK_ELEMENTS',
+          ids,
+        });
       }
       return;
     }
@@ -234,12 +293,26 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     }
 
     if (e.key === 'f' || e.key === 'F') {
-      const vp = fitToElements(history.present.elements, window.innerWidth, window.innerHeight);
-      history.dispatch({ type: 'SET_VIEWPORT', offsetX: vp.offsetX, offsetY: vp.offsetY, zoom: vp.zoom });
+      const vp = fitToElements(
+        history.present.elements,
+        window.innerWidth,
+        window.innerHeight,
+      );
+      history.dispatch({
+        type: 'SET_VIEWPORT',
+        offsetX: vp.offsetX,
+        offsetY: vp.offsetY,
+        zoom: vp.zoom,
+      });
       return;
     }
     if (e.key === '0' && e.shiftKey) {
-      history.dispatch({ type: 'SET_VIEWPORT', offsetX: 0, offsetY: 0, zoom: 1 });
+      history.dispatch({
+        type: 'SET_VIEWPORT',
+        offsetX: 0,
+        offsetY: 0,
+        zoom: 1,
+      });
       return;
     }
 
@@ -254,7 +327,7 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     if (e.key === ' ' && spacePressed) {
       spacePressed = false;
       if (previousTool && previousTool !== 'hand') {
-        history.dispatch({ type: 'SET_TOOL', tool: previousTool as any });
+        history.dispatch({ type: 'SET_TOOL', tool: previousTool });
         previousTool = null;
       }
     }

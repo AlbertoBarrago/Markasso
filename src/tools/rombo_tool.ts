@@ -1,5 +1,5 @@
-import type { Tool, ToolContext } from './tool';
 import type { RhombusElement } from '../elements/element';
+import type { Tool, ToolContext } from './tool';
 
 export class RomboTool implements Tool {
   private drawing = false;
@@ -7,18 +7,33 @@ export class RomboTool implements Tool {
   private startY = 0;
   preview: RhombusElement | null = null;
 
-  onMouseDown(_e: MouseEvent, worldX: number, worldY: number, _ctx: ToolContext): void {
+  onMouseDown(
+    _e: MouseEvent,
+    worldX: number,
+    worldY: number,
+    _ctx: ToolContext,
+  ): void {
     this.drawing = true;
     this.startX = worldX;
     this.startY = worldY;
     this.preview = null;
   }
 
-  onMouseMove(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+  onMouseMove(
+    e: MouseEvent,
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void {
     if (!this.drawing) return;
     const { appState } = ctx.history.present;
-    let w = worldX - this.startX, h = worldY - this.startY;
-    if (e.shiftKey) { const s = Math.min(Math.abs(w), Math.abs(h)); w = Math.sign(w || 1) * s; h = Math.sign(h || 1) * s; }
+    let w = worldX - this.startX,
+      h = worldY - this.startY;
+    if (e.shiftKey) {
+      const s = Math.min(Math.abs(w), Math.abs(h));
+      w = Math.sign(w || 1) * s;
+      h = Math.sign(h || 1) * s;
+    }
     this.preview = {
       id: '__preview__',
       type: 'rhombus',
@@ -36,13 +51,23 @@ export class RomboTool implements Tool {
     ctx.onPreviewUpdate?.();
   }
 
-  onMouseUp(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+  onMouseUp(
+    e: MouseEvent,
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void {
     if (!this.drawing) return;
     this.drawing = false;
     this.preview = null;
 
-    let w = worldX - this.startX, h = worldY - this.startY;
-    if (e.shiftKey) { const s = Math.min(Math.abs(w), Math.abs(h)); w = Math.sign(w || 1) * s; h = Math.sign(h || 1) * s; }
+    let w = worldX - this.startX,
+      h = worldY - this.startY;
+    if (e.shiftKey) {
+      const s = Math.min(Math.abs(w), Math.abs(h));
+      w = Math.sign(w || 1) * s;
+      h = Math.sign(h || 1) * s;
+    }
     if (Math.abs(w) < 2 && Math.abs(h) < 2) return;
 
     const { appState } = ctx.history.present;
@@ -64,7 +89,11 @@ export class RomboTool implements Tool {
       },
     });
     if (!ctx.history.present.appState.toolLocked) {
-      ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
+      ctx.history.dispatch({
+        type: 'SET_TOOL',
+        tool: 'select',
+        keepSelection: true,
+      });
     }
   }
 

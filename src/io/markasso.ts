@@ -1,7 +1,7 @@
-import type { Element } from '../elements/element';
 import type { Viewport } from '../core/viewport';
-import type { History } from '../engine/history';
 import { fitToElements } from '../core/viewport';
+import type { Element } from '../elements/element';
+import type { History } from '../engine/history';
 
 // ── Format ──────────────────────────────────────────────────────────────────
 
@@ -15,7 +15,10 @@ interface MarkassoFile {
 
 // ── Export ──────────────────────────────────────────────────────────────────
 
-export function exportMarkasso(scene: { elements: ReadonlyArray<Element>; viewport: Viewport }): void {
+export function exportMarkasso(scene: {
+  elements: ReadonlyArray<Element>;
+  viewport: Viewport;
+}): void {
   const file: MarkassoFile = {
     version: FORMAT_VERSION,
     viewport: { ...scene.viewport },
@@ -44,12 +47,18 @@ export function importMarkasso(file: File, history: History): void {
         alert('This file does not appear to be a valid .markasso file.');
         return;
       }
-      const viewport: Viewport = validated.viewport ?? fitToElements(
-        validated.elements,
-        window.innerWidth,
-        window.innerHeight,
-      );
-      history.dispatch({ type: 'LOAD_SCENE', elements: validated.elements, viewport });
+      const viewport: Viewport =
+        validated.viewport ??
+        fitToElements(
+          validated.elements,
+          window.innerWidth,
+          window.innerHeight,
+        );
+      history.dispatch({
+        type: 'LOAD_SCENE',
+        elements: validated.elements,
+        viewport,
+      });
     } catch {
       alert('Failed to read .markasso file. The file may be corrupted.');
     }
@@ -62,26 +71,36 @@ export function importMarkasso(file: File, history: History): void {
 function validateMarkassoFile(data: unknown): MarkassoFile | null {
   if (typeof data !== 'object' || data === null) return null;
   const d = data as Record<string, unknown>;
-  if (typeof d['version'] !== 'number') return null;
-  if (d['version'] > FORMAT_VERSION) {
-    console.warn(`[Markasso] File version ${d['version']} is newer than supported (${FORMAT_VERSION}). Some elements may not load correctly.`);
+  if (typeof d.version !== 'number') return null;
+  if (d.version > FORMAT_VERSION) {
+    console.warn(
+      `[Markasso] File version ${d.version} is newer than supported (${FORMAT_VERSION}). Some elements may not load correctly.`,
+    );
   }
-  if (!Array.isArray(d['elements'])) return null;
-  for (const el of d['elements'] as unknown[]) {
+  if (!Array.isArray(d.elements)) return null;
+  for (const el of d.elements as unknown[]) {
     if (typeof el !== 'object' || el === null) return null;
     const e = el as Record<string, unknown>;
-    if (typeof e['type'] !== 'string' || typeof e['id'] !== 'string') return null;
+    if (typeof e.type !== 'string' || typeof e.id !== 'string') return null;
   }
   let viewport: Viewport | undefined;
-  if (typeof d['viewport'] === 'object' && d['viewport'] !== null) {
-    const v = d['viewport'] as Record<string, unknown>;
-    if (typeof v['offsetX'] === 'number' && typeof v['offsetY'] === 'number' && typeof v['zoom'] === 'number') {
-      viewport = { offsetX: v['offsetX'], offsetY: v['offsetY'], zoom: v['zoom'] };
+  if (typeof d.viewport === 'object' && d.viewport !== null) {
+    const v = d.viewport as Record<string, unknown>;
+    if (
+      typeof v.offsetX === 'number' &&
+      typeof v.offsetY === 'number' &&
+      typeof v.zoom === 'number'
+    ) {
+      viewport = {
+        offsetX: v.offsetX,
+        offsetY: v.offsetY,
+        zoom: v.zoom,
+      };
     }
   }
   return {
-    version: d['version'] as number,
+    version: d.version as number,
     viewport: viewport ?? { offsetX: 0, offsetY: 0, zoom: 1 },
-    elements: d['elements'] as Element[],
+    elements: d.elements as Element[],
   };
 }

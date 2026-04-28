@@ -1,5 +1,5 @@
-import type { Scene } from '../core/scene';
 import type { Command } from '../commands/commands';
+import type { Scene } from '../core/scene';
 import { pan, zoom } from '../core/viewport';
 import type { Element } from '../elements/element';
 
@@ -9,12 +9,12 @@ export function assertNever(x: never): never {
 
 export function reducer(scene: Scene, command: Command): Scene {
   switch (command.type) {
-
     case 'CREATE_ELEMENT':
       return {
         ...scene,
         elements: [...scene.elements, command.element],
-        selectedIds: command.select === false ? new Set() : new Set([command.element.id]),
+        selectedIds:
+          command.select === false ? new Set() : new Set([command.element.id]),
         appState: {
           ...scene.appState,
           lastCreatedId: command.select === false ? command.element.id : null,
@@ -32,7 +32,7 @@ export function reducer(scene: Scene, command: Command): Scene {
       return {
         ...scene,
         elements: scene.elements.map((el) =>
-          el.id === command.id ? ({ ...el, ...command.props } as Element) : el
+          el.id === command.id ? ({ ...el, ...command.props } as Element) : el,
         ),
       };
 
@@ -42,22 +42,37 @@ export function reducer(scene: Scene, command: Command): Scene {
         elements: scene.elements.map((el) => {
           if (el.id !== command.id) return el;
           if (el.type === 'line' || el.type === 'arrow') {
-            return { ...el, x: el.x + command.dx, y: el.y + command.dy,
-                           x2: el.x2 + command.dx, y2: el.y2 + command.dy,
-                           ...(el.type === 'line' && el.cx !== undefined && { cx: el.cx + command.dx }),
-                           ...(el.type === 'line' && el.cy !== undefined && { cy: el.cy + command.dy }) };
+            return {
+              ...el,
+              x: el.x + command.dx,
+              y: el.y + command.dy,
+              x2: el.x2 + command.dx,
+              y2: el.y2 + command.dy,
+              ...(el.type === 'line' &&
+                el.cx !== undefined && { cx: el.cx + command.dx }),
+              ...(el.type === 'line' &&
+                el.cy !== undefined && { cy: el.cy + command.dy }),
+            };
           }
           if (el.type === 'curve') {
-            return { ...el, x: el.x + command.dx, y: el.y + command.dy,
-                           x2: el.x2 + command.dx, y2: el.y2 + command.dy,
-                           cx: el.cx + command.dx, cy: el.cy + command.dy };
+            return {
+              ...el,
+              x: el.x + command.dx,
+              y: el.y + command.dy,
+              x2: el.x2 + command.dx,
+              y2: el.y2 + command.dy,
+              cx: el.cx + command.dx,
+              cy: el.cy + command.dy,
+            };
           }
           if (el.type === 'freehand' || el.type === 'polygon') {
             return {
               ...el,
               x: el.x + command.dx,
               y: el.y + command.dy,
-              points: el.points.map(([px, py]) => [px + command.dx, py + command.dy] as const),
+              points: el.points.map(
+                ([px, py]) => [px + command.dx, py + command.dy] as const,
+              ),
             };
           }
           return { ...el, x: el.x + command.dx, y: el.y + command.dy };
@@ -69,44 +84,57 @@ export function reducer(scene: Scene, command: Command): Scene {
         ...scene,
         elements: scene.elements.map((el) => {
           if (el.id !== command.id) return el;
-          const { x, y, width, height, x2, y2, cx, cy, fontSize, points } = command;
-          if (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'rhombus' || el.type === 'text' || el.type === 'image') {
+          const { x, y, width, height, x2, y2, cx, cy, fontSize, points } =
+            command;
+          if (
+            el.type === 'rectangle' ||
+            el.type === 'ellipse' ||
+            el.type === 'rhombus' ||
+            el.type === 'text' ||
+            el.type === 'image'
+          ) {
             return {
               ...el,
-              ...(x        !== undefined && { x }),
-              ...(y        !== undefined && { y }),
-              ...(width    !== undefined && { width }),
-              ...(height   !== undefined && { height }),
+              ...(x !== undefined && { x }),
+              ...(y !== undefined && { y }),
+              ...(width !== undefined && { width }),
+              ...(height !== undefined && { height }),
               ...(fontSize !== undefined && el.type === 'text' && { fontSize }),
             };
           }
           if (el.type === 'curve') {
             const patch: Record<string, unknown> = {};
-            if (x  !== undefined) patch['x']  = x;
-            if (y  !== undefined) patch['y']  = y;
-            if (x2 !== undefined) patch['x2'] = x2;
-            if (y2 !== undefined) patch['y2'] = y2;
-            if (cx !== undefined) patch['cx'] = cx;
-            if (cy !== undefined) patch['cy'] = cy;
+            if (x !== undefined) patch.x = x;
+            if (y !== undefined) patch.y = y;
+            if (x2 !== undefined) patch.x2 = x2;
+            if (y2 !== undefined) patch.y2 = y2;
+            if (cx !== undefined) patch.cx = cx;
+            if (cy !== undefined) patch.cy = cy;
             return { ...el, ...patch } as Element;
           }
           if (el.type === 'line' || el.type === 'arrow') {
             const { startElementId, endElementId } = command;
             // Build patch carefully to avoid exactOptionalPropertyTypes issues
             const patch: Record<string, unknown> = {};
-            if (x  !== undefined) patch['x']  = x;
-            if (y  !== undefined) patch['y']  = y;
-            if (x2 !== undefined) patch['x2'] = x2;
-            if (y2 !== undefined) patch['y2'] = y2;
-            if (cx !== undefined) patch['cx'] = cx;
-            if (cy !== undefined) patch['cy'] = cy;
+            if (x !== undefined) patch.x = x;
+            if (y !== undefined) patch.y = y;
+            if (x2 !== undefined) patch.x2 = x2;
+            if (y2 !== undefined) patch.y2 = y2;
+            if (cx !== undefined) patch.cx = cx;
+            if (cy !== undefined) patch.cy = cy;
             if (startElementId !== undefined) {
-              if (startElementId === null) { delete (patch as { startElementId?: string })['startElementId']; }
-              else { patch['startElementId'] = startElementId; }
+              if (startElementId === null) {
+                delete (patch as { startElementId?: string }).startElementId;
+              } else {
+                patch.startElementId = startElementId;
+              }
             }
             if (endElementId !== undefined) {
-              if (endElementId === null) { delete (patch as { endElementId?: string })['endElementId']; }
-              else { patch['endElementId'] = endElementId; }
+              if (endElementId === null) {
+                delete (patch as { endElementId?: string }).endElementId;
+              } else {
+                patch.endElementId = endElementId;
+              }
             }
             // When disconnecting (null), explicitly remove the property
             const base = { ...el, ...patch } as Element;
@@ -125,8 +153,8 @@ export function reducer(scene: Scene, command: Command): Scene {
           if (el.type === 'freehand' || el.type === 'polygon') {
             return {
               ...el,
-              ...(x      !== undefined && { x }),
-              ...(y      !== undefined && { y }),
+              ...(x !== undefined && { x }),
+              ...(y !== undefined && { y }),
               ...(points !== undefined && { points }),
             };
           }
@@ -141,15 +169,17 @@ export function reducer(scene: Scene, command: Command): Scene {
         if (el.type !== 'arrow' && el.type !== 'line') continue;
         if (
           (el.startElementId && del.has(el.startElementId)) ||
-          (el.endElementId   && del.has(el.endElementId))
+          (el.endElementId && del.has(el.endElementId))
         ) {
           del.add(el.id);
         }
       }
       return {
         ...scene,
-        elements:    scene.elements.filter((el) => !del.has(el.id)),
-        selectedIds: new Set([...scene.selectedIds].filter((id) => !del.has(id))),
+        elements: scene.elements.filter((el) => !del.has(el.id)),
+        selectedIds: new Set(
+          [...scene.selectedIds].filter((id) => !del.has(id)),
+        ),
       };
     }
 
@@ -159,7 +189,7 @@ export function reducer(scene: Scene, command: Command): Scene {
         elements: scene.elements.map((el) =>
           el.id === command.id && el.type === 'text'
             ? { ...el, content: command.content }
-            : el
+            : el,
         ),
       };
 
@@ -167,45 +197,89 @@ export function reducer(scene: Scene, command: Command): Scene {
       return {
         ...scene,
         elements: scene.elements.map((el) =>
-          el.id === command.id && (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'rhombus' || el.type === 'arrow' || el.type === 'line')
-            ? { ...el, label: command.label, labelFontSize: command.labelFontSize, labelFontFamily: command.labelFontFamily }
-            : el
+          el.id === command.id &&
+          (el.type === 'rectangle' ||
+            el.type === 'ellipse' ||
+            el.type === 'rhombus' ||
+            el.type === 'arrow' ||
+            el.type === 'line')
+            ? {
+                ...el,
+                label: command.label,
+                labelFontSize: command.labelFontSize,
+                labelFontFamily: command.labelFontFamily,
+              }
+            : el,
         ),
       };
 
     case 'SELECT_ELEMENTS':
-      return { ...scene, selectedIds: new Set(command.ids), appState: { ...scene.appState, lastCreatedId: null } };
+      return {
+        ...scene,
+        selectedIds: new Set(command.ids),
+        appState: { ...scene.appState, lastCreatedId: null },
+      };
 
     case 'CLEAR_SELECTION':
-      return { ...scene, selectedIds: new Set(), appState: { ...scene.appState, lastCreatedId: null } };
+      return {
+        ...scene,
+        selectedIds: new Set(),
+        appState: { ...scene.appState, lastCreatedId: null },
+      };
 
     case 'PAN_VIEWPORT':
-      return { ...scene, viewport: pan(scene.viewport, command.dx, command.dy) };
+      return {
+        ...scene,
+        viewport: pan(scene.viewport, command.dx, command.dy),
+      };
 
     case 'ZOOM_VIEWPORT':
-      return { ...scene, viewport: zoom(scene.viewport, command.factor, command.originX, command.originY) };
+      return {
+        ...scene,
+        viewport: zoom(
+          scene.viewport,
+          command.factor,
+          command.originX,
+          command.originY,
+        ),
+      };
 
     case 'SET_VIEWPORT':
-      return { ...scene, viewport: { offsetX: command.offsetX, offsetY: command.offsetY, zoom: command.zoom } };
+      return {
+        ...scene,
+        viewport: {
+          offsetX: command.offsetX,
+          offsetY: command.offsetY,
+          zoom: command.zoom,
+        },
+      };
 
     case 'SET_TOOL': {
       const NON_DRAWING = new Set(['select', 'hand', 'eraser']);
       const isDrawingTool = !NON_DRAWING.has(command.tool);
-      let newAppState = { ...scene.appState, activeTool: command.tool, lastCreatedId: null };
+      let newAppState = {
+        ...scene.appState,
+        activeTool: command.tool,
+        lastCreatedId: null,
+      };
 
       // When switching to a drawing tool while an element is selected,
       // inherit that element's style so the sidebar reflects the current shape.
-      if (!command.keepSelection && isDrawingTool && scene.selectedIds.size > 0) {
+      if (
+        !command.keepSelection &&
+        isDrawingTool &&
+        scene.selectedIds.size > 0
+      ) {
         const firstId = [...scene.selectedIds][0]!;
         const el = scene.elements.find((e) => e.id === firstId);
         if (el) {
           newAppState = {
             ...newAppState,
             strokeColor: el.strokeColor,
-            fillColor:   el.fillColor,
+            fillColor: el.fillColor,
             strokeWidth: el.strokeWidth,
-            opacity:     el.opacity,
-            roughness:   el.roughness ?? 0,
+            opacity: el.opacity,
+            roughness: el.roughness ?? 0,
             strokeStyle: el.strokeStyle ?? 'solid',
           };
         }
@@ -213,19 +287,28 @@ export function reducer(scene: Scene, command: Command): Scene {
 
       return {
         ...scene,
-        appState:    newAppState,
+        appState: newAppState,
         selectedIds: command.keepSelection ? scene.selectedIds : new Set(),
       };
     }
 
     case 'SET_STROKE_COLOR':
-      return { ...scene, appState: { ...scene.appState, strokeColor: command.color } };
+      return {
+        ...scene,
+        appState: { ...scene.appState, strokeColor: command.color },
+      };
 
     case 'SET_FILL_COLOR':
-      return { ...scene, appState: { ...scene.appState, fillColor: command.color } };
+      return {
+        ...scene,
+        appState: { ...scene.appState, fillColor: command.color },
+      };
 
     case 'SET_STROKE_WIDTH':
-      return { ...scene, appState: { ...scene.appState, strokeWidth: command.width } };
+      return {
+        ...scene,
+        appState: { ...scene.appState, strokeWidth: command.width },
+      };
 
     case 'SET_FONT_FAMILY':
       return {
@@ -233,7 +316,8 @@ export function reducer(scene: Scene, command: Command): Scene {
         appState: { ...scene.appState, fontFamily: command.family },
         elements: scene.elements.map((el) =>
           scene.selectedIds.has(el.id) && el.type === 'text'
-            ? { ...el, fontFamily: command.family } : el
+            ? { ...el, fontFamily: command.family }
+            : el,
         ),
       };
 
@@ -243,26 +327,39 @@ export function reducer(scene: Scene, command: Command): Scene {
         appState: { ...scene.appState, fontSize: command.size },
         elements: scene.elements.map((el) =>
           scene.selectedIds.has(el.id) && el.type === 'text'
-            ? { ...el, fontSize: command.size } : el
+            ? { ...el, fontSize: command.size }
+            : el,
         ),
       };
 
     case 'TOGGLE_GRID':
-      return { ...scene, appState: { ...scene.appState, gridVisible: !scene.appState.gridVisible } };
+      return {
+        ...scene,
+        appState: {
+          ...scene.appState,
+          gridVisible: !scene.appState.gridVisible,
+        },
+      };
 
     case 'SET_GRID_TYPE':
-      return { ...scene, appState: { ...scene.appState, gridType: command.gridType } };
+      return {
+        ...scene,
+        appState: { ...scene.appState, gridType: command.gridType },
+      };
 
     case 'SET_ROTATION':
       return {
         ...scene,
         elements: scene.elements.map((el) =>
-          el.id === command.id ? { ...el, rotation: command.rotation } : el
+          el.id === command.id ? { ...el, rotation: command.rotation } : el,
         ),
       };
 
     case 'SET_STROKE_STYLE':
-      return { ...scene, appState: { ...scene.appState, strokeStyle: command.style } };
+      return {
+        ...scene,
+        appState: { ...scene.appState, strokeStyle: command.style },
+      };
 
     case 'REORDER_ELEMENTS': {
       const idSet = new Set(command.ids);
@@ -270,7 +367,10 @@ export function reducer(scene: Scene, command: Command): Scene {
         .map((id) => scene.elements.find((el) => el.id === id))
         .filter((el): el is Element => el !== undefined);
       const rest = scene.elements.filter((el) => !idSet.has(el.id));
-      const clampedIdx = Math.max(0, Math.min(command.targetIndex, rest.length));
+      const clampedIdx = Math.max(
+        0,
+        Math.min(command.targetIndex, rest.length),
+      );
       const reordered = [
         ...rest.slice(0, clampedIdx),
         ...moving,
@@ -283,7 +383,7 @@ export function reducer(scene: Scene, command: Command): Scene {
       return {
         ...scene,
         elements: scene.elements.map((el) =>
-          el.id === command.id ? { ...el, visible: el.visible === false ? true : false } : el
+          el.id === command.id ? { ...el, visible: el.visible === false } : el,
         ),
       };
 
@@ -291,7 +391,7 @@ export function reducer(scene: Scene, command: Command): Scene {
       return {
         ...scene,
         elements: scene.elements.map((el) =>
-          el.id === command.id ? { ...el, layerName: command.name } : el
+          el.id === command.id ? { ...el, layerName: command.name } : el,
         ),
       };
 
@@ -308,7 +408,9 @@ export function reducer(scene: Scene, command: Command): Scene {
       return {
         ...scene,
         elements: scene.elements.map((el) =>
-          groupSet.has(el.id) ? ({ ...el, groupId: command.groupId } as Element) : el
+          groupSet.has(el.id)
+            ? ({ ...el, groupId: command.groupId } as Element)
+            : el,
         ),
       };
     }
@@ -329,7 +431,7 @@ export function reducer(scene: Scene, command: Command): Scene {
       return {
         ...scene,
         elements: scene.elements.map((el) =>
-          lockSet.has(el.id) ? ({ ...el, locked: true } as Element) : el
+          lockSet.has(el.id) ? ({ ...el, locked: true } as Element) : el,
         ),
       };
     }
@@ -339,19 +441,28 @@ export function reducer(scene: Scene, command: Command): Scene {
       return {
         ...scene,
         elements: scene.elements.map((el) =>
-          unlockSet.has(el.id) ? ({ ...el, locked: false } as Element) : el
+          unlockSet.has(el.id) ? ({ ...el, locked: false } as Element) : el,
         ),
       };
     }
 
     case 'CLEAR_JUST_CREATED_TEXT':
-      return { ...scene, appState: { ...scene.appState, justCreatedText: false } };
+      return {
+        ...scene,
+        appState: { ...scene.appState, justCreatedText: false },
+      };
 
     case 'SET_JUST_CREATED_TEXT':
-      return { ...scene, appState: { ...scene.appState, justCreatedText: true } };
+      return {
+        ...scene,
+        appState: { ...scene.appState, justCreatedText: true },
+      };
 
     case 'SET_TOOL_LOCK':
-      return { ...scene, appState: { ...scene.appState, toolLocked: command.locked } };
+      return {
+        ...scene,
+        appState: { ...scene.appState, toolLocked: command.locked },
+      };
 
     case 'SET_TEXT_MODE':
       return {
@@ -360,52 +471,74 @@ export function reducer(scene: Scene, command: Command): Scene {
         elements: scene.elements.map((el) =>
           scene.selectedIds.has(el.id) && el.type === 'text'
             ? { ...el, isCode: command.mode === 'code' }
-            : el
+            : el,
         ),
       };
 
     case 'APPLY_STYLE': {
-      const { strokeColor, fillColor, labelColor, strokeWidth, opacity, roughness, strokeStyle, lineCap, lineJoin, shadowBlur, shadowColor, shadowOffsetX, shadowOffsetY, cornerRadius, textAlign, bold, italic, underline, strikethrough, arrowHead } = command;
+      const {
+        strokeColor,
+        fillColor,
+        labelColor,
+        strokeWidth,
+        opacity,
+        roughness,
+        strokeStyle,
+        lineCap,
+        lineJoin,
+        shadowBlur,
+        shadowColor,
+        shadowOffsetX,
+        shadowOffsetY,
+        cornerRadius,
+        textAlign,
+        bold,
+        italic,
+        underline,
+        strikethrough,
+        arrowHead,
+      } = command;
       const patch: Record<string, unknown> = {};
-      if (strokeColor   !== undefined) patch['strokeColor']   = strokeColor;
-      if (fillColor     !== undefined) patch['fillColor']     = fillColor;
-      if (labelColor    !== undefined) patch['labelColor']    = labelColor;
-      if (strokeWidth   !== undefined) patch['strokeWidth']   = strokeWidth;
-      if (opacity       !== undefined) patch['opacity']       = opacity;
-      if (roughness     !== undefined) patch['roughness']     = roughness;
-      if (strokeStyle   !== undefined) patch['strokeStyle']   = strokeStyle;
-      if (lineCap       !== undefined) patch['lineCap']       = lineCap;
-      if (lineJoin      !== undefined) patch['lineJoin']      = lineJoin;
-      if (shadowBlur    !== undefined) patch['shadowBlur']    = shadowBlur;
-      if (shadowColor   !== undefined) patch['shadowColor']   = shadowColor;
-      if (shadowOffsetX !== undefined) patch['shadowOffsetX'] = shadowOffsetX;
-      if (shadowOffsetY !== undefined) patch['shadowOffsetY'] = shadowOffsetY;
-      if (cornerRadius  !== undefined) patch['cornerRadius']  = cornerRadius;
-      if (textAlign     !== undefined) patch['textAlign']     = textAlign;
-      if (bold          !== undefined) patch['bold']          = bold;
-      if (italic        !== undefined) patch['italic']        = italic;
-      if (underline     !== undefined) patch['underline']     = underline;
-      if (strikethrough !== undefined) patch['strikethrough'] = strikethrough;
-      if (arrowHead     !== undefined) patch['arrowHead']     = arrowHead;
+      if (strokeColor !== undefined) patch.strokeColor = strokeColor;
+      if (fillColor !== undefined) patch.fillColor = fillColor;
+      if (labelColor !== undefined) patch.labelColor = labelColor;
+      if (strokeWidth !== undefined) patch.strokeWidth = strokeWidth;
+      if (opacity !== undefined) patch.opacity = opacity;
+      if (roughness !== undefined) patch.roughness = roughness;
+      if (strokeStyle !== undefined) patch.strokeStyle = strokeStyle;
+      if (lineCap !== undefined) patch.lineCap = lineCap;
+      if (lineJoin !== undefined) patch.lineJoin = lineJoin;
+      if (shadowBlur !== undefined) patch.shadowBlur = shadowBlur;
+      if (shadowColor !== undefined) patch.shadowColor = shadowColor;
+      if (shadowOffsetX !== undefined) patch.shadowOffsetX = shadowOffsetX;
+      if (shadowOffsetY !== undefined) patch.shadowOffsetY = shadowOffsetY;
+      if (cornerRadius !== undefined) patch.cornerRadius = cornerRadius;
+      if (textAlign !== undefined) patch.textAlign = textAlign;
+      if (bold !== undefined) patch.bold = bold;
+      if (italic !== undefined) patch.italic = italic;
+      if (underline !== undefined) patch.underline = underline;
+      if (strikethrough !== undefined) patch.strikethrough = strikethrough;
+      if (arrowHead !== undefined) patch.arrowHead = arrowHead;
 
       // appState patch (only properties that belong to appState)
       const statePatch: Record<string, unknown> = {};
-      if (strokeColor   !== undefined) statePatch['strokeColor']   = strokeColor;
-      if (fillColor     !== undefined) statePatch['fillColor']     = fillColor;
-      if (strokeWidth   !== undefined) statePatch['strokeWidth']   = strokeWidth;
-      if (opacity       !== undefined) statePatch['opacity']       = opacity;
-      if (roughness     !== undefined) statePatch['roughness']     = roughness;
-      if (strokeStyle   !== undefined) statePatch['strokeStyle']   = strokeStyle;
-      if (textAlign     !== undefined) statePatch['textAlign']     = textAlign;
+      if (strokeColor !== undefined) statePatch.strokeColor = strokeColor;
+      if (fillColor !== undefined) statePatch.fillColor = fillColor;
+      if (strokeWidth !== undefined) statePatch.strokeWidth = strokeWidth;
+      if (opacity !== undefined) statePatch.opacity = opacity;
+      if (roughness !== undefined) statePatch.roughness = roughness;
+      if (strokeStyle !== undefined) statePatch.strokeStyle = strokeStyle;
+      if (textAlign !== undefined) statePatch.textAlign = textAlign;
 
-      const fallbackId = scene.selectedIds.size === 0 ? scene.appState.lastCreatedId : null;
+      const fallbackId =
+        scene.selectedIds.size === 0 ? scene.appState.lastCreatedId : null;
       return {
         ...scene,
         appState: { ...scene.appState, ...statePatch },
         elements: scene.elements.map((el) =>
           scene.selectedIds.has(el.id) || el.id === fallbackId
             ? ({ ...el, ...patch } as Element)
-            : el
+            : el,
         ),
       };
     }
@@ -421,7 +554,13 @@ export function reducer(scene: Scene, command: Command): Scene {
           const dy = move.y - el.y;
           if (dx === 0 && dy === 0) return el;
           if (el.type === 'line' || el.type === 'arrow') {
-            return { ...el, x: move.x, y: move.y, x2: el.x2 + dx, y2: el.y2 + dy };
+            return {
+              ...el,
+              x: move.x,
+              y: move.y,
+              x2: el.x2 + dx,
+              y2: el.y2 + dy,
+            };
           }
           if (el.type === 'freehand') {
             return {

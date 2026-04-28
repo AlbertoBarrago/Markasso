@@ -1,6 +1,6 @@
-import { reducer } from './reducer';
-import { createScene, type Scene } from '../core/scene';
 import type { Command } from '../commands/commands';
+import { createScene, type Scene } from '../core/scene';
+import { reducer } from './reducer';
 
 type Listener = (scene: Scene) => void;
 
@@ -12,20 +12,20 @@ const EPHEMERAL_COMMANDS = new Set<Command['type']>([
   'SELECT_ELEMENTS',
   'CLEAR_SELECTION',
   'SET_TOOL',
-  'SET_STROKE_COLOR',   // appState default only, no element changes
+  'SET_STROKE_COLOR', // appState default only, no element changes
   'SET_FILL_COLOR',
   'SET_STROKE_WIDTH',
   'TOGGLE_GRID',
-  'SET_GRID_TYPE',      // view setting only
+  'SET_GRID_TYPE', // view setting only
   'SET_TOOL_LOCK',
   'CLEAR_JUST_CREATED_TEXT',
   'SET_JUST_CREATED_TEXT',
 ]);
 
 export class History {
-  private past:    Scene[] = [];
+  private past: Scene[] = [];
   private _present: Scene;
-  private future:  Scene[] = [];
+  private future: Scene[] = [];
   private listeners: Listener[] = [];
   private _dragging = false;
 
@@ -33,7 +33,9 @@ export class History {
     this._present = initial;
   }
 
-  get present(): Scene { return this._present; }
+  get present(): Scene {
+    return this._present;
+  }
 
   /** Call at the start of a drag (move/resize/rotate). Records the pre-drag
    *  state once so the entire drag undoes in a single Ctrl+Z step. */
@@ -46,7 +48,10 @@ export class History {
   /** Call at the end of a drag. Pops the undo entry if nothing actually changed. */
   endDrag(): void {
     this._dragging = false;
-    if (this.past.length > 0 && this.past[this.past.length - 1] === this._present) {
+    if (
+      this.past.length > 0 &&
+      this.past[this.past.length - 1] === this._present
+    ) {
       this.past.pop();
     }
   }
@@ -78,12 +83,18 @@ export class History {
     this.notify();
   }
 
-  canUndo(): boolean { return this.past.length > 0; }
-  canRedo(): boolean { return this.future.length > 0; }
+  canUndo(): boolean {
+    return this.past.length > 0;
+  }
+  canRedo(): boolean {
+    return this.future.length > 0;
+  }
 
   subscribe(listener: Listener): () => void {
     this.listeners.push(listener);
-    return () => { this.listeners = this.listeners.filter((l) => l !== listener); };
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== listener);
+    };
   }
 
   private notify(): void {

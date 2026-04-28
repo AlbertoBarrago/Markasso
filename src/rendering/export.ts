@@ -1,13 +1,27 @@
 import type { Scene } from '../core/scene';
-import type { Element, RectangleElement, EllipseElement, RhombusElement, LineElement, ArrowElement, FreehandElement, TextElement, ImageElement } from '../elements/element';
+import type {
+  ArrowElement,
+  Element,
+  EllipseElement,
+  FreehandElement,
+  ImageElement,
+  LineElement,
+  RectangleElement,
+  RhombusElement,
+  TextElement,
+} from '../elements/element';
+import { getArrowHeadVector } from './connector_geometry';
 import { drawElement } from './draw_element';
 import { getElementBounds } from './draw_selection';
-import { getArrowHeadVector } from './connector_geometry';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function getCanvasBg(): string {
-  return getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg').trim() || '#080808';
+  return (
+    getComputedStyle(document.documentElement)
+      .getPropertyValue('--canvas-bg')
+      .trim() || '#080808'
+  );
 }
 
 // ── PNG export ─────────────────────────────────────────────────────────────────
@@ -107,7 +121,9 @@ export function exportSVG(scene: Scene, withBackground = true): void {
     `<svg xmlns="http://www.w3.org/2000/svg" width="${round(w)}" height="${round(h)}" viewBox="0 0 ${round(w)} ${round(h)}">`,
   ];
   if (withBackground) {
-    parts.push(`<rect width="${round(w)}" height="${round(h)}" fill="${getCanvasBg()}"/>`);
+    parts.push(
+      `<rect width="${round(w)}" height="${round(h)}" fill="${getCanvasBg()}"/>`,
+    );
   }
 
   for (const el of elements) {
@@ -124,8 +140,16 @@ export function exportSVG(scene: Scene, withBackground = true): void {
 
 // ── Bounds ─────────────────────────────────────────────────────────────────────
 
-function computeBounds(elements: ReadonlyArray<Element>): { minX: number; minY: number; maxX: number; maxY: number } {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+function computeBounds(elements: ReadonlyArray<Element>): {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+} {
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
 
   for (const el of elements) {
     switch (el.type) {
@@ -142,10 +166,30 @@ function computeBounds(elements: ReadonlyArray<Element>): { minX: number; minY: 
         break;
       }
       case 'line':
-        minX = Math.min(minX, el.x, el.x2, ...(el.cx !== undefined ? [el.cx] : []));
-        minY = Math.min(minY, el.y, el.y2, ...(el.cy !== undefined ? [el.cy] : []));
-        maxX = Math.max(maxX, el.x, el.x2, ...(el.cx !== undefined ? [el.cx] : []));
-        maxY = Math.max(maxY, el.y, el.y2, ...(el.cy !== undefined ? [el.cy] : []));
+        minX = Math.min(
+          minX,
+          el.x,
+          el.x2,
+          ...(el.cx !== undefined ? [el.cx] : []),
+        );
+        minY = Math.min(
+          minY,
+          el.y,
+          el.y2,
+          ...(el.cy !== undefined ? [el.cy] : []),
+        );
+        maxX = Math.max(
+          maxX,
+          el.x,
+          el.x2,
+          ...(el.cx !== undefined ? [el.cx] : []),
+        );
+        maxY = Math.max(
+          maxY,
+          el.y,
+          el.y2,
+          ...(el.cy !== undefined ? [el.cy] : []),
+        );
         break;
       case 'arrow':
         minX = Math.min(minX, el.x, el.x2);
@@ -187,21 +231,33 @@ function computeBounds(elements: ReadonlyArray<Element>): { minX: number; minY: 
 
 function elementToSVG(el: Element, ox: number, oy: number): string {
   switch (el.type) {
-    case 'rectangle': return rectToSVG(el, ox, oy);
-    case 'ellipse':   return ellipseToSVG(el, ox, oy);
-    case 'rhombus':   return rhombusToSVG(el, ox, oy);
-    case 'line':      return lineToSVG(el, ox, oy);
-    case 'arrow':     return arrowToSVG(el, ox, oy);
-    case 'freehand':  return freehandToSVG(el, ox, oy);
-    case 'text':      return textToSVG(el, ox, oy);
-    case 'image':     return imageToSVG(el, ox, oy);
+    case 'rectangle':
+      return rectToSVG(el, ox, oy);
+    case 'ellipse':
+      return ellipseToSVG(el, ox, oy);
+    case 'rhombus':
+      return rhombusToSVG(el, ox, oy);
+    case 'line':
+      return lineToSVG(el, ox, oy);
+    case 'arrow':
+      return arrowToSVG(el, ox, oy);
+    case 'freehand':
+      return freehandToSVG(el, ox, oy);
+    case 'text':
+      return textToSVG(el, ox, oy);
+    case 'image':
+      return imageToSVG(el, ox, oy);
     case 'polygon': {
       if (el.points.length < 2) return '';
       const stroke = el.strokeColor;
       const fill = el.fillColor === 'transparent' ? 'none' : el.fillColor;
       const sw = el.strokeWidth;
-      const dash = el.strokeStyle === 'dashed' ? `stroke-dasharray="${sw * 4},${sw * 2}"` :
-                   el.strokeStyle === 'dotted' ? `stroke-dasharray="${sw},${sw * 2}"` : '';
+      const dash =
+        el.strokeStyle === 'dashed'
+          ? `stroke-dasharray="${sw * 4},${sw * 2}"`
+          : el.strokeStyle === 'dotted'
+            ? `stroke-dasharray="${sw},${sw * 2}"`
+            : '';
       const pts = el.points.map(([x, y]) => `${x + ox},${y + oy}`).join(' ');
       const tag = el.closed ? 'polygon' : 'polyline';
       return `<${tag} points="${pts}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" opacity="${el.opacity}" ${dash}/>`;
@@ -209,20 +265,31 @@ function elementToSVG(el: Element, ox: number, oy: number): string {
     case 'curve': {
       const stroke = el.strokeColor;
       const sw = el.strokeWidth;
-      const dash = el.strokeStyle === 'dashed' ? `stroke-dasharray="${sw * 4},${sw * 2}"` :
-                   el.strokeStyle === 'dotted' ? `stroke-dasharray="${sw},${sw * 2}"` : '';
-      const x = el.x + ox; const y = el.y + oy;
-      const x2 = el.x2 + ox; const y2 = el.y2 + oy;
-      const cx = el.cx + ox; const cy = el.cy + oy;
+      const dash =
+        el.strokeStyle === 'dashed'
+          ? `stroke-dasharray="${sw * 4},${sw * 2}"`
+          : el.strokeStyle === 'dotted'
+            ? `stroke-dasharray="${sw},${sw * 2}"`
+            : '';
+      const x = el.x + ox;
+      const y = el.y + oy;
+      const x2 = el.x2 + ox;
+      const y2 = el.y2 + oy;
+      const cx = el.cx + ox;
+      const cy = el.cy + oy;
       return `<path d="M ${x} ${y} Q ${cx} ${cy} ${x2} ${y2}" fill="none" stroke="${stroke}" stroke-width="${sw}" opacity="${el.opacity}" ${dash}/>`;
     }
   }
 }
 
-function strokeDashAttr(el: { strokeStyle?: string; strokeWidth: number }): string {
+function strokeDashAttr(el: {
+  strokeStyle?: string;
+  strokeWidth: number;
+}): string {
   const style = el.strokeStyle ?? 'solid';
   if (style === 'dashed') {
-    const on = el.strokeWidth * 4 + 4, off = el.strokeWidth * 2 + 2;
+    const on = el.strokeWidth * 4 + 4,
+      off = el.strokeWidth * 2 + 2;
     return ` stroke-dasharray="${on} ${off}"`;
   }
   if (style === 'dotted') {
@@ -232,7 +299,13 @@ function strokeDashAttr(el: { strokeStyle?: string; strokeWidth: number }): stri
   return '';
 }
 
-function shapeProps(el: { strokeColor: string; fillColor: string; strokeWidth: number; opacity: number; strokeStyle?: string }): string {
+function shapeProps(el: {
+  strokeColor: string;
+  fillColor: string;
+  strokeWidth: number;
+  opacity: number;
+  strokeStyle?: string;
+}): string {
   const fill = el.fillColor === 'transparent' ? 'none' : el.fillColor;
   return `fill="${fill}" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" opacity="${el.opacity}"${strokeDashAttr(el)}`;
 }
@@ -242,7 +315,7 @@ function rotateAttr(el: Element, ox: number, oy: number): string {
   const { x, y, w, h } = getElementBounds(el);
   const cx = round(x + w / 2 + ox);
   const cy = round(y + h / 2 + oy);
-  const deg = round(el.rotation * 180 / Math.PI);
+  const deg = round((el.rotation * 180) / Math.PI);
   return ` transform="rotate(${deg},${cx},${cy})"`;
 }
 
@@ -253,7 +326,17 @@ function rectToSVG(el: RectangleElement, ox: number, oy: number): string {
   const h = Math.abs(el.height);
   let svg = `<rect x="${round(x)}" y="${round(y)}" width="${round(w)}" height="${round(h)}" ${shapeProps(el)}${rotateAttr(el, ox, oy)}/>`;
   if (el.label) {
-    svg += '\n' + shapeLabelToSVG(x + w / 2, y + h / 2, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', el.strokeColor, el.opacity);
+    svg +=
+      '\n' +
+      shapeLabelToSVG(
+        x + w / 2,
+        y + h / 2,
+        el.label,
+        el.labelFontSize ?? 16,
+        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.strokeColor,
+        el.opacity,
+      );
   }
   return svg;
 }
@@ -265,7 +348,17 @@ function ellipseToSVG(el: EllipseElement, ox: number, oy: number): string {
   const ry = Math.abs(el.height / 2);
   let svg = `<ellipse cx="${round(cx)}" cy="${round(cy)}" rx="${round(rx)}" ry="${round(ry)}" ${shapeProps(el)}${rotateAttr(el, ox, oy)}/>`;
   if (el.label) {
-    svg += '\n' + shapeLabelToSVG(cx, cy, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', el.strokeColor, el.opacity);
+    svg +=
+      '\n' +
+      shapeLabelToSVG(
+        cx,
+        cy,
+        el.label,
+        el.labelFontSize ?? 16,
+        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.strokeColor,
+        el.opacity,
+      );
   }
   return svg;
 }
@@ -284,7 +377,15 @@ function rhombusToSVG(el: RhombusElement, ox: number, oy: number): string {
   return `<polygon points="${pts}" ${shapeProps(el)}${rotateAttr(el, ox, oy)}/>`;
 }
 
-function lineArrowHeadSVG(x1: number, y1: number, x2: number, y2: number, sw: number, sp: string, rot: string): string {
+function lineArrowHeadSVG(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  sw: number,
+  sp: string,
+  rot: string,
+): string {
   const angle = Math.atan2(y2 - y1, x2 - x1);
   const headLen = Math.max(12, sw * 4);
   const ax1 = x2 - headLen * Math.cos(angle - Math.PI / 6);
@@ -295,31 +396,59 @@ function lineArrowHeadSVG(x1: number, y1: number, x2: number, y2: number, sw: nu
 }
 
 function lineToSVG(el: LineElement, ox: number, oy: number): string {
-  const x1 = el.x + ox, y1 = el.y + oy;
-  const x2 = el.x2 + ox, y2 = el.y2 + oy;
+  const x1 = el.x + ox,
+    y1 = el.y + oy;
+  const x2 = el.x2 + ox,
+    y2 = el.y2 + oy;
   const sp = `stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"${strokeDashAttr(el)}`;
   const rot = rotateAttr(el, ox, oy);
   const parts: string[] = [];
   if (el.cx !== undefined && el.cy !== undefined) {
-    parts.push(`<path d="M ${round(x1)} ${round(y1)} Q ${round(el.cx + ox)} ${round(el.cy + oy)} ${round(x2)} ${round(y2)}" ${sp}${rot}/>`);
+    parts.push(
+      `<path d="M ${round(x1)} ${round(y1)} Q ${round(el.cx + ox)} ${round(el.cy + oy)} ${round(x2)} ${round(y2)}" ${sp}${rot}/>`,
+    );
   } else {
-    parts.push(`<line x1="${round(x1)}" y1="${round(y1)}" x2="${round(x2)}" y2="${round(y2)}" ${sp}${rot}/>`);
+    parts.push(
+      `<line x1="${round(x1)}" y1="${round(y1)}" x2="${round(x2)}" y2="${round(y2)}" ${sp}${rot}/>`,
+    );
   }
   const arrowHead = el.arrowHead;
   if (arrowHead === 'end' || arrowHead === 'both') {
     const head = getArrowHeadVector(el, el, 'end');
-    parts.push(lineArrowHeadSVG(head.fromX + ox, head.fromY + oy, head.tipX + ox, head.tipY + oy, el.strokeWidth, sp, rot));
+    parts.push(
+      lineArrowHeadSVG(
+        head.fromX + ox,
+        head.fromY + oy,
+        head.tipX + ox,
+        head.tipY + oy,
+        el.strokeWidth,
+        sp,
+        rot,
+      ),
+    );
   }
   if (arrowHead === 'start' || arrowHead === 'both') {
     const head = getArrowHeadVector(el, el, 'start');
-    parts.push(lineArrowHeadSVG(head.fromX + ox, head.fromY + oy, head.tipX + ox, head.tipY + oy, el.strokeWidth, sp, rot));
+    parts.push(
+      lineArrowHeadSVG(
+        head.fromX + ox,
+        head.fromY + oy,
+        head.tipX + ox,
+        head.tipY + oy,
+        el.strokeWidth,
+        sp,
+        rot,
+      ),
+    );
   }
   return parts.join('\n');
 }
 
 function arrowToSVG(el: ArrowElement, ox: number, oy: number): string {
-  const x1 = el.x + ox, y1 = el.y + oy;
-  const x2 = el.x2 + ox, y2 = el.y2 + oy;
+  const x1 = el.x + ox,
+    y1 = el.y + oy;
+  const x2 = el.x2 + ox,
+    y2 = el.y2 + oy;
   const angle = Math.atan2(y2 - y1, x2 - x1);
   const headLen = Math.max(12, el.strokeWidth * 4);
   const ax1 = x2 - headLen * Math.cos(angle - Math.PI / 6);
@@ -353,7 +482,9 @@ function freehandToSVG(el: FreehandElement, ox: number, oy: number): string {
       const cpy2 = (y1 + y2) / 2;
       const endX = (cpx2 + cpx) / 2;
       const endY = (cpy2 + cpy) / 2;
-      parts.push(`Q ${round(x1 + ox)} ${round(y1 + oy)} ${round(endX + ox)} ${round(endY + oy)}`);
+      parts.push(
+        `Q ${round(x1 + ox)} ${round(y1 + oy)} ${round(endX + ox)} ${round(endY + oy)}`,
+      );
     }
     const last = el.points[el.points.length - 1]!;
     parts.push(`L ${round(last[0] + ox)} ${round(last[1] + oy)}`);
@@ -362,7 +493,11 @@ function freehandToSVG(el: FreehandElement, ox: number, oy: number): string {
   return `<path d="${parts.join(' ')}" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"${rotateAttr(el, ox, oy)}/>`;
 }
 
-function wrapTextApprox(content: string, maxWidth: number, avgCharWidth: number): string[] {
+function wrapTextApprox(
+  content: string,
+  maxWidth: number,
+  avgCharWidth: number,
+): string[] {
   const result: string[] = [];
   for (const line of content.split('\n')) {
     if (!line || line.length * avgCharWidth <= maxWidth) {
@@ -389,13 +524,17 @@ function textToSVG(el: TextElement, ox: number, oy: number): string {
   const lines = wrapTextApprox(el.content, el.width - 8, el.fontSize * 0.55);
   const lineHeight = el.fontSize * 1.2;
   const tspans = lines
-    .map((line, i) => `<tspan x="${round(el.x + ox)}" dy="${i === 0 ? 0 : round(lineHeight)}">${escapeXml(line)}</tspan>`)
+    .map(
+      (line, i) =>
+        `<tspan x="${round(el.x + ox)}" dy="${i === 0 ? 0 : round(lineHeight)}">${escapeXml(line)}</tspan>`,
+    )
     .join('');
   return `<text x="${round(el.x + ox)}" y="${round(el.y + oy)}" font-family="${el.fontFamily}" font-size="${el.fontSize}" fill="${el.strokeColor}" opacity="${el.opacity}" dominant-baseline="hanging"${rotateAttr(el, ox, oy)}>${tspans}</text>`;
 }
 
 function shapeLabelToSVG(
-  cx: number, cy: number,
+  cx: number,
+  cy: number,
   label: string,
   fontSize: number,
   fontFamily: string,
@@ -407,7 +546,10 @@ function shapeLabelToSVG(
   const totalH = lines.length * lineHeight;
   const startY = cy - totalH / 2;
   const tspans = lines
-    .map((line, i) => `<tspan x="${round(cx)}" y="${round(startY + i * lineHeight + lineHeight / 2)}">${escapeXml(line)}</tspan>`)
+    .map(
+      (line, i) =>
+        `<tspan x="${round(cx)}" y="${round(startY + i * lineHeight + lineHeight / 2)}">${escapeXml(line)}</tspan>`,
+    )
     .join('');
   return `<text font-family="${fontFamily}" font-size="${fontSize}" fill="${color}" opacity="${opacity}" text-anchor="middle">${tspans}</text>`;
 }

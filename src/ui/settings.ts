@@ -1,10 +1,10 @@
-import type { History } from '../engine/history';
+import pkg from '../../package.json';
 import type { GridType } from '../core/app_state';
 import { fitToElements } from '../core/viewport';
-import { exportPNG, exportSVG } from '../rendering/export';
+import type { History } from '../engine/history';
+import { getLocale, LOCALES, type Locale, setLocale, t } from '../i18n';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
-import { t, setLocale, getLocale, LOCALES, type Locale } from '../i18n';
-import pkg from '../../package.json';
+import { exportPNG, exportSVG } from '../rendering/export';
 
 // ── Theme ─────────────────────────────────────────────────────────────────
 export type ThemeMode = 'light' | 'dark' | 'device';
@@ -18,9 +18,12 @@ export function getThemeMode(): ThemeMode {
 
 export function applyTheme(mode: ThemeMode): void {
   localStorage.setItem(THEME_KEY, mode);
-  const resolved = mode === 'device'
-    ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
-    : mode;
+  const resolved =
+    mode === 'device'
+      ? window.matchMedia('(prefers-color-scheme: light)').matches
+        ? 'light'
+        : 'dark'
+      : mode;
   document.documentElement.setAttribute('data-theme', resolved);
 }
 
@@ -42,8 +45,15 @@ export function loadSettings(): UISettings {
   const defaultBg = isResolvedLight() ? '#ffffff' : '#080808';
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { bgColor: defaultBg, showMinimap: true, ...(JSON.parse(raw) as Partial<UISettings>) };
-  } catch { /* ignore */ }
+    if (raw)
+      return {
+        bgColor: defaultBg,
+        showMinimap: true,
+        ...(JSON.parse(raw) as Partial<UISettings>),
+      };
+  } catch {
+    /* ignore */
+  }
   return { bgColor: defaultBg, showMinimap: true };
 }
 
@@ -57,37 +67,77 @@ export function applySettings(appEl: HTMLElement, s: UISettings): void {
 }
 
 const GRID_TYPES: { type: GridType; label: string; desc: string }[] = [
-  { type: 'dot',  label: '•', desc: t('dotGrid') },
+  { type: 'dot', label: '•', desc: t('dotGrid') },
   { type: 'line', label: '≡', desc: t('lineGrid') },
-  { type: 'mm',   label: '▦', desc: t('graphPaper') },
+  { type: 'mm', label: '▦', desc: t('graphPaper') },
 ];
 
-const DARK_BG_COLORS  = ['#141414', '#1a1a2e', '#0d1117', '#1e1e1e', '#12100e', '#0f1923'];
-const LIGHT_BG_COLORS = ['#ffffff', '#fef5ef', '#fde8d8', '#f8dfd4', '#f5d5c8', '#f0cfc0'];
+const DARK_BG_COLORS = [
+  '#141414',
+  '#1a1a2e',
+  '#0d1117',
+  '#1e1e1e',
+  '#12100e',
+  '#0f1923',
+];
+const LIGHT_BG_COLORS = [
+  '#ffffff',
+  '#fef5ef',
+  '#fde8d8',
+  '#f8dfd4',
+  '#f5d5c8',
+  '#f0cfc0',
+];
 const LIGHT_STROKE_COLOR = '#000000';
 const DARK_STROKE_COLOR = '#e2e2ef';
 
 function svg(inner: string, size = 16): string {
   return `<svg width="${size}" height="${size}" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
 }
-function p(d: string): string { return `<path d="${d}"/>`; }
+function p(d: string): string {
+  return `<path d="${d}"/>`;
+}
 
 const ICONS = {
   hamburger: svg(p('M3 5h14M3 10h14M3 15h14'), 18),
-  open:    svg(p('M2 9a2 2 0 012-2h4l2-2h6a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2z')),
-  save:    svg(p('M10 3v8M7 8l3 3 3-3M4 15v1a1 1 0 001 1h10a1 1 0 001-1v-1')),
-  png:     svg(`<rect x="3" y="3" width="14" height="14" rx="2"/>${p('M3 13l4-4 3 3 2-2 5 5')}<circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/>`),
-  svg:     svg(p('M6 7l-4 3 4 3M14 7l4 3-4 3M11 5l-2 10')),
-  trash:   svg(p('M4 6h12M9 3h2M16 6l-1 11H5L4 6M9 10v4M11 10v4')),
-  prefs:   svg(p('M3 5h14M3 10h14M3 15h14M7 3v4M13 8v4M10 13v4')),
+  open: svg(
+    p('M2 9a2 2 0 012-2h4l2-2h6a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2z'),
+  ),
+  save: svg(p('M10 3v8M7 8l3 3 3-3M4 15v1a1 1 0 001 1h10a1 1 0 001-1v-1')),
+  png: svg(
+    `<rect x="3" y="3" width="14" height="14" rx="2"/>${p('M3 13l4-4 3 3 2-2 5 5')}<circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/>`,
+  ),
+  svg: svg(p('M6 7l-4 3 4 3M14 7l4 3-4 3M11 5l-2 10')),
+  trash: svg(p('M4 6h12M9 3h2M16 6l-1 11H5L4 6M9 10v4M11 10v4')),
+  prefs: svg(p('M3 5h14M3 10h14M3 15h14M7 3v4M13 8v4M10 13v4')),
   chevron: svg(p('M8 5l5 5-5 5')),
-  guide:   svg(p('M10 2a8 8 0 100 16A8 8 0 0010 2zM10 7v4M10 13h.01')),
-  about:   svg(p('M3 4a1 1 0 011-1h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1zM10 9v5M10 6.5h.01')),
-  coffee:  svg(p('M6 2v3M10 2v3M14 2v3M4 7h12l-1.5 9a2 2 0 01-2 1.5h-5a2 2 0 01-2-1.5zM16 9h2a2 2 0 010 4h-2')),
-  lang:    svg(p('M10 2a8 8 0 100 16A8 8 0 0010 2zM2 10h16M10 2c-2 4-2 10 0 16M10 2c2 4 2 10 0 16')),
-  sun:     svg(`<circle cx="10" cy="10" r="3"/>${p('M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.41 1.41M13.37 13.37l1.41 1.41M4.22 15.78l1.41-1.41M13.37 6.63l1.41-1.41')}`),
-  moon:    svg(p('M15 10a6 6 0 01-6 6 6 6 0 010-12c.34 0 .67.03 1 .08A5 5 0 1014.92 9c.05.33.08.66.08 1z')),
-  device:  svg(`<rect x="2" y="3" width="16" height="11" rx="2"/>${p('M7 18h6M10 14v4')}`),
+  guide: svg(p('M10 2a8 8 0 100 16A8 8 0 0010 2zM10 7v4M10 13h.01')),
+  about: svg(
+    p(
+      'M3 4a1 1 0 011-1h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1zM10 9v5M10 6.5h.01',
+    ),
+  ),
+  coffee: svg(
+    p(
+      'M6 2v3M10 2v3M14 2v3M4 7h12l-1.5 9a2 2 0 01-2 1.5h-5a2 2 0 01-2-1.5zM16 9h2a2 2 0 010 4h-2',
+    ),
+  ),
+  lang: svg(
+    p(
+      'M10 2a8 8 0 100 16A8 8 0 0010 2zM2 10h16M10 2c-2 4-2 10 0 16M10 2c2 4 2 10 0 16',
+    ),
+  ),
+  sun: svg(
+    `<circle cx="10" cy="10" r="3"/>${p('M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.41 1.41M13.37 13.37l1.41 1.41M4.22 15.78l1.41-1.41M13.37 6.63l1.41-1.41')}`,
+  ),
+  moon: svg(
+    p(
+      'M15 10a6 6 0 01-6 6 6 6 0 010-12c.34 0 .67.03 1 .08A5 5 0 1014.92 9c.05.33.08.66.08 1z',
+    ),
+  ),
+  device: svg(
+    `<rect x="2" y="3" width="16" height="11" rx="2"/>${p('M7 18h6M10 14v4')}`,
+  ),
 };
 
 export function initSettings(
@@ -173,8 +223,9 @@ export function initSettings(
             ${t('grid')}
           </label>
           <div class="pref-grid-types">
-            ${GRID_TYPES.map((g) =>
-              `<button class="sp-grid-btn" data-grid="${g.type}" title="${g.desc}">${g.label}</button>`
+            ${GRID_TYPES.map(
+              (g) =>
+                `<button class="sp-grid-btn" data-grid="${g.type}" title="${g.desc}">${g.label}</button>`,
             ).join('')}
           </div>
         </div>
@@ -212,9 +263,12 @@ export function initSettings(
        <div class="menu-section-label">${t('language')}</div>
        <div class="sp-lang-wrapper menu-theme-toggle ">
             <select class="sp-lang-select" id="sp-lang-select">
-              ${(Object.entries(LOCALES) as [Locale, string][]).map(([code, name]) =>
-        `<option value="${code}"${getLocale() === code ? ' selected' : ''}>${name}</option>`
-      ).join('')}
+              ${(Object.entries(LOCALES) as [Locale, string][])
+                .map(
+                  ([code, name]) =>
+                    `<option value="${code}"${getLocale() === code ? ' selected' : ''}>${name}</option>`,
+                )
+                .join('')}
             </select>
         </div>
         </div>
@@ -279,44 +333,53 @@ export function initSettings(
   }
   function positionPanel(): void {
     const r = menuBtn.getBoundingClientRect();
-    panel.style.top  = `${r.bottom + 10}px`;
+    panel.style.top = `${r.bottom + 10}px`;
     panel.style.left = `${r.left}px`;
   }
   function syncPanel(): void {
     const gridVis = panel.querySelector<HTMLInputElement>('#sp-grid-visible')!;
     gridVis.checked = history.present.appState.gridVisible;
 
-    const minimapVis = panel.querySelector<HTMLInputElement>('#sp-minimap-visible')!;
+    const minimapVis = panel.querySelector<HTMLInputElement>(
+      '#sp-minimap-visible',
+    )!;
     minimapVis.checked = current.showMinimap;
 
     panel.querySelectorAll<HTMLButtonElement>('.sp-grid-btn').forEach((b) => {
-      const isActive = b.dataset['grid'] === history.present.appState.gridType;
+      const isActive = b.dataset.grid === history.present.appState.gridType;
       b.classList.toggle('active', isActive);
       b.setAttribute('aria-pressed', String(isActive));
     });
 
     panel.querySelectorAll<HTMLButtonElement>('.sp-preset').forEach((b) => {
-      b.classList.toggle('active', b.dataset['color'] === current.bgColor);
+      b.classList.toggle('active', b.dataset.color === current.bgColor);
     });
 
     const hasElements = history.present.elements.length > 0;
-    panel.querySelector<HTMLButtonElement>('#menu-save')!.disabled        = !hasElements;
-    panel.querySelector<HTMLButtonElement>('#menu-export-png')!.disabled  = !hasElements;
-    panel.querySelector<HTMLButtonElement>('#menu-export-svg')!.disabled  = !hasElements;
-    panel.querySelector<HTMLButtonElement>('#menu-clear')!.disabled       = !hasElements;
+    panel.querySelector<HTMLButtonElement>('#menu-save')!.disabled =
+      !hasElements;
+    panel.querySelector<HTMLButtonElement>('#menu-export-png')!.disabled =
+      !hasElements;
+    panel.querySelector<HTMLButtonElement>('#menu-export-svg')!.disabled =
+      !hasElements;
+    panel.querySelector<HTMLButtonElement>('#menu-clear')!.disabled =
+      !hasElements;
 
-    const prefsBody   = panel.querySelector<HTMLElement>('#menu-prefs-body')!;
-    const prefsToggle = panel.querySelector<HTMLButtonElement>('#menu-prefs-toggle')!;
+    const prefsBody = panel.querySelector<HTMLElement>('#menu-prefs-body')!;
+    const prefsToggle =
+      panel.querySelector<HTMLButtonElement>('#menu-prefs-toggle')!;
     prefsBody.setAttribute('aria-hidden', prefsOpen ? 'false' : 'true');
     prefsToggle.classList.toggle('prefs-open', prefsOpen);
     prefsToggle.setAttribute('aria-expanded', String(prefsOpen));
 
     const curMode = getThemeMode();
-    panel.querySelectorAll<HTMLButtonElement>('.menu-theme-btn').forEach((b) => {
-      const isActive = b.dataset['mode'] === curMode;
-      b.classList.toggle('active', isActive);
-      b.setAttribute('aria-pressed', String(isActive));
-    });
+    panel
+      .querySelectorAll<HTMLButtonElement>('.menu-theme-btn')
+      .forEach((b) => {
+        const isActive = b.dataset.mode === curMode;
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-pressed', String(isActive));
+      });
   }
 
   // ── Keyboard: close on Escape ────────────────────────────────────────────
@@ -334,79 +397,133 @@ export function initSettings(
   });
 
   // ── File actions ─────────────────────────────────────────────────────────
-  panel.querySelector<HTMLButtonElement>('#menu-open')!.addEventListener('click', () => {
-    fileInput.click();
-  });
-  panel.querySelector<HTMLButtonElement>('#menu-save')!.addEventListener('click', () => {
-    exportMarkasso(history.present);
-    close();
-  });
-  panel.querySelector<HTMLButtonElement>('#menu-export-png')!.addEventListener('click', () => {
-    exportPNG(history.present, true);
-    close();
-  });
-  panel.querySelector<HTMLButtonElement>('#menu-export-svg')!.addEventListener('click', () => {
-    exportSVG(history.present, true);
-    close();
-  });
-  panel.querySelector<HTMLButtonElement>('#menu-guide')!.addEventListener('click', () => {
-    window.open('https://github.com/AlbertoBarrago/Markasso/blob/main/MANUAL.md', '_blank');
-    close();
-  });
-  panel.querySelector<HTMLButtonElement>('#menu-about')!.addEventListener('click', () => {
-    close();
-    openAbout();
-  });
-  panel.querySelector<HTMLButtonElement>('#menu-clear')!.addEventListener('click', () => {
-    if (confirm('Clear the canvas? This cannot be undone.')) {
-      history.dispatch({ type: 'LOAD_SCENE', elements: [], viewport: history.present.viewport });
+  panel
+    .querySelector<HTMLButtonElement>('#menu-open')!
+    .addEventListener('click', () => {
+      fileInput.click();
+    });
+  panel
+    .querySelector<HTMLButtonElement>('#menu-save')!
+    .addEventListener('click', () => {
+      exportMarkasso(history.present);
       close();
-    }
-  });
+    });
+  panel
+    .querySelector<HTMLButtonElement>('#menu-export-png')!
+    .addEventListener('click', () => {
+      exportPNG(history.present, true);
+      close();
+    });
+  panel
+    .querySelector<HTMLButtonElement>('#menu-export-svg')!
+    .addEventListener('click', () => {
+      exportSVG(history.present, true);
+      close();
+    });
+  panel
+    .querySelector<HTMLButtonElement>('#menu-guide')!
+    .addEventListener('click', () => {
+      window.open(
+        'https://github.com/AlbertoBarrago/Markasso/blob/main/MANUAL.md',
+        '_blank',
+      );
+      close();
+    });
+  panel
+    .querySelector<HTMLButtonElement>('#menu-about')!
+    .addEventListener('click', () => {
+      close();
+      openAbout();
+    });
+  panel
+    .querySelector<HTMLButtonElement>('#menu-clear')!
+    .addEventListener('click', () => {
+      if (confirm('Clear the canvas? This cannot be undone.')) {
+        history.dispatch({
+          type: 'LOAD_SCENE',
+          elements: [],
+          viewport: history.present.viewport,
+        });
+        close();
+      }
+    });
 
   // ── Preferences ──────────────────────────────────────────────────────────
-  panel.querySelector<HTMLButtonElement>('#menu-prefs-toggle')!.addEventListener('click', () => {
-    prefsOpen = !prefsOpen;
-    syncPanel();
-  });
-  panel.querySelector<HTMLInputElement>('#sp-grid-visible')!.addEventListener('change', () => {
-    history.dispatch({ type: 'TOGGLE_GRID' });
-  });
-  panel.querySelector<HTMLInputElement>('#sp-minimap-visible')!.addEventListener('change', (e) => {
-    current = { ...current, showMinimap: (e.target as HTMLInputElement).checked };
-    saveSettings(current);
-    applySettings(appEl, current);
-  });
+  panel
+    .querySelector<HTMLButtonElement>('#menu-prefs-toggle')!
+    .addEventListener('click', () => {
+      prefsOpen = !prefsOpen;
+      syncPanel();
+    });
+  panel
+    .querySelector<HTMLInputElement>('#sp-grid-visible')!
+    .addEventListener('change', () => {
+      history.dispatch({ type: 'TOGGLE_GRID' });
+    });
+  panel
+    .querySelector<HTMLInputElement>('#sp-minimap-visible')!
+    .addEventListener('change', (e) => {
+      current = {
+        ...current,
+        showMinimap: (e.target as HTMLInputElement).checked,
+      };
+      saveSettings(current);
+      applySettings(appEl, current);
+    });
   panel.querySelectorAll<HTMLButtonElement>('.sp-grid-btn').forEach((b) => {
     b.addEventListener('click', () => {
-      history.dispatch({ type: 'SET_GRID_TYPE', gridType: b.dataset['grid'] as GridType });
+      history.dispatch({
+        type: 'SET_GRID_TYPE',
+        gridType: b.dataset.grid as GridType,
+      });
       if (!history.present.appState.gridVisible) {
         history.dispatch({ type: 'TOGGLE_GRID' });
       }
       syncPanel();
     });
   });
-  panel.querySelector<HTMLButtonElement>('#sp-fit-to-content')!.addEventListener('click', () => {
-    const vp = fitToElements(history.present.elements, window.innerWidth, window.innerHeight);
-    history.dispatch({ type: 'SET_VIEWPORT', offsetX: vp.offsetX, offsetY: vp.offsetY, zoom: vp.zoom });
-    close();
-  });
-  panel.querySelector<HTMLButtonElement>('#sp-reset-zoom')!.addEventListener('click', () => {
-    history.dispatch({ type: 'SET_VIEWPORT', offsetX: 0, offsetY: 0, zoom: 1 });
-    close();
-  });
+  panel
+    .querySelector<HTMLButtonElement>('#sp-fit-to-content')!
+    .addEventListener('click', () => {
+      const vp = fitToElements(
+        history.present.elements,
+        window.innerWidth,
+        window.innerHeight,
+      );
+      history.dispatch({
+        type: 'SET_VIEWPORT',
+        offsetX: vp.offsetX,
+        offsetY: vp.offsetY,
+        zoom: vp.zoom,
+      });
+      close();
+    });
+  panel
+    .querySelector<HTMLButtonElement>('#sp-reset-zoom')!
+    .addEventListener('click', () => {
+      history.dispatch({
+        type: 'SET_VIEWPORT',
+        offsetX: 0,
+        offsetY: 0,
+        zoom: 1,
+      });
+      close();
+    });
 
   // ── Background swatches ──────────────────────────────────────────────────
   function renderBgSwatches(): void {
     const container = panel.querySelector<HTMLElement>('#menu-bg-swatches')!;
     const colors = isResolvedLight() ? LIGHT_BG_COLORS : DARK_BG_COLORS;
-    container.innerHTML = colors.map((c) =>
-      `<button class="sp-preset" data-color="${c}" style="background:${c}" title="${c}"></button>`
-    ).join('');
+    container.innerHTML = colors
+      .map(
+        (c) =>
+          `<button class="sp-preset" data-color="${c}" style="background:${c}" title="${c}"></button>`,
+      )
+      .join('');
     container.querySelectorAll<HTMLButtonElement>('.sp-preset').forEach((b) => {
-      b.classList.toggle('active', b.dataset['color'] === current.bgColor);
+      b.classList.toggle('active', b.dataset.color === current.bgColor);
       b.addEventListener('click', () => {
-        current = { ...current, bgColor: b.dataset['color']! };
+        current = { ...current, bgColor: b.dataset.color! };
         saveSettings(current);
         applySettings(appEl, current);
         syncPanel();
@@ -423,19 +540,24 @@ export function initSettings(
   });
 
   // ── Language selector ────────────────────────────────────────────────────
-  panel.querySelector<HTMLSelectElement>('#sp-lang-select')!.addEventListener('change', (e) => {
-    setLocale((e.target as HTMLSelectElement).value as Locale);
-  });
+  panel
+    .querySelector<HTMLSelectElement>('#sp-lang-select')!
+    .addEventListener('change', (e) => {
+      setLocale((e.target as HTMLSelectElement).value as Locale);
+    });
 
   // ── Theme toggle ─────────────────────────────────────────────────────────
   panel.querySelectorAll<HTMLButtonElement>('.menu-theme-btn').forEach((b) => {
     b.addEventListener('click', () => {
-      applyTheme(b.dataset['mode'] as ThemeMode);
+      applyTheme(b.dataset.mode as ThemeMode);
       history.dispatch({
         type: 'SET_STROKE_COLOR',
         color: isResolvedLight() ? LIGHT_STROKE_COLOR : DARK_STROKE_COLOR,
       });
-      current = { ...current, bgColor: isResolvedLight() ? LIGHT_BG_COLORS[0]! : DARK_BG_COLORS[0]! };
+      current = {
+        ...current,
+        bgColor: isResolvedLight() ? LIGHT_BG_COLORS[0]! : DARK_BG_COLORS[0]!,
+      };
       saveSettings(current);
       applySettings(appEl, current);
       renderBgSwatches();
@@ -444,20 +566,25 @@ export function initSettings(
   });
 
   // Re-apply when system preference changes (for device mode)
-  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
-    if (getThemeMode() === 'device') {
-      applyTheme('device');
-      history.dispatch({
-        type: 'SET_STROKE_COLOR',
-        color: isResolvedLight() ? LIGHT_STROKE_COLOR : DARK_STROKE_COLOR,
-      });
-      current = { ...current, bgColor: e.matches ? LIGHT_BG_COLORS[0]! : DARK_BG_COLORS[0]! };
-      saveSettings(current);
-      applySettings(appEl, current);
-      renderBgSwatches();
-      syncPanel();
-    }
-  });
+  window
+    .matchMedia('(prefers-color-scheme: light)')
+    .addEventListener('change', (e) => {
+      if (getThemeMode() === 'device') {
+        applyTheme('device');
+        history.dispatch({
+          type: 'SET_STROKE_COLOR',
+          color: isResolvedLight() ? LIGHT_STROKE_COLOR : DARK_STROKE_COLOR,
+        });
+        current = {
+          ...current,
+          bgColor: e.matches ? LIGHT_BG_COLORS[0]! : DARK_BG_COLORS[0]!,
+        };
+        saveSettings(current);
+        applySettings(appEl, current);
+        renderBgSwatches();
+        syncPanel();
+      }
+    });
 
   history.subscribe(syncPanel);
 }

@@ -1,6 +1,6 @@
-import type { Element } from '../elements/element';
 import type { Viewport } from '../core/viewport';
 import { worldToScreen } from '../core/viewport';
+import type { Element } from '../elements/element';
 import { getQuadraticBounds } from './connector_geometry';
 
 /**
@@ -85,26 +85,37 @@ export function getElementBorderPoint(
  * snapping to the border of connected elements (facing each other).
  */
 export function resolveArrowEndpoints(
-  el: { x: number; y: number; x2: number; y2: number; startElementId?: string; endElementId?: string },
+  el: {
+    x: number;
+    y: number;
+    x2: number;
+    y2: number;
+    startElementId?: string;
+    endElementId?: string;
+  },
   allElements: ReadonlyArray<Element>,
 ): { x: number; y: number; x2: number; y2: number } {
   let { x, y, x2, y2 } = el;
 
-  const startEl = el.startElementId ? (allElements.find((e) => e.id === el.startElementId) ?? null) : null;
-  const endEl   = el.endElementId   ? (allElements.find((e) => e.id === el.endElementId)   ?? null) : null;
+  const startEl = el.startElementId
+    ? (allElements.find((e) => e.id === el.startElementId) ?? null)
+    : null;
+  const endEl = el.endElementId
+    ? (allElements.find((e) => e.id === el.endElementId) ?? null)
+    : null;
 
   // Effective centers used for direction computation
   const startB = startEl ? getElementBounds(startEl) : null;
-  const endB   = endEl   ? getElementBounds(endEl)   : null;
+  const endB = endEl ? getElementBounds(endEl) : null;
   const startCx = startB ? startB.x + startB.w / 2 : x;
   const startCy = startB ? startB.y + startB.h / 2 : y;
-  const endCx   = endB   ? endB.x   + endB.w   / 2 : x2;
-  const endCy   = endB   ? endB.y   + endB.h   / 2 : y2;
+  const endCx = endB ? endB.x + endB.w / 2 : x2;
+  const endCy = endB ? endB.y + endB.h / 2 : y2;
 
   // Border point of start element facing toward end
-  if (startEl) [x, y]   = getElementBorderPoint(startEl, endCx, endCy);
+  if (startEl) [x, y] = getElementBorderPoint(startEl, endCx, endCy);
   // Border point of end element facing toward start
-  if (endEl)   [x2, y2] = getElementBorderPoint(endEl, startCx, startCy);
+  if (endEl) [x2, y2] = getElementBorderPoint(endEl, startCx, startCy);
 
   return { x, y, x2, y2 };
 }
@@ -138,10 +149,7 @@ const HANDLE_HALF = HANDLE_SIZE / 2;
 export const ROTATION_HANDLE_R = 7;
 export const ROTATION_HANDLE_OFFSET = 34;
 
-export type HandlePosition =
-  | 'nw' | 'n' | 'ne'
-  | 'w'  |       'e'
-  | 'sw' | 's' | 'se';
+export type HandlePosition = 'nw' | 'n' | 'ne' | 'w' | 'e' | 'sw' | 's' | 'se';
 
 export interface Handle {
   position: HandlePosition;
@@ -149,7 +157,10 @@ export interface Handle {
   screenY: number;
 }
 
-export function getElementBounds(el: Element, allElements?: ReadonlyArray<Element>): { x: number; y: number; w: number; h: number } {
+export function getElementBounds(
+  el: Element,
+  allElements?: ReadonlyArray<Element>,
+): { x: number; y: number; w: number; h: number } {
   switch (el.type) {
     case 'rectangle':
     case 'ellipse':
@@ -164,7 +175,14 @@ export function getElementBounds(el: Element, allElements?: ReadonlyArray<Elemen
     case 'arrow': {
       const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
       if (el.type === 'line' && el.cx !== undefined && el.cy !== undefined) {
-        const bounds = getQuadraticBounds(pts.x, pts.y, el.cx, el.cy, pts.x2, pts.y2);
+        const bounds = getQuadraticBounds(
+          pts.x,
+          pts.y,
+          el.cx,
+          el.cy,
+          pts.x2,
+          pts.y2,
+        );
         return {
           x: bounds.minX,
           y: bounds.minY,
@@ -190,7 +208,10 @@ export function getElementBounds(el: Element, allElements?: ReadonlyArray<Elemen
     case 'freehand':
     case 'polygon': {
       if (el.points.length === 0) return { x: el.x, y: el.y, w: 0, h: 0 };
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
       for (const [px, py] of el.points) {
         minX = Math.min(minX, px);
         minY = Math.min(minY, py);
@@ -215,7 +236,10 @@ export function getRotationHandleScreen(
 ): { screenX: number; screenY: number } | null {
   if (elements.length === 0) return null;
 
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
   for (const el of elements) {
     const { x, y, w, h } = getElementBounds(el);
     minX = Math.min(minX, x);
@@ -225,7 +249,10 @@ export function getRotationHandleScreen(
   }
 
   const [, sy] = worldToScreen(viewport, minX, minY);
-  const mx = (worldToScreen(viewport, minX, minY)[0] + worldToScreen(viewport, maxX, maxY)[0]) / 2;
+  const mx =
+    (worldToScreen(viewport, minX, minY)[0] +
+      worldToScreen(viewport, maxX, maxY)[0]) /
+    2;
 
   // For a single rotated element, rotate the handle position around the element center
   const rotation = elements.length === 1 ? (elements[0]!.rotation ?? 0) : 0;
@@ -271,7 +298,7 @@ export function hitTestEndpoint(
 export function drawSelection(
   ctx: CanvasRenderingContext2D,
   elements: ReadonlyArray<Element>,
-  viewport: Viewport
+  viewport: Viewport,
 ): void {
   if (elements.length === 0) return;
 
@@ -280,7 +307,10 @@ export function drawSelection(
   ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
   // Compute union bounding box in world space
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
   for (const el of elements) {
     const { x, y, w, h } = getElementBounds(el);
     minX = Math.min(minX, x);
@@ -316,8 +346,18 @@ export function drawSelection(
   ctx.lineWidth = 1.5;
 
   for (const h of handles) {
-    ctx.fillRect(h.screenX - HANDLE_HALF, h.screenY - HANDLE_HALF, HANDLE_SIZE, HANDLE_SIZE);
-    ctx.strokeRect(h.screenX - HANDLE_HALF, h.screenY - HANDLE_HALF, HANDLE_SIZE, HANDLE_SIZE);
+    ctx.fillRect(
+      h.screenX - HANDLE_HALF,
+      h.screenY - HANDLE_HALF,
+      HANDLE_SIZE,
+      HANDLE_SIZE,
+    );
+    ctx.strokeRect(
+      h.screenX - HANDLE_HALF,
+      h.screenY - HANDLE_HALF,
+      HANDLE_SIZE,
+      HANDLE_SIZE,
+    );
   }
 
   // Rotation handle — connector line + circle with ↻ arc indicator
@@ -459,7 +499,11 @@ export function drawHoverHighlight(
       const [x1s, y1s] = s(element.x, element.y);
       const [x2s, y2s] = s(element.x2, element.y2);
       ctx.beginPath();
-      if (element.type === 'line' && element.cx !== undefined && element.cy !== undefined) {
+      if (
+        element.type === 'line' &&
+        element.cx !== undefined &&
+        element.cy !== undefined
+      ) {
         const [cxs, cys] = s(element.cx, element.cy);
         ctx.moveTo(x1s, y1s);
         ctx.quadraticCurveTo(cxs, cys, x2s, y2s);
@@ -522,7 +566,7 @@ export function drawMarquee(
   x1: number,
   y1: number,
   x2: number,
-  y2: number
+  y2: number,
 ): void {
   ctx.save();
   ctx.resetTransform();
@@ -541,17 +585,22 @@ export function drawMarquee(
   ctx.restore();
 }
 
-function getHandlePositions(sx: number, sy: number, ex: number, ey: number): Handle[] {
+function getHandlePositions(
+  sx: number,
+  sy: number,
+  ex: number,
+  ey: number,
+): Handle[] {
   const mx = (sx + ex) / 2;
   const my = (sy + ey) / 2;
   return [
     { position: 'nw', screenX: sx, screenY: sy },
-    { position: 'n',  screenX: mx, screenY: sy },
+    { position: 'n', screenX: mx, screenY: sy },
     { position: 'ne', screenX: ex, screenY: sy },
-    { position: 'w',  screenX: sx, screenY: my },
-    { position: 'e',  screenX: ex, screenY: my },
+    { position: 'w', screenX: sx, screenY: my },
+    { position: 'e', screenX: ex, screenY: my },
     { position: 'sw', screenX: sx, screenY: ey },
-    { position: 's',  screenX: mx, screenY: ey },
+    { position: 's', screenX: mx, screenY: ey },
     { position: 'se', screenX: ex, screenY: ey },
   ];
 }
@@ -562,7 +611,10 @@ export function getSelectionHandles(
   viewport: Viewport,
 ): Handle[] {
   if (elements.length === 0) return [];
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
   for (const el of elements) {
     const { x, y, w, h } = getElementBounds(el);
     minX = Math.min(minX, x);

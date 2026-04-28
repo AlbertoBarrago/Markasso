@@ -1,8 +1,8 @@
 import type { History } from '../engine/history';
 import { getElementBounds } from '../rendering/draw_selection';
 
-const MM_W = 168;   // minimap canvas logical width
-const MM_H = 100;   // minimap canvas logical height
+const MM_W = 168; // minimap canvas logical width
+const MM_H = 100; // minimap canvas logical height
 const PADDING = 20; // world-space padding around the scene bounds
 
 export function initMinimap(workspace: HTMLElement, history: History): void {
@@ -15,24 +15,24 @@ export function initMinimap(workspace: HTMLElement, history: History): void {
   workspace.appendChild(container);
 
   const mmCanvas = document.createElement('canvas');
-  mmCanvas.width  = MM_W * devicePixelRatio;
+  mmCanvas.width = MM_W * devicePixelRatio;
   mmCanvas.height = MM_H * devicePixelRatio;
-  mmCanvas.style.width  = MM_W + 'px';
-  mmCanvas.style.height = MM_H + 'px';
+  mmCanvas.style.width = `${MM_W}px`;
+  mmCanvas.style.height = `${MM_H}px`;
   container.appendChild(mmCanvas);
 
   const ctx = mmCanvas.getContext('2d')!;
 
   // ── State ─────────────────────────────────────────────────────────────────
   // Maps world coords ↔ minimap pixel coords
-  let worldLeft   = 0;
-  let worldTop    = 0;
+  let worldLeft = 0;
+  let worldTop = 0;
   let worldToMmScale = 1; // pixels per world unit in the minimap
 
   function worldToMm(wx: number, wy: number): [number, number] {
     return [
-      (wx - worldLeft)  * worldToMmScale * devicePixelRatio,
-      (wy - worldTop)   * worldToMmScale * devicePixelRatio,
+      (wx - worldLeft) * worldToMmScale * devicePixelRatio,
+      (wy - worldTop) * worldToMmScale * devicePixelRatio,
     ];
   }
 
@@ -51,23 +51,32 @@ export function initMinimap(workspace: HTMLElement, history: History): void {
     ctx.clearRect(0, 0, mmCanvas.width, mmCanvas.height);
 
     // Background
-    const bg = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg').trim() || '#141414';
+    const bg =
+      getComputedStyle(document.documentElement)
+        .getPropertyValue('--canvas-bg')
+        .trim() || '#141414';
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, mmCanvas.width, mmCanvas.height);
 
     if (elements.length === 0) {
       // Show only viewport rect on empty canvas
       worldLeft = -window.innerWidth / 2;
-      worldTop  = -window.innerHeight / 2;
+      worldTop = -window.innerHeight / 2;
       const worldW = window.innerWidth;
       const worldH = window.innerHeight;
-      worldToMmScale = Math.min(MM_W / (worldW + PADDING * 2), MM_H / (worldH + PADDING * 2));
+      worldToMmScale = Math.min(
+        MM_W / (worldW + PADDING * 2),
+        MM_H / (worldH + PADDING * 2),
+      );
       drawViewportRect(viewport);
       return;
     }
 
     // Compute scene bounding box
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
     for (const el of elements) {
       if (el.visible === false) continue;
       const b = getElementBounds(el);
@@ -78,14 +87,14 @@ export function initMinimap(workspace: HTMLElement, history: History): void {
     }
 
     // Include viewport in bounds so the viewport rect is always visible
-    const vpLeft   = (0 - viewport.offsetX) / viewport.zoom;
-    const vpTop    = (0 - viewport.offsetY) / viewport.zoom;
-    const vpRight  = (window.innerWidth  - viewport.offsetX) / viewport.zoom;
+    const vpLeft = (0 - viewport.offsetX) / viewport.zoom;
+    const vpTop = (0 - viewport.offsetY) / viewport.zoom;
+    const vpRight = (window.innerWidth - viewport.offsetX) / viewport.zoom;
     const vpBottom = (window.innerHeight - viewport.offsetY) / viewport.zoom;
 
-    minX = Math.min(minX, vpLeft)   - PADDING;
-    minY = Math.min(minY, vpTop)    - PADDING;
-    maxX = Math.max(maxX, vpRight)  + PADDING;
+    minX = Math.min(minX, vpLeft) - PADDING;
+    minY = Math.min(minY, vpTop) - PADDING;
+    maxX = Math.max(maxX, vpRight) + PADDING;
     maxY = Math.max(maxY, vpBottom) + PADDING;
 
     const worldW = maxX - minX;
@@ -96,24 +105,26 @@ export function initMinimap(workspace: HTMLElement, history: History): void {
     const scaledW = worldW * worldToMmScale;
     const scaledH = worldH * worldToMmScale;
     worldLeft = minX - (MM_W / worldToMmScale - worldW) / 2;
-    worldTop  = minY - (MM_H / worldToMmScale - worldH) / 2;
+    worldTop = minY - (MM_H / worldToMmScale - worldH) / 2;
 
     // Center unused space
-    const offX = (MM_W - scaledW) / 2 * devicePixelRatio;
-    const offY = (MM_H - scaledH) / 2 * devicePixelRatio;
+    const offX = ((MM_W - scaledW) / 2) * devicePixelRatio;
+    const offY = ((MM_H - scaledH) / 2) * devicePixelRatio;
 
     // Draw elements as simplified shapes
     ctx.save();
-    ctx.translate(offX - worldLeft * worldToMmScale * devicePixelRatio,
-                  offY - worldTop  * worldToMmScale * devicePixelRatio);
+    ctx.translate(
+      offX - worldLeft * worldToMmScale * devicePixelRatio,
+      offY - worldTop * worldToMmScale * devicePixelRatio,
+    );
 
     for (const el of elements) {
       if (el.visible === false) continue;
       const b = getElementBounds(el);
-      const x  = b.x * worldToMmScale * devicePixelRatio;
-      const y  = b.y * worldToMmScale * devicePixelRatio;
-      const w  = Math.max(1, b.w * worldToMmScale * devicePixelRatio);
-      const h  = Math.max(1, b.h * worldToMmScale * devicePixelRatio);
+      const x = b.x * worldToMmScale * devicePixelRatio;
+      const y = b.y * worldToMmScale * devicePixelRatio;
+      const w = Math.max(1, b.w * worldToMmScale * devicePixelRatio);
+      const h = Math.max(1, b.h * worldToMmScale * devicePixelRatio);
 
       ctx.globalAlpha = el.opacity ?? 1;
 
@@ -122,7 +133,10 @@ export function initMinimap(workspace: HTMLElement, history: History): void {
         ctx.fillRect(x, y, w, h);
       }
       ctx.strokeStyle = el.strokeColor;
-      ctx.lineWidth   = Math.max(0.5, (el.strokeWidth ?? 1) * worldToMmScale * devicePixelRatio * 0.5);
+      ctx.lineWidth = Math.max(
+        0.5,
+        (el.strokeWidth ?? 1) * worldToMmScale * devicePixelRatio * 0.5,
+      );
       ctx.globalAlpha = (el.opacity ?? 1) * 0.8;
       ctx.strokeRect(x, y, w, h);
     }
@@ -132,16 +146,20 @@ export function initMinimap(workspace: HTMLElement, history: History): void {
 
     // Correct worldLeft/worldTop for drawViewportRect (they account for centering)
     worldLeft = minX - (MM_W / worldToMmScale - worldW) / 2;
-    worldTop  = minY - (MM_H / worldToMmScale - worldH) / 2;
+    worldTop = minY - (MM_H / worldToMmScale - worldH) / 2;
 
     drawViewportRect(viewport);
   }
 
-  function drawViewportRect(viewport: { zoom: number; offsetX: number; offsetY: number }): void {
+  function drawViewportRect(viewport: {
+    zoom: number;
+    offsetX: number;
+    offsetY: number;
+  }): void {
     // Viewport corners in world space
     const vl = (0 - viewport.offsetX) / viewport.zoom;
     const vt = (0 - viewport.offsetY) / viewport.zoom;
-    const vr = (window.innerWidth  - viewport.offsetX) / viewport.zoom;
+    const vr = (window.innerWidth - viewport.offsetX) / viewport.zoom;
     const vb = (window.innerHeight - viewport.offsetY) / viewport.zoom;
 
     const [sx, sy] = worldToMm(vl, vt);
@@ -158,7 +176,7 @@ export function initMinimap(workspace: HTMLElement, history: History): void {
 
     // Border
     ctx.strokeStyle = 'rgba(100,160,255,0.6)';
-    ctx.lineWidth   = devicePixelRatio;
+    ctx.lineWidth = devicePixelRatio;
     ctx.setLineDash([]);
     ctx.strokeRect(rectX + 0.5, rectY + 0.5, rectW - 1, rectH - 1);
   }
@@ -169,13 +187,17 @@ export function initMinimap(workspace: HTMLElement, history: History): void {
   function panTo(e: MouseEvent): void {
     const rect = mmCanvas.getBoundingClientRect();
     const mx = (e.clientX - rect.left) * devicePixelRatio;
-    const my = (e.clientY - rect.top)  * devicePixelRatio;
+    const my = (e.clientY - rect.top) * devicePixelRatio;
     const [wx, wy] = mmToWorld(mx, my);
     const vp = history.present.viewport;
     // Center the viewport on (wx, wy)
-    const offsetX = window.innerWidth  / 2 - wx * vp.zoom;
+    const offsetX = window.innerWidth / 2 - wx * vp.zoom;
     const offsetY = window.innerHeight / 2 - wy * vp.zoom;
-    history.dispatch({ type: 'PAN_VIEWPORT', dx: offsetX - vp.offsetX, dy: offsetY - vp.offsetY });
+    history.dispatch({
+      type: 'PAN_VIEWPORT',
+      dx: offsetX - vp.offsetX,
+      dy: offsetY - vp.offsetY,
+    });
   }
 
   mmCanvas.addEventListener('mousedown', (e) => {
@@ -189,7 +211,9 @@ export function initMinimap(workspace: HTMLElement, history: History): void {
     if (dragging) panTo(e);
   });
 
-  window.addEventListener('mouseup', () => { dragging = false; });
+  window.addEventListener('mouseup', () => {
+    dragging = false;
+  });
 
   // ── Subscribe and initial paint ───────────────────────────────────────────
   history.subscribe(() => paint());

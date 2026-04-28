@@ -1,33 +1,50 @@
-import type { Tool, ToolContext } from './tool';
+import { worldToScreen } from '../core/viewport';
 import type { Element } from '../elements/element';
+import { distToQuadraticCurve } from '../rendering/connector_geometry';
 import type { HandlePosition } from '../rendering/draw_selection';
 import {
-  getElementBounds,
-  getElementBorderPoint,
   distToShapeBoundary,
-  resolveArrowEndpoints,
-  hitTestHandle,
-  getSelectionHandles,
-  getRotationHandleScreen,
+  getElementBorderPoint,
+  getElementBounds,
   getElementCenter,
+  getRotationHandleScreen,
+  getSelectionHandles,
   hitTestEndpoint,
+  hitTestHandle,
   ROTATION_HANDLE_R,
+  resolveArrowEndpoints,
 } from '../rendering/draw_selection';
-import { worldToScreen } from '../core/viewport';
-import { distToQuadraticCurve } from '../rendering/connector_geometry';
+import type { Tool, ToolContext } from './tool';
 
-type DragMode = 'none' | 'move' | 'marquee' | 'resize' | 'rotate' | 'endpoint' | 'curve-cp' | 'line-cp';
+type DragMode =
+  | 'none'
+  | 'move'
+  | 'marquee'
+  | 'resize'
+  | 'rotate'
+  | 'endpoint'
+  | 'curve-cp'
+  | 'line-cp';
 
 const SNAP_RADIUS_PX = 20;
 
 const HANDLE_CURSORS: Record<HandlePosition, string> = {
-  nw: 'nw-resize', n: 'ns-resize', ne: 'ne-resize',
-  w:  'ew-resize',                  e: 'ew-resize',
-  sw: 'sw-resize', s: 'ns-resize', se: 'se-resize',
+  nw: 'nw-resize',
+  n: 'ns-resize',
+  ne: 'ne-resize',
+  w: 'ew-resize',
+  e: 'ew-resize',
+  sw: 'sw-resize',
+  s: 'ns-resize',
+  se: 'se-resize',
 };
 
 export class SelectTool implements Tool {
-  private readonly handleTolerance = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches ? 14 : 8;
+  private readonly handleTolerance =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(pointer: coarse)').matches
+      ? 14
+      : 8;
   private dragMode: DragMode = 'none';
   private lastWorldX = 0;
   private lastWorldY = 0;
@@ -49,13 +66,21 @@ export class SelectTool implements Tool {
   // Resize state — captured at mousedown, used throughout the drag
   private resizeHandle: HandlePosition | null = null;
   private resizeOrigEl: Element | null = null;
-  private resizeOrigBounds: { x: number; y: number; w: number; h: number } | null = null;
+  private resizeOrigBounds: {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } | null = null;
   private resizeAnchorX = 0;
   private resizeAnchorY = 0;
   private resizeInitialSignX = 1;
   private resizeInitialSignY = 1;
   // Original bounds per element for multi-selection resize (keyed by element id)
-  private resizeOrigElBounds = new Map<string, { x: number; y: number; w: number; h: number }>();
+  private resizeOrigElBounds = new Map<
+    string,
+    { x: number; y: number; w: number; h: number }
+  >();
 
   // Curve control-point drag state (legacy CurveElement)
   private curveCpElId: string | null = null;
@@ -69,7 +94,11 @@ export class SelectTool implements Tool {
   // Endpoint drag state
   private endpointSide: 'start' | 'end' | null = null;
   private endpointElId: string | null = null;
-  private endpointSnapTarget: { worldX: number; worldY: number; elementId: string } | null = null;
+  private endpointSnapTarget: {
+    worldX: number;
+    worldY: number;
+    elementId: string;
+  } | null = null;
 
   /** Exposed for canvas_view to draw a snap indicator */
   endpointSnapIndicator: { worldX: number; worldY: number } | null = null;
@@ -120,12 +149,19 @@ export class SelectTool implements Tool {
       shadowColor: sourceElement.shadowColor,
       shadowOffsetX: sourceElement.shadowOffsetX,
       shadowOffsetY: sourceElement.shadowOffsetY,
-      ...(sourceElement.type === 'rectangle' || sourceElement.type === 'rhombus' ? { cornerRadius: sourceElement.cornerRadius } : {}),
+      ...(sourceElement.type === 'rectangle' || sourceElement.type === 'rhombus'
+        ? { cornerRadius: sourceElement.cornerRadius }
+        : {}),
     };
     this.formatPainterActive = true;
   }
 
-  onMouseDown(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+  onMouseDown(
+    e: MouseEvent,
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void {
     // Format painter mode: apply captured style to clicked element
     if (this.formatPainterActive) {
       const scene = ctx.history.present;
@@ -149,7 +185,9 @@ export class SelectTool implements Tool {
     this.lastWorldY = worldY;
 
     const scene = ctx.history.present;
-    const selectedEls = scene.elements.filter((el) => scene.selectedIds.has(el.id));
+    const selectedEls = scene.elements.filter((el) =>
+      scene.selectedIds.has(el.id),
+    );
     const rect = ctx.canvas.getBoundingClientRect();
     const screenX = e.clientX - rect.left;
     const screenY = e.clientY - rect.top;
@@ -212,7 +250,10 @@ export class SelectTool implements Tool {
     if (selectedEls.length > 0) {
       const rotHandlePos = getRotationHandleScreen(selectedEls, scene.viewport);
       if (rotHandlePos) {
-        const dist = Math.hypot(screenX - rotHandlePos.screenX, screenY - rotHandlePos.screenY);
+        const dist = Math.hypot(
+          screenX - rotHandlePos.screenX,
+          screenY - rotHandlePos.screenY,
+        );
         if (dist <= ROTATION_HANDLE_R + 4) {
           // Only support rotation for single element
           if (selectedEls.length === 1) {
@@ -235,7 +276,12 @@ export class SelectTool implements Tool {
     // 3. Check if a resize handle was clicked
     if (selectedEls.length > 0) {
       const handles = getSelectionHandles(selectedEls, scene.viewport);
-      const hitHandle = hitTestHandle(handles, screenX, screenY, this.handleTolerance);
+      const hitHandle = hitTestHandle(
+        handles,
+        screenX,
+        screenY,
+        this.handleTolerance,
+      );
 
       if (hitHandle) {
         this.dragMode = 'resize';
@@ -247,7 +293,10 @@ export class SelectTool implements Tool {
           // Multi-selection: treat union bounds as the resize surface
           this.resizeOrigEl = null;
           this.resizeOrigElBounds.clear();
-          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          let minX = Infinity,
+            minY = Infinity,
+            maxX = -Infinity,
+            maxY = -Infinity;
           for (const el of selectedEls) {
             const b = getElementBounds(el);
             this.resizeOrigElBounds.set(el.id, b);
@@ -256,7 +305,12 @@ export class SelectTool implements Tool {
             maxX = Math.max(maxX, b.x + b.w);
             maxY = Math.max(maxY, b.y + b.h);
           }
-          this.resizeOrigBounds = { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+          this.resizeOrigBounds = {
+            x: minX,
+            y: minY,
+            w: maxX - minX,
+            h: maxY - minY,
+          };
         }
         this.resizeAnchorX = anchorX(hitHandle, this.resizeOrigBounds);
         this.resizeAnchorY = anchorY(hitHandle, this.resizeOrigBounds);
@@ -320,7 +374,12 @@ export class SelectTool implements Tool {
     }
   }
 
-  onMouseMove(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+  onMouseMove(
+    e: MouseEvent,
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void {
     if (this.dragMode === 'curve-cp' && this.curveCpElId) {
       ctx.history.dispatch({
         type: 'RESIZE_ELEMENT',
@@ -344,7 +403,11 @@ export class SelectTool implements Tool {
     if (this.dragMode === 'endpoint') {
       const scene = ctx.history.present;
       const el = scene.elements.find((el) => el.id === this.endpointElId);
-      if (el && (el.type === 'line' || el.type === 'arrow') && this.endpointSide) {
+      if (
+        el &&
+        (el.type === 'line' || el.type === 'arrow') &&
+        this.endpointSide
+      ) {
         // Determine the "other end" position for computing border facing direction
         const resolved = resolveArrowEndpoints(el, scene.elements);
         const otherX = this.endpointSide === 'start' ? resolved.x2 : resolved.x;
@@ -352,7 +415,11 @@ export class SelectTool implements Tool {
 
         // Check for snap to element perimeter
         const snapRadius = SNAP_RADIUS_PX / scene.viewport.zoom;
-        let snapTarget: { worldX: number; worldY: number; elementId: string } | null = null;
+        let snapTarget: {
+          worldX: number;
+          worldY: number;
+          elementId: string;
+        } | null = null;
         let bestSnapDist = Infinity;
         for (const candidate of scene.elements) {
           if (candidate.id === el.id) continue;
@@ -369,16 +436,28 @@ export class SelectTool implements Tool {
           }
         }
         this.endpointSnapTarget = snapTarget;
-        this.endpointSnapIndicator = snapTarget ? { worldX: snapTarget.worldX, worldY: snapTarget.worldY } : null;
+        this.endpointSnapIndicator = snapTarget
+          ? { worldX: snapTarget.worldX, worldY: snapTarget.worldY }
+          : null;
         this.endpointSnapElementId = snapTarget ? snapTarget.elementId : null;
 
         const resolvedX = snapTarget ? snapTarget.worldX : worldX;
         const resolvedY = snapTarget ? snapTarget.worldY : worldY;
 
         if (this.endpointSide === 'start') {
-          ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: el.id, x: resolvedX, y: resolvedY });
+          ctx.history.dispatch({
+            type: 'RESIZE_ELEMENT',
+            id: el.id,
+            x: resolvedX,
+            y: resolvedY,
+          });
         } else {
-          ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: el.id, x2: resolvedX, y2: resolvedY });
+          ctx.history.dispatch({
+            type: 'RESIZE_ELEMENT',
+            id: el.id,
+            x2: resolvedX,
+            y2: resolvedY,
+          });
         }
       }
       ctx.onPreviewUpdate?.();
@@ -388,14 +467,19 @@ export class SelectTool implements Tool {
     if (this.dragMode === 'rotate') {
       const [cx, cy] = this.rotateCenter;
       const angle = Math.atan2(worldY - cy, worldX - cx);
-      let rotation = this.rotateInitialRotation + (angle - this.rotateInitialAngle);
+      let rotation =
+        this.rotateInitialRotation + (angle - this.rotateInitialAngle);
       if (e.shiftKey) {
         const SNAP_DEG = 15;
         const snapRad = (SNAP_DEG * Math.PI) / 180;
         rotation = Math.round(rotation / snapRad) * snapRad;
       }
       if (this.rotateElId) {
-        ctx.history.dispatch({ type: 'SET_ROTATION', id: this.rotateElId, rotation });
+        ctx.history.dispatch({
+          type: 'SET_ROTATION',
+          id: this.rotateElId,
+          rotation,
+        });
       }
       ctx.onPreviewUpdate?.();
       return;
@@ -406,15 +490,14 @@ export class SelectTool implements Tool {
         const rect = ctx.canvas.getBoundingClientRect();
         const sx = e.clientX - rect.left;
         const sy = e.clientY - rect.top;
-        if (Math.hypot(sx - this.mouseDownScreenX, sy - this.mouseDownScreenY) < 4) return;
+        if (
+          Math.hypot(sx - this.mouseDownScreenX, sy - this.mouseDownScreenY) < 4
+        )
+          return;
         this.dragThresholdMet = true;
       }
       const scene = ctx.history.present;
-      if (
-        this.resizeHandle &&
-        this.resizeOrigEl &&
-        this.resizeOrigBounds
-      ) {
+      if (this.resizeHandle && this.resizeOrigEl && this.resizeOrigBounds) {
         const resized = computeResize(
           this.resizeOrigEl,
           this.resizeHandle,
@@ -428,15 +511,32 @@ export class SelectTool implements Tool {
           this.resizeInitialSignY,
         );
         if (resized) {
-          ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: this.resizeOrigEl.id, ...resized });
+          ctx.history.dispatch({
+            type: 'RESIZE_ELEMENT',
+            id: this.resizeOrigEl.id,
+            ...resized,
+          });
         }
-      } else if (this.resizeHandle && this.resizeOrigBounds && !this.resizeOrigEl) {
+      } else if (
+        this.resizeHandle &&
+        this.resizeOrigBounds &&
+        !this.resizeOrigEl
+      ) {
         // Multi-selection proportional scale
-        const selectedEls = scene.elements.filter((el) => scene.selectedIds.has(el.id));
+        const selectedEls = scene.elements.filter((el) =>
+          scene.selectedIds.has(el.id),
+        );
         const ob = this.resizeOrigBounds;
         const newBounds = newBoundsFromHandle(
-          this.resizeHandle, this.resizeAnchorX, this.resizeAnchorY, worldX, worldY, ob, e.shiftKey,
-          this.resizeInitialSignX, this.resizeInitialSignY,
+          this.resizeHandle,
+          this.resizeAnchorX,
+          this.resizeAnchorY,
+          worldX,
+          worldY,
+          ob,
+          e.shiftKey,
+          this.resizeInitialSignX,
+          this.resizeInitialSignY,
         );
         if (newBounds && ob.w > 0 && ob.h > 0) {
           const scaleX = newBounds.w / ob.w;
@@ -444,11 +544,23 @@ export class SelectTool implements Tool {
           for (const el of selectedEls) {
             // Use original bounds captured at mousedown — not current bounds — to
             // prevent each mousemove from multiplying on top of the previous resize.
-            const b = this.resizeOrigElBounds.get(el.id) ?? getElementBounds(el);
+            const b =
+              this.resizeOrigElBounds.get(el.id) ?? getElementBounds(el);
             const relX = (b.x - ob.x) * scaleX + newBounds.x;
             const relY = (b.y - ob.y) * scaleY + newBounds.y;
-            const resized = scaleElement(el, relX, relY, b.w * scaleX, b.h * scaleY);
-            if (resized) ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: el.id, ...resized });
+            const resized = scaleElement(
+              el,
+              relX,
+              relY,
+              b.w * scaleX,
+              b.h * scaleY,
+            );
+            if (resized)
+              ctx.history.dispatch({
+                type: 'RESIZE_ELEMENT',
+                id: el.id,
+                ...resized,
+              });
           }
         }
       }
@@ -458,7 +570,10 @@ export class SelectTool implements Tool {
 
     if (this.dragMode === 'move') {
       if (this.altClonePending) {
-        const dist = Math.hypot(worldX - this.lastWorldX, worldY - this.lastWorldY);
+        const dist = Math.hypot(
+          worldX - this.lastWorldX,
+          worldY - this.lastWorldY,
+        );
         if (dist < 2) return;
         // drag: clone the selection and move clones
         this.altClonePending = false;
@@ -468,16 +583,26 @@ export class SelectTool implements Tool {
         const altIds = altScene.selectedIds.has(altHit.id)
           ? [...altScene.selectedIds]
           : [altHit.id];
-        const altEls = altScene.elements.filter((el) => altIds.includes(el.id) && !el.locked);
+        const altEls = altScene.elements.filter(
+          (el) => altIds.includes(el.id) && !el.locked,
+        );
         if (altEls.length > 0) {
-          const newElements = altEls.map((el) => ({ ...el, id: crypto.randomUUID() } as Element));
-          ctx.history.dispatch({ type: 'CREATE_ELEMENTS', elements: newElements });
+          const newElements = altEls.map(
+            (el) => ({ ...el, id: crypto.randomUUID() }) as Element,
+          );
+          ctx.history.dispatch({
+            type: 'CREATE_ELEMENTS',
+            elements: newElements,
+          });
         }
         // fall through to move the newly selected clones
       }
 
       if (this.shiftClonePending) {
-        const dist = Math.hypot(worldX - this.lastWorldX, worldY - this.lastWorldY);
+        const dist = Math.hypot(
+          worldX - this.lastWorldX,
+          worldY - this.lastWorldY,
+        );
         if (dist < 2) return;
         // It's a drag: clone and drag
         this.shiftClonePending = false;
@@ -487,10 +612,17 @@ export class SelectTool implements Tool {
         const idsToClone = scene.selectedIds.has(hit.id)
           ? [...scene.selectedIds]
           : [hit.id];
-        const elsToClone = scene.elements.filter((el) => idsToClone.includes(el.id) && !el.locked);
+        const elsToClone = scene.elements.filter(
+          (el) => idsToClone.includes(el.id) && !el.locked,
+        );
         if (elsToClone.length > 0) {
-          const newElements = elsToClone.map((el) => ({ ...el, id: crypto.randomUUID() } as Element));
-          ctx.history.dispatch({ type: 'CREATE_ELEMENTS', elements: newElements });
+          const newElements = elsToClone.map(
+            (el) => ({ ...el, id: crypto.randomUUID() }) as Element,
+          );
+          ctx.history.dispatch({
+            type: 'CREATE_ELEMENTS',
+            elements: newElements,
+          });
           // CREATE_ELEMENTS selects the clones — subsequent moves drag them
         }
         // Fall through to move the newly selected clones
@@ -510,7 +642,11 @@ export class SelectTool implements Tool {
       this.lastWorldY = worldY;
 
       // Compute alignment guides from updated scene state
-      this.alignGuides = computeAlignGuides(ctx.history.present.elements, ctx.history.present.selectedIds, ctx.history.present.viewport.zoom);
+      this.alignGuides = computeAlignGuides(
+        ctx.history.present.elements,
+        ctx.history.present.selectedIds,
+        ctx.history.present.viewport.zoom,
+      );
       return;
     }
 
@@ -534,7 +670,12 @@ export class SelectTool implements Tool {
     this.hoveredId = null;
   }
 
-  onMouseUp(_e: MouseEvent, _worldX: number, _worldY: number, ctx: ToolContext): void {
+  onMouseUp(
+    _e: MouseEvent,
+    _worldX: number,
+    _worldY: number,
+    ctx: ToolContext,
+  ): void {
     // Shift+click (no drag): fall back to toggle selection
     if (this.shiftClonePending && this.shiftCloneTarget) {
       const hit = this.shiftCloneTarget;
@@ -543,7 +684,8 @@ export class SelectTool implements Tool {
       const newIds = scene.selectedIds.has(hit.id)
         ? currentIds.filter((id) => id !== hit.id)
         : [...currentIds, hit.id];
-      if (newIds.length > 0) ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
+      if (newIds.length > 0)
+        ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
       else ctx.history.dispatch({ type: 'CLEAR_SELECTION' });
     }
     this.shiftClonePending = false;
@@ -570,15 +712,22 @@ export class SelectTool implements Tool {
       const ids = scene.elements
         .filter((el) => {
           const b = getElementBounds(el);
-          return b.x >= wx1 && b.y >= wy1 && b.x + b.w <= wx2 && b.y + b.h <= wy2;
+          return (
+            b.x >= wx1 && b.y >= wy1 && b.x + b.w <= wx2 && b.y + b.h <= wy2
+          );
         })
         .map((el) => el.id);
 
-      if (ids.length > 0) ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids });
+      if (ids.length > 0)
+        ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids });
     }
 
     // Commit endpoint connection on mouseup
-    if (this.dragMode === 'endpoint' && this.endpointElId && this.endpointSide) {
+    if (
+      this.dragMode === 'endpoint' &&
+      this.endpointElId &&
+      this.endpointSide
+    ) {
       const snap = this.endpointSnapTarget;
       if (this.endpointSide === 'start') {
         ctx.history.dispatch({
@@ -605,8 +754,12 @@ export class SelectTool implements Tool {
       this.lineCpElId = null;
     }
 
-    if (this.dragMode === 'resize' || this.dragMode === 'move' ||
-        this.dragMode === 'rotate' || this.dragMode === 'endpoint') {
+    if (
+      this.dragMode === 'resize' ||
+      this.dragMode === 'move' ||
+      this.dragMode === 'rotate' ||
+      this.dragMode === 'endpoint'
+    ) {
       ctx.history.endDrag();
     }
 
@@ -660,14 +813,14 @@ export class SelectTool implements Tool {
       return;
     }
 
-
     // Arrow key nudge — 1px normally, 10px with Shift
     const NUDGE = e.shiftKey ? 10 : 1;
-    let dx = 0, dy = 0;
-    if (e.key === 'ArrowLeft')  dx = -NUDGE;
-    if (e.key === 'ArrowRight') dx =  NUDGE;
-    if (e.key === 'ArrowUp')    dy = -NUDGE;
-    if (e.key === 'ArrowDown')  dy =  NUDGE;
+    let dx = 0,
+      dy = 0;
+    if (e.key === 'ArrowLeft') dx = -NUDGE;
+    if (e.key === 'ArrowRight') dx = NUDGE;
+    if (e.key === 'ArrowUp') dy = -NUDGE;
+    if (e.key === 'ArrowDown') dy = NUDGE;
     if (dx !== 0 || dy !== 0) {
       e.preventDefault();
       const ids = [...ctx.history.present.selectedIds];
@@ -680,7 +833,9 @@ export class SelectTool implements Tool {
   getCursor(worldX: number, worldY: number, ctx: ToolContext): string {
     if (this.formatPainterActive) return 'crosshair';
     const scene = ctx.history.present;
-    const selectedEls = scene.elements.filter((el) => scene.selectedIds.has(el.id));
+    const selectedEls = scene.elements.filter((el) =>
+      scene.selectedIds.has(el.id),
+    );
     const [screenX, screenY] = worldToScreen(scene.viewport, worldX, worldY);
 
     if (selectedEls.length > 0) {
@@ -714,13 +869,21 @@ export class SelectTool implements Tool {
       // Check rotation handle
       const rotHandlePos = getRotationHandleScreen(selectedEls, scene.viewport);
       if (rotHandlePos) {
-        const dist = Math.hypot(screenX - rotHandlePos.screenX, screenY - rotHandlePos.screenY);
+        const dist = Math.hypot(
+          screenX - rotHandlePos.screenX,
+          screenY - rotHandlePos.screenY,
+        );
         if (dist <= ROTATION_HANDLE_R + 4) return 'grab';
       }
 
       // Check resize handles
       const handles = getSelectionHandles(selectedEls, scene.viewport);
-      const hit = hitTestHandle(handles, screenX, screenY, this.handleTolerance);
+      const hit = hitTestHandle(
+        handles,
+        screenX,
+        screenY,
+        this.handleTolerance,
+      );
       if (hit) return HANDLE_CURSORS[hit];
     }
 
@@ -732,21 +895,31 @@ export class SelectTool implements Tool {
 // ── Resize helpers ─────────────────────────────────────────────────────────────
 
 type ResizePayload = {
-  x?: number; y?: number;
-  width?: number; height?: number;
-  x2?: number; y2?: number;
-  cx?: number; cy?: number;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  x2?: number;
+  y2?: number;
+  cx?: number;
+  cy?: number;
   fontSize?: number;
   points?: ReadonlyArray<readonly [number, number]>;
 };
 
-function anchorX(h: HandlePosition, b: { x: number; y: number; w: number; h: number }): number {
+function anchorX(
+  h: HandlePosition,
+  b: { x: number; y: number; w: number; h: number },
+): number {
   if (h === 'nw' || h === 'w' || h === 'sw') return b.x + b.w;
   if (h === 'ne' || h === 'e' || h === 'se') return b.x;
   return b.x + b.w / 2; // n/s — unused (x axis fixed)
 }
 
-function anchorY(h: HandlePosition, b: { x: number; y: number; w: number; h: number }): number {
+function anchorY(
+  h: HandlePosition,
+  b: { x: number; y: number; w: number; h: number },
+): number {
   if (h === 'nw' || h === 'n' || h === 'ne') return b.y + b.h;
   if (h === 'sw' || h === 's' || h === 'se') return b.y;
   return b.y + b.h / 2; // w/e — unused (y axis fixed)
@@ -754,8 +927,10 @@ function anchorY(h: HandlePosition, b: { x: number; y: number; w: number; h: num
 
 function newBoundsFromHandle(
   handle: HandlePosition,
-  ax: number, ay: number,
-  curX: number, curY: number,
+  ax: number,
+  ay: number,
+  curX: number,
+  curY: number,
   orig: { x: number; y: number; w: number; h: number },
   shiftKey = false,
   initialSignX = 1,
@@ -777,8 +952,13 @@ function newBoundsFromHandle(
     const sx = initialSignX;
     const sy = initialSignY;
     let finalW: number, finalH: number;
-    if (rawW / rawH > ar) { finalH = rawH; finalW = rawH * ar; }
-    else                  { finalW = rawW; finalH = rawW / ar; }
+    if (rawW / rawH > ar) {
+      finalH = rawH;
+      finalW = rawH * ar;
+    } else {
+      finalW = rawW;
+      finalH = rawW / ar;
+    }
     minX = Math.min(ax, ax + sx * finalW);
     maxX = Math.max(ax, ax + sx * finalW);
     minY = Math.min(ay, ay + sy * finalH);
@@ -793,8 +973,10 @@ function newBoundsFromHandle(
 
 function scaleElement(
   el: Element,
-  newX: number, newY: number,
-  newW: number, newH: number,
+  newX: number,
+  newY: number,
+  newW: number,
+  newH: number,
 ): ResizePayload | null {
   switch (el.type) {
     case 'rectangle':
@@ -832,10 +1014,13 @@ function scaleElement(
       if (origB.w === 0 || origB.h === 0) return null;
       const scaleX = newW / origB.w;
       const scaleY = newH / origB.h;
-      const points = el.points.map(([px, py]) => [
-        newX + (px - origB.x) * scaleX,
-        newY + (py - origB.y) * scaleY,
-      ] as const);
+      const points = el.points.map(
+        ([px, py]) =>
+          [
+            newX + (px - origB.x) * scaleX,
+            newY + (py - origB.y) * scaleY,
+          ] as const,
+      );
       return { x: newX, y: newY, points };
     }
     case 'image':
@@ -846,21 +1031,37 @@ function scaleElement(
 function computeResize(
   el: Element,
   handle: HandlePosition,
-  ax: number, ay: number,
-  curX: number, curY: number,
+  ax: number,
+  ay: number,
+  curX: number,
+  curY: number,
   origBounds: { x: number; y: number; w: number; h: number },
   shiftKey = false,
   initialSignX = 1,
   initialSignY = 1,
 ): ResizePayload | null {
-  const nb = newBoundsFromHandle(handle, ax, ay, curX, curY, origBounds, shiftKey, initialSignX, initialSignY);
+  const nb = newBoundsFromHandle(
+    handle,
+    ax,
+    ay,
+    curX,
+    curY,
+    origBounds,
+    shiftKey,
+    initialSignX,
+    initialSignY,
+  );
   if (!nb) return null;
   return scaleElement(el, nb.x, nb.y, nb.w, nb.h);
 }
 
 // ── Hit testing ───────────────────────────────────────────────────────────────
 
-function hitTest(elements: ReadonlyArray<Element>, wx: number, wy: number): Element | null {
+function hitTest(
+  elements: ReadonlyArray<Element>,
+  wx: number,
+  wy: number,
+): Element | null {
   for (let i = elements.length - 1; i >= 0; i--) {
     const el = elements[i];
     if (el && hitTestElement(el, wx, wy)) return el;
@@ -892,7 +1093,9 @@ function hitTestElement(el: Element, wx: number, wy: number): boolean {
       const y = el.height < 0 ? el.y + el.height : el.y;
       const w = Math.abs(el.width);
       const h = Math.abs(el.height);
-      return lx >= x - PAD && lx <= x + w + PAD && ly >= y - PAD && ly <= y + h + PAD;
+      return (
+        lx >= x - PAD && lx <= x + w + PAD && ly >= y - PAD && ly <= y + h + PAD
+      );
     }
     case 'ellipse': {
       const cx = el.x + el.width / 2;
@@ -915,34 +1118,63 @@ function hitTestElement(el: Element, wx: number, wy: number): boolean {
     }
     case 'line':
       if (el.cx !== undefined && el.cy !== undefined) {
-        return distToQuadraticCurve(lx, ly, el.x, el.y, el.cx, el.cy, el.x2, el.y2) < el.strokeWidth / 2 + PAD + 4;
+        return (
+          distToQuadraticCurve(lx, ly, el.x, el.y, el.cx, el.cy, el.x2, el.y2) <
+          el.strokeWidth / 2 + PAD + 4
+        );
       }
-      return distToSegment(lx, ly, el.x, el.y, el.x2, el.y2) < el.strokeWidth / 2 + PAD;
+      return (
+        distToSegment(lx, ly, el.x, el.y, el.x2, el.y2) <
+        el.strokeWidth / 2 + PAD
+      );
     case 'arrow':
-      return distToSegment(lx, ly, el.x, el.y, el.x2, el.y2) < el.strokeWidth / 2 + PAD;
+      return (
+        distToSegment(lx, ly, el.x, el.y, el.x2, el.y2) <
+        el.strokeWidth / 2 + PAD
+      );
     case 'curve':
       // Approximate hit test: check distance to the two segments endpoint→control→endpoint
-      return distToSegment(lx, ly, el.x, el.y, el.cx, el.cy) < el.strokeWidth / 2 + PAD + 6 ||
-             distToSegment(lx, ly, el.cx, el.cy, el.x2, el.y2) < el.strokeWidth / 2 + PAD + 6;
+      return (
+        distToSegment(lx, ly, el.x, el.y, el.cx, el.cy) <
+          el.strokeWidth / 2 + PAD + 6 ||
+        distToSegment(lx, ly, el.cx, el.cy, el.x2, el.y2) <
+          el.strokeWidth / 2 + PAD + 6
+      );
     case 'freehand':
     case 'polygon': {
       for (let i = 1; i < el.points.length; i++) {
         const p1 = el.points[i - 1]!;
         const p2 = el.points[i]!;
-        if (distToSegment(lx, ly, p1[0], p1[1], p2[0], p2[1]) < el.strokeWidth / 2 + PAD) return true;
+        if (
+          distToSegment(lx, ly, p1[0], p1[1], p2[0], p2[1]) <
+          el.strokeWidth / 2 + PAD
+        )
+          return true;
       }
       if (el.type === 'polygon' && el.closed && el.points.length >= 3) {
         const first = el.points[0]!;
         const last = el.points[el.points.length - 1]!;
-        if (distToSegment(lx, ly, last[0], last[1], first[0], first[1]) < el.strokeWidth / 2 + PAD) return true;
+        if (
+          distToSegment(lx, ly, last[0], last[1], first[0], first[1]) <
+          el.strokeWidth / 2 + PAD
+        )
+          return true;
       }
       return false;
     }
   }
 }
 
-function distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
-  const dx = x2 - x1, dy = y2 - y1;
+function distToSegment(
+  px: number,
+  py: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): number {
+  const dx = x2 - x1,
+    dy = y2 - y1;
   const lenSq = dx * dx + dy * dy;
   if (lenSq === 0) return Math.hypot(px - x1, py - y1);
   const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
@@ -957,11 +1189,16 @@ function computeAlignGuides(
   zoom: number,
 ): Array<{ axis: 'x' | 'y'; worldPos: number }> {
   const selected = elements.filter((el) => selectedIds.has(el.id));
-  const others = elements.filter((el) => !selectedIds.has(el.id) && el.visible !== false);
+  const others = elements.filter(
+    (el) => !selectedIds.has(el.id) && el.visible !== false,
+  );
   if (selected.length === 0 || others.length === 0) return [];
 
   // Compute bounding box of all selected elements
-  let selMinX = Infinity, selMinY = Infinity, selMaxX = -Infinity, selMaxY = -Infinity;
+  let selMinX = Infinity,
+    selMinY = Infinity,
+    selMaxX = -Infinity,
+    selMaxY = -Infinity;
   for (const el of selected) {
     const b = getElementBounds(el);
     selMinX = Math.min(selMinX, b.x);
@@ -987,7 +1224,11 @@ function computeAlignGuides(
       for (const ox of otherXEdges) {
         if (Math.abs(sx - ox) <= tol) {
           const pos = Math.round(ox * 100) / 100;
-          if (!guides.some((g) => g.axis === 'x' && Math.abs(g.worldPos - pos) < tol)) {
+          if (
+            !guides.some(
+              (g) => g.axis === 'x' && Math.abs(g.worldPos - pos) < tol,
+            )
+          ) {
             guides.push({ axis: 'x', worldPos: pos });
           }
         }
@@ -998,7 +1239,11 @@ function computeAlignGuides(
       for (const oy of otherYEdges) {
         if (Math.abs(sy - oy) <= tol) {
           const pos = Math.round(oy * 100) / 100;
-          if (!guides.some((g) => g.axis === 'y' && Math.abs(g.worldPos - pos) < tol)) {
+          if (
+            !guides.some(
+              (g) => g.axis === 'y' && Math.abs(g.worldPos - pos) < tol,
+            )
+          ) {
             guides.push({ axis: 'y', worldPos: pos });
           }
         }

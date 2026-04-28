@@ -1,5 +1,5 @@
-import type { Tool, ToolContext } from './tool';
 import type { FreehandElement } from '../elements/element';
+import type { Tool, ToolContext } from './tool';
 
 const MIN_DIST_SQ = 4; // minimum 2px between points (squared) — reduces noise
 const RDP_EPSILON = 0.5; // Ramer-Douglas-Peucker tolerance in world units (lower = smoother)
@@ -13,7 +13,12 @@ export class PenTool implements Tool {
   private smoothedPressures: number[] = [];
   preview: FreehandElement | null = null;
 
-  onMouseDown(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+  onMouseDown(
+    e: MouseEvent,
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void {
     this.drawing = true;
     const pressure = (e as PointerEvent).pressure ?? 0.5;
     this.points = [[worldX, worldY]];
@@ -27,7 +32,12 @@ export class PenTool implements Tool {
     }
   }
 
-  onMouseMove(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+  onMouseMove(
+    e: MouseEvent,
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void {
     if (!this.drawing) return;
 
     // Only record a point if it's far enough from the last one
@@ -43,10 +53,14 @@ export class PenTool implements Tool {
 
     // Apply exponential moving average smoothing
     const prevSmoothed = this.smoothedPoints[this.smoothedPoints.length - 1]!;
-    const smoothedX = prevSmoothed[0] + (worldX - prevSmoothed[0]) * SMOOTHING_FACTOR;
-    const smoothedY = prevSmoothed[1] + (worldY - prevSmoothed[1]) * SMOOTHING_FACTOR;
-    const prevSmoothedP = this.smoothedPressures[this.smoothedPressures.length - 1]!;
-    const smoothedP = prevSmoothedP + (pressure - prevSmoothedP) * SMOOTHING_FACTOR;
+    const smoothedX =
+      prevSmoothed[0] + (worldX - prevSmoothed[0]) * SMOOTHING_FACTOR;
+    const smoothedY =
+      prevSmoothed[1] + (worldY - prevSmoothed[1]) * SMOOTHING_FACTOR;
+    const prevSmoothedP =
+      this.smoothedPressures[this.smoothedPressures.length - 1]!;
+    const smoothedP =
+      prevSmoothedP + (pressure - prevSmoothedP) * SMOOTHING_FACTOR;
     this.smoothedPoints.push([smoothedX, smoothedY]);
     this.smoothedPressures.push(smoothedP);
 
@@ -93,7 +107,12 @@ export class PenTool implements Tool {
     this.preview = null;
   }
 
-  onMouseUp(_e: MouseEvent, _worldX: number, _worldY: number, ctx: ToolContext): void {
+  onMouseUp(
+    _e: MouseEvent,
+    _worldX: number,
+    _worldY: number,
+    ctx: ToolContext,
+  ): void {
     if (!this.drawing) return;
     this.drawing = false;
     this.preview = null;
@@ -101,7 +120,11 @@ export class PenTool implements Tool {
     if (this.smoothedPoints.length < 2) return;
 
     const { appState } = ctx.history.present;
-    const simplified = simplifyRDP(this.smoothedPoints, this.smoothedPressures, RDP_EPSILON);
+    const simplified = simplifyRDP(
+      this.smoothedPoints,
+      this.smoothedPressures,
+      RDP_EPSILON,
+    );
     const origin = simplified.points[0] ?? [0, 0];
     const hasPressure = simplified.pressures.some((p) => p !== 0.5);
     ctx.history.dispatch({
@@ -151,15 +174,26 @@ function simplifyRDP(
   }
 
   if (maxDist > epsilon) {
-    const left = simplifyRDP(points.slice(0, maxIdx + 1), pressures.slice(0, maxIdx + 1), epsilon);
-    const right = simplifyRDP(points.slice(maxIdx), pressures.slice(maxIdx), epsilon);
+    const left = simplifyRDP(
+      points.slice(0, maxIdx + 1),
+      pressures.slice(0, maxIdx + 1),
+      epsilon,
+    );
+    const right = simplifyRDP(
+      points.slice(maxIdx),
+      pressures.slice(maxIdx),
+      epsilon,
+    );
     return {
       points: [...left.points.slice(0, -1), ...right.points],
       pressures: [...left.pressures.slice(0, -1), ...right.pressures],
     };
   }
 
-  return { points: [first, last], pressures: [pressures[0]!, pressures[pressures.length - 1]!] };
+  return {
+    points: [first, last],
+    pressures: [pressures[0]!, pressures[pressures.length - 1]!],
+  };
 }
 
 function perpendicularDist(
@@ -172,5 +206,8 @@ function perpendicularDist(
   const lenSq = dx * dx + dy * dy;
   if (lenSq === 0) return Math.hypot(p[0] - lineStart[0], p[1] - lineStart[1]);
   const t = ((p[0] - lineStart[0]) * dx + (p[1] - lineStart[1]) * dy) / lenSq;
-  return Math.hypot(p[0] - (lineStart[0] + t * dx), p[1] - (lineStart[1] + t * dy));
+  return Math.hypot(
+    p[0] - (lineStart[0] + t * dx),
+    p[1] - (lineStart[1] + t * dy),
+  );
 }

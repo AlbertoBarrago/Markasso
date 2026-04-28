@@ -5,14 +5,24 @@ export class HandTool implements Tool {
   private lastX = 0;
   private lastY = 0;
 
-  onMouseDown(e: MouseEvent, _worldX: number, _worldY: number, ctx: ToolContext): void {
+  onMouseDown(
+    e: MouseEvent,
+    _worldX: number,
+    _worldY: number,
+    _ctx: ToolContext,
+  ): void {
     e.preventDefault();
     this.isPanning = true;
     this.lastX = e.clientX;
     this.lastY = e.clientY;
   }
 
-  onMouseMove(e: MouseEvent, _worldX: number, _worldY: number, ctx: ToolContext): void {
+  onMouseMove(
+    e: MouseEvent,
+    _worldX: number,
+    _worldY: number,
+    ctx: ToolContext,
+  ): void {
     if (this.isPanning) {
       const dx = e.clientX - this.lastX;
       const dy = e.clientY - this.lastY;

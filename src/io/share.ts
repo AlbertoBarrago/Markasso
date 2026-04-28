@@ -1,14 +1,17 @@
 import type { Element } from '../elements/element';
 
-const SHORT_PREFIX  = '#s=';
+const SHORT_PREFIX = '#s=';
 const LEGACY_PREFIX = '#share=';
-const SHORT_ID_RE   = /^[a-zA-Z0-9]{8}$/;
+const SHORT_ID_RE = /^[a-zA-Z0-9]{8}$/;
 
 // ── base64url (inline fallback — no server round-trip) ─────────────────────────
 
 function toBase64Url(bytes: Uint8Array<ArrayBuffer>): string {
   const binary = Array.from(bytes, (b) => String.fromCharCode(b)).join('');
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 }
 
 function fromBase64Url(b64url: string): Uint8Array<ArrayBuffer> {
@@ -24,7 +27,9 @@ function textToBytes(text: string): Uint8Array<ArrayBuffer> {
   return new Uint8Array(new TextEncoder().encode(text).buffer as ArrayBuffer);
 }
 
-async function gzipEncode(bytes: Uint8Array<ArrayBuffer>): Promise<Uint8Array<ArrayBuffer>> {
+async function gzipEncode(
+  bytes: Uint8Array<ArrayBuffer>,
+): Promise<Uint8Array<ArrayBuffer>> {
   const cs = new CompressionStream('gzip');
   const writer = cs.writable.getWriter();
   writer.write(bytes);
@@ -33,7 +38,9 @@ async function gzipEncode(bytes: Uint8Array<ArrayBuffer>): Promise<Uint8Array<Ar
   return new Uint8Array(buf);
 }
 
-async function gzipDecode(bytes: Uint8Array<ArrayBuffer>): Promise<Uint8Array<ArrayBuffer>> {
+async function gzipDecode(
+  bytes: Uint8Array<ArrayBuffer>,
+): Promise<Uint8Array<ArrayBuffer>> {
   const ds = new DecompressionStream('gzip');
   const writer = ds.writable.getWriter();
   writer.write(bytes);
@@ -48,7 +55,9 @@ function isGzip(bytes: Uint8Array<ArrayBuffer>): boolean {
 
 // ── Decode helpers ─────────────────────────────────────────────────────────────
 
-async function parseBytes(bytes: Uint8Array<ArrayBuffer>): Promise<Element[] | null> {
+async function parseBytes(
+  bytes: Uint8Array<ArrayBuffer>,
+): Promise<Element[] | null> {
   try {
     const raw = isGzip(bytes) ? await gzipDecode(bytes) : bytes;
     return JSON.parse(new TextDecoder().decode(raw)) as Element[];
@@ -60,7 +69,9 @@ async function parseBytes(bytes: Uint8Array<ArrayBuffer>): Promise<Element[] | n
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 /** Encode elements to a base64url string (used internally and as inline fallback). */
-export async function encodeScene(elements: ReadonlyArray<Element>): Promise<string> {
+export async function encodeScene(
+  elements: ReadonlyArray<Element>,
+): Promise<string> {
   const bytes = textToBytes(JSON.stringify(elements));
   try {
     return toBase64Url(await gzipEncode(bytes));
@@ -71,7 +82,8 @@ export async function encodeScene(elements: ReadonlyArray<Element>): Promise<str
 
 /** Decode from any supported hash format. Fetches from API for short IDs. */
 export async function decodeScene(hash: string): Promise<Element[] | null> {
-  if (!hash.startsWith(SHORT_PREFIX) && !hash.startsWith(LEGACY_PREFIX)) return null;
+  if (!hash.startsWith(SHORT_PREFIX) && !hash.startsWith(LEGACY_PREFIX))
+    return null;
 
   if (hash.startsWith(SHORT_PREFIX)) {
     const payload = hash.slice(SHORT_PREFIX.length);
@@ -121,7 +133,9 @@ export function isShareHash(hash: string): boolean {
  * Build a short share URL via server API.
  * Falls back to inline base64url if the API is unavailable (dev / offline).
  */
-export async function buildShareUrl(elements: ReadonlyArray<Element>): Promise<string> {
+export async function buildShareUrl(
+  elements: ReadonlyArray<Element>,
+): Promise<string> {
   try {
     const res = await fetch('/api/share', {
       method: 'POST',
@@ -129,7 +143,7 @@ export async function buildShareUrl(elements: ReadonlyArray<Element>): Promise<s
       body: JSON.stringify(elements),
     });
     if (res.ok) {
-      const { url } = await res.json() as { id: string; url: string };
+      const { url } = (await res.json()) as { id: string; url: string };
       return url;
     }
   } catch {

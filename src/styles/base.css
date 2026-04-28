@@ -1,25 +1,32 @@
 /* ── Reset & variables ─────────────────────────────────────────────── */
 :root {
   --accent: #c42059;
-  --accent-light: rgb(196, 32, 81, .2);
+  --accent-light: rgb(196, 32, 81, 0.2);
   --focus-ring: var(--accent);
   --alert: #fa0101;
 
-  --bg-island:     rgba(13, 7, 7, 0.98);
-  --island-border: rgba(255,255,255,0.18);
-  --island-shadow: 0 2px 24px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04);
+  --bg-island: rgba(13, 7, 7, 0.98);
+  --island-border: rgba(255, 255, 255, 0.18);
+  --island-shadow:
+    0 2px 24px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.04);
   --island-radius: 12px;
-  --input-border: rgba(89, 89, 89, .4);
+  --input-border: rgba(89, 89, 89, 0.4);
 
-  --bg-hover:   rgba(255,255,255,0.07);
-  --border:     var(--island-border);
-  --text:       #e8d4d4;
-  --false-white:      #FFFADF;
+  --bg-hover: rgba(255, 255, 255, 0.07);
+  --border: var(--island-border);
+  --text: #e8d4d4;
+  --false-white: #fffadf;
   --text-muted: rgb(141 141 141);
-  --radius:     8px;
+  --radius: 8px;
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 /* ── Keyboard focus indicators ─────────────────────────────────────── */
 :focus-visible {
@@ -30,31 +37,46 @@
   outline: none;
 }
 
-html, body {
-  width: 100%; height: 100%; overflow: hidden;
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   font-family: system-ui, -apple-system, sans-serif;
   background: var(--canvas-bg, #080808);
   color: var(--text);
 }
 
 /* ── App shell — full screen ───────────────────────────────────────── */
-#app { position: fixed; inset: 0; }
+#app {
+  position: fixed;
+  inset: 0;
+}
 
 /* Canvas workspace fills everything */
 /* touch-action: none prevents Safari from intercepting touches at the
    parent level before they reach the canvas, which can suppress touchmove
    events and break pen-tool drawing on iOS. */
-#workspace { position: fixed; inset: 0; z-index: 1; touch-action: none; }
+#workspace {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  touch-action: none;
+}
 
 #main {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  touch-action: none; display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  display: block;
 }
 
 /* Toolbar is a transparent pointer-events:none overlay that hosts islands */
 #toolbar {
-  position: fixed; inset: 0;
+  position: fixed;
+  inset: 0;
   pointer-events: none;
   z-index: 50;
   background: transparent;
@@ -89,7 +111,8 @@ html, body {
 /* Top-right: export */
 .tb-island-topright {
   position: fixed;
-  top: 12px; right: 16px;
+  top: 12px;
+  right: 16px;
   z-index: 10;
   display: flex;
   align-items: center;
@@ -100,7 +123,8 @@ html, body {
 /* Top-left: settings */
 .tb-island-topleft {
   position: fixed;
-  top: 12px; left: 16px;
+  top: 12px;
+  left: 16px;
   z-index: 10;
   pointer-events: all;
 }
@@ -108,7 +132,8 @@ html, body {
 /* Bottom-left: zoom */
 .tb-island-bottomleft {
   position: fixed;
-  bottom: 16px; left: 16px;
+  bottom: 16px;
+  left: 16px;
   z-index: 10;
   display: flex;
   align-items: center;
@@ -119,7 +144,8 @@ html, body {
 /* Bottom-right: undo/redo */
 .tb-island-bottomright {
   position: fixed;
-  bottom: 16px; right: 16px;
+  bottom: 16px;
+  right: 16px;
   z-index: 10;
   display: flex;
   align-items: center;
@@ -155,23 +181,34 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px; height: 36px;
+  width: 36px;
+  height: 36px;
   border: none;
   border-radius: 8px;
   background: transparent;
   cursor: pointer;
   color: var(--text-muted);
-  transition: background .12s, color .12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   flex-shrink: 0;
 }
-.tb-btn:hover   { background: var(--bg-hover); color: var(--text); }
-.tb-btn.active  {
+.tb-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.tb-btn.active {
   background: var(--accent-light);
   color: var(--accent);
   outline: 2px solid var(--accent);
 }
-.tb-btn:disabled{ opacity: .3; cursor: default; }
-.tb-btn svg     { pointer-events: none; }
+.tb-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.tb-btn svg {
+  pointer-events: none;
+}
 
 .tb-locked-indicator {
   color: var(--warning, #f59e0b) !important;
@@ -185,19 +222,23 @@ html, body {
 /* Subscript shortcut number */
 .tb-btn-key {
   position: absolute;
-  bottom: 3px; right: 4px;
-  font-size: 8px; font-weight: 600;
+  bottom: 3px;
+  right: 4px;
+  font-size: 8px;
+  font-weight: 600;
   color: var(--text-muted);
   line-height: 1;
   pointer-events: none;
   font-variant-numeric: tabular-nums;
 }
-.tb-btn.active .tb-btn-key { color: var(--accent); }
+.tb-btn.active .tb-btn-key {
+  color: var(--accent);
+}
 
 /* ── Tool group (line / curve / polygon flyout) ───────────────────── */
 .tb-group-wrap {
-  position: relative;  /* anchor for the absolute flyout */
-  display: flex;       /* behaves as a flex item inside the toolbar pill */
+  position: relative; /* anchor for the absolute flyout */
+  display: flex; /* behaves as a flex item inside the toolbar pill */
 }
 
 /* Split button: main activates tool, chevron opens flyout */
@@ -233,25 +274,37 @@ html, body {
   padding: 0;
   background: none;
   border: none;
-  border-left: 1px solid rgba(255,255,255,0.1);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0 var(--radius) var(--radius) 0;
   cursor: pointer;
   color: var(--text-muted);
   opacity: 0.7;
   font-size: 7px;
   line-height: 1;
-  transition: opacity .1s, background .1s;
+  transition:
+    opacity 0.1s,
+    background 0.1s;
 }
-.tb-group-chevron-btn:hover { opacity: 1; background: rgba(255,255,255,0.07); }
-.tb-group-chevron-btn.active { opacity: 1; color: var(--accent); }
-[data-theme="light"] .tb-group-chevron-btn { border-left-color: rgba(0,0,0,0.12); }
-[data-theme="light"] .tb-group-chevron-btn.active { color: var(--accent); }
+.tb-group-chevron-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.07);
+}
+.tb-group-chevron-btn.active {
+  opacity: 1;
+  color: var(--accent);
+}
+[data-theme="light"] .tb-group-chevron-btn {
+  border-left-color: rgba(0, 0, 0, 0.12);
+}
+[data-theme="light"] .tb-group-chevron-btn.active {
+  color: var(--accent);
+}
 
 .tb-group-flyout {
   display: none;
   position: absolute;
   top: calc(100% + 6px);
-  left: 0;             /* aligns left edge to the button */
+  left: 0; /* aligns left edge to the button */
   background: var(--bg-island);
   border: 1px solid var(--island-border);
   border-radius: 10px;
@@ -264,7 +317,9 @@ html, body {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
-.tb-group-flyout.open { display: flex; }
+.tb-group-flyout.open {
+  display: flex;
+}
 
 /* Zoom percentage label */
 .tb-zoom {
@@ -289,4 +344,6 @@ html, body {
 body.ui-hidden #toolbar,
 body.ui-hidden #context-panel,
 body.ui-hidden #layers-panel,
-body.ui-hidden #mobile-actions { display: none !important; }
+body.ui-hidden #mobile-actions {
+  display: none !important;
+}

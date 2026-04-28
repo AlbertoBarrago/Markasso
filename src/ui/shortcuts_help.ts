@@ -1,5 +1,5 @@
 const isMac = navigator.platform.toUpperCase().includes('MAC');
-const mod   = isMac ? '⌘' : 'Ctrl+';
+const mod = isMac ? '⌘' : 'Ctrl+';
 
 type ShortcutEntry = { label: string; key: string };
 type ShortcutSection = { title: string; items: ShortcutEntry[] };
@@ -8,46 +8,46 @@ const SECTIONS: ShortcutSection[] = [
   {
     title: 'Tools',
     items: [
-      { label: 'Hand',      key: 'H / Space' },
-      { label: 'Select',    key: 'V / 1' },
+      { label: 'Hand', key: 'H / Space' },
+      { label: 'Select', key: 'V / 1' },
       { label: 'Rectangle', key: 'R / 2' },
-      { label: 'Rhombus',   key: 'D / 3' },
-      { label: 'Ellipse',   key: 'E / 4' },
+      { label: 'Rhombus', key: 'D / 3' },
+      { label: 'Ellipse', key: 'E / 4' },
       { label: 'Line / Arrowheads', key: 'A / L / 5' },
-      { label: 'Pen',       key: 'P / 6' },
-      { label: 'Text',      key: 'T / 7' },
-      { label: 'Eraser',    key: '0' },
+      { label: 'Pen', key: 'P / 6' },
+      { label: 'Text', key: 'T / 7' },
+      { label: 'Eraser', key: '0' },
     ],
   },
   {
     title: 'Edit',
     items: [
-      { label: 'Undo',      key: `${mod}Z` },
-      { label: 'Redo',      key: isMac ? '⌘⇧Z' : 'Ctrl+Y' },
-      { label: 'Select all',key: `${mod}A` },
+      { label: 'Undo', key: `${mod}Z` },
+      { label: 'Redo', key: isMac ? '⌘⇧Z' : 'Ctrl+Y' },
+      { label: 'Select all', key: `${mod}A` },
       { label: 'Duplicate', key: `${mod}D` },
-      { label: 'Copy',      key: `${mod}C` },
-      { label: 'Paste',     key: `${mod}V` },
-      { label: 'Delete',    key: 'Del / ⌫' },
+      { label: 'Copy', key: `${mod}C` },
+      { label: 'Paste', key: `${mod}V` },
+      { label: 'Delete', key: 'Del / ⌫' },
     ],
   },
   {
     title: 'Organize',
     items: [
       { label: 'Bring to front', key: `${mod}⇧]` },
-      { label: 'Send to back',   key: `${mod}⇧[` },
-      { label: 'Group',          key: `${mod}G` },
-      { label: 'Ungroup',        key: `${mod}⇧G` },
-      { label: 'Lock / Unlock',  key: `${mod}⇧L` },
+      { label: 'Send to back', key: `${mod}⇧[` },
+      { label: 'Group', key: `${mod}G` },
+      { label: 'Ungroup', key: `${mod}⇧G` },
+      { label: 'Lock / Unlock', key: `${mod}⇧L` },
     ],
   },
   {
     title: 'View',
     items: [
-      { label: 'Toggle grid',   key: 'G' },
-      { label: 'Fit to content',key: 'F' },
-      { label: 'Reset zoom',    key: 'Shift+0' },
-      { label: 'Hide UI',       key: '\\' },
+      { label: 'Toggle grid', key: 'G' },
+      { label: 'Fit to content', key: 'F' },
+      { label: 'Reset zoom', key: 'Shift+0' },
+      { label: 'Hide UI', key: '\\' },
     ],
   },
   {
@@ -66,19 +66,25 @@ function buildModal(): HTMLElement {
   overlay.setAttribute('aria-modal', 'true');
   overlay.setAttribute('aria-label', 'Keyboard shortcuts');
 
-  const sectionsHtml = SECTIONS.map(section => `
+  const sectionsHtml = SECTIONS.map(
+    (section) => `
     <div class="sh-section">
       <h3 class="sh-section-title">${section.title}</h3>
       <ul class="sh-list">
-        ${section.items.map(item => `
+        ${section.items
+          .map(
+            (item) => `
           <li class="sh-row">
             <span class="sh-label">${item.label}</span>
             <kbd class="sh-kbd">${item.key}</kbd>
           </li>
-        `).join('')}
+        `,
+          )
+          .join('')}
       </ul>
     </div>
-  `).join('');
+  `,
+  ).join('');
 
   overlay.innerHTML = `
     <div class="sh-card">
@@ -108,10 +114,14 @@ function open(appEl: HTMLElement): void {
   const dismiss = (): void => {
     if (!overlayEl) return;
     overlayEl.classList.add('sh-out');
-    overlayEl.addEventListener('animationend', () => {
-      overlayEl?.remove();
-      overlayEl = null;
-    }, { once: true });
+    overlayEl.addEventListener(
+      'animationend',
+      () => {
+        overlayEl?.remove();
+        overlayEl = null;
+      },
+      { once: true },
+    );
     document.removeEventListener('keydown', onKey);
   };
 
@@ -123,7 +133,9 @@ function open(appEl: HTMLElement): void {
   };
 
   overlayEl.querySelector('.sh-close')!.addEventListener('click', dismiss);
-  overlayEl.addEventListener('click', (e) => { if (e.target === overlayEl) dismiss(); });
+  overlayEl.addEventListener('click', (e) => {
+    if (e.target === overlayEl) dismiss();
+  });
   document.addEventListener('keydown', onKey);
 
   appEl.appendChild(overlayEl);

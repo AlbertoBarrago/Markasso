@@ -179,7 +179,14 @@ export function distToQuadraticCurve(
   return minDist;
 }
 
-function distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+function distToSegment(
+  px: number,
+  py: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): number {
   const dx = x2 - x1;
   const dy = y2 - y1;
   const lenSq = dx * dx + dy * dy;
@@ -211,6 +218,14 @@ export function getQuadraticSegment(
   if (clampedStart <= 0) return left;
 
   const localT = clampedStart / clampedEnd;
-  const { right } = splitQuadraticAt(left.x, left.y, left.cx, left.cy, left.x2, left.y2, localT);
+  const { right } = splitQuadraticAt(
+    left.x,
+    left.y,
+    left.cx,
+    left.cy,
+    left.x2,
+    left.y2,
+    localT,
+  );
   return right;
 }

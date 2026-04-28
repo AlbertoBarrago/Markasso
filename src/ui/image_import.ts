@@ -1,10 +1,13 @@
-import type { History } from '../engine/history';
+import { elementClipboard } from '../core/clipboard';
 import type { ImageElement } from '../elements/element';
+import type { History } from '../engine/history';
 import { importMarkasso } from '../io/markasso';
 import { importMermaid, importMermaidText } from '../io/mermaid';
-import { elementClipboard } from '../core/clipboard';
 
-export function initImageImport(workspace: HTMLElement, history: History): void {
+export function initImageImport(
+  workspace: HTMLElement,
+  history: History,
+): void {
   // Hidden file input
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
@@ -43,9 +46,18 @@ export function initImageImport(workspace: HTMLElement, history: History): void 
     const files = e.dataTransfer?.files;
     if (!files) return;
     for (const file of Array.from(files)) {
-      if (file.name.endsWith('.markasso'))                      { importMarkasso(file, history); break; }
-      if (file.name.endsWith('.mmd') || file.name.endsWith('.mermaid')) { importMermaid(file, history); break; }
-      if (file.type.startsWith('image/'))                       { loadFile(file); break; }
+      if (file.name.endsWith('.markasso')) {
+        importMarkasso(file, history);
+        break;
+      }
+      if (file.name.endsWith('.mmd') || file.name.endsWith('.mermaid')) {
+        importMermaid(file, history);
+        break;
+      }
+      if (file.type.startsWith('image/')) {
+        loadFile(file);
+        break;
+      }
     }
   });
 
@@ -123,5 +135,6 @@ export function initImageImport(workspace: HTMLElement, history: History): void 
   }
 
   // Expose trigger function via the file input element
-  (fileInput as HTMLInputElement & { triggerOpen: () => void }).triggerOpen = () => fileInput.click();
+  (fileInput as HTMLInputElement & { triggerOpen: () => void }).triggerOpen =
+    () => fileInput.click();
 }

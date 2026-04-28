@@ -1,22 +1,33 @@
-import type { History } from '../engine/history';
-import type { Tool, ToolContext } from '../tools/tool';
-import { SelectTool } from '../tools/select_tool';
-import { HandTool } from '../tools/hand_tool';
-import { RectangleTool } from '../tools/rectangle_tool';
-import { EllipseTool } from '../tools/ellipse_tool';
-import { LineTool } from '../tools/line_tool';
-import { RomboTool } from '../tools/rombo_tool';
-import { PenTool } from '../tools/pen_tool';
-import { TextTool } from '../tools/text_tool';
-import { StickyTool } from '../tools/sticky_tool';
-import { EraserTool, type SlashPoint } from '../tools/eraser_tool';
-import type { TextElement, RectangleElement, EllipseElement, RhombusElement, LineElement } from '../elements/element';
-import { render } from '../rendering/renderer';
-import { drawElement, contrastColor } from '../rendering/draw_element';
-import { drawMarquee, drawHoverHighlight, drawSnapIndicator, drawAlignGuides } from '../rendering/draw_selection';
-import { screenToWorld, worldToScreen } from '../core/viewport';
 import type { ActiveTool } from '../core/app_state';
+import { screenToWorld, worldToScreen } from '../core/viewport';
+import type {
+  EllipseElement,
+  LineElement,
+  RectangleElement,
+  RhombusElement,
+  TextElement,
+} from '../elements/element';
+import type { History } from '../engine/history';
 import { t } from '../i18n';
+import { contrastColor, drawElement } from '../rendering/draw_element';
+import {
+  drawAlignGuides,
+  drawHoverHighlight,
+  drawMarquee,
+  drawSnapIndicator,
+} from '../rendering/draw_selection';
+import { render } from '../rendering/renderer';
+import { EllipseTool } from '../tools/ellipse_tool';
+import { EraserTool, type SlashPoint } from '../tools/eraser_tool';
+import { HandTool } from '../tools/hand_tool';
+import { LineTool } from '../tools/line_tool';
+import { PenTool } from '../tools/pen_tool';
+import { RectangleTool } from '../tools/rectangle_tool';
+import { RomboTool } from '../tools/rombo_tool';
+import { SelectTool } from '../tools/select_tool';
+import { StickyTool } from '../tools/sticky_tool';
+import { TextTool } from '../tools/text_tool';
+import type { Tool, ToolContext } from '../tools/tool';
 
 const textTool = new TextTool();
 const stickyTool = new StickyTool();
@@ -34,7 +45,10 @@ const TOOLS: Record<ActiveTool, Tool> = {
   sticky: stickyTool,
 };
 
-export function initCanvasView(canvas: HTMLCanvasElement, history: History): { selectTool: SelectTool } {
+export function initCanvasView(
+  canvas: HTMLCanvasElement,
+  history: History,
+): { selectTool: SelectTool } {
   const ctx2d = canvas.getContext('2d')!;
 
   let isPanning = false;
@@ -46,18 +60,28 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
   const toolCtx: ToolContext = {
     history,
     canvas,
-    onPreviewUpdate: () => { needsRender = true; },
+    onPreviewUpdate: () => {
+      needsRender = true;
+    },
   };
 
   function getActiveTool(): Tool {
     return TOOLS[history.present.appState.activeTool];
   }
 
-  const SNAP_TOOLS = new Set(['rectangle', 'ellipse', 'rombo', 'arrow', 'line', 'text']);
+  const SNAP_TOOLS = new Set([
+    'rectangle',
+    'ellipse',
+    'rombo',
+    'arrow',
+    'line',
+    'text',
+  ]);
 
   function snapWorldCoords(wx: number, wy: number): [number, number] {
     const { appState } = history.present;
-    if (!appState.gridVisible || !SNAP_TOOLS.has(appState.activeTool)) return [wx, wy];
+    if (!appState.gridVisible || !SNAP_TOOLS.has(appState.activeTool))
+      return [wx, wy];
     const g = appState.gridSize;
     return [Math.round(wx / g) * g, Math.round(wy / g) * g];
   }
@@ -144,7 +168,10 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
       if (!el) continue;
 
       if (el.type === 'text') {
-        const x = el.x, y = el.y, w = el.width, h = el.height;
+        const x = el.x,
+          y = el.y,
+          w = el.width,
+          h = el.height;
         if (wx >= x - 4 && wx <= x + w + 4 && wy >= y - 4 && wy <= y + h + 4) {
           (TOOLS.text as TextTool).editExisting(el as TextElement, toolCtx);
           needsRender = true;
@@ -152,13 +179,30 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
         }
       }
 
-      if (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'rhombus') {
+      if (
+        el.type === 'rectangle' ||
+        el.type === 'ellipse' ||
+        el.type === 'rhombus'
+      ) {
         const bx = el.width < 0 ? el.x + el.width : el.x;
         const by = el.height < 0 ? el.y + el.height : el.y;
         const bw = Math.abs(el.width);
         const bh = Math.abs(el.height);
-        if (wx >= bx - 4 && wx <= bx + bw + 4 && wy >= by - 4 && wy <= by + bh + 4) {
-          openShapeLabelEditor(el as RectangleElement | EllipseElement | RhombusElement, history, canvas, (id) => { editingShapeLabelId = id; needsRender = true; });
+        if (
+          wx >= bx - 4 &&
+          wx <= bx + bw + 4 &&
+          wy >= by - 4 &&
+          wy <= by + bh + 4
+        ) {
+          openShapeLabelEditor(
+            el as RectangleElement | EllipseElement | RhombusElement,
+            history,
+            canvas,
+            (id) => {
+              editingShapeLabelId = id;
+              needsRender = true;
+            },
+          );
           needsRender = true;
           return;
         }
@@ -167,9 +211,14 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
       if (el.type === 'arrow' || el.type === 'line') {
         const line = el as LineElement;
         const hitLabel = isPointInArrowLabel(wx, wy, line);
-        const hitShaft = distPointToSegment(wx, wy, line.x, line.y, line.x2, line.y2) < line.strokeWidth / 2 + 8;
+        const hitShaft =
+          distPointToSegment(wx, wy, line.x, line.y, line.x2, line.y2) <
+          line.strokeWidth / 2 + 8;
         if (hitLabel || hitShaft) {
-          openArrowLabelEditor(line, history, canvas, (id) => { editingShapeLabelId = id; needsRender = true; });
+          openArrowLabelEditor(line, history, canvas, (id) => {
+            editingShapeLabelId = id;
+            needsRender = true;
+          });
           needsRender = true;
           return;
         }
@@ -178,10 +227,16 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
   });
 
   // ── Touch support ──────────────────────────────────────────────────────────
-  let touch1Id = -1, touch2Id = -1;
-  let lastTouchX = 0, lastTouchY = 0;
-  let lastPinchDist = 0, lastPinchMidX = 0, lastPinchMidY = 0;
-  let lastTapTime = 0, lastTapX = 0, lastTapY = 0;
+  let touch1Id = -1,
+    touch2Id = -1;
+  let _lastTouchX = 0,
+    _lastTouchY = 0;
+  let lastPinchDist = 0,
+    lastPinchMidX = 0,
+    lastPinchMidY = 0;
+  let lastTapTime = 0,
+    lastTapX = 0,
+    lastTapY = 0;
 
   // Touch pan inertia
   let inertiaVX = 0;
@@ -217,46 +272,60 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
 
     ctxMenu.innerHTML = '';
 
-    const actions: Array<{ label: string; icon: string; action: () => void }> = [
-      {
-        label: t('duplicate'),
-        icon: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="9" height="9" rx="1.5"/><path d="M13 7V5.5A1.5 1.5 0 0 0 11.5 4h-7A1.5 1.5 0 0 0 3 5.5v7A1.5 1.5 0 0 0 4.5 14H7"/></svg>`,
-        action: () => {
-          const newIds: string[] = [];
-          const sc = history.present;
-          for (const id of [...sc.selectedIds]) {
-            const el = sc.elements.find((e) => e.id === id);
-            if (!el) continue;
-            const newId = crypto.randomUUID();
-            newIds.push(newId);
-            history.dispatch({ type: 'CREATE_ELEMENT', element: { ...el, id: newId } });
-            history.dispatch({ type: 'MOVE_ELEMENT', id: newId, dx: 20, dy: 20 });
-          }
-          if (newIds.length > 0) history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
-          closeCtxMenu();
+    const actions: Array<{ label: string; icon: string; action: () => void }> =
+      [
+        {
+          label: t('duplicate'),
+          icon: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="9" height="9" rx="1.5"/><path d="M13 7V5.5A1.5 1.5 0 0 0 11.5 4h-7A1.5 1.5 0 0 0 3 5.5v7A1.5 1.5 0 0 0 4.5 14H7"/></svg>`,
+          action: () => {
+            const newIds: string[] = [];
+            const sc = history.present;
+            for (const id of [...sc.selectedIds]) {
+              const el = sc.elements.find((e) => e.id === id);
+              if (!el) continue;
+              const newId = crypto.randomUUID();
+              newIds.push(newId);
+              history.dispatch({
+                type: 'CREATE_ELEMENT',
+                element: { ...el, id: newId },
+              });
+              history.dispatch({
+                type: 'MOVE_ELEMENT',
+                id: newId,
+                dx: 20,
+                dy: 20,
+              });
+            }
+            if (newIds.length > 0)
+              history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
+            closeCtxMenu();
+          },
         },
-      },
-      {
-        label: t('delete'),
-        icon: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 17,6"/><path d="M8 6V4h4v2"/><rect x="5" y="6" width="10" height="10" rx="1"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="12" y1="10" x2="12" y2="14"/></svg>`,
-        action: () => {
-          const sc = history.present;
-          const ids = [...sc.selectedIds].filter((id) => {
-            const el = sc.elements.find((e) => e.id === id);
-            return el && !el.locked;
-          });
-          if (ids.length > 0) history.dispatch({ type: 'DELETE_ELEMENTS', ids });
-          closeCtxMenu();
+        {
+          label: t('delete'),
+          icon: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 17,6"/><path d="M8 6V4h4v2"/><rect x="5" y="6" width="10" height="10" rx="1"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="12" y1="10" x2="12" y2="14"/></svg>`,
+          action: () => {
+            const sc = history.present;
+            const ids = [...sc.selectedIds].filter((id) => {
+              const el = sc.elements.find((e) => e.id === id);
+              return el && !el.locked;
+            });
+            if (ids.length > 0)
+              history.dispatch({ type: 'DELETE_ELEMENTS', ids });
+            closeCtxMenu();
+          },
         },
-      },
-    ];
+      ];
 
     for (const item of actions) {
       const btn = document.createElement('button');
       btn.className = 'touch-ctx-menu-item';
       btn.setAttribute('role', 'menuitem');
       btn.innerHTML = `${item.icon}<span>${item.label}</span>`;
-      btn.addEventListener('pointerdown', (e) => { e.stopPropagation(); item.action(); });
+      btn.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        item.action();
+      });
       ctxMenu.appendChild(btn);
     }
 
@@ -274,23 +343,41 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
   }
 
   // Close on outside tap
-  document.addEventListener('pointerdown', (e) => {
-    if (ctxMenu.style.display !== 'none' && !ctxMenu.contains(e.target as Node)) {
-      closeCtxMenu();
-    }
-  }, true);
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (
+        ctxMenu.style.display !== 'none' &&
+        !ctxMenu.contains(e.target as Node)
+      ) {
+        closeCtxMenu();
+      }
+    },
+    true,
+  );
 
   function getWorldCoordsFromTouch(touch: Touch): [number, number] {
     const rect = canvas.getBoundingClientRect();
-    return snapWorldCoords(...screenToWorld(history.present.viewport, touch.clientX - rect.left, touch.clientY - rect.top));
+    return snapWorldCoords(
+      ...screenToWorld(
+        history.present.viewport,
+        touch.clientX - rect.left,
+        touch.clientY - rect.top,
+      ),
+    );
   }
 
-  function syntheticMouse(type: string, clientX: number, clientY: number): MouseEvent {
+  function syntheticMouse(
+    type: string,
+    clientX: number,
+    clientY: number,
+  ): MouseEvent {
     return new MouseEvent(type, { clientX, clientY, bubbles: false });
   }
 
   function getTouchById(list: TouchList, id: number): Touch | null {
-    for (let i = 0; i < list.length; i++) if (list.item(i)!.identifier === id) return list.item(i)!;
+    for (let i = 0; i < list.length; i++)
+      if (list.item(i)!.identifier === id) return list.item(i)!;
     return null;
   }
 
@@ -298,163 +385,227 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
     if (e.cancelable) e.preventDefault();
   }
 
-  canvas.addEventListener('touchstart', (e) => {
-    preventIfCancelable(e);
-    cancelAnimationFrame(inertiaRafId);
-    if (e.touches.length === 1) {
-      const t = e.touches.item(0)!;
-      touch1Id = t.identifier;
-      touch2Id = -1;
-      lastTouchX = t.clientX;
-      lastTouchY = t.clientY;
-      const [wx, wy] = getWorldCoordsFromTouch(t);
-      getActiveTool().onMouseDown(syntheticMouse('mousedown', t.clientX, t.clientY), wx, wy, toolCtx);
-      needsRender = true;
+  canvas.addEventListener(
+    'touchstart',
+    (e) => {
+      preventIfCancelable(e);
+      cancelAnimationFrame(inertiaRafId);
+      if (e.touches.length === 1) {
+        const t = e.touches.item(0)!;
+        touch1Id = t.identifier;
+        touch2Id = -1;
+        _lastTouchX = t.clientX;
+        _lastTouchY = t.clientY;
+        const [wx, wy] = getWorldCoordsFromTouch(t);
+        getActiveTool().onMouseDown(
+          syntheticMouse('mousedown', t.clientX, t.clientY),
+          wx,
+          wy,
+          toolCtx,
+        );
+        needsRender = true;
 
-      // Long-press timer
-      clearTimeout(longPressTimer);
-      longPressClientX = t.clientX;
-      longPressClientY = t.clientY;
-      longPressMoved = false;
-      longPressTimer = window.setTimeout(() => {
-        if (!longPressMoved && touch2Id === -1) {
-          openCtxMenu(longPressClientX, longPressClientY);
-        }
-      }, LONG_PRESS_MS);
-    } else if (e.touches.length === 2) {
-      clearTimeout(longPressTimer);
-      longPressMoved = true;
-      // Cancel any in-progress single-touch draw.
-      // Use onCancel() when available (e.g. PenTool) so the tool can discard
-      // the partial stroke rather than committing it — a second finger is
-      // almost always a pinch-to-zoom, not an intentional stroke end.
-      const activeTool = getActiveTool();
-      if (touch1Id !== -1) {
-        if (activeTool.onCancel) {
-          activeTool.onCancel(toolCtx);
-        } else {
-          const t1prev = getTouchById(e.touches, touch1Id);
-          if (t1prev) {
-            const [wx, wy] = getWorldCoordsFromTouch(t1prev);
-            activeTool.onMouseUp(syntheticMouse('mouseup', t1prev.clientX, t1prev.clientY), wx, wy, toolCtx);
+        // Long-press timer
+        clearTimeout(longPressTimer);
+        longPressClientX = t.clientX;
+        longPressClientY = t.clientY;
+        longPressMoved = false;
+        longPressTimer = window.setTimeout(() => {
+          if (!longPressMoved && touch2Id === -1) {
+            openCtxMenu(longPressClientX, longPressClientY);
+          }
+        }, LONG_PRESS_MS);
+      } else if (e.touches.length === 2) {
+        clearTimeout(longPressTimer);
+        longPressMoved = true;
+        // Cancel any in-progress single-touch draw.
+        // Use onCancel() when available (e.g. PenTool) so the tool can discard
+        // the partial stroke rather than committing it — a second finger is
+        // almost always a pinch-to-zoom, not an intentional stroke end.
+        const activeTool = getActiveTool();
+        if (touch1Id !== -1) {
+          if (activeTool.onCancel) {
+            activeTool.onCancel(toolCtx);
+          } else {
+            const t1prev = getTouchById(e.touches, touch1Id);
+            if (t1prev) {
+              const [wx, wy] = getWorldCoordsFromTouch(t1prev);
+              activeTool.onMouseUp(
+                syntheticMouse('mouseup', t1prev.clientX, t1prev.clientY),
+                wx,
+                wy,
+                toolCtx,
+              );
+            }
           }
         }
+        const t1 = e.touches.item(0)!;
+        const t2 = e.touches.item(1)!;
+        touch1Id = t1.identifier;
+        touch2Id = t2.identifier;
+        lastPinchDist = Math.hypot(
+          t2.clientX - t1.clientX,
+          t2.clientY - t1.clientY,
+        );
+        lastPinchMidX = (t1.clientX + t2.clientX) / 2;
+        lastPinchMidY = (t1.clientY + t2.clientY) / 2;
+        needsRender = true;
       }
-      const t1 = e.touches.item(0)!;
-      const t2 = e.touches.item(1)!;
-      touch1Id = t1.identifier;
-      touch2Id = t2.identifier;
-      lastPinchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      lastPinchMidX = (t1.clientX + t2.clientX) / 2;
-      lastPinchMidY = (t1.clientY + t2.clientY) / 2;
-      needsRender = true;
-    }
-  }, { passive: false });
+    },
+    { passive: false },
+  );
 
-  canvas.addEventListener('touchmove', (e) => {
-    preventIfCancelable(e);
-    if (touch2Id === -1) {
-      // Single-finger: dispatch move to active tool
-      const t = getTouchById(e.touches, touch1Id);
-      if (!t) return;
-      lastTouchX = t.clientX;
-      lastTouchY = t.clientY;
-      // Cancel long-press if finger moved too far
-      if (!longPressMoved && Math.hypot(t.clientX - longPressClientX, t.clientY - longPressClientY) > LONG_PRESS_MOVE_TOL) {
-        longPressMoved = true;
-        clearTimeout(longPressTimer);
-      }
-      const now = performance.now();
-      const dt = Math.max(1, now - lastTouchMoveTime);
-      inertiaVX = (t.clientX - prevInertiaX) / dt;
-      inertiaVY = (t.clientY - prevInertiaY) / dt;
-      prevInertiaX = t.clientX;
-      prevInertiaY = t.clientY;
-      lastTouchMoveTime = now;
-      const [wx, wy] = getWorldCoordsFromTouch(t);
-      getActiveTool().onMouseMove(syntheticMouse('mousemove', t.clientX, t.clientY), wx, wy, toolCtx);
-      needsRender = true;
-    } else {
-      // Two-finger: pan + pinch-zoom
-      const t1 = getTouchById(e.touches, touch1Id);
-      const t2 = getTouchById(e.touches, touch2Id);
-      if (!t1 || !t2) return;
-      const midX = (t1.clientX + t2.clientX) / 2;
-      const midY = (t1.clientY + t2.clientY) / 2;
-      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      // Pan
-      const dx = midX - lastPinchMidX;
-      const dy = midY - lastPinchMidY;
-      if (dx !== 0 || dy !== 0) {
-        history.dispatch({ type: 'PAN_VIEWPORT', dx, dy });
-      }
-      // Zoom
-      if (lastPinchDist > 0) {
-        const factor = dist / lastPinchDist;
-        const rect = canvas.getBoundingClientRect();
-        history.dispatch({ type: 'ZOOM_VIEWPORT', factor, originX: midX - rect.left, originY: midY - rect.top });
-      }
-      lastPinchDist = dist;
-      lastPinchMidX = midX;
-      lastPinchMidY = midY;
-      needsRender = true;
-    }
-  }, { passive: false });
-
-  canvas.addEventListener('touchend', (e) => {
-    preventIfCancelable(e);
-    clearTimeout(longPressTimer);
-    if (touch2Id === -1) {
-      // Single-finger end
-      const changedTouch = e.changedTouches[0];
-      if (changedTouch) {
-        const [wx, wy] = getWorldCoordsFromTouch(changedTouch);
-        getActiveTool().onMouseUp(syntheticMouse('mouseup', changedTouch.clientX, changedTouch.clientY), wx, wy, toolCtx);
-        // Touch pan inertia — only when panning, not drawing
-        if (history.present.appState.activeTool === 'hand') {
-          cancelAnimationFrame(inertiaRafId);
-          const FRICTION = 0.90;
-          const MIN_V = 0.05;
-          const frameMs = 16;
-          const applyInertia = (): void => {
-            inertiaVX *= FRICTION;
-            inertiaVY *= FRICTION;
-            if (Math.abs(inertiaVX) < MIN_V && Math.abs(inertiaVY) < MIN_V) return;
-            history.dispatch({ type: 'PAN_VIEWPORT', dx: inertiaVX * frameMs, dy: inertiaVY * frameMs });
-            needsRender = true;
-            inertiaRafId = requestAnimationFrame(applyInertia);
-          };
-          inertiaRafId = requestAnimationFrame(applyInertia);
+  canvas.addEventListener(
+    'touchmove',
+    (e) => {
+      preventIfCancelable(e);
+      if (touch2Id === -1) {
+        // Single-finger: dispatch move to active tool
+        const t = getTouchById(e.touches, touch1Id);
+        if (!t) return;
+        _lastTouchX = t.clientX;
+        _lastTouchY = t.clientY;
+        // Cancel long-press if finger moved too far
+        if (
+          !longPressMoved &&
+          Math.hypot(
+            t.clientX - longPressClientX,
+            t.clientY - longPressClientY,
+          ) > LONG_PRESS_MOVE_TOL
+        ) {
+          longPressMoved = true;
+          clearTimeout(longPressTimer);
         }
-        // Double-tap detection
-        const now = Date.now();
-        const dx = changedTouch.clientX - lastTapX;
-        const dy = changedTouch.clientY - lastTapY;
-        const dist = Math.hypot(dx, dy);
-        if (now - lastTapTime < 300 && dist < 20) {
-          canvas.dispatchEvent(new MouseEvent('dblclick', { clientX: changedTouch.clientX, clientY: changedTouch.clientY, bubbles: true }));
-          lastTapTime = 0;
-        } else {
-          lastTapTime = now;
-          lastTapX = changedTouch.clientX;
-          lastTapY = changedTouch.clientY;
-        }
-      }
-      touch1Id = -1;
-    } else if (e.touches.length < 2) {
-      // One finger lifted during two-finger gesture
-      touch2Id = -1;
-      if (e.touches.length === 1) {
-        const remaining = e.touches.item(0)!;
-        touch1Id = remaining.identifier;
-        lastTouchX = remaining.clientX;
-        lastTouchY = remaining.clientY;
+        const now = performance.now();
+        const dt = Math.max(1, now - lastTouchMoveTime);
+        inertiaVX = (t.clientX - prevInertiaX) / dt;
+        inertiaVY = (t.clientY - prevInertiaY) / dt;
+        prevInertiaX = t.clientX;
+        prevInertiaY = t.clientY;
+        lastTouchMoveTime = now;
+        const [wx, wy] = getWorldCoordsFromTouch(t);
+        getActiveTool().onMouseMove(
+          syntheticMouse('mousemove', t.clientX, t.clientY),
+          wx,
+          wy,
+          toolCtx,
+        );
+        needsRender = true;
       } else {
-        touch1Id = -1;
+        // Two-finger: pan + pinch-zoom
+        const t1 = getTouchById(e.touches, touch1Id);
+        const t2 = getTouchById(e.touches, touch2Id);
+        if (!t1 || !t2) return;
+        const midX = (t1.clientX + t2.clientX) / 2;
+        const midY = (t1.clientY + t2.clientY) / 2;
+        const dist = Math.hypot(
+          t2.clientX - t1.clientX,
+          t2.clientY - t1.clientY,
+        );
+        // Pan
+        const dx = midX - lastPinchMidX;
+        const dy = midY - lastPinchMidY;
+        if (dx !== 0 || dy !== 0) {
+          history.dispatch({ type: 'PAN_VIEWPORT', dx, dy });
+        }
+        // Zoom
+        if (lastPinchDist > 0) {
+          const factor = dist / lastPinchDist;
+          const rect = canvas.getBoundingClientRect();
+          history.dispatch({
+            type: 'ZOOM_VIEWPORT',
+            factor,
+            originX: midX - rect.left,
+            originY: midY - rect.top,
+          });
+        }
+        lastPinchDist = dist;
+        lastPinchMidX = midX;
+        lastPinchMidY = midY;
+        needsRender = true;
       }
-    }
-    needsRender = true;
-  }, { passive: false });
+    },
+    { passive: false },
+  );
+
+  canvas.addEventListener(
+    'touchend',
+    (e) => {
+      preventIfCancelable(e);
+      clearTimeout(longPressTimer);
+      if (touch2Id === -1) {
+        // Single-finger end
+        const changedTouch = e.changedTouches[0];
+        if (changedTouch) {
+          const [wx, wy] = getWorldCoordsFromTouch(changedTouch);
+          getActiveTool().onMouseUp(
+            syntheticMouse(
+              'mouseup',
+              changedTouch.clientX,
+              changedTouch.clientY,
+            ),
+            wx,
+            wy,
+            toolCtx,
+          );
+          // Touch pan inertia — only when panning, not drawing
+          if (history.present.appState.activeTool === 'hand') {
+            cancelAnimationFrame(inertiaRafId);
+            const FRICTION = 0.9;
+            const MIN_V = 0.05;
+            const frameMs = 16;
+            const applyInertia = (): void => {
+              inertiaVX *= FRICTION;
+              inertiaVY *= FRICTION;
+              if (Math.abs(inertiaVX) < MIN_V && Math.abs(inertiaVY) < MIN_V)
+                return;
+              history.dispatch({
+                type: 'PAN_VIEWPORT',
+                dx: inertiaVX * frameMs,
+                dy: inertiaVY * frameMs,
+              });
+              needsRender = true;
+              inertiaRafId = requestAnimationFrame(applyInertia);
+            };
+            inertiaRafId = requestAnimationFrame(applyInertia);
+          }
+          // Double-tap detection
+          const now = Date.now();
+          const dx = changedTouch.clientX - lastTapX;
+          const dy = changedTouch.clientY - lastTapY;
+          const dist = Math.hypot(dx, dy);
+          if (now - lastTapTime < 300 && dist < 20) {
+            canvas.dispatchEvent(
+              new MouseEvent('dblclick', {
+                clientX: changedTouch.clientX,
+                clientY: changedTouch.clientY,
+                bubbles: true,
+              }),
+            );
+            lastTapTime = 0;
+          } else {
+            lastTapTime = now;
+            lastTapX = changedTouch.clientX;
+            lastTapY = changedTouch.clientY;
+          }
+        }
+        touch1Id = -1;
+      } else if (e.touches.length < 2) {
+        // One finger lifted during two-finger gesture
+        touch2Id = -1;
+        if (e.touches.length === 1) {
+          const remaining = e.touches.item(0)!;
+          touch1Id = remaining.identifier;
+          _lastTouchX = remaining.clientX;
+          _lastTouchY = remaining.clientY;
+        } else {
+          touch1Id = -1;
+        }
+      }
+      needsRender = true;
+    },
+    { passive: false },
+  );
 
   // touchcancel fires when the OS interrupts a touch sequence (e.g. incoming
   // call, system gesture). Cancel any in-progress tool action so the tool
@@ -475,29 +626,37 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
     needsRender = true;
   });
 
-  canvas.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-    // Use CSS pixels — viewport coords are all in CSS pixel space
-    const originX = e.clientX - rect.left;
-    const originY = e.clientY - rect.top;
+  canvas.addEventListener(
+    'wheel',
+    (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      // Use CSS pixels — viewport coords are all in CSS pixel space
+      const originX = e.clientX - rect.left;
+      const originY = e.clientY - rect.top;
 
-    if (e.ctrlKey || e.metaKey) {
-      // Pinch zoom (trackpad) or Ctrl+wheel (mouse)
-      // deltaMode=0: trackpad pixel deltas (small) → fine sensitivity
-      // deltaMode=1/2: mouse wheel lines/pages → coarser sensitivity
-      const sensitivity = e.deltaMode === 0 ? 0.005 : 0.05;
-      const rawFactor = Math.exp(-e.deltaY * sensitivity);
-      // Hard cap: no single event jumps more than 2× in either direction
-      const factor = Math.min(Math.max(rawFactor, 0.5), 2.0);
-      history.dispatch({ type: 'ZOOM_VIEWPORT', factor, originX, originY });
-    } else {
-      // Scroll pan — normalize non-pixel deltas so mouse and trackpad feel consistent
-      const scale = e.deltaMode === 0 ? 1 : 12;
-      history.dispatch({ type: 'PAN_VIEWPORT', dx: -e.deltaX * scale, dy: -e.deltaY * scale });
-    }
-    needsRender = true;
-  }, { passive: false });
+      if (e.ctrlKey || e.metaKey) {
+        // Pinch zoom (trackpad) or Ctrl+wheel (mouse)
+        // deltaMode=0: trackpad pixel deltas (small) → fine sensitivity
+        // deltaMode=1/2: mouse wheel lines/pages → coarser sensitivity
+        const sensitivity = e.deltaMode === 0 ? 0.005 : 0.05;
+        const rawFactor = Math.exp(-e.deltaY * sensitivity);
+        // Hard cap: no single event jumps more than 2× in either direction
+        const factor = Math.min(Math.max(rawFactor, 0.5), 2.0);
+        history.dispatch({ type: 'ZOOM_VIEWPORT', factor, originX, originY });
+      } else {
+        // Scroll pan — normalize non-pixel deltas so mouse and trackpad feel consistent
+        const scale = e.deltaMode === 0 ? 1 : 12;
+        history.dispatch({
+          type: 'PAN_VIEWPORT',
+          dx: -e.deltaX * scale,
+          dy: -e.deltaY * scale,
+        });
+      }
+      needsRender = true;
+    },
+    { passive: false },
+  );
 
   window.addEventListener('keydown', (e) => {
     const target = e.target as HTMLElement;
@@ -531,7 +690,7 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
   // rAF render loop
   function loop(): void {
     // Keep rendering while eraser slash trail is fading out
-    if ((TOOLS['eraser'] as EraserTool).pruneTrail()) needsRender = true;
+    if ((TOOLS.eraser as EraserTool).pruneTrail()) needsRender = true;
     if (needsRender) {
       needsRender = false;
       renderFrame();
@@ -549,13 +708,20 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
 
     // Draw text tool drag preview
     if (scene.appState.activeTool === 'text') {
-      const textTool = TOOLS['text'] as TextTool;
+      const textTool = TOOLS.text as TextTool;
       const preview = textTool.getPreview();
       if (preview) {
         ctx2d.save();
         const { viewport } = scene;
         const dpr = window.devicePixelRatio;
-        ctx2d.setTransform(viewport.zoom * dpr, 0, 0, viewport.zoom * dpr, viewport.offsetX * dpr, viewport.offsetY * dpr);
+        ctx2d.setTransform(
+          viewport.zoom * dpr,
+          0,
+          0,
+          viewport.zoom * dpr,
+          viewport.offsetX * dpr,
+          viewport.offsetY * dpr,
+        );
         ctx2d.fillStyle = 'rgba(120,180,255,0.1)';
         ctx2d.strokeStyle = 'rgba(120,180,255,0.8)';
         ctx2d.lineWidth = 1.5 / viewport.zoom;
@@ -573,28 +739,55 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
         ctx2d.save();
         const { viewport } = scene;
         const dpr = window.devicePixelRatio;
-        ctx2d.setTransform(viewport.zoom * dpr, 0, 0, viewport.zoom * dpr, viewport.offsetX * dpr, viewport.offsetY * dpr);
+        ctx2d.setTransform(
+          viewport.zoom * dpr,
+          0,
+          0,
+          viewport.zoom * dpr,
+          viewport.offsetX * dpr,
+          viewport.offsetY * dpr,
+        );
         ctx2d.globalAlpha = 0.7;
         for (const el of previews) {
-          drawElement(ctx2d, el as Parameters<typeof drawElement>[1], scene.elements);
+          drawElement(
+            ctx2d,
+            el as Parameters<typeof drawElement>[1],
+            scene.elements,
+          );
         }
         ctx2d.restore();
       }
     }
 
     // Draw snap indicators (arrow/line tool and select tool endpoint drag)
-    const selectTool = TOOLS['select'] as SelectTool;
+    const selectTool = TOOLS.select as SelectTool;
     if ('snapIndicator' in activeTool) {
-      const indicator = (activeTool as { snapIndicator: { worldX: number; worldY: number } | null }).snapIndicator;
+      const indicator = (
+        activeTool as {
+          snapIndicator: { worldX: number; worldY: number } | null;
+        }
+      ).snapIndicator;
       if (indicator) {
-        drawSnapIndicator(ctx2d, indicator.worldX, indicator.worldY, scene.viewport);
+        drawSnapIndicator(
+          ctx2d,
+          indicator.worldX,
+          indicator.worldY,
+          scene.viewport,
+        );
       }
     }
     if (selectTool.endpointSnapIndicator) {
-      drawSnapIndicator(ctx2d, selectTool.endpointSnapIndicator.worldX, selectTool.endpointSnapIndicator.worldY, scene.viewport);
+      drawSnapIndicator(
+        ctx2d,
+        selectTool.endpointSnapIndicator.worldX,
+        selectTool.endpointSnapIndicator.worldY,
+        scene.viewport,
+      );
     }
     if (selectTool.endpointSnapElementId) {
-      const snapEl = scene.elements.find((el) => el.id === selectTool.endpointSnapElementId);
+      const snapEl = scene.elements.find(
+        (el) => el.id === selectTool.endpointSnapElementId,
+      );
       if (snapEl) drawHoverHighlight(ctx2d, snapEl, scene.viewport);
     }
 
@@ -608,7 +801,8 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
 
     // Draw hover highlight for arrow/line tool snap target (magnetic connection point)
     if ('snapElementId' in activeTool) {
-      const snapElId = (activeTool as { snapElementId: string | null }).snapElementId;
+      const snapElId = (activeTool as { snapElementId: string | null })
+        .snapElementId;
       if (snapElId) {
         const snapEl = scene.elements.find((el) => el.id === snapElId);
         if (snapEl) drawHoverHighlight(ctx2d, snapEl, scene.viewport);
@@ -616,9 +810,11 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
     }
 
     // Draw hover highlight when using eraser tool
-    const eraserTool = TOOLS['eraser'] as EraserTool;
+    const eraserTool = TOOLS.eraser as EraserTool;
     if (scene.appState.activeTool === 'eraser' && eraserTool.hoveredId) {
-      const hoveredEl = scene.elements.find((el) => el.id === eraserTool.hoveredId);
+      const hoveredEl = scene.elements.find(
+        (el) => el.id === eraserTool.hoveredId,
+      );
       if (hoveredEl) drawHoverHighlight(ctx2d, hoveredEl, scene.viewport);
     }
 
@@ -635,18 +831,34 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
 
     // Draw alignment guides during element move
     if (selectTool.alignGuides.length > 0) {
-      drawAlignGuides(ctx2d, selectTool.alignGuides, scene.viewport, canvas.width, canvas.height);
+      drawAlignGuides(
+        ctx2d,
+        selectTool.alignGuides,
+        scene.viewport,
+        canvas.width,
+        canvas.height,
+      );
     }
 
     // Draw curve control point handle when a single curve element is selected
     if (scene.selectedIds.size === 1) {
       const selId = [...scene.selectedIds][0]!;
-      const curveEl = scene.elements.find((el) => el.id === selId && el.type === 'curve');
+      const curveEl = scene.elements.find(
+        (el) => el.id === selId && el.type === 'curve',
+      );
       if (curveEl && curveEl.type === 'curve') {
         const dpr = window.devicePixelRatio;
-        const [scx, scy] = worldToScreen(scene.viewport, curveEl.cx, curveEl.cy);
-        const [sx1, sy1] = worldToScreen(scene.viewport, curveEl.x,  curveEl.y);
-        const [sx2, sy2] = worldToScreen(scene.viewport, curveEl.x2, curveEl.y2);
+        const [scx, scy] = worldToScreen(
+          scene.viewport,
+          curveEl.cx,
+          curveEl.cy,
+        );
+        const [sx1, sy1] = worldToScreen(scene.viewport, curveEl.x, curveEl.y);
+        const [sx2, sy2] = worldToScreen(
+          scene.viewport,
+          curveEl.x2,
+          curveEl.y2,
+        );
         ctx2d.save();
         ctx2d.resetTransform();
         ctx2d.setLineDash([4, 3]);
@@ -678,7 +890,7 @@ export function initCanvasView(canvas: HTMLCanvasElement, history: History): { s
     needsRender = true;
   };
 
-  return { selectTool: TOOLS['select'] as SelectTool };
+  return { selectTool: TOOLS.select as SelectTool };
 }
 
 function drawSlashTrail(
@@ -689,7 +901,14 @@ function drawSlashTrail(
   const now = Date.now();
   const dpr = window.devicePixelRatio;
   ctx2d.save();
-  ctx2d.setTransform(viewport.zoom * dpr, 0, 0, viewport.zoom * dpr, viewport.offsetX * dpr, viewport.offsetY * dpr);
+  ctx2d.setTransform(
+    viewport.zoom * dpr,
+    0,
+    0,
+    viewport.zoom * dpr,
+    viewport.offsetX * dpr,
+    viewport.offsetY * dpr,
+  );
   ctx2d.lineCap = 'round';
   ctx2d.lineJoin = 'round';
 
@@ -740,27 +959,27 @@ function openShapeLabelEditor(
   ta.spellcheck = true;
   ta.value = el.label ?? '';
 
-  ta.style.position    = 'fixed';
-  ta.style.left        = `${screenCX + canvasRect.left - shapeW / 2}px`;
-  ta.style.top         = `${screenCY + canvasRect.top - fontSize * viewport.zoom * 0.6}px`;
-  ta.style.width       = `${shapeW}px`;
-  ta.style.minHeight   = `${fontSize * viewport.zoom * 1.2}px`;
-  ta.style.font        = `${fontSize * viewport.zoom}px ${fontFamily}`;
-  ta.style.color       = el.labelColor ?? contrastColor(el.fillColor, el.strokeColor);
-  ta.style.caretColor  = 'var(--accent, #7c63d4)';
-  ta.style.textAlign   = 'center';
-  ta.style.lineHeight  = '1.2';
-  ta.style.padding     = '0';
-  ta.style.margin      = '0';
-  ta.style.border      = 'none';
-  ta.style.outline     = 'none';
-  ta.style.boxShadow   = 'none';
-  ta.style.resize      = 'none';
-  ta.style.overflow    = 'hidden';
-  ta.style.background  = 'transparent';
-  ta.style.zIndex      = '1000';
-  ta.style.whiteSpace  = 'pre-wrap';
-  ta.style.wordBreak   = 'break-word';
+  ta.style.position = 'fixed';
+  ta.style.left = `${screenCX + canvasRect.left - shapeW / 2}px`;
+  ta.style.top = `${screenCY + canvasRect.top - fontSize * viewport.zoom * 0.6}px`;
+  ta.style.width = `${shapeW}px`;
+  ta.style.minHeight = `${fontSize * viewport.zoom * 1.2}px`;
+  ta.style.font = `${fontSize * viewport.zoom}px ${fontFamily}`;
+  ta.style.color = el.labelColor ?? contrastColor(el.fillColor, el.strokeColor);
+  ta.style.caretColor = 'var(--accent, #7c63d4)';
+  ta.style.textAlign = 'center';
+  ta.style.lineHeight = '1.2';
+  ta.style.padding = '0';
+  ta.style.margin = '0';
+  ta.style.border = 'none';
+  ta.style.outline = 'none';
+  ta.style.boxShadow = 'none';
+  ta.style.resize = 'none';
+  ta.style.overflow = 'hidden';
+  ta.style.background = 'transparent';
+  ta.style.zIndex = '1000';
+  ta.style.whiteSpace = 'pre-wrap';
+  ta.style.wordBreak = 'break-word';
 
   const grow = (): void => {
     ta.style.height = '0';
@@ -776,7 +995,13 @@ function openShapeLabelEditor(
     const content = ta.value.trim();
     ta.remove();
     if (content !== (el.label ?? '')) {
-      history.dispatch({ type: 'SET_SHAPE_LABEL', id: el.id, label: content, labelFontSize: fontSize, labelFontFamily: fontFamily });
+      history.dispatch({
+        type: 'SET_SHAPE_LABEL',
+        id: el.id,
+        label: content,
+        labelFontSize: fontSize,
+        labelFontFamily: fontFamily,
+      });
     }
   };
 
@@ -807,12 +1032,24 @@ function isPointInArrowLabel(wx: number, wy: number, el: LineElement): boolean {
   const pad = fontSize * 0.8;
   const labelW = maxLen * fontSize * 0.6 + pad;
   const labelH = lines.length * fontSize * 1.2 + pad;
-  return wx >= mx - labelW / 2 && wx <= mx + labelW / 2 &&
-         wy >= my - labelH / 2 && wy <= my + labelH / 2;
+  return (
+    wx >= mx - labelW / 2 &&
+    wx <= mx + labelW / 2 &&
+    wy >= my - labelH / 2 &&
+    wy <= my + labelH / 2
+  );
 }
 
-function distPointToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
-  const dx = x2 - x1, dy = y2 - y1;
+function distPointToSegment(
+  px: number,
+  py: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): number {
+  const dx = x2 - x1,
+    dy = y2 - y1;
   const lenSq = dx * dx + dy * dy;
   if (lenSq === 0) return Math.hypot(px - x1, py - y1);
   const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
@@ -838,27 +1075,27 @@ function openArrowLabelEditor(
   ta.spellcheck = true;
   ta.value = el.label ?? '';
 
-  ta.style.position    = 'fixed';
-  ta.style.left        = `${screenX + canvasRect.left - 80}px`;
-  ta.style.top         = `${screenY + canvasRect.top - fontSize * viewport.zoom * 0.6}px`;
-  ta.style.width       = '160px';
-  ta.style.minHeight   = `${fontSize * viewport.zoom * 1.2}px`;
-  ta.style.font        = `${fontSize * viewport.zoom}px ${fontFamily}`;
-  ta.style.color       = el.labelColor ?? el.strokeColor;
-  ta.style.caretColor  = 'var(--accent, #7c63d4)';
-  ta.style.textAlign   = 'center';
-  ta.style.lineHeight  = '1.2';
-  ta.style.padding     = '0';
-  ta.style.margin      = '0';
-  ta.style.border      = 'none';
-  ta.style.outline     = 'none';
-  ta.style.boxShadow   = 'none';
-  ta.style.resize      = 'none';
-  ta.style.overflow    = 'hidden';
-  ta.style.background  = 'transparent';
-  ta.style.zIndex      = '1000';
-  ta.style.whiteSpace  = 'pre-wrap';
-  ta.style.wordBreak   = 'break-word';
+  ta.style.position = 'fixed';
+  ta.style.left = `${screenX + canvasRect.left - 80}px`;
+  ta.style.top = `${screenY + canvasRect.top - fontSize * viewport.zoom * 0.6}px`;
+  ta.style.width = '160px';
+  ta.style.minHeight = `${fontSize * viewport.zoom * 1.2}px`;
+  ta.style.font = `${fontSize * viewport.zoom}px ${fontFamily}`;
+  ta.style.color = el.labelColor ?? el.strokeColor;
+  ta.style.caretColor = 'var(--accent, #7c63d4)';
+  ta.style.textAlign = 'center';
+  ta.style.lineHeight = '1.2';
+  ta.style.padding = '0';
+  ta.style.margin = '0';
+  ta.style.border = 'none';
+  ta.style.outline = 'none';
+  ta.style.boxShadow = 'none';
+  ta.style.resize = 'none';
+  ta.style.overflow = 'hidden';
+  ta.style.background = 'transparent';
+  ta.style.zIndex = '1000';
+  ta.style.whiteSpace = 'pre-wrap';
+  ta.style.wordBreak = 'break-word';
 
   const grow = (): void => {
     ta.style.height = '0';
@@ -872,7 +1109,13 @@ function openArrowLabelEditor(
     const content = ta.value.trim();
     ta.remove();
     if (content !== (el.label ?? '')) {
-      history.dispatch({ type: 'SET_SHAPE_LABEL', id: el.id, label: content, labelFontSize: fontSize, labelFontFamily: fontFamily });
+      history.dispatch({
+        type: 'SET_SHAPE_LABEL',
+        id: el.id,
+        label: content,
+        labelFontSize: fontSize,
+        labelFontFamily: fontFamily,
+      });
     }
   };
 

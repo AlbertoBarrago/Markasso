@@ -1,5 +1,5 @@
-import type { Viewport } from '../core/viewport';
 import type { GridType } from '../core/app_state';
+import type { Viewport } from '../core/viewport';
 
 // Physical mm → CSS pixels at 96 DPI standard
 const PX_PER_MM = 96 / 25.4; // ≈ 3.7795
@@ -10,19 +10,25 @@ export function drawGrid(
   gridSize: number,
   gridType: GridType,
   canvasWidth: number,
-  canvasHeight: number
+  canvasHeight: number,
 ): void {
   ctx.save();
   ctx.resetTransform();
   ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-  const cssW = canvasWidth  / window.devicePixelRatio;
+  const cssW = canvasWidth / window.devicePixelRatio;
   const cssH = canvasHeight / window.devicePixelRatio;
 
   switch (gridType) {
-    case 'dot':  drawDotGrid(ctx, viewport, gridSize, cssW, cssH);  break;
-    case 'line': drawLineGrid(ctx, viewport, gridSize, cssW, cssH); break;
-    case 'mm':   drawMmGrid(ctx, viewport, cssW, cssH);             break;
+    case 'dot':
+      drawDotGrid(ctx, viewport, gridSize, cssW, cssH);
+      break;
+    case 'line':
+      drawLineGrid(ctx, viewport, gridSize, cssW, cssH);
+      break;
+    case 'mm':
+      drawMmGrid(ctx, viewport, cssW, cssH);
+      break;
   }
 
   ctx.restore();
@@ -34,17 +40,17 @@ function drawDotGrid(
   viewport: Viewport,
   gridSize: number,
   w: number,
-  h: number
+  h: number,
 ): void {
   const { offsetX, offsetY, zoom } = viewport;
-  const left  = -offsetX / zoom;
-  const top   = -offsetY / zoom;
-  const right  = (w - offsetX) / zoom;
+  const left = -offsetX / zoom;
+  const top = -offsetY / zoom;
+  const right = (w - offsetX) / zoom;
   const bottom = (h - offsetY) / zoom;
 
-  const startX = Math.floor(left  / gridSize) * gridSize;
-  const startY = Math.floor(top   / gridSize) * gridSize;
-  const r      = Math.max(0.8, zoom * 0.6);
+  const startX = Math.floor(left / gridSize) * gridSize;
+  const startY = Math.floor(top / gridSize) * gridSize;
+  const r = Math.max(0.8, zoom * 0.6);
 
   ctx.fillStyle = 'rgba(255,255,255,0.12)';
   ctx.beginPath();
@@ -65,19 +71,19 @@ function drawLineGrid(
   viewport: Viewport,
   gridSize: number,
   w: number,
-  h: number
+  h: number,
 ): void {
   const { offsetX, offsetY, zoom } = viewport;
-  const left   = -offsetX / zoom;
-  const top    = -offsetY / zoom;
-  const right   = (w - offsetX) / zoom;
-  const bottom  = (h - offsetY) / zoom;
+  const left = -offsetX / zoom;
+  const top = -offsetY / zoom;
+  const right = (w - offsetX) / zoom;
+  const bottom = (h - offsetY) / zoom;
 
   const startX = Math.floor(left / gridSize) * gridSize;
-  const startY = Math.floor(top  / gridSize) * gridSize;
+  const startY = Math.floor(top / gridSize) * gridSize;
 
   ctx.strokeStyle = 'rgba(255,255,255,0.07)';
-  ctx.lineWidth   = 0.5;
+  ctx.lineWidth = 0.5;
   ctx.beginPath();
   for (let wx = startX; wx < right + gridSize; wx += gridSize) {
     const sx = wx * zoom + offsetX;
@@ -86,7 +92,7 @@ function drawLineGrid(
   }
   for (let wy = startY; wy < bottom + gridSize; wy += gridSize) {
     const sy = wy * zoom + offsetY;
-    ctx.moveTo(0,  sy);
+    ctx.moveTo(0, sy);
     ctx.lineTo(w, sy);
   }
   ctx.stroke();
@@ -97,31 +103,27 @@ function drawMmGrid(
   ctx: CanvasRenderingContext2D,
   viewport: Viewport,
   w: number,
-  h: number
+  h: number,
 ): void {
   const { offsetX, offsetY, zoom } = viewport;
 
   // World units per mm, 5mm, 10mm
-  const mm1  = PX_PER_MM;
-  const mm5  = PX_PER_MM * 5;
+  const mm1 = PX_PER_MM;
+  const mm5 = PX_PER_MM * 5;
   const mm10 = PX_PER_MM * 10;
 
   const screenMm1 = mm1 * zoom; // how many screen px = 1 world-mm
 
-  function gridLines(
-    spacing: number,
-    color: string,
-    lineW: number
-  ): void {
-    const left   = -offsetX / zoom;
-    const top    = -offsetY / zoom;
-    const right   = (w - offsetX) / zoom;
-    const bottom  = (h - offsetY) / zoom;
-    const startX  = Math.floor(left  / spacing) * spacing;
-    const startY  = Math.floor(top   / spacing) * spacing;
+  function gridLines(spacing: number, color: string, lineW: number): void {
+    const left = -offsetX / zoom;
+    const top = -offsetY / zoom;
+    const right = (w - offsetX) / zoom;
+    const bottom = (h - offsetY) / zoom;
+    const startX = Math.floor(left / spacing) * spacing;
+    const startY = Math.floor(top / spacing) * spacing;
 
     ctx.strokeStyle = color;
-    ctx.lineWidth   = lineW;
+    ctx.lineWidth = lineW;
     ctx.beginPath();
     for (let wx = startX; wx <= right + spacing; wx += spacing) {
       const sx = wx * zoom + offsetX;

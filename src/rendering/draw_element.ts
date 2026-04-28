@@ -1,7 +1,13 @@
 import type { Element } from '../elements/element';
+import {
+  getArrowHeadVector,
+  getQuadraticLength,
+  getQuadraticPoint,
+  getQuadraticSegment,
+  getQuadraticTangent,
+} from './connector_geometry';
 import { getElementCenter, resolveArrowEndpoints } from './draw_selection';
 import { getCachedImage } from './image_cache';
-import { getArrowHeadVector, getQuadraticLength, getQuadraticPoint, getQuadraticSegment, getQuadraticTangent } from './connector_geometry';
 
 export function contrastColor(fill: string, fallback: string): string {
   if (!fill || fill === 'transparent' || fill === 'none') return fallback;
@@ -10,7 +16,7 @@ export function contrastColor(fill: string, fallback: string): string {
   const r = parseInt(hex.slice(0, 2), 16);
   const g = parseInt(hex.slice(2, 4), 16);
   const b = parseInt(hex.slice(4, 6), 16);
-  if (isNaN(r) || isNaN(g) || isNaN(b)) return fallback;
+  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return fallback;
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   return luminance > 0.55 ? '#111111' : '#ffffff';
 }
@@ -28,7 +34,8 @@ function resolveStrokeColorForTheme(strokeColor: string): string {
  */
 function resolveShadowColorForTheme(shadowColor: string): string {
   if (typeof document === 'undefined') return shadowColor;
-  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const isLight =
+    document.documentElement.getAttribute('data-theme') === 'light';
   if (isLight) return shadowColor;
   // Convert black-based rgba to a white glow
   const lc = shadowColor.toLowerCase().replace(/\s/g, '');
@@ -41,13 +48,19 @@ function resolveShadowColorForTheme(shadowColor: string): string {
   return shadowColor;
 }
 
-export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allElements?: ReadonlyArray<Element>, editingShapeLabelId?: string | null): void {
+export function drawElement(
+  ctx: CanvasRenderingContext2D,
+  el: Element,
+  allElements?: ReadonlyArray<Element>,
+  editingShapeLabelId?: string | null,
+): void {
   ctx.save();
   const strokeColor = resolveStrokeColorForTheme(el.strokeColor);
   ctx.globalAlpha = el.opacity;
   ctx.strokeStyle = strokeColor;
   ctx.lineWidth = el.strokeWidth;
-  ctx.fillStyle = el.fillColor === 'transparent' ? 'rgba(0,0,0,0)' : el.fillColor;
+  ctx.fillStyle =
+    el.fillColor === 'transparent' ? 'rgba(0,0,0,0)' : el.fillColor;
   ctx.lineCap = el.lineCap ?? 'round';
   ctx.lineJoin = el.lineJoin ?? 'round';
 
@@ -64,7 +77,9 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
 
   if (el.shadowBlur && el.shadowBlur > 0) {
     ctx.shadowBlur = el.shadowBlur;
-    ctx.shadowColor = resolveShadowColorForTheme(el.shadowColor ?? 'rgba(0,0,0,0.35)') as string;
+    ctx.shadowColor = resolveShadowColorForTheme(
+      el.shadowColor ?? 'rgba(0,0,0,0.35)',
+    ) as string;
     ctx.shadowOffsetX = el.shadowOffsetX ?? 4;
     ctx.shadowOffsetY = el.shadowOffsetY ?? 4;
   }
@@ -80,7 +95,16 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
     case 'rectangle': {
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
-      drawRectangle(ctx, el.x, el.y, el.width, el.height, roughness, seed, el.cornerRadius ?? 0);
+      drawRectangle(
+        ctx,
+        el.x,
+        el.y,
+        el.width,
+        el.height,
+        roughness,
+        seed,
+        el.cornerRadius ?? 0,
+      );
       if (el.label && editingShapeLabelId !== el.id) {
         const rx = el.width < 0 ? el.x + el.width : el.x;
         const ry = el.height < 0 ? el.y + el.height : el.y;
@@ -91,7 +115,16 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         ctx.beginPath();
         ctx.rect(rx, ry, rw, rh);
         ctx.clip();
-        drawShapeLabel(ctx, rx + rw / 2, ry + rh / 2, rw, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', el.labelColor ?? contrastColor(el.fillColor, strokeColor));
+        drawShapeLabel(
+          ctx,
+          rx + rw / 2,
+          ry + rh / 2,
+          rw,
+          el.label,
+          el.labelFontSize ?? 16,
+          el.labelFontFamily ?? 'Arial, sans-serif',
+          el.labelColor ?? contrastColor(el.fillColor, strokeColor),
+        );
         ctx.restore();
       }
       break;
@@ -99,7 +132,16 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
     case 'rhombus': {
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
-      drawRhombus(ctx, el.x, el.y, el.width, el.height, roughness, seed, el.cornerRadius ?? 0);
+      drawRhombus(
+        ctx,
+        el.x,
+        el.y,
+        el.width,
+        el.height,
+        roughness,
+        seed,
+        el.cornerRadius ?? 0,
+      );
       if (el.label && editingShapeLabelId !== el.id) {
         const rx = el.width < 0 ? el.x + el.width : el.x;
         const ry = el.height < 0 ? el.y + el.height : el.y;
@@ -116,7 +158,16 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         ctx.lineTo(rx, cy);
         ctx.closePath();
         ctx.clip();
-        drawShapeLabel(ctx, cx, cy, rw * 0.7, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', el.labelColor ?? contrastColor(el.fillColor, strokeColor));
+        drawShapeLabel(
+          ctx,
+          cx,
+          cy,
+          rw * 0.7,
+          el.label,
+          el.labelFontSize ?? 16,
+          el.labelFontFamily ?? 'Arial, sans-serif',
+          el.labelColor ?? contrastColor(el.fillColor, strokeColor),
+        );
         ctx.restore();
       }
       break;
@@ -135,7 +186,16 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         ctx.beginPath();
         ctx.ellipse(cx, cy, erx, ery, 0, 0, Math.PI * 2);
         ctx.clip();
-        drawShapeLabel(ctx, cx, cy, erx * 2 * 0.7, el.label, el.labelFontSize ?? 16, el.labelFontFamily ?? 'Arial, sans-serif', el.labelColor ?? contrastColor(el.fillColor, strokeColor));
+        drawShapeLabel(
+          ctx,
+          cx,
+          cy,
+          erx * 2 * 0.7,
+          el.label,
+          el.labelFontSize ?? 16,
+          el.labelFontFamily ?? 'Arial, sans-serif',
+          el.labelColor ?? contrastColor(el.fillColor, strokeColor),
+        );
         ctx.restore();
       }
       break;
@@ -145,7 +205,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
       const seed = hashId(el.id);
       const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
       const arrowHead = el.arrowHead;
-      const drawEnd   = arrowHead === 'end'  || arrowHead === 'both';
+      const drawEnd = arrowHead === 'end' || arrowHead === 'both';
       const drawStart = arrowHead === 'start' || arrowHead === 'both';
 
       if (el.label && editingShapeLabelId !== el.id) {
@@ -156,7 +216,8 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         ctx.font = `${fontSize}px ${fontFamily}`;
         const lines = el.label.split('\n');
         const pad = fontSize * 0.4;
-        const labelW = Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2;
+        const labelW =
+          Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2;
         const labelH = lines.length * fontSize * 1.2 + pad * 2;
         ctx.restore();
 
@@ -167,42 +228,124 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         let dy = totalLen > 0 ? (pts.y2 - pts.y) / totalLen : 0;
 
         if (el.cx !== undefined && el.cy !== undefined) {
-          const midPoint = getQuadraticPoint(pts.x, pts.y, el.cx, el.cy, pts.x2, pts.y2, 0.5);
-          const tangent = getQuadraticTangent(pts.x, pts.y, el.cx, el.cy, pts.x2, pts.y2, 0.5);
+          const midPoint = getQuadraticPoint(
+            pts.x,
+            pts.y,
+            el.cx,
+            el.cy,
+            pts.x2,
+            pts.y2,
+            0.5,
+          );
+          const tangent = getQuadraticTangent(
+            pts.x,
+            pts.y,
+            el.cx,
+            el.cy,
+            pts.x2,
+            pts.y2,
+            0.5,
+          );
           const tangentLen = Math.hypot(tangent.x, tangent.y);
           mx = midPoint.x;
           my = midPoint.y;
-          totalLen = getQuadraticLength(pts.x, pts.y, el.cx, el.cy, pts.x2, pts.y2);
+          totalLen = getQuadraticLength(
+            pts.x,
+            pts.y,
+            el.cx,
+            el.cy,
+            pts.x2,
+            pts.y2,
+          );
           if (tangentLen > 0.001) {
             dx = tangent.x / tangentLen;
             dy = tangent.y / tangentLen;
           }
         }
 
-        const gapHalf = Math.abs(dx) * labelW / 2 + Math.abs(dy) * labelH / 2;
+        const gapHalf =
+          (Math.abs(dx) * labelW) / 2 + (Math.abs(dy) * labelH) / 2;
         const gapT = totalLen > 0 ? gapHalf / totalLen : 0;
         const t1 = Math.max(0, 0.5 - gapT);
         const t2 = Math.min(1, 0.5 + gapT);
 
         if (el.cx !== undefined && el.cy !== undefined) {
-          drawQuadraticSegment(ctx, pts.x, pts.y, el.cx, el.cy, pts.x2, pts.y2, 0, t1);
-          drawQuadraticSegment(ctx, pts.x, pts.y, el.cx, el.cy, pts.x2, pts.y2, t2, 1);
+          drawQuadraticSegment(
+            ctx,
+            pts.x,
+            pts.y,
+            el.cx,
+            el.cy,
+            pts.x2,
+            pts.y2,
+            0,
+            t1,
+          );
+          drawQuadraticSegment(
+            ctx,
+            pts.x,
+            pts.y,
+            el.cx,
+            el.cy,
+            pts.x2,
+            pts.y2,
+            t2,
+            1,
+          );
         } else {
-          drawArrowShaft(ctx, pts.x, pts.y, pts.x + (pts.x2 - pts.x) * t1, pts.y + (pts.y2 - pts.y) * t1, roughness, seed);
-          drawArrowShaft(ctx, pts.x + (pts.x2 - pts.x) * t2, pts.y + (pts.y2 - pts.y) * t2, pts.x2, pts.y2, roughness, seed);
+          drawArrowShaft(
+            ctx,
+            pts.x,
+            pts.y,
+            pts.x + (pts.x2 - pts.x) * t1,
+            pts.y + (pts.y2 - pts.y) * t1,
+            roughness,
+            seed,
+          );
+          drawArrowShaft(
+            ctx,
+            pts.x + (pts.x2 - pts.x) * t2,
+            pts.y + (pts.y2 - pts.y) * t2,
+            pts.x2,
+            pts.y2,
+            roughness,
+            seed,
+          );
         }
 
         if (drawEnd) {
           const head = getArrowHeadVector(pts, el, 'end');
-          drawArrowHead(ctx, head.fromX, head.fromY, head.tipX, head.tipY, el.strokeWidth);
+          drawArrowHead(
+            ctx,
+            head.fromX,
+            head.fromY,
+            head.tipX,
+            head.tipY,
+            el.strokeWidth,
+          );
         }
         if (drawStart) {
           const head = getArrowHeadVector(pts, el, 'start');
-          drawArrowHead(ctx, head.fromX, head.fromY, head.tipX, head.tipY, el.strokeWidth);
+          drawArrowHead(
+            ctx,
+            head.fromX,
+            head.fromY,
+            head.tipX,
+            head.tipY,
+            el.strokeWidth,
+          );
         }
         ctx.save();
         ctx.setLineDash([]);
-        drawArrowLabel(ctx, mx, my, el.label, fontSize, fontFamily, el.labelColor ?? strokeColor);
+        drawArrowLabel(
+          ctx,
+          mx,
+          my,
+          el.label,
+          fontSize,
+          fontFamily,
+          el.labelColor ?? strokeColor,
+        );
         ctx.restore();
       } else if (el.cx !== undefined && el.cy !== undefined) {
         ctx.beginPath();
@@ -211,21 +354,49 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         ctx.stroke();
         if (drawEnd) {
           const head = getArrowHeadVector(pts, el, 'end');
-          drawArrowHead(ctx, head.fromX, head.fromY, head.tipX, head.tipY, el.strokeWidth);
+          drawArrowHead(
+            ctx,
+            head.fromX,
+            head.fromY,
+            head.tipX,
+            head.tipY,
+            el.strokeWidth,
+          );
         }
         if (drawStart) {
           const head = getArrowHeadVector(pts, el, 'start');
-          drawArrowHead(ctx, head.fromX, head.fromY, head.tipX, head.tipY, el.strokeWidth);
+          drawArrowHead(
+            ctx,
+            head.fromX,
+            head.fromY,
+            head.tipX,
+            head.tipY,
+            el.strokeWidth,
+          );
         }
       } else {
         drawLine(ctx, pts.x, pts.y, pts.x2, pts.y2, roughness, seed);
         if (drawEnd) {
           const head = getArrowHeadVector(pts, el, 'end');
-          drawArrowHead(ctx, head.fromX, head.fromY, head.tipX, head.tipY, el.strokeWidth);
+          drawArrowHead(
+            ctx,
+            head.fromX,
+            head.fromY,
+            head.tipX,
+            head.tipY,
+            el.strokeWidth,
+          );
         }
         if (drawStart) {
           const head = getArrowHeadVector(pts, el, 'start');
-          drawArrowHead(ctx, head.fromX, head.fromY, head.tipX, head.tipY, el.strokeWidth);
+          drawArrowHead(
+            ctx,
+            head.fromX,
+            head.fromY,
+            head.tipX,
+            head.tipY,
+            el.strokeWidth,
+          );
         }
       }
       break;
@@ -245,27 +416,62 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
         ctx.font = `${fontSize}px ${fontFamily}`;
         const lines = el.label.split('\n');
         const pad = fontSize * 0.4;
-        const labelW = Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2;
+        const labelW =
+          Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2;
         const labelH = lines.length * fontSize * 1.2 + pad * 2;
         ctx.restore();
         const totalLen = Math.hypot(pts.x2 - pts.x, pts.y2 - pts.y);
         const dx = totalLen > 0 ? (pts.x2 - pts.x) / totalLen : 1;
         const dy = totalLen > 0 ? (pts.y2 - pts.y) / totalLen : 0;
         // Half-extent of the label box projected onto the arrow direction
-        const gapHalf = Math.abs(dx) * labelW / 2 + Math.abs(dy) * labelH / 2;
+        const gapHalf =
+          (Math.abs(dx) * labelW) / 2 + (Math.abs(dy) * labelH) / 2;
         const gapT = totalLen > 0 ? gapHalf / totalLen : 0;
         const t1 = Math.max(0, 0.5 - gapT);
         const t2 = Math.min(1, 0.5 + gapT);
         // Draw shaft in two segments, skipping the label gap
-        drawArrowShaft(ctx, pts.x, pts.y, pts.x + (pts.x2 - pts.x) * t1, pts.y + (pts.y2 - pts.y) * t1, roughness, seed);
-        drawArrowShaft(ctx, pts.x + (pts.x2 - pts.x) * t2, pts.y + (pts.y2 - pts.y) * t2, pts.x2, pts.y2, roughness, seed);
+        drawArrowShaft(
+          ctx,
+          pts.x,
+          pts.y,
+          pts.x + (pts.x2 - pts.x) * t1,
+          pts.y + (pts.y2 - pts.y) * t1,
+          roughness,
+          seed,
+        );
+        drawArrowShaft(
+          ctx,
+          pts.x + (pts.x2 - pts.x) * t2,
+          pts.y + (pts.y2 - pts.y) * t2,
+          pts.x2,
+          pts.y2,
+          roughness,
+          seed,
+        );
         drawArrowHead(ctx, pts.x, pts.y, pts.x2, pts.y2, el.strokeWidth);
         ctx.save();
         ctx.setLineDash([]);
-        drawArrowLabel(ctx, mx, my, el.label, fontSize, fontFamily, el.labelColor ?? strokeColor);
+        drawArrowLabel(
+          ctx,
+          mx,
+          my,
+          el.label,
+          fontSize,
+          fontFamily,
+          el.labelColor ?? strokeColor,
+        );
         ctx.restore();
       } else {
-        drawArrow(ctx, pts.x, pts.y, pts.x2, pts.y2, el.strokeWidth, roughness, seed);
+        drawArrow(
+          ctx,
+          pts.x,
+          pts.y,
+          pts.x2,
+          pts.y2,
+          el.strokeWidth,
+          roughness,
+          seed,
+        );
       }
       break;
     }
@@ -294,9 +500,36 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: Element, allEleme
     case 'text':
       ctx.setLineDash([]);
       if (el.isCode) {
-        drawCode(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, strokeColor, el.width, el.height, el.textAlign ?? 'left');
+        drawCode(
+          ctx,
+          el.x,
+          el.y,
+          el.content,
+          el.fontSize,
+          el.fontFamily,
+          strokeColor,
+          el.width,
+          el.height,
+          el.textAlign ?? 'left',
+        );
       } else {
-        drawText(ctx, el.x, el.y, el.content, el.fontSize, el.fontFamily, strokeColor, el.fillColor, el.width, el.height, el.textAlign ?? 'left', el.bold, el.italic, el.underline, el.strikethrough);
+        drawText(
+          ctx,
+          el.x,
+          el.y,
+          el.content,
+          el.fontSize,
+          el.fontFamily,
+          strokeColor,
+          el.fillColor,
+          el.width,
+          el.height,
+          el.textAlign ?? 'left',
+          el.bold,
+          el.italic,
+          el.underline,
+          el.strikethrough,
+        );
       }
       break;
     case 'image':
@@ -317,7 +550,12 @@ function hashId(id: string): number {
   return h;
 }
 
-function roughOffset(seed: number, i: number, roughness: number, scale: number): number {
+function roughOffset(
+  seed: number,
+  i: number,
+  roughness: number,
+  scale: number,
+): number {
   return Math.sin(seed * 0.001 + i * 1.7) * roughness * scale;
 }
 
@@ -357,7 +595,10 @@ function drawRectangle(
   // Draw wobbly stroke along 4 edges using quadratic curves for smooth wobble
   const amp = roughness * Math.min(rw, rh) * 0.03;
   const corners: [number, number][] = [
-    [rx, ry], [rx + rw, ry], [rx + rw, ry + rh], [rx, ry + rh],
+    [rx, ry],
+    [rx + rw, ry],
+    [rx + rw, ry + rh],
+    [rx, ry + rh],
   ];
 
   ctx.beginPath();
@@ -367,9 +608,9 @@ function drawRectangle(
     if (edge === 0) ctx.moveTo(x1, y1);
     const mx = (x1 + x2) / 2;
     const my = (y1 + y2) / 2;
-    const cp1x = (x1 + mx) / 2 + roughOffset(seed,      edge * 7 + 1, 1, amp);
+    const cp1x = (x1 + mx) / 2 + roughOffset(seed, edge * 7 + 1, 1, amp);
     const cp1y = (y1 + my) / 2 + roughOffset(seed + 99, edge * 7 + 1, 1, amp);
-    const cp2x = (mx + x2) / 2 + roughOffset(seed,      edge * 7 + 3, 1, amp);
+    const cp2x = (mx + x2) / 2 + roughOffset(seed, edge * 7 + 3, 1, amp);
     const cp2y = (my + y2) / 2 + roughOffset(seed + 99, edge * 7 + 3, 1, amp);
     ctx.quadraticCurveTo(cp1x, cp1y, mx, my);
     ctx.quadraticCurveTo(cp2x, cp2y, x2, y2);
@@ -429,10 +670,10 @@ function drawRhombusPath(
   rh: number,
   cr: number,
 ): void {
-  const top: [number, number]    = [rx + rw / 2, ry];
-  const right: [number, number]  = [rx + rw,     ry + rh / 2];
+  const top: [number, number] = [rx + rw / 2, ry];
+  const right: [number, number] = [rx + rw, ry + rh / 2];
   const bottom: [number, number] = [rx + rw / 2, ry + rh];
-  const left: [number, number]   = [rx,           ry + rh / 2];
+  const left: [number, number] = [rx, ry + rh / 2];
   const corners = [top, right, bottom, left];
 
   ctx.beginPath();
@@ -456,8 +697,8 @@ function drawRhombusPath(
       const r = Math.min(cr, len1 / 2, len2 / 2);
       const startX = curr[0] + (d1x / len1) * r;
       const startY = curr[1] + (d1y / len1) * r;
-      const endX   = curr[0] + (d2x / len2) * r;
-      const endY   = curr[1] + (d2y / len2) * r;
+      const endX = curr[0] + (d2x / len2) * r;
+      const endY = curr[1] + (d2y / len2) * r;
       if (i === 0) ctx.moveTo(startX, startY);
       else ctx.lineTo(startX, startY);
       ctx.arcTo(curr[0], curr[1], endX, endY, r);
@@ -492,10 +733,10 @@ function drawRhombus(
   }
 
   // Wobbly stroke along 4 edges (no corner radius for rough mode)
-  const top: [number, number]    = [rx + rw / 2, ry];
-  const right: [number, number]  = [rx + rw,     ry + rh / 2];
+  const top: [number, number] = [rx + rw / 2, ry];
+  const right: [number, number] = [rx + rw, ry + rh / 2];
   const bottom: [number, number] = [rx + rw / 2, ry + rh];
-  const left: [number, number]   = [rx,           ry + rh / 2];
+  const left: [number, number] = [rx, ry + rh / 2];
   const corners = [top, right, bottom, left];
   const amp = roughness * Math.min(rw, rh) * 0.03;
 
@@ -506,9 +747,9 @@ function drawRhombus(
     if (edge === 0) ctx.moveTo(x1, y1);
     const mx = (x1 + x2) / 2;
     const my = (y1 + y2) / 2;
-    const cp1x = (x1 + mx) / 2 + roughOffset(seed,      edge * 7 + 1, 1, amp);
+    const cp1x = (x1 + mx) / 2 + roughOffset(seed, edge * 7 + 1, 1, amp);
     const cp1y = (y1 + my) / 2 + roughOffset(seed + 99, edge * 7 + 1, 1, amp);
-    const cp2x = (mx + x2) / 2 + roughOffset(seed,      edge * 7 + 3, 1, amp);
+    const cp2x = (mx + x2) / 2 + roughOffset(seed, edge * 7 + 3, 1, amp);
     const cp2y = (my + y2) / 2 + roughOffset(seed + 99, edge * 7 + 3, 1, amp);
     ctx.quadraticCurveTo(cp1x, cp1y, mx, my);
     ctx.quadraticCurveTo(cp2x, cp2y, x2, y2);
@@ -539,19 +780,24 @@ function drawLine(
 
   // Perpendicular unit vector for offset direction
   const px = -(y2 - y1) / len;
-  const py =  (x2 - x1) / len;
+  const py = (x2 - x1) / len;
 
   const segs = Math.max(2, Math.round(len / 80));
-  const amp  = roughness * Math.min(len * 0.04, 14);
+  const amp = roughness * Math.min(len * 0.04, 14);
 
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   for (let i = 0; i < segs; i++) {
     const tCtrl = (i + 0.5) / segs;
-    const tEnd  = (i + 1)   / segs;
+    const tEnd = (i + 1) / segs;
     const cpx = x1 + (x2 - x1) * tCtrl + px * roughOffset(seed, i, 1, amp);
     const cpy = y1 + (y2 - y1) * tCtrl + py * roughOffset(seed, i, 1, amp);
-    ctx.quadraticCurveTo(cpx, cpy, x1 + (x2 - x1) * tEnd, y1 + (y2 - y1) * tEnd);
+    ctx.quadraticCurveTo(
+      cpx,
+      cpy,
+      x1 + (x2 - x1) * tEnd,
+      y1 + (y2 - y1) * tEnd,
+    );
   }
   ctx.stroke();
 }
@@ -572,19 +818,24 @@ function drawArrowShaft(
     ctx.lineTo(x2, y2);
     ctx.stroke();
   } else {
-    const px  = -(y2 - y1) / len;
-    const py  =  (x2 - x1) / len;
+    const px = -(y2 - y1) / len;
+    const py = (x2 - x1) / len;
     const segs = Math.max(2, Math.round(len / 80));
-    const amp  = roughness * Math.min(len * 0.04, 14);
+    const amp = roughness * Math.min(len * 0.04, 14);
 
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     for (let i = 0; i < segs; i++) {
       const tCtrl = (i + 0.5) / segs;
-      const tEnd  = (i + 1)   / segs;
+      const tEnd = (i + 1) / segs;
       const cpx = x1 + (x2 - x1) * tCtrl + px * roughOffset(seed, i, 1, amp);
       const cpy = y1 + (y2 - y1) * tCtrl + py * roughOffset(seed, i, 1, amp);
-      ctx.quadraticCurveTo(cpx, cpy, x1 + (x2 - x1) * tEnd, y1 + (y2 - y1) * tEnd);
+      ctx.quadraticCurveTo(
+        cpx,
+        cpy,
+        x1 + (x2 - x1) * tEnd,
+        y1 + (y2 - y1) * tEnd,
+      );
     }
     ctx.stroke();
   }
@@ -624,12 +875,12 @@ function drawArrowHead(
   ctx.moveTo(x2, y2);
   ctx.lineTo(
     x2 - headLen * Math.cos(angle - Math.PI / 6),
-    y2 - headLen * Math.sin(angle - Math.PI / 6)
+    y2 - headLen * Math.sin(angle - Math.PI / 6),
   );
   ctx.moveTo(x2, y2);
   ctx.lineTo(
     x2 - headLen * Math.cos(angle + Math.PI / 6),
-    y2 - headLen * Math.sin(angle + Math.PI / 6)
+    y2 - headLen * Math.sin(angle + Math.PI / 6),
   );
   ctx.stroke();
 }
@@ -664,7 +915,8 @@ function drawFreehand(
     for (let i = 0; i < points.length - 1; i++) {
       const p1 = points[i]!;
       const p2 = points[i + 1]!;
-      const avgPressure = ((pressures[i] ?? 0.5) + (pressures[i + 1] ?? 0.5)) / 2;
+      const avgPressure =
+        ((pressures[i] ?? 0.5) + (pressures[i + 1] ?? 0.5)) / 2;
       ctx.lineWidth = Math.max(0.5, baseWidth * avgPressure * 2);
       ctx.beginPath();
       ctx.moveTo(p1[0], p1[1]);
@@ -692,10 +944,10 @@ function drawFreehand(
       const p3_next = points[Math.min(points.length - 1, i + 2)]!;
 
       // Catmull-Rom control points
-      const cp1x = p1_curr[0] + (p2_curr[0] - p0_prev[0]) * tension / 3;
-      const cp1y = p1_curr[1] + (p2_curr[1] - p0_prev[1]) * tension / 3;
-      const cp2x = p2_curr[0] - (p3_next[0] - p1_curr[0]) * tension / 3;
-      const cp2y = p2_curr[1] - (p3_next[1] - p1_curr[1]) * tension / 3;
+      const cp1x = p1_curr[0] + ((p2_curr[0] - p0_prev[0]) * tension) / 3;
+      const cp1y = p1_curr[1] + ((p2_curr[1] - p0_prev[1]) * tension) / 3;
+      const cp2x = p2_curr[0] - ((p3_next[0] - p1_curr[0]) * tension) / 3;
+      const cp2y = p2_curr[1] - ((p3_next[1] - p1_curr[1]) * tension) / 3;
 
       ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2_curr[0], p2_curr[1]);
     }
@@ -757,9 +1009,12 @@ function drawText(
   ctx.fillStyle = color;
   ctx.textBaseline = 'top';
   ctx.textAlign = textAlign;
-  const drawX = textAlign === 'center' ? x + elWidth / 2
-    : textAlign === 'right'  ? x + elWidth
-    : x;
+  const drawX =
+    textAlign === 'center'
+      ? x + elWidth / 2
+      : textAlign === 'right'
+        ? x + elWidth
+        : x;
   const lineHeight = fontSize * 1.2;
   const lines = buildWrappedLines(ctx, content, elWidth);
   for (let i = 0; i < lines.length; i++) {
@@ -813,7 +1068,9 @@ function drawCode(
   const PAD = 10;
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
   ctx.beginPath();
-  (ctx as CanvasRenderingContext2D & { roundRect: (...a: unknown[]) => void }).roundRect(x, y, width, height, 6);
+  (
+    ctx as CanvasRenderingContext2D & { roundRect: (...a: unknown[]) => void }
+  ).roundRect(x, y, width, height, 6);
   ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,0.15)';
   ctx.lineWidth = 1;
@@ -822,9 +1079,12 @@ function drawCode(
   ctx.fillStyle = color;
   ctx.textBaseline = 'top';
   ctx.textAlign = textAlign;
-  const drawX = textAlign === 'center' ? x + width / 2
-    : textAlign === 'right'  ? x + width - PAD
-    : x + PAD;
+  const drawX =
+    textAlign === 'center'
+      ? x + width / 2
+      : textAlign === 'right'
+        ? x + width - PAD
+        : x + PAD;
   const lines = content.split('\n');
   for (let i = 0; i < lines.length; i++) {
     ctx.fillText(lines[i] ?? '', drawX, y + PAD + i * fontSize * 1.3);
@@ -847,11 +1107,17 @@ function drawShapeLabel(
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const maxWidth = Math.max(shapeWidth - 16, fontSize);
-  const lines = label.split('\n').flatMap((line) => buildWrappedLines(ctx, line, maxWidth));
+  const lines = label
+    .split('\n')
+    .flatMap((line) => buildWrappedLines(ctx, line, maxWidth));
   const lineHeight = fontSize * 1.2;
   const totalHeight = lines.length * lineHeight;
   for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i] ?? '', cx, cy - totalHeight / 2 + i * lineHeight + lineHeight / 2);
+    ctx.fillText(
+      lines[i] ?? '',
+      cx,
+      cy - totalHeight / 2 + i * lineHeight + lineHeight / 2,
+    );
   }
 }
 
@@ -872,7 +1138,11 @@ function drawArrowLabel(
   const lineHeight = fontSize * 1.2;
   const totalHeight = lines.length * lineHeight;
   for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i] ?? '', cx, cy - totalHeight / 2 + i * lineHeight + lineHeight / 2);
+    ctx.fillText(
+      lines[i] ?? '',
+      cx,
+      cy - totalHeight / 2 + i * lineHeight + lineHeight / 2,
+    );
   }
 }
 

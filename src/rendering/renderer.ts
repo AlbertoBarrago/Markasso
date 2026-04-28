@@ -1,8 +1,8 @@
-import type {Scene} from '../core/scene';
-import {getSelectedElements} from '../core/scene';
-import {drawGrid} from './draw_grid';
-import {drawElement} from './draw_element';
-import {drawSelection} from './draw_selection';
+import type { Scene } from '../core/scene';
+import { getSelectedElements } from '../core/scene';
+import { drawElement } from './draw_element';
+import { drawGrid } from './draw_grid';
+import { drawSelection } from './draw_selection';
 
 export function render(
   ctx: CanvasRenderingContext2D,
@@ -18,7 +18,10 @@ export function render(
   ctx.resetTransform();
   ctx.clearRect(0, 0, width, height);
 
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg').trim() || '#141414';
+  ctx.fillStyle =
+    getComputedStyle(document.documentElement)
+      .getPropertyValue('--canvas-bg')
+      .trim() || '#141414';
   ctx.fillRect(0, 0, width, height);
 
   // Enable anti-aliasing for smooth curves
@@ -26,15 +29,24 @@ export function render(
   ctx.imageSmoothingQuality = 'high';
 
   if (appState.gridVisible) {
-    drawGrid(ctx, viewport, appState.gridSize, appState.gridType, width, height);
+    drawGrid(
+      ctx,
+      viewport,
+      appState.gridSize,
+      appState.gridType,
+      width,
+      height,
+    );
   }
 
   // World → canvas-pixel transform (all element coords are CSS pixels in world space)
   ctx.setTransform(
-    viewport.zoom * dpr, 0,
-    0, viewport.zoom * dpr,
+    viewport.zoom * dpr,
+    0,
+    0,
+    viewport.zoom * dpr,
     viewport.offsetX * dpr,
-    viewport.offsetY * dpr
+    viewport.offsetY * dpr,
   );
 
   for (const el of scene.elements) {

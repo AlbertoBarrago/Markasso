@@ -73,19 +73,30 @@ export function initStarCta(appEl: HTMLElement, toolbarEl: HTMLElement): void {
     const dismiss = (): void => {
       if (!modalEl) return;
       modalEl.classList.add('star-out');
-      modalEl.addEventListener('animationend', () => {
-        modalEl?.remove();
-        modalEl = null;
-      }, { once: true });
+      modalEl.addEventListener(
+        'animationend',
+        () => {
+          modalEl?.remove();
+          modalEl = null;
+        },
+        { once: true },
+      );
       document.removeEventListener('keydown', onKey);
     };
 
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') { e.preventDefault(); dismiss(); }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        dismiss();
+      }
     };
 
-    modalEl.querySelector<HTMLButtonElement>('.star-close')!.addEventListener('click', dismiss);
-    modalEl.addEventListener('click', (e) => { if (e.target === modalEl) dismiss(); });
+    modalEl
+      .querySelector<HTMLButtonElement>('.star-close')!
+      .addEventListener('click', dismiss);
+    modalEl.addEventListener('click', (e) => {
+      if (e.target === modalEl) dismiss();
+    });
     document.addEventListener('keydown', onKey);
 
     appEl.appendChild(modalEl);

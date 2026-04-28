@@ -1,6 +1,6 @@
-import type { Element } from '../elements/element';
-import type { Viewport } from '../core/viewport';
 import type { GridType } from '../core/app_state';
+import type { Viewport } from '../core/viewport';
+import type { Element } from '../elements/element';
 import type { History } from '../engine/history';
 
 const STORAGE_KEY = 'markasso-session';
@@ -21,20 +21,31 @@ export function loadSession(): SessionData | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const d = JSON.parse(raw) as Record<string, unknown>;
-    if (!Array.isArray(d['elements']) || (d['elements'] as unknown[]).length === 0) return null;
-    const elements = d['elements'] as Element[];
+    if (!Array.isArray(d.elements) || (d.elements as unknown[]).length === 0)
+      return null;
+    const elements = d.elements as Element[];
     let viewport: Viewport = { offsetX: 0, offsetY: 0, zoom: 1 };
-    if (typeof d['viewport'] === 'object' && d['viewport'] !== null) {
-      const v = d['viewport'] as Record<string, unknown>;
-      if (typeof v['offsetX'] === 'number' && typeof v['offsetY'] === 'number' && typeof v['zoom'] === 'number') {
-        viewport = { offsetX: v['offsetX'], offsetY: v['offsetY'], zoom: v['zoom'] };
+    if (typeof d.viewport === 'object' && d.viewport !== null) {
+      const v = d.viewport as Record<string, unknown>;
+      if (
+        typeof v.offsetX === 'number' &&
+        typeof v.offsetY === 'number' &&
+        typeof v.zoom === 'number'
+      ) {
+        viewport = {
+          offsetX: v.offsetX,
+          offsetY: v.offsetY,
+          zoom: v.zoom,
+        };
       }
     }
     const VALID_GRID_TYPES: GridType[] = ['dot', 'line', 'mm'];
-    const gridVisible = typeof d['gridVisible'] === 'boolean' ? d['gridVisible'] : false;
-    const gridSize = typeof d['gridSize'] === 'number' && d['gridSize'] > 0 ? d['gridSize'] : 20;
-    const gridType: GridType = VALID_GRID_TYPES.includes(d['gridType'] as GridType)
-      ? (d['gridType'] as GridType)
+    const gridVisible =
+      typeof d.gridVisible === 'boolean' ? d.gridVisible : false;
+    const gridSize =
+      typeof d.gridSize === 'number' && d.gridSize > 0 ? d.gridSize : 20;
+    const gridType: GridType = VALID_GRID_TYPES.includes(d.gridType as GridType)
+      ? (d.gridType as GridType)
       : 'dot';
     return { elements, viewport, gridVisible, gridSize, gridType };
   } catch {
@@ -54,19 +65,23 @@ export function initSession(history: History): void {
         return;
       }
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-          version: 1,
-          viewport: scene.viewport,
-          elements: scene.elements,
-          gridVisible: scene.appState.gridVisible,
-          gridSize: scene.appState.gridSize,
-          gridType: scene.appState.gridType,
-        }));
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            version: 1,
+            viewport: scene.viewport,
+            elements: scene.elements,
+            gridVisible: scene.appState.gridVisible,
+            gridSize: scene.appState.gridSize,
+            gridType: scene.appState.gridType,
+          }),
+        );
       } catch (e) {
-        if (e instanceof DOMException && (
-          e.name === 'QuotaExceededError' ||
-          e.name === 'NS_ERROR_DOM_QUOTA_REACHED'
-        )) {
+        if (
+          e instanceof DOMException &&
+          (e.name === 'QuotaExceededError' ||
+            e.name === 'NS_ERROR_DOM_QUOTA_REACHED')
+        ) {
           showQuotaWarning();
         }
       }
@@ -89,7 +104,9 @@ function showQuotaWarning(): void {
   requestAnimationFrame(() => toast.classList.add('visible'));
   const dismiss = (): void => {
     toast.classList.remove('visible');
-    toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+    toast.addEventListener('transitionend', () => toast.remove(), {
+      once: true,
+    });
   };
   toast.querySelector('.quota-toast-close')?.addEventListener('click', dismiss);
   setTimeout(dismiss, 8000);

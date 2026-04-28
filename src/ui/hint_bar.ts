@@ -1,20 +1,20 @@
-import type { History } from '../engine/history';
 import type { ActiveTool } from '../core/app_state';
+import type { History } from '../engine/history';
 import { t } from '../i18n';
 
 const HIDE_DELAY = 4000;
 
 const HINT_KEYS: Partial<Record<ActiveTool, string>> = {
-  select:    'hintSelect',
-  hand:      'hintHand',
-  eraser:    'hintEraser',
+  select: 'hintSelect',
+  hand: 'hintHand',
+  eraser: 'hintEraser',
   rectangle: 'hintRectangle',
-  ellipse:   'hintEllipse',
-  line:      'hintLine',
-  rombo:     'hintRombo',
-  freehand:  'hintFreehand',
-  text:      'hintText',
-  sticky:    'hintSticky',
+  ellipse: 'hintEllipse',
+  line: 'hintLine',
+  rombo: 'hintRombo',
+  freehand: 'hintFreehand',
+  text: 'hintText',
+  sticky: 'hintSticky',
 };
 
 function buildHtml(raw: string): string {

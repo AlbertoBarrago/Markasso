@@ -13,7 +13,7 @@ export function createViewport(): Viewport {
 export function screenToWorld(
   viewport: Viewport,
   screenX: number,
-  screenY: number
+  screenY: number,
 ): [number, number] {
   return [
     (screenX - viewport.offsetX) / viewport.zoom,
@@ -24,7 +24,7 @@ export function screenToWorld(
 export function worldToScreen(
   viewport: Viewport,
   worldX: number,
-  worldY: number
+  worldY: number,
 ): [number, number] {
   return [
     worldX * viewport.zoom + viewport.offsetX,
@@ -61,58 +61,73 @@ export function fitToElements(
 ): Viewport {
   if (elements.length === 0) return createViewport();
 
-  const iTop    = insets.top    ?? 70;
+  const iTop = insets.top ?? 70;
   const iBottom = insets.bottom ?? 70;
-  const iLeft   = insets.left   ?? 20;
-  const iRight  = insets.right  ?? 20;
+  const iLeft = insets.left ?? 20;
+  const iRight = insets.right ?? 20;
 
-  let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+  let left = Infinity,
+    top = Infinity,
+    right = -Infinity,
+    bottom = -Infinity;
 
   for (const el of elements) {
     if (
-      el.type === 'rectangle' || el.type === 'ellipse' ||
-      el.type === 'text'      || el.type === 'rhombus' ||
+      el.type === 'rectangle' ||
+      el.type === 'ellipse' ||
+      el.type === 'text' ||
+      el.type === 'rhombus' ||
       el.type === 'image'
     ) {
       const x1 = Math.min(el.x, el.x + el.width);
       const y1 = Math.min(el.y, el.y + el.height);
       const x2 = Math.max(el.x, el.x + el.width);
       const y2 = Math.max(el.y, el.y + el.height);
-      left = Math.min(left, x1); top = Math.min(top, y1);
-      right = Math.max(right, x2); bottom = Math.max(bottom, y2);
+      left = Math.min(left, x1);
+      top = Math.min(top, y1);
+      right = Math.max(right, x2);
+      bottom = Math.max(bottom, y2);
     } else if (el.type === 'line' || el.type === 'arrow') {
-      left = Math.min(left, el.x, el.x2); top = Math.min(top, el.y, el.y2);
-      right = Math.max(right, el.x, el.x2); bottom = Math.max(bottom, el.y, el.y2);
+      left = Math.min(left, el.x, el.x2);
+      top = Math.min(top, el.y, el.y2);
+      right = Math.max(right, el.x, el.x2);
+      bottom = Math.max(bottom, el.y, el.y2);
     } else if (el.type === 'curve') {
       // Conservative: union of both endpoints + control point
-      left = Math.min(left, el.x, el.x2, el.cx); top = Math.min(top, el.y, el.y2, el.cy);
-      right = Math.max(right, el.x, el.x2, el.cx); bottom = Math.max(bottom, el.y, el.y2, el.cy);
+      left = Math.min(left, el.x, el.x2, el.cx);
+      top = Math.min(top, el.y, el.y2, el.cy);
+      right = Math.max(right, el.x, el.x2, el.cx);
+      bottom = Math.max(bottom, el.y, el.y2, el.cy);
     } else if (el.type === 'polygon') {
       for (const [px, py] of el.points) {
-        left = Math.min(left, px); top = Math.min(top, py);
-        right = Math.max(right, px); bottom = Math.max(bottom, py);
+        left = Math.min(left, px);
+        top = Math.min(top, py);
+        right = Math.max(right, px);
+        bottom = Math.max(bottom, py);
       }
     } else if (el.type === 'freehand') {
       for (const [px, py] of el.points) {
-        left = Math.min(left, px); top = Math.min(top, py);
-        right = Math.max(right, px); bottom = Math.max(bottom, py);
+        left = Math.min(left, px);
+        top = Math.min(top, py);
+        right = Math.max(right, px);
+        bottom = Math.max(bottom, py);
       }
     }
   }
 
   const bbW = Math.max(right - left, 1);
   const bbH = Math.max(bottom - top, 1);
-  const availW = canvasWidth  - iLeft - iRight;
-  const availH = canvasHeight - iTop  - iBottom;
-  const newZoom = Math.min(Math.max(
-    Math.min(availW / bbW, availH / bbH),
-    0.05,
-  ), insets.maxZoom ?? 30);
+  const availW = canvasWidth - iLeft - iRight;
+  const availH = canvasHeight - iTop - iBottom;
+  const newZoom = Math.min(
+    Math.max(Math.min(availW / bbW, availH / bbH), 0.05),
+    insets.maxZoom ?? 30,
+  );
   // Center of the usable area (below top toolbar, above bottom toolbar)
   const centerX = iLeft + availW / 2;
-  const centerY = iTop  + availH / 2;
+  const centerY = iTop + availH / 2;
   const offsetX = centerX - (left + bbW / 2) * newZoom;
-  const offsetY = centerY - (top  + bbH / 2) * newZoom;
+  const offsetY = centerY - (top + bbH / 2) * newZoom;
   return { zoom: newZoom, offsetX, offsetY };
 }
 
@@ -120,7 +135,7 @@ export function zoom(
   viewport: Viewport,
   factor: number,
   originX: number,
-  originY: number
+  originY: number,
 ): Viewport {
   const newZoom = Math.min(Math.max(viewport.zoom * factor, 0.05), 30);
   const actualFactor = newZoom / viewport.zoom;

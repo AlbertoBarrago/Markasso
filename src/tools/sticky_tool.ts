@@ -1,5 +1,5 @@
-import type { Tool, ToolContext } from './tool';
 import type { TextElement } from '../elements/element';
+import type { Tool, ToolContext } from './tool';
 
 const STICKY_W = 200;
 const STICKY_H = 180;
@@ -10,15 +10,30 @@ export class StickyTool implements Tool {
   /** Called after placing a sticky to immediately open the text editor. Injected by canvas_view.ts. */
   onPlaced: ((el: TextElement, ctx: ToolContext) => void) | null = null;
 
-  onMouseDown(_e: MouseEvent, _worldX: number, _worldY: number, _ctx: ToolContext): void {
+  onMouseDown(
+    _e: MouseEvent,
+    _worldX: number,
+    _worldY: number,
+    _ctx: ToolContext,
+  ): void {
     // Nothing on mousedown
   }
 
-  onMouseMove(_e: MouseEvent, _worldX: number, _worldY: number, _ctx: ToolContext): void {
+  onMouseMove(
+    _e: MouseEvent,
+    _worldX: number,
+    _worldY: number,
+    _ctx: ToolContext,
+  ): void {
     // No preview
   }
 
-  onMouseUp(_e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+  onMouseUp(
+    _e: MouseEvent,
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void {
     const id = crypto.randomUUID();
     const { appState } = ctx.history.present;
     const el: TextElement = {
@@ -45,7 +60,11 @@ export class StickyTool implements Tool {
     ctx.history.dispatch({ type: 'CREATE_ELEMENT', element: el });
     ctx.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [id] });
     if (!ctx.history.present.appState.toolLocked) {
-      ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
+      ctx.history.dispatch({
+        type: 'SET_TOOL',
+        tool: 'select',
+        keepSelection: true,
+      });
     }
     this.onPlaced?.(el, ctx);
   }

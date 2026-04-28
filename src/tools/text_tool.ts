@@ -1,14 +1,13 @@
-import type { Tool, ToolContext } from './tool';
-import type { TextElement } from '../elements/element';
 import { worldToScreen } from '../core/viewport';
-
+import type { TextElement } from '../elements/element';
+import type { Tool, ToolContext } from './tool';
 
 export class TextTool implements Tool {
   private textarea: HTMLTextAreaElement | null = null;
   private commitFn: (() => void) | null = null;
   /** ID of the text element currently being edited (to suppress canvas rendering). */
   editingId: string | null = null;
-  
+
   /** Drag state for creating text area */
   private isDragging = false;
   private startX = 0;
@@ -20,7 +19,12 @@ export class TextTool implements Tool {
   /** Prevents SET_TOOL dispatch when commit is triggered from onDeactivate */
   private _suppressToolSwitch = false;
 
-  onMouseDown(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+  onMouseDown(
+    e: MouseEvent,
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void {
     e.preventDefault();
     if (this.commitSync(ctx)) return;
 
@@ -30,8 +34,12 @@ export class TextTool implements Tool {
       const el = elements[i];
       if (!el || el.type !== 'text') continue;
       const PAD = 4;
-      if (worldX >= el.x - PAD && worldX <= el.x + el.width + PAD &&
-          worldY >= el.y - PAD && worldY <= el.y + el.height + PAD) {
+      if (
+        worldX >= el.x - PAD &&
+        worldX <= el.x + el.width + PAD &&
+        worldY >= el.y - PAD &&
+        worldY <= el.y + el.height + PAD
+      ) {
         this.editExisting(el, ctx);
         return;
       }
@@ -46,14 +54,24 @@ export class TextTool implements Tool {
     this.previewLineHeight = ctx.history.present.appState.fontSize * 1.2;
   }
 
-  onMouseMove(_e: MouseEvent, worldX: number, _worldY: number, ctx: ToolContext): void {
+  onMouseMove(
+    _e: MouseEvent,
+    worldX: number,
+    _worldY: number,
+    ctx: ToolContext,
+  ): void {
     if (!this.isDragging) return;
     this.currentX = worldX;
     this.dragWidth = Math.abs(this.currentX - this.startX);
     ctx.onPreviewUpdate?.();
   }
 
-  onMouseUp(_e: MouseEvent, _worldX: number, _worldY: number, ctx: ToolContext): void {
+  onMouseUp(
+    _e: MouseEvent,
+    _worldX: number,
+    _worldY: number,
+    ctx: ToolContext,
+  ): void {
     if (!this.isDragging) return;
     this.isDragging = false;
 
@@ -90,7 +108,7 @@ export class TextTool implements Tool {
     };
   }
 
-  private commitSync(ctx: ToolContext): boolean {
+  private commitSync(_ctx: ToolContext): boolean {
     if (!this.textarea || !this.commitFn) return false;
     this.textarea.removeEventListener('blur', this.commitFn);
     const fn = this.commitFn;
@@ -102,7 +120,12 @@ export class TextTool implements Tool {
     return true;
   }
 
-  private createFixedWidthTextarea(worldX: number, worldY: number, width: number, ctx: ToolContext): void {
+  private createFixedWidthTextarea(
+    worldX: number,
+    worldY: number,
+    width: number,
+    ctx: ToolContext,
+  ): void {
     const { viewport, appState } = ctx.history.present;
     const [screenX, screenY] = worldToScreen(viewport, worldX, worldY);
     const canvasRect = ctx.canvas.getBoundingClientRect();
@@ -111,27 +134,27 @@ export class TextTool implements Tool {
 
     const ta = document.createElement('textarea');
     ta.spellcheck = true;
-    ta.style.position   = 'fixed';
-    ta.style.left       = `${screenX + canvasRect.left}px`;
-    ta.style.top        = `${screenY + canvasRect.top}px`;
-    ta.style.width      = `${scaledWidth}px`;
-    ta.style.height     = `${scaledFont * 1.2}px`;
-    ta.style.font       = `${scaledFont}px ${appState.fontFamily}`;
-    ta.style.color      = appState.strokeColor;
+    ta.style.position = 'fixed';
+    ta.style.left = `${screenX + canvasRect.left}px`;
+    ta.style.top = `${screenY + canvasRect.top}px`;
+    ta.style.width = `${scaledWidth}px`;
+    ta.style.height = `${scaledFont * 1.2}px`;
+    ta.style.font = `${scaledFont}px ${appState.fontFamily}`;
+    ta.style.color = appState.strokeColor;
     ta.style.caretColor = 'var(--accent, #7c63d4)';
     ta.style.lineHeight = '1.2';
-    ta.style.padding    = '0';
-    ta.style.margin     = '0';
-    ta.style.border     = 'none';
-    ta.style.outline    = 'none';
-    ta.style.boxShadow  = 'none';
-    ta.style.resize     = 'none';
-    ta.style.overflow   = 'hidden';
+    ta.style.padding = '0';
+    ta.style.margin = '0';
+    ta.style.border = 'none';
+    ta.style.outline = 'none';
+    ta.style.boxShadow = 'none';
+    ta.style.resize = 'none';
+    ta.style.overflow = 'hidden';
     ta.style.background = 'transparent';
-    ta.style.zIndex     = '1000';
+    ta.style.zIndex = '1000';
     ta.style.whiteSpace = 'pre-wrap';
-    ta.style.wordBreak  = 'break-word';
-    ta.style.textAlign  = appState.textAlign;
+    ta.style.wordBreak = 'break-word';
+    ta.style.textAlign = appState.textAlign;
 
     // Height auto-grows, width stays fixed
     const grow = (): void => {
@@ -144,7 +167,10 @@ export class TextTool implements Tool {
       const content = ta.value.trim();
       const h = ta.offsetHeight / viewport.zoom;
       ta.remove();
-      if (this.textarea === ta) { this.textarea = null; this.commitFn = null; }
+      if (this.textarea === ta) {
+        this.textarea = null;
+        this.commitFn = null;
+      }
 
       if (content) {
         ctx.history.dispatch({
@@ -157,24 +183,34 @@ export class TextTool implements Tool {
             width,
             height: Math.max(h, appState.fontSize),
             content,
-            fontSize:    appState.fontSize,
-            fontFamily:  appState.fontFamily,
+            fontSize: appState.fontSize,
+            fontFamily: appState.fontFamily,
             strokeColor: appState.strokeColor,
-            fillColor:   'transparent',
+            fillColor: 'transparent',
             strokeWidth: 0,
-            opacity:     appState.opacity,
-            roughness:   0,
-            textAlign:   appState.textAlign,
+            opacity: appState.opacity,
+            roughness: 0,
+            textAlign: appState.textAlign,
           } satisfies TextElement,
         });
-        if (!this._suppressToolSwitch && !ctx.history.present.appState.toolLocked) {
-          ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
+        if (
+          !this._suppressToolSwitch &&
+          !ctx.history.present.appState.toolLocked
+        ) {
+          ctx.history.dispatch({
+            type: 'SET_TOOL',
+            tool: 'select',
+            keepSelection: true,
+          });
         }
       }
     };
 
     const onBlur = (): void => {
-      if (this.commitFn === onBlur) { this.commitFn = null; this.textarea = null; }
+      if (this.commitFn === onBlur) {
+        this.commitFn = null;
+        this.textarea = null;
+      }
       doCommit();
     };
 
@@ -183,7 +219,10 @@ export class TextTool implements Tool {
       if (e.key === 'Escape') {
         e.stopPropagation();
         ta.removeEventListener('blur', onBlur);
-        if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
+        if (this.textarea === ta) {
+          this.commitFn = null;
+          this.textarea = null;
+        }
         doCommit();
         return;
       }
@@ -196,7 +235,11 @@ export class TextTool implements Tool {
     this.commitFn = onBlur;
   }
 
-  private createAutoTextarea(worldX: number, worldY: number, ctx: ToolContext): void {
+  private createAutoTextarea(
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void {
     const { viewport, appState } = ctx.history.present;
     const [screenX, screenY] = worldToScreen(viewport, worldX, worldY);
     const canvasRect = ctx.canvas.getBoundingClientRect();
@@ -204,28 +247,28 @@ export class TextTool implements Tool {
 
     const ta = document.createElement('textarea');
     ta.spellcheck = true;
-    ta.style.position    = 'fixed';
-    ta.style.left        = `${screenX + canvasRect.left}px`;
-    ta.style.top         = `${screenY + canvasRect.top}px`;
-    ta.style.minWidth    = '4px';
-    ta.style.width       = '4px';
-    ta.style.height      = `${scaledFont * 1.2}px`;
-    ta.style.font        = `${scaledFont}px ${appState.fontFamily}`;
-    ta.style.color       = appState.strokeColor;
-    ta.style.caretColor  = 'var(--accent, #7c63d4)';
-    ta.style.lineHeight  = '1.2';
-    ta.style.padding     = '0';
-    ta.style.margin      = '0';
-    ta.style.border      = 'none';
-    ta.style.outline     = 'none';
-    ta.style.boxShadow   = 'none';
-    ta.style.resize      = 'none';
-    ta.style.overflow    = 'hidden';
-    ta.style.background  = 'transparent';
-    ta.style.zIndex      = '1000';
-    ta.style.whiteSpace  = 'pre';
+    ta.style.position = 'fixed';
+    ta.style.left = `${screenX + canvasRect.left}px`;
+    ta.style.top = `${screenY + canvasRect.top}px`;
+    ta.style.minWidth = '4px';
+    ta.style.width = '4px';
+    ta.style.height = `${scaledFont * 1.2}px`;
+    ta.style.font = `${scaledFont}px ${appState.fontFamily}`;
+    ta.style.color = appState.strokeColor;
+    ta.style.caretColor = 'var(--accent, #7c63d4)';
+    ta.style.lineHeight = '1.2';
+    ta.style.padding = '0';
+    ta.style.margin = '0';
+    ta.style.border = 'none';
+    ta.style.outline = 'none';
+    ta.style.boxShadow = 'none';
+    ta.style.resize = 'none';
+    ta.style.overflow = 'hidden';
+    ta.style.background = 'transparent';
+    ta.style.zIndex = '1000';
+    ta.style.whiteSpace = 'pre';
     ta.style.overflowWrap = 'normal';
-    ta.style.textAlign   = appState.textAlign;
+    ta.style.textAlign = appState.textAlign;
 
     // Mirror span to measure natural text width
     const mirror = document.createElement('span');
@@ -239,7 +282,7 @@ export class TextTool implements Tool {
         mirror.textContent = line || ' ';
         maxWidth = Math.max(maxWidth, mirror.offsetWidth);
       }
-      ta.style.width  = `${maxWidth + 4}px`;
+      ta.style.width = `${maxWidth + 4}px`;
       ta.style.height = `${scaledFont * 1.2 * lines.length}px`;
     };
     ta.addEventListener('input', grow);
@@ -250,7 +293,10 @@ export class TextTool implements Tool {
       const h = ta.offsetHeight / viewport.zoom;
       mirror.remove();
       ta.remove();
-      if (this.textarea === ta) { this.textarea = null; this.commitFn = null; }
+      if (this.textarea === ta) {
+        this.textarea = null;
+        this.commitFn = null;
+      }
 
       if (content) {
         ctx.history.dispatch({
@@ -260,27 +306,37 @@ export class TextTool implements Tool {
             type: 'text',
             x: worldX,
             y: worldY,
-            width:  Math.max(w, 10),
+            width: Math.max(w, 10),
             height: Math.max(h, appState.fontSize),
             content,
-            fontSize:    appState.fontSize,
-            fontFamily:  appState.fontFamily,
+            fontSize: appState.fontSize,
+            fontFamily: appState.fontFamily,
             strokeColor: appState.strokeColor,
-            fillColor:   'transparent',
+            fillColor: 'transparent',
             strokeWidth: 0,
-            opacity:     appState.opacity,
-            roughness:   0,
-            textAlign:   appState.textAlign,
+            opacity: appState.opacity,
+            roughness: 0,
+            textAlign: appState.textAlign,
           } satisfies TextElement,
         });
-        if (!this._suppressToolSwitch && !ctx.history.present.appState.toolLocked) {
-          ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
+        if (
+          !this._suppressToolSwitch &&
+          !ctx.history.present.appState.toolLocked
+        ) {
+          ctx.history.dispatch({
+            type: 'SET_TOOL',
+            tool: 'select',
+            keepSelection: true,
+          });
         }
       }
     };
 
     const onBlur = (): void => {
-      if (this.commitFn === onBlur) { this.commitFn = null; this.textarea = null; }
+      if (this.commitFn === onBlur) {
+        this.commitFn = null;
+        this.textarea = null;
+      }
       doCommit();
     };
 
@@ -289,7 +345,10 @@ export class TextTool implements Tool {
       if (e.key === 'Escape') {
         e.stopPropagation();
         ta.removeEventListener('blur', onBlur);
-        if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
+        if (this.textarea === ta) {
+          this.commitFn = null;
+          this.textarea = null;
+        }
         doCommit();
         return;
       }
@@ -307,7 +366,11 @@ export class TextTool implements Tool {
     return 'text';
   }
 
-  private createCodeTextarea(worldX: number, worldY: number, ctx: ToolContext): void {
+  private createCodeTextarea(
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void {
     const { viewport, appState } = ctx.history.present;
     const [screenX, screenY] = worldToScreen(viewport, worldX, worldY);
     const canvasRect = ctx.canvas.getBoundingClientRect();
@@ -315,34 +378,34 @@ export class TextTool implements Tool {
 
     const ta = document.createElement('textarea');
     ta.spellcheck = true;
-    ta.style.position     = 'fixed';
-    ta.style.left         = `${screenX + canvasRect.left}px`;
-    ta.style.top          = `${screenY + canvasRect.top}px`;
-    ta.style.minWidth     = '160px';
-    ta.style.minHeight    = `${scaledFont * 1.5}px`;
-    ta.style.width        = '160px';
-    ta.style.height       = `${scaledFont * 1.5}px`;
-    ta.style.font         = `${scaledFont}px "Courier New", monospace`;
-    ta.style.color        = appState.strokeColor;
-    ta.style.caretColor   = 'var(--accent, #7c63d4)';
-    ta.style.lineHeight   = '1.3';
-    ta.style.padding      = '10px';
-    ta.style.margin       = '0';
-    ta.style.border       = '1px dashed rgba(255,255,255,0.3)';
-    ta.style.outline      = 'none';
-    ta.style.boxShadow    = 'none';
-    ta.style.resize       = 'none';
-    ta.style.overflow     = 'hidden';
-    ta.style.background   = 'rgba(0,0,0,0.55)';
-    ta.style.zIndex       = '1000';
-    ta.style.whiteSpace   = 'pre';
+    ta.style.position = 'fixed';
+    ta.style.left = `${screenX + canvasRect.left}px`;
+    ta.style.top = `${screenY + canvasRect.top}px`;
+    ta.style.minWidth = '160px';
+    ta.style.minHeight = `${scaledFont * 1.5}px`;
+    ta.style.width = '160px';
+    ta.style.height = `${scaledFont * 1.5}px`;
+    ta.style.font = `${scaledFont}px "Courier New", monospace`;
+    ta.style.color = appState.strokeColor;
+    ta.style.caretColor = 'var(--accent, #7c63d4)';
+    ta.style.lineHeight = '1.3';
+    ta.style.padding = '10px';
+    ta.style.margin = '0';
+    ta.style.border = '1px dashed rgba(255,255,255,0.3)';
+    ta.style.outline = 'none';
+    ta.style.boxShadow = 'none';
+    ta.style.resize = 'none';
+    ta.style.overflow = 'hidden';
+    ta.style.background = 'rgba(0,0,0,0.55)';
+    ta.style.zIndex = '1000';
+    ta.style.whiteSpace = 'pre';
     ta.style.overflowWrap = 'normal';
 
     const grow = (): void => {
       ta.style.height = '0';
       ta.style.height = `${ta.scrollHeight}px`;
-      ta.style.width  = '0';
-      ta.style.width  = `${Math.max(ta.scrollWidth + 4, 160)}px`;
+      ta.style.width = '0';
+      ta.style.width = `${Math.max(ta.scrollWidth + 4, 160)}px`;
     };
     ta.addEventListener('input', grow);
 
@@ -351,7 +414,10 @@ export class TextTool implements Tool {
       const w = ta.offsetWidth / viewport.zoom;
       const h = ta.offsetHeight / viewport.zoom;
       ta.remove();
-      if (this.textarea === ta) { this.textarea = null; this.commitFn = null; }
+      if (this.textarea === ta) {
+        this.textarea = null;
+        this.commitFn = null;
+      }
 
       if (content.trim()) {
         ctx.history.dispatch({
@@ -361,27 +427,37 @@ export class TextTool implements Tool {
             type: 'text',
             x: worldX,
             y: worldY,
-            width:  Math.max(w, 80),
+            width: Math.max(w, 80),
             height: Math.max(h, 24),
             content,
-            fontSize:    appState.fontSize,
-            fontFamily:  '"Courier New", monospace',
+            fontSize: appState.fontSize,
+            fontFamily: '"Courier New", monospace',
             strokeColor: appState.strokeColor,
-            fillColor:   'transparent',
+            fillColor: 'transparent',
             strokeWidth: 0,
-            opacity:     appState.opacity,
-            roughness:   0,
-            isCode:      true,
+            opacity: appState.opacity,
+            roughness: 0,
+            isCode: true,
           } satisfies TextElement,
         });
-        if (!this._suppressToolSwitch && !ctx.history.present.appState.toolLocked) {
-          ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
+        if (
+          !this._suppressToolSwitch &&
+          !ctx.history.present.appState.toolLocked
+        ) {
+          ctx.history.dispatch({
+            type: 'SET_TOOL',
+            tool: 'select',
+            keepSelection: true,
+          });
         }
       }
     };
 
     const onBlur = (): void => {
-      if (this.commitFn === onBlur) { this.commitFn = null; this.textarea = null; }
+      if (this.commitFn === onBlur) {
+        this.commitFn = null;
+        this.textarea = null;
+      }
       doCommit();
     };
 
@@ -390,7 +466,10 @@ export class TextTool implements Tool {
       if (e.key === 'Escape') {
         e.stopPropagation();
         ta.removeEventListener('blur', onBlur);
-        if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
+        if (this.textarea === ta) {
+          this.commitFn = null;
+          this.textarea = null;
+        }
         doCommit();
         return;
       }
@@ -398,14 +477,17 @@ export class TextTool implements Tool {
       if (e.key === 'Enter' && e.shiftKey) {
         e.preventDefault();
         ta.removeEventListener('blur', onBlur);
-        if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
+        if (this.textarea === ta) {
+          this.commitFn = null;
+          this.textarea = null;
+        }
         doCommit();
         return;
       }
       if (e.key === 'Tab') {
         e.preventDefault();
         const s = ta.selectionStart;
-        ta.value = ta.value.slice(0, s) + '  ' + ta.value.slice(ta.selectionEnd);
+        ta.value = `${ta.value.slice(0, s)}  ${ta.value.slice(ta.selectionEnd)}`;
         ta.selectionStart = ta.selectionEnd = s + 2;
         grow();
       }
@@ -432,43 +514,43 @@ export class TextTool implements Tool {
     ta.spellcheck = true;
     ta.value = el.content;
 
-    ta.style.position   = 'fixed';
-    ta.style.left       = `${screenX + canvasRect.left}px`;
-    ta.style.top        = `${screenY + canvasRect.top}px`;
-    ta.style.font       = `${el.fontSize * viewport.zoom}px ${el.fontFamily}`;
-    ta.style.color      = el.strokeColor;
+    ta.style.position = 'fixed';
+    ta.style.left = `${screenX + canvasRect.left}px`;
+    ta.style.top = `${screenY + canvasRect.top}px`;
+    ta.style.font = `${el.fontSize * viewport.zoom}px ${el.fontFamily}`;
+    ta.style.color = el.strokeColor;
     ta.style.caretColor = 'var(--accent, #7c63d4)';
     ta.style.lineHeight = '1.2';
-    ta.style.margin     = '0';
-    ta.style.outline    = 'none';
-    ta.style.boxShadow  = 'none';
-    ta.style.resize     = 'none';
-    ta.style.overflow   = 'hidden';
-    ta.style.zIndex     = '1000';
+    ta.style.margin = '0';
+    ta.style.outline = 'none';
+    ta.style.boxShadow = 'none';
+    ta.style.resize = 'none';
+    ta.style.overflow = 'hidden';
+    ta.style.zIndex = '1000';
 
     let mirror: HTMLSpanElement | null = null;
     const scaledFont = el.fontSize * viewport.zoom;
 
     if (el.isCode) {
-      ta.style.width        = `${el.width * viewport.zoom}px`;
-      ta.style.minWidth     = `${el.width * viewport.zoom}px`;
-      ta.style.fontFamily   = '"Courier New", monospace';
-      ta.style.background   = 'rgba(0,0,0,0.55)';
-      ta.style.border       = '1px dashed rgba(255,255,255,0.3)';
-      ta.style.padding      = '10px';
-      ta.style.whiteSpace   = 'pre';
-      ta.style.wordBreak    = 'normal';
+      ta.style.width = `${el.width * viewport.zoom}px`;
+      ta.style.minWidth = `${el.width * viewport.zoom}px`;
+      ta.style.fontFamily = '"Courier New", monospace';
+      ta.style.background = 'rgba(0,0,0,0.55)';
+      ta.style.border = '1px dashed rgba(255,255,255,0.3)';
+      ta.style.padding = '10px';
+      ta.style.whiteSpace = 'pre';
+      ta.style.wordBreak = 'normal';
       ta.style.overflowWrap = 'normal';
     } else {
-      ta.style.minWidth     = '4px';
-      ta.style.width        = `${el.width * viewport.zoom}px`;
-      ta.style.background   = 'transparent';
-      ta.style.border       = 'none';
-      ta.style.outline      = 'none';
-      ta.style.padding      = '0';
-      ta.style.whiteSpace   = 'pre';
+      ta.style.minWidth = '4px';
+      ta.style.width = `${el.width * viewport.zoom}px`;
+      ta.style.background = 'transparent';
+      ta.style.border = 'none';
+      ta.style.outline = 'none';
+      ta.style.padding = '0';
+      ta.style.whiteSpace = 'pre';
       ta.style.overflowWrap = 'normal';
-      ta.style.textAlign    = el.textAlign ?? 'left';
+      ta.style.textAlign = el.textAlign ?? 'left';
 
       mirror = document.createElement('span');
       mirror.style.cssText = `position:fixed;visibility:hidden;white-space:pre;font:${scaledFont}px ${el.fontFamily};padding:0;`;
@@ -484,7 +566,7 @@ export class TextTool implements Tool {
           mirror.textContent = line || ' ';
           maxWidth = Math.max(maxWidth, mirror.offsetWidth);
         }
-        ta.style.width  = `${maxWidth + 4}px`;
+        ta.style.width = `${maxWidth + 4}px`;
         ta.style.height = `${scaledFont * 1.2 * lines.length}px`;
       } else {
         ta.style.height = '0';
@@ -498,20 +580,28 @@ export class TextTool implements Tool {
     const doCommit = (): void => {
       const content = ta.value.trim();
       const newHeight = ta.offsetHeight / viewport.zoom;
-      const newWidth  = ta.offsetWidth  / viewport.zoom;
+      const newWidth = ta.offsetWidth / viewport.zoom;
       mirror?.remove();
       ta.remove();
-      if (this.textarea === ta) { this.textarea = null; this.commitFn = null; }
+      if (this.textarea === ta) {
+        this.textarea = null;
+        this.commitFn = null;
+      }
       this.editingId = null;
 
       if (content) {
         ctx.history.dispatch({ type: 'EDIT_TEXT', id: el.id, content });
         const clampedHeight = Math.max(newHeight, el.fontSize);
-        const clampedWidth  = Math.max(newWidth, 10);
+        const clampedWidth = Math.max(newWidth, 10);
         const heightChanged = Math.abs(clampedHeight - el.height) > 1;
-        const widthChanged  = Math.abs(clampedWidth  - el.width)  > 1;
+        const widthChanged = Math.abs(clampedWidth - el.width) > 1;
         if (heightChanged || widthChanged) {
-          ctx.history.dispatch({ type: 'RESIZE_ELEMENT', id: el.id, height: clampedHeight, width: clampedWidth });
+          ctx.history.dispatch({
+            type: 'RESIZE_ELEMENT',
+            id: el.id,
+            height: clampedHeight,
+            width: clampedWidth,
+          });
         }
       } else {
         ctx.history.dispatch({ type: 'DELETE_ELEMENTS', ids: [el.id] });
@@ -519,7 +609,10 @@ export class TextTool implements Tool {
     };
 
     const onBlur = (): void => {
-      if (this.commitFn === onBlur) { this.commitFn = null; this.textarea = null; }
+      if (this.commitFn === onBlur) {
+        this.commitFn = null;
+        this.textarea = null;
+      }
       doCommit();
     };
 
@@ -529,7 +622,10 @@ export class TextTool implements Tool {
       if (e.key === 'Escape') {
         e.stopPropagation();
         ta.removeEventListener('blur', onBlur);
-        if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
+        if (this.textarea === ta) {
+          this.commitFn = null;
+          this.textarea = null;
+        }
         doCommit();
         return;
       }
@@ -538,13 +634,16 @@ export class TextTool implements Tool {
         if (e.key === 'Enter' && e.shiftKey) {
           e.preventDefault();
           ta.removeEventListener('blur', onBlur);
-          if (this.textarea === ta) { this.commitFn = null; this.textarea = null; }
+          if (this.textarea === ta) {
+            this.commitFn = null;
+            this.textarea = null;
+          }
           doCommit();
         }
         if (e.key === 'Tab') {
           e.preventDefault();
           const s = ta.selectionStart;
-          ta.value = ta.value.slice(0, s) + '  ' + ta.value.slice(ta.selectionEnd);
+          ta.value = `${ta.value.slice(0, s)}  ${ta.value.slice(ta.selectionEnd)}`;
           ta.selectionStart = ta.selectionEnd = s + 2;
           grow();
         }

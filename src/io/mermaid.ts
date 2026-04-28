@@ -1,13 +1,13 @@
+import { fitToElements } from '../core/viewport';
 import type {
-  Element,
-  RectangleElement,
-  EllipseElement,
-  RhombusElement,
   ArrowElement,
+  Element,
+  EllipseElement,
   LineElement,
+  RectangleElement,
+  RhombusElement,
 } from '../elements/element';
 import type { History } from '../engine/history';
-import { fitToElements } from '../core/viewport';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -74,14 +74,14 @@ const SEQ_MSG_SPACING = 60;
 // Reuse colors already present in the app's POPUP_COLORS palette for consistency
 const MERMAID_COLORS = {
   dark: {
-    rectangle: { fill: 'rgba(77,150,255,0.18)',  stroke: '#4d96ff' },
-    rhombus:   { fill: 'rgba(255,107,107,0.18)', stroke: '#ff6b6b' },
-    ellipse:   { fill: 'rgba(107,203,119,0.18)', stroke: '#6bcb77' },
+    rectangle: { fill: 'rgba(77,150,255,0.18)', stroke: '#4d96ff' },
+    rhombus: { fill: 'rgba(255,107,107,0.18)', stroke: '#ff6b6b' },
+    ellipse: { fill: 'rgba(107,203,119,0.18)', stroke: '#6bcb77' },
   },
   light: {
-    rectangle: { fill: 'rgba(77,150,255,0.14)',  stroke: '#1a6fd4' },
-    rhombus:   { fill: 'rgba(220,50,50,0.10)',   stroke: '#c0392b' },
-    ellipse:   { fill: 'rgba(40,160,70,0.10)',   stroke: '#27ae60' },
+    rectangle: { fill: 'rgba(77,150,255,0.14)', stroke: '#1a6fd4' },
+    rhombus: { fill: 'rgba(220,50,50,0.10)', stroke: '#c0392b' },
+    ellipse: { fill: 'rgba(40,160,70,0.10)', stroke: '#27ae60' },
   },
 } as const;
 
@@ -117,9 +117,15 @@ export function importMermaidText(text: string, history: History): void {
     // Try flowchart / graph
     const flowchart = parseDiagram(text);
     if (flowchart) {
-      if (flowchart.nodes.size === 0) { alert('No nodes found in the Mermaid diagram.'); return; }
+      if (flowchart.nodes.size === 0) {
+        alert('No nodes found in the Mermaid diagram.');
+        return;
+      }
       const elements = buildElements(flowchart, strokeColor, isDark);
-      if (elements.length === 0) { alert('No elements could be created from this diagram.'); return; }
+      if (elements.length === 0) {
+        alert('No elements could be created from this diagram.');
+        return;
+      }
       dispatchElements(elements, history);
       return;
     }
@@ -127,16 +133,22 @@ export function importMermaidText(text: string, history: History): void {
     // Try sequenceDiagram
     const sequence = parseSequenceDiagram(text);
     if (sequence) {
-      if (sequence.participants.length === 0) { alert('No participants found in the sequence diagram.'); return; }
+      if (sequence.participants.length === 0) {
+        alert('No participants found in the sequence diagram.');
+        return;
+      }
       const elements = buildSequenceElements(sequence, strokeColor, isDark);
-      if (elements.length === 0) { alert('No elements could be created from this diagram.'); return; }
+      if (elements.length === 0) {
+        alert('No elements could be created from this diagram.');
+        return;
+      }
       dispatchElements(elements, history);
       return;
     }
 
     alert(
       'This does not appear to be a supported Mermaid diagram.\n' +
-      'Supported types: flowchart / graph, sequenceDiagram.',
+        'Supported types: flowchart / graph, sequenceDiagram.',
     );
   } catch (err) {
     console.error('[Markasso] Mermaid import error:', err);
@@ -147,10 +159,19 @@ export function importMermaidText(text: string, history: History): void {
 function dispatchElements(elements: Element[], history: History): void {
   history.dispatch({ type: 'CREATE_ELEMENTS', elements });
   if (elements.length > 1) {
-    history.dispatch({ type: 'GROUP_ELEMENTS', ids: elements.map((e) => e.id), groupId: crypto.randomUUID() });
+    history.dispatch({
+      type: 'GROUP_ELEMENTS',
+      ids: elements.map((e) => e.id),
+      groupId: crypto.randomUUID(),
+    });
   }
   const vp = fitToElements(elements, window.innerWidth, window.innerHeight);
-  history.dispatch({ type: 'SET_VIEWPORT', offsetX: vp.offsetX, offsetY: vp.offsetY, zoom: vp.zoom });
+  history.dispatch({
+    type: 'SET_VIEWPORT',
+    offsetX: vp.offsetX,
+    offsetY: vp.offsetY,
+    zoom: vp.zoom,
+  });
 }
 
 // ── Parser ─────────────────────────────────────────────────────────────────────
@@ -190,7 +211,8 @@ export function parseDiagram(text: string): ParsedDiagram | null {
     if (!line) continue;
 
     // Skip structural / style keywords
-    if (/^(?:subgraph|end|style|classDef|class|linkStyle)\b/.test(line)) continue;
+    if (/^(?:subgraph|end|style|classDef|class|linkStyle)\b/.test(line))
+      continue;
 
     // Normalize labeled edges: "-- label -->" → "-->|label|"
     line = line.replace(/--\s+([^-]+?)\s+-->/g, '-->|$1|');
@@ -249,7 +271,8 @@ function parseNodeToken(token: string): MermaidNode | null {
 
   // Rectangle: id[label]
   m = t.match(/^([A-Za-z0-9_]+)\[([^\]]*)\]$/);
-  if (m) return { id: m[1]!, label: cleanLabel(m[2] ?? ''), shape: 'rectangle' };
+  if (m)
+    return { id: m[1]!, label: cleanLabel(m[2] ?? ''), shape: 'rectangle' };
 
   // Diamond: id{label}
   m = t.match(/^([A-Za-z0-9_]+)\{([^}]*)\}$/);
@@ -261,7 +284,8 @@ function parseNodeToken(token: string): MermaidNode | null {
 
   // Asymmetric: id>label]
   m = t.match(/^([A-Za-z0-9_]+)>([^\]]*)\]$/);
-  if (m) return { id: m[1]!, label: cleanLabel(m[2] ?? ''), shape: 'rectangle' };
+  if (m)
+    return { id: m[1]!, label: cleanLabel(m[2] ?? ''), shape: 'rectangle' };
 
   // Bare id (no shape notation)
   m = t.match(/^[A-Za-z0-9_]+$/);
@@ -286,7 +310,12 @@ function ensureNode(info: MermaidNode, nodes: Map<string, MermaidNode>): void {
   }
 }
 
-function buildEdge(from: string, to: string, edgeOp: string, label: string): MermaidEdge {
+function buildEdge(
+  from: string,
+  to: string,
+  edgeOp: string,
+  label: string,
+): MermaidEdge {
   const dashed = edgeOp === '-.->'; // -.-  is undirected dashed; -.-> is directed dashed
   const edgeKind: 'arrow' | 'line' =
     edgeOp === '---' || edgeOp === '-.-' ? 'line' : 'arrow';
@@ -352,7 +381,9 @@ function computeLayout(
   const isHorizontal = direction === 'LR' || direction === 'RL';
 
   // Cross-axis span using the widest level for centering
-  const maxNodesInLevel = Math.max(...[...levels.values()].map((l) => l.length));
+  const maxNodesInLevel = Math.max(
+    ...[...levels.values()].map((l) => l.length),
+  );
   const crossUnit = isHorizontal ? NODE_H + H_GAP : NODE_W + H_GAP;
   const maxCrossSpan = (maxNodesInLevel - 1) * crossUnit;
 
@@ -370,9 +401,12 @@ function computeLayout(
 
     levelNodes.forEach((id, i) => {
       const crossAxis = crossStart + i * crossUnit;
-      positions.set(id, isHorizontal
-        ? { x: mainAxis, y: crossAxis }
-        : { x: crossAxis, y: mainAxis });
+      positions.set(
+        id,
+        isHorizontal
+          ? { x: mainAxis, y: crossAxis }
+          : { x: crossAxis, y: mainAxis },
+      );
     });
   }
 
@@ -382,7 +416,11 @@ function computeLayout(
 // ── Element builder ────────────────────────────────────────────────────────────
 
 /** Exported for testing. Converts a parsed diagram to Markasso elements. */
-export function buildElements(diagram: ParsedDiagram, strokeColor: string, isDark = true): Element[] {
+export function buildElements(
+  diagram: ParsedDiagram,
+  strokeColor: string,
+  isDark = true,
+): Element[] {
   const { nodes, edges, direction } = diagram;
   const positions = computeLayout(nodes, edges, direction);
   const palette = isDark ? MERMAID_COLORS.dark : MERMAID_COLORS.light;
@@ -514,7 +552,9 @@ export function buildElements(diagram: ParsedDiagram, strokeColor: string, isDar
 // ── Sequence diagram parser ────────────────────────────────────────────────────
 
 /** Exported for testing. Parses a Mermaid sequenceDiagram text. */
-export function parseSequenceDiagram(text: string): ParsedSequenceDiagram | null {
+export function parseSequenceDiagram(
+  text: string,
+): ParsedSequenceDiagram | null {
   const lines = text.split('\n').map((l) => l.trim());
 
   // Find header
@@ -522,7 +562,10 @@ export function parseSequenceDiagram(text: string): ParsedSequenceDiagram | null
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? '';
     if (!line || line.startsWith('%%')) continue;
-    if (/^sequenceDiagram\b/i.test(line)) { headerIdx = i; break; }
+    if (/^sequenceDiagram\b/i.test(line)) {
+      headerIdx = i;
+      break;
+    }
     return null;
   }
   if (headerIdx === -1) return null;
@@ -532,7 +575,8 @@ export function parseSequenceDiagram(text: string): ParsedSequenceDiagram | null
   const messages: SequenceMessage[] = [];
 
   // Message arrow pattern: From ->> To: label  (handles ->>, -->>, ->, -->, -x, --x)
-  const msgRe = /^([A-Za-z0-9_]+)\s*(->>|-->>|->|-->|-x|--x)\s*([A-Za-z0-9_]+)\s*:\s*(.*)$/;
+  const msgRe =
+    /^([A-Za-z0-9_]+)\s*(->>|-->>|->|-->|-x|--x)\s*([A-Za-z0-9_]+)\s*:\s*(.*)$/;
   // Participant declaration: participant Id as Label  OR  participant Id  OR  actor Id
   const partRe = /^(?:participant|actor)\s+([A-Za-z0-9_]+)(?:\s+as\s+(.+))?$/i;
 
@@ -541,7 +585,12 @@ export function parseSequenceDiagram(text: string): ParsedSequenceDiagram | null
     if (!line) continue;
 
     // Skip block keywords
-    if (/^(?:loop|alt|else|opt|par|and|critical|break|end|rect|Note)\b/i.test(line)) continue;
+    if (
+      /^(?:loop|alt|else|opt|par|and|critical|break|end|rect|Note)\b/i.test(
+        line,
+      )
+    )
+      continue;
 
     const partMatch = line.match(partRe);
     if (partMatch) {
@@ -581,14 +630,22 @@ export function parseSequenceDiagram(text: string): ParsedSequenceDiagram | null
 // ── Sequence diagram builder ───────────────────────────────────────────────────
 
 /** Exported for testing. Converts a parsed sequence diagram to Markasso elements. */
-export function buildSequenceElements(diagram: ParsedSequenceDiagram, strokeColor: string, _isDark = true): Element[] {
+export function buildSequenceElements(
+  diagram: ParsedSequenceDiagram,
+  strokeColor: string,
+  _isDark = true,
+): Element[] {
   const { participants, messages } = diagram;
   const elements: Element[] = [];
 
   // Map participant id → column index and color
-  const colIndex = new Map<string, number>(participants.map((p, i) => [p.id, i]));
-  const centerX = (id: string) => (colIndex.get(id) ?? 0) * SEQ_PART_SPACING + SEQ_PART_W / 2;
-  const participantColor = (id: string) => SEQ_COLORS[(colIndex.get(id) ?? 0) % SEQ_COLORS.length]!;
+  const colIndex = new Map<string, number>(
+    participants.map((p, i) => [p.id, i]),
+  );
+  const centerX = (id: string) =>
+    (colIndex.get(id) ?? 0) * SEQ_PART_SPACING + SEQ_PART_W / 2;
+  const participantColor = (id: string) =>
+    SEQ_COLORS[(colIndex.get(id) ?? 0) % SEQ_COLORS.length]!;
 
   const totalHeight = SEQ_MSG_FIRST_Y + messages.length * SEQ_MSG_SPACING + 40;
 

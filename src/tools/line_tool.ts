@@ -1,17 +1,29 @@
+import type { Element, LineElement } from '../elements/element';
+import {
+  distToShapeBoundary,
+  getElementBorderPoint,
+  getElementBounds,
+} from '../rendering/draw_selection';
 import type { Tool, ToolContext } from './tool';
-import type { LineElement } from '../elements/element';
-import { getElementBounds, getElementBorderPoint, distToShapeBoundary } from '../rendering/draw_selection';
-import type { Element } from '../elements/element';
 
 const SNAP_RADIUS_PX = 20;
 
-function distToPerimeter(b: { x: number; y: number; w: number; h: number }, px: number, py: number): number {
+function distToPerimeter(
+  b: { x: number; y: number; w: number; h: number },
+  px: number,
+  py: number,
+): number {
   const nearX = Math.max(b.x, Math.min(b.x + b.w, px));
   const nearY = Math.max(b.y, Math.min(b.y + b.h, py));
   return Math.hypot(px - nearX, py - nearY);
 }
 
-function bestSnapCandidate(elements: ReadonlyArray<Element>, px: number, py: number, snapRadius: number): Element | null {
+function bestSnapCandidate(
+  elements: ReadonlyArray<Element>,
+  px: number,
+  py: number,
+  snapRadius: number,
+): Element | null {
   let best: Element | null = null;
   let bestDist = Infinity;
   for (const el of elements) {
@@ -38,7 +50,12 @@ export class LineTool implements Tool {
   snapIndicator: { worldX: number; worldY: number } | null = null;
   snapElementId: string | null = null;
 
-  onMouseDown(_e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+  onMouseDown(
+    _e: MouseEvent,
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void {
     this.drawing = true;
     this.preview = null;
     this.endElementId = null;
@@ -51,7 +68,12 @@ export class LineTool implements Tool {
     this.startElementId = null;
     let snappedX = worldX;
     let snappedY = worldY;
-    const startSnap = bestSnapCandidate(scene.elements, worldX, worldY, snapRadius);
+    const startSnap = bestSnapCandidate(
+      scene.elements,
+      worldX,
+      worldY,
+      snapRadius,
+    );
     if (startSnap) {
       this.startElementId = startSnap.id;
       const b = getElementBounds(startSnap);
@@ -63,14 +85,24 @@ export class LineTool implements Tool {
     this.startY = snappedY;
   }
 
-  onMouseMove(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+  onMouseMove(
+    e: MouseEvent,
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void {
     const scene = ctx.history.present;
     const snapRadius = SNAP_RADIUS_PX / scene.viewport.zoom;
 
     if (!this.drawing) {
       this.snapIndicator = null;
       this.snapElementId = null;
-      const hoverSnap = bestSnapCandidate(scene.elements, worldX, worldY, snapRadius);
+      const hoverSnap = bestSnapCandidate(
+        scene.elements,
+        worldX,
+        worldY,
+        snapRadius,
+      );
       if (hoverSnap) {
         const [bx, by] = getElementBorderPoint(hoverSnap, worldX, worldY);
         this.snapIndicator = { worldX: bx, worldY: by };
@@ -88,7 +120,11 @@ export class LineTool implements Tool {
     this.snapElementId = null;
     const endSnapMove = bestSnapCandidate(scene.elements, x2, y2, snapRadius);
     if (endSnapMove) {
-      const [bx, by] = getElementBorderPoint(endSnapMove, this.startX, this.startY);
+      const [bx, by] = getElementBorderPoint(
+        endSnapMove,
+        this.startX,
+        this.startY,
+      );
       x2 = bx;
       y2 = by;
       this.snapIndicator = { worldX: bx, worldY: by };
@@ -98,7 +134,9 @@ export class LineTool implements Tool {
     let previewStartX = this.startX;
     let previewStartY = this.startY;
     if (this.startElementId) {
-      const startEl = scene.elements.find((el) => el.id === this.startElementId);
+      const startEl = scene.elements.find(
+        (el) => el.id === this.startElementId,
+      );
       if (startEl) {
         [previewStartX, previewStartY] = getElementBorderPoint(startEl, x2, y2);
       }
@@ -122,7 +160,12 @@ export class LineTool implements Tool {
     ctx.onPreviewUpdate?.();
   }
 
-  onMouseUp(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void {
+  onMouseUp(
+    e: MouseEvent,
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void {
     if (!this.drawing) return;
     this.drawing = false;
 
@@ -134,7 +177,11 @@ export class LineTool implements Tool {
     const snapRadius = SNAP_RADIUS_PX / scene.viewport.zoom;
     const endSnapUp = bestSnapCandidate(scene.elements, x2, y2, snapRadius);
     if (endSnapUp) {
-      const [bx, by] = getElementBorderPoint(endSnapUp, this.startX, this.startY);
+      const [bx, by] = getElementBorderPoint(
+        endSnapUp,
+        this.startX,
+        this.startY,
+      );
       x2 = bx;
       y2 = by;
       finalEndElementId = endSnapUp.id;
@@ -144,7 +191,8 @@ export class LineTool implements Tool {
     this.snapIndicator = null;
     this.snapElementId = null;
 
-    const dx = x2 - this.startX, dy = y2 - this.startY;
+    const dx = x2 - this.startX,
+      dy = y2 - this.startY;
     if (Math.abs(dx) < 2 && Math.abs(dy) < 2) {
       this.startElementId = null;
       this.endElementId = null;
@@ -171,7 +219,11 @@ export class LineTool implements Tool {
 
     ctx.history.dispatch({ type: 'CREATE_ELEMENT', element });
     if (!ctx.history.present.appState.toolLocked) {
-      ctx.history.dispatch({ type: 'SET_TOOL', tool: 'select', keepSelection: true });
+      ctx.history.dispatch({
+        type: 'SET_TOOL',
+        tool: 'select',
+        keepSelection: true,
+      });
     }
     this.startElementId = null;
     this.endElementId = null;
@@ -191,8 +243,14 @@ export class LineTool implements Tool {
   }
 }
 
-function snap45(startX: number, startY: number, x: number, y: number): [number, number] {
-  const dx = x - startX, dy = y - startY;
+function snap45(
+  startX: number,
+  startY: number,
+  x: number,
+  y: number,
+): [number, number] {
+  const dx = x - startX,
+    dy = y - startY;
   const angle = Math.atan2(dy, dx);
   const snapped = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
   const dist = Math.hypot(dx, dy);

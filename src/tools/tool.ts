@@ -8,9 +8,24 @@ export interface ToolContext {
 }
 
 export interface Tool {
-  onMouseDown(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void;
-  onMouseMove(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void;
-  onMouseUp(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void;
+  onMouseDown(
+    e: MouseEvent,
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void;
+  onMouseMove(
+    e: MouseEvent,
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void;
+  onMouseUp(
+    e: MouseEvent,
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void;
   /**
    * Called when an in-progress gesture is cancelled (second finger added during
    * drawing, or a touchcancel event). Tools that accumulate state over multiple
@@ -18,7 +33,12 @@ export interface Tool {
    * than committing a partial result.
    */
   onCancel?(ctx: ToolContext): void;
-  onDblClick?(e: MouseEvent, worldX: number, worldY: number, ctx: ToolContext): void;
+  onDblClick?(
+    e: MouseEvent,
+    worldX: number,
+    worldY: number,
+    ctx: ToolContext,
+  ): void;
   onKeyDown?(e: KeyboardEvent, ctx: ToolContext): void;
   onActivate?(ctx: ToolContext): void;
   onDeactivate?(ctx: ToolContext): void;

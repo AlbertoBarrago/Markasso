@@ -2,15 +2,25 @@ import type { History } from '../engine/history';
 import { t } from '../i18n';
 
 const isMac = navigator.platform.toUpperCase().includes('MAC');
-const mod   = isMac ? '⌘' : 'Ctrl+';
+const mod = isMac ? '⌘' : 'Ctrl+';
 
-const SHORTCUTS: { icon: string; label: string; key: string; iconClass?: string }[] = [
-  { icon: '⌘',  label: t('commandPalette'), key: `${mod}K` },
-  { icon: '⌕',  label: t('search'),         key: `${mod}F`, iconClass: 'wl-shortcut-icon--search' },
-  { icon: '📂', label: t('openFile'),  key: `${mod}O` },
-  { icon: '💾', label: t('saveFile'),  key: `${mod}S` },
-  { icon: '↩',  label: t('undoLabel'), key: `${mod}Z` },
-  { icon: '↪',  label: t('redoLabel'), key: isMac ? '⌘⇧Z' : 'Ctrl+Y' },
+const SHORTCUTS: {
+  icon: string;
+  label: string;
+  key: string;
+  iconClass?: string;
+}[] = [
+  { icon: '⌘', label: t('commandPalette'), key: `${mod}K` },
+  {
+    icon: '⌕',
+    label: t('search'),
+    key: `${mod}F`,
+    iconClass: 'wl-shortcut-icon--search',
+  },
+  { icon: '📂', label: t('openFile'), key: `${mod}O` },
+  { icon: '💾', label: t('saveFile'), key: `${mod}S` },
+  { icon: '↩', label: t('undoLabel'), key: `${mod}Z` },
+  { icon: '↪', label: t('redoLabel'), key: isMac ? '⌘⇧Z' : 'Ctrl+Y' },
 ];
 
 export function initWelcome(appEl: HTMLElement, history: History): void {
@@ -29,13 +39,15 @@ export function initWelcome(appEl: HTMLElement, history: History): void {
         ${t('welcomeTagline').replace('\n', '<br>')}
       </p>
       <ul class="wl-shortcuts">
-        ${SHORTCUTS.map(s => `
+        ${SHORTCUTS.map(
+          (s) => `
           <li class="wl-shortcut-row">
             <span class="wl-shortcut-icon${s.iconClass ? ` ${s.iconClass}` : ''}">${s.icon}</span>
             <span class="wl-shortcut-label">${s.label}</span>
             <kbd class="wl-kbd">${s.key}</kbd>
           </li>
-        `).join('')}
+        `,
+        ).join('')}
       </ul>
       <button class="wl-cta">${t('startDrawing')}</button>
     </div>
@@ -43,7 +55,9 @@ export function initWelcome(appEl: HTMLElement, history: History): void {
 
   const dismiss = (): void => {
     overlay.classList.add('wl-out');
-    overlay.addEventListener('animationend', () => overlay.remove(), { once: true });
+    overlay.addEventListener('animationend', () => overlay.remove(), {
+      once: true,
+    });
     unsubscribe();
     document.removeEventListener('keydown', onKey);
   };
@@ -53,7 +67,9 @@ export function initWelcome(appEl: HTMLElement, history: History): void {
   };
 
   overlay.querySelector('.wl-cta')!.addEventListener('click', dismiss);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) dismiss(); });
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) dismiss();
+  });
   document.addEventListener('keydown', onKey);
 
   // Auto-dismiss as soon as the user draws something
