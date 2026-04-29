@@ -22,7 +22,7 @@
 
 <br/>
 
-[User Manual](./MANUAL.md) · [Guide](./GUIDA.md) · [Contributing](./CONTRIBUTORS.md) · [Report an Issue](https://github.com/AlbertoBarrago/Markasso/issues)
+[User Manual](./MANUAL.md) · [Guide](./GUIDA.md) · [Contributing](./CONTRIBUTORS.md) · [Report an Issue](https://codeberg.org/alBz/Markasso/issues)
 
 </div>
 

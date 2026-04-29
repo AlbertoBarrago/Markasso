@@ -35,7 +35,7 @@ function printConsoleGreeting(): void {
     '%cIf you have ideas, spot a bug, or just want to say hi — open an issue or a PR:',
     reset,
   );
-  console.log('%c→ https://github.com/AlbertoBarrago/Markasso', accent);
+  console.log('%c→ https://codeberg.org/alBz/Markasso', accent);
   console.log(
     "%cAll contributions are welcome. Let's build something cool together.",
     muted,

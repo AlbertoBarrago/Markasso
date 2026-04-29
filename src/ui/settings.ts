@@ -385,7 +385,7 @@ export function initSettings(
     .querySelector<HTMLButtonElement>('#menu-guide')!
     .addEventListener('click', () => {
       window.open(
-        'https://github.com/AlbertoBarrago/Markasso/blob/main/MANUAL.md',
+        'https://codeberg.org/alBz/Markasso/src/branch/main/MANUAL.md',
         '_blank',
       );
       close();

@@ -1011,7 +1011,7 @@
   transform: translateX(-50%) translateY(0);
 }
 
-/* ── Star CTA modal ─────────────────────────────────────────────────────────── */
+/* ── Coffee CTA modal ───────────────────────────────────────────────────────── */
 #star-modal {
   position: fixed;
   inset: 0;
@@ -1130,7 +1130,6 @@
   align-items: center;
 }
 
-.star-cta-btn,
 .star-coffee-btn {
   display: inline-flex;
   align-items: center;
@@ -1146,43 +1145,21 @@
     background 0.15s,
     transform 0.15s,
     box-shadow 0.15s;
-}
-
-.star-cta-btn {
   background: #f59e0b;
   color: #000;
   box-shadow: 0 2px 12px rgba(245, 158, 11, 0.35);
 }
-.star-cta-btn:hover {
+.star-coffee-btn:hover {
   background: #fbbf24;
   transform: translateY(-2px);
   box-shadow: 0 4px 20px rgba(245, 158, 11, 0.5);
 }
 
-.star-coffee-btn {
-  background: var(--bg-hover);
-  color: var(--text-muted);
-  border: 1px solid var(--island-border);
-  box-shadow: none;
-}
-.star-coffee-btn:hover {
-  background: var(--bg-island);
-  color: var(--text);
-  transform: translateY(-1px);
-}
-
-.star-sub {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin: 14px 0 0;
-  opacity: 0.7;
-}
-
-/* Toolbar star button styling */
-.tb-star-btn {
+/* Toolbar coffee button styling */
+.tb-coffee-btn {
   color: #f59e0b !important;
 }
-.tb-star-btn:hover {
+.tb-coffee-btn:hover {
   color: #fbbf24 !important;
 }
 
@@ -1195,6 +1172,6 @@
     transform: scale(1.2);
   }
 }
-.tb-star-btn.pulse {
+.tb-coffee-btn.pulse {
   animation: star-pulse 1.6s ease-in-out 2;
 }

@@ -1,24 +1,22 @@
-const STAR_ICON = `<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-  <path d="M10 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L10 14.4l-4.8 2.5.9-5.4L2.2 7.7l5.4-.8z"/>
+const COFFEE_ICON = `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M6 2v3M10 2v3M14 2v3M4 7h12l-1.5 9a2 2 0 01-2 1.5h-5a2 2 0 01-2-1.5zM16 9h2a2 2 0 010 4h-2"/>
 </svg>`;
-
-const GITHUB_URL = 'https://github.com/AlbertoBarrago/Markasso';
 
 export function initStarCta(appEl: HTMLElement, toolbarEl: HTMLElement): void {
   // ── Toolbar button ──────────────────────────────────────────────────────────
-  const starBtn = document.createElement('button');
-  starBtn.className = 'tb-btn tb-star-btn';
-  starBtn.title = 'Give us a star on GitHub';
-  starBtn.setAttribute('aria-label', 'Support Markasso on GitHub');
-  starBtn.innerHTML = STAR_ICON;
+  const coffeeBtn = document.createElement('button');
+  coffeeBtn.className = 'tb-btn tb-coffee-btn';
+  coffeeBtn.title = 'Buy me a coffee';
+  coffeeBtn.setAttribute('aria-label', 'Support Markasso with a coffee');
+  coffeeBtn.innerHTML = COFFEE_ICON;
 
   const leftSection = toolbarEl.querySelector<HTMLElement>('.tb-left');
-  (leftSection ?? toolbarEl).appendChild(starBtn);
+  (leftSection ?? toolbarEl).appendChild(coffeeBtn);
 
   function triggerPulse(): void {
-    starBtn.classList.remove('pulse');
-    void starBtn.offsetWidth;
-    starBtn.classList.add('pulse');
+    coffeeBtn.classList.remove('pulse');
+    void coffeeBtn.offsetWidth;
+    coffeeBtn.classList.add('pulse');
   }
 
   triggerPulse();
@@ -53,12 +51,6 @@ export function initStarCta(appEl: HTMLElement, toolbarEl: HTMLElement): void {
           for the style, and to <strong>Claude Code</strong> for its unbearable absence of fatigue.
         </p>
         <div class="star-actions">
-          <a class="star-cta-btn" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0">
-              <path d="M10 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L10 14.4l-4.8 2.5.9-5.4L2.2 7.7l5.4-.8z"/>
-            </svg>
-            Star on GitHub
-          </a>
           <a class="star-coffee-btn" href="https://buymeacoffee.com/albz" target="_blank" rel="noopener noreferrer">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
               <path d="M6 2v3M10 2v3M14 2v3M4 7h12l-1.5 9a2 2 0 01-2 1.5h-5a2 2 0 01-2-1.5zM16 9h2a2 2 0 010 4h-2"/>
@@ -66,7 +58,6 @@ export function initStarCta(appEl: HTMLElement, toolbarEl: HTMLElement): void {
             Buy me a coffee
           </a>
         </div>
-        <p class="star-sub">It takes 2 seconds and helps us grow.</p>
       </div>
     `;
 
@@ -102,5 +93,5 @@ export function initStarCta(appEl: HTMLElement, toolbarEl: HTMLElement): void {
     appEl.appendChild(modalEl);
   }
 
-  starBtn.addEventListener('click', openModal);
+  coffeeBtn.addEventListener('click', openModal);
 }
