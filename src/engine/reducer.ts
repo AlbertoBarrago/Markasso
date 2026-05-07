@@ -333,6 +333,7 @@ export function reducer(scene: Scene, command: Command): Scene {
             ? {
                 ...el,
                 fontSize: command.size,
+                ...(command.width !== undefined && { width: command.width }),
                 ...(command.height !== undefined && { height: command.height }),
               }
             : el,

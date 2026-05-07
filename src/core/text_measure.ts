@@ -1,16 +1,21 @@
-import { buildWrappedLines } from '../rendering/draw_element';
-
-export function measureTextHeight(
+export function measureTextBounds(
   content: string,
   fontSize: number,
   fontFamily: string,
-  width: number,
   bold?: boolean,
   italic?: boolean,
-): number {
+): { width: number; height: number } {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
   ctx.font = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${fontSize}px ${fontFamily}`;
-  const lines = buildWrappedLines(ctx, content, width);
-  return Math.max(lines.length * fontSize * 1.2, fontSize);
+  const lineHeight = fontSize * 1.2;
+  const rawLines = content.split('\n');
+  let maxWidth = 0;
+  for (const line of rawLines) {
+    maxWidth = Math.max(maxWidth, ctx.measureText(line).width);
+  }
+  return {
+    width: Math.max(maxWidth, fontSize),
+    height: Math.max(rawLines.length * lineHeight, fontSize),
+  };
 }

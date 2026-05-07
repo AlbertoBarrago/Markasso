@@ -913,7 +913,7 @@ describe('reducer', () => {
     expect((next.elements[0] as TextElement).fontSize).toBe(24);
   });
 
-  it('SET_FONT_SIZE with height resizes selected text element', () => {
+  it('SET_FONT_SIZE with width and height resizes selected text element', () => {
     const text: TextElement = {
       id: 'txt1',
       type: 'text',
@@ -938,12 +938,14 @@ describe('reducer', () => {
     const next = reducer(scene, {
       type: 'SET_FONT_SIZE',
       size: 24,
+      width: 120,
       height: 60,
     });
+    expect((next.elements[0] as TextElement).width).toBe(120);
     expect((next.elements[0] as TextElement).height).toBe(60);
   });
 
-  it('SET_FONT_SIZE without height preserves element height', () => {
+  it('SET_FONT_SIZE without bounds preserves element dimensions', () => {
     const text: TextElement = {
       id: 'txt1',
       type: 'text',
@@ -966,6 +968,7 @@ describe('reducer', () => {
       selectedIds: new Set(['txt1']),
     };
     const next = reducer(scene, { type: 'SET_FONT_SIZE', size: 24 });
+    expect((next.elements[0] as TextElement).width).toBe(100);
     expect((next.elements[0] as TextElement).height).toBe(30);
   });
 

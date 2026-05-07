@@ -1,4 +1,4 @@
-import { measureTextHeight } from '../core/text_measure';
+import { measureTextBounds } from '../core/text_measure';
 import type { Element } from '../elements/element';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
@@ -686,13 +686,12 @@ export function initContextPanel(
       const selectedText = scene.elements.find(
         (el) => scene.selectedIds.has(el.id) && el.type === 'text',
       );
-      const height =
+      const bounds =
         selectedText?.type === 'text'
-          ? measureTextHeight(
+          ? measureTextBounds(
               selectedText.content,
               size,
               selectedText.fontFamily,
-              Math.abs(selectedText.width),
               selectedText.bold,
               selectedText.italic,
             )
@@ -700,7 +699,10 @@ export function initContextPanel(
       history.dispatch({
         type: 'SET_FONT_SIZE',
         size,
-        ...(height !== undefined && { height }),
+        ...(bounds !== undefined && {
+          width: bounds.width,
+          height: bounds.height,
+        }),
       });
     }
   });
