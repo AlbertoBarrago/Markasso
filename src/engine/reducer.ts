@@ -257,10 +257,13 @@ export function reducer(scene: Scene, command: Command): Scene {
     case 'SET_TOOL': {
       const NON_DRAWING = new Set(['select', 'hand', 'eraser']);
       const isDrawingTool = !NON_DRAWING.has(command.tool);
+      const leavingText =
+        scene.appState.activeTool === 'text' && command.tool !== 'text';
       let newAppState = {
         ...scene.appState,
         activeTool: command.tool,
         lastCreatedId: null,
+        ...(leavingText && { fontSize: 20 }),
       };
 
       // When switching to a drawing tool while an element is selected,

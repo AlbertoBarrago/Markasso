@@ -1173,6 +1173,32 @@ describe('reducer', () => {
     expect(next.selectedIds.size).toBe(0);
   });
 
+  it('SET_TOOL resets fontSize to 20 when leaving text tool', () => {
+    const scene: Scene = {
+      ...createScene(),
+      appState: {
+        ...createScene().appState,
+        activeTool: 'text',
+        fontSize: 120,
+      },
+    };
+    const next = reducer(scene, { type: 'SET_TOOL', tool: 'rectangle' });
+    expect(next.appState.fontSize).toBe(20);
+  });
+
+  it('SET_TOOL does not reset fontSize when staying on text tool', () => {
+    const scene: Scene = {
+      ...createScene(),
+      appState: {
+        ...createScene().appState,
+        activeTool: 'text',
+        fontSize: 120,
+      },
+    };
+    const next = reducer(scene, { type: 'SET_TOOL', tool: 'text' });
+    expect(next.appState.fontSize).toBe(120);
+  });
+
   it('SET_TOOL with keepSelection preserves selection', () => {
     const scene: Scene = {
       ...createScene(),
