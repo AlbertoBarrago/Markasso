@@ -4,6 +4,16 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.4.2] — 2026-05-07
+
+### Fixed
+- **Text tool font size** — switching away from the text tool now resets the font size to the default (20px), so a large size set on one text element no longer carries over to new elements created later
+
+### Changed
+- **Support CTA** — toolbar coffee button replaces the GitHub star button; Buy Me a Coffee is now the primary support action
+
+---
+
 ## [1.4.1] — 2026-04-28
 
 ### Changed
