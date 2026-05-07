@@ -1,7 +1,7 @@
+import { measureTextHeight } from '../core/text_measure';
 import type { Element } from '../elements/element';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
-import { measureTextHeight } from '../core/text_measure';
 import { getElementBounds } from '../rendering/draw_selection';
 
 const SHARED_COLOR_PRESETS = [

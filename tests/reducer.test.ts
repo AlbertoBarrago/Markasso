@@ -935,7 +935,11 @@ describe('reducer', () => {
       elements: [text],
       selectedIds: new Set(['txt1']),
     };
-    const next = reducer(scene, { type: 'SET_FONT_SIZE', size: 24, height: 60 });
+    const next = reducer(scene, {
+      type: 'SET_FONT_SIZE',
+      size: 24,
+      height: 60,
+    });
     expect((next.elements[0] as TextElement).height).toBe(60);
   });
 
