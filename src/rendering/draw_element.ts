@@ -956,7 +956,7 @@ function drawFreehand(
   ctx.stroke();
 }
 
-function buildWrappedLines(
+export function buildWrappedLines(
   ctx: CanvasRenderingContext2D,
   content: string,
   maxWidth: number,

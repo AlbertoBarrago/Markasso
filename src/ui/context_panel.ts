@@ -1,6 +1,7 @@
 import type { Element } from '../elements/element';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
+import { measureTextHeight } from '../core/text_measure';
 import { getElementBounds } from '../rendering/draw_selection';
 
 const SHARED_COLOR_PRESETS = [
@@ -681,7 +682,26 @@ export function initContextPanel(
   fontSizeInput.addEventListener('change', () => {
     const size = parseInt(fontSizeInput.value, 10);
     if (!Number.isNaN(size) && size >= 6 && size <= 400) {
-      history.dispatch({ type: 'SET_FONT_SIZE', size });
+      const scene = history.present;
+      const selectedText = scene.elements.find(
+        (el) => scene.selectedIds.has(el.id) && el.type === 'text',
+      );
+      const height =
+        selectedText?.type === 'text'
+          ? measureTextHeight(
+              selectedText.content,
+              size,
+              selectedText.fontFamily,
+              Math.abs(selectedText.width),
+              selectedText.bold,
+              selectedText.italic,
+            )
+          : undefined;
+      history.dispatch({
+        type: 'SET_FONT_SIZE',
+        size,
+        ...(height !== undefined && { height }),
+      });
     }
   });
   fontSizeInput.addEventListener('keydown', (e) => {

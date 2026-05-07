@@ -330,7 +330,11 @@ export function reducer(scene: Scene, command: Command): Scene {
         appState: { ...scene.appState, fontSize: command.size },
         elements: scene.elements.map((el) =>
           scene.selectedIds.has(el.id) && el.type === 'text'
-            ? { ...el, fontSize: command.size }
+            ? {
+                ...el,
+                fontSize: command.size,
+                ...(command.height !== undefined && { height: command.height }),
+              }
             : el,
         ),
       };

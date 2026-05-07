@@ -913,6 +913,58 @@ describe('reducer', () => {
     expect((next.elements[0] as TextElement).fontSize).toBe(24);
   });
 
+  it('SET_FONT_SIZE with height resizes selected text element', () => {
+    const text: TextElement = {
+      id: 'txt1',
+      type: 'text',
+      x: 0,
+      y: 0,
+      content: 'hi',
+      width: 100,
+      height: 30,
+      fontSize: 16,
+      fontFamily: 'sans-serif',
+      strokeColor: '#000',
+      fillColor: 'transparent',
+      strokeWidth: 0,
+      opacity: 1,
+      roughness: 0,
+    };
+    const scene: Scene = {
+      ...createScene(),
+      elements: [text],
+      selectedIds: new Set(['txt1']),
+    };
+    const next = reducer(scene, { type: 'SET_FONT_SIZE', size: 24, height: 60 });
+    expect((next.elements[0] as TextElement).height).toBe(60);
+  });
+
+  it('SET_FONT_SIZE without height preserves element height', () => {
+    const text: TextElement = {
+      id: 'txt1',
+      type: 'text',
+      x: 0,
+      y: 0,
+      content: 'hi',
+      width: 100,
+      height: 30,
+      fontSize: 16,
+      fontFamily: 'sans-serif',
+      strokeColor: '#000',
+      fillColor: 'transparent',
+      strokeWidth: 0,
+      opacity: 1,
+      roughness: 0,
+    };
+    const scene: Scene = {
+      ...createScene(),
+      elements: [text],
+      selectedIds: new Set(['txt1']),
+    };
+    const next = reducer(scene, { type: 'SET_FONT_SIZE', size: 24 });
+    expect((next.elements[0] as TextElement).height).toBe(30);
+  });
+
   it('SET_TEXT_MODE sets isCode on selected text elements', () => {
     const text: TextElement = {
       id: 'txt1',

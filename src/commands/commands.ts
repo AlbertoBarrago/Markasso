@@ -42,7 +42,7 @@ export type Command =
   | { type: 'SET_FILL_COLOR'; color: string } // appState only
   | { type: 'SET_STROKE_WIDTH'; width: number } // appState only
   | { type: 'SET_FONT_FAMILY'; family: string } // appState + selected text
-  | { type: 'SET_FONT_SIZE'; size: number } // appState + selected text
+  | { type: 'SET_FONT_SIZE'; size: number; height?: number } // appState + selected text
   | { type: 'TOGGLE_GRID' }
   | { type: 'SET_GRID_TYPE'; gridType: GridType }
   | { type: 'SET_ROTATION'; id: string; rotation: number }
