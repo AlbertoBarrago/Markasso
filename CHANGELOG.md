@@ -4,6 +4,20 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.5.0] — 2026-05-09
+
+### Added
+- **Mermaid gitGraph import** — paste or load a `gitGraph` diagram; branches, commits, and merge arrows are rendered as canvas elements automatically
+- **Mermaid import dialog** — replaces the old file-only button with a textarea dialog (paste code directly or load a `.mmd` file); supports Cmd/Ctrl+Enter to confirm
+
+### Changed
+- **Grid on by default** — new sessions start with the dot grid visible
+
+### Fixed
+- **gitGraph paste** — Ctrl+V with a gitGraph diagram was silently ignored; the global paste handler now recognises `gitGraph` as a valid Mermaid prefix
+
+---
+
 ## [1.4.2] — 2026-05-07
 
 ### Fixed
