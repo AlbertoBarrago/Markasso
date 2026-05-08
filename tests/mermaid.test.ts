@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type {
   ArrowElement,
-  EllipseElement,
   LineElement,
   RectangleElement,
-  RhombusElement,
 } from '../src/elements/element';
 import {
   buildElements,
