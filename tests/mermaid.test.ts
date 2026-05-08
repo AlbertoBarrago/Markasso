@@ -6,8 +6,10 @@ import type {
 } from '../src/elements/element';
 import {
   buildElements,
+  buildGitGraphElements,
   buildSequenceElements,
   parseDiagram,
+  parseGitGraph,
   parseSequenceDiagram,
 } from '../src/io/mermaid';
 
@@ -555,5 +557,127 @@ describe('buildSequenceElements', () => {
     const arrows = els.filter((e) => e.type === 'arrow');
     expect(lines.length).toBeGreaterThanOrEqual(2);
     expect(arrows.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// ── parseGitGraph ──────────────────────────────────────────────────────────────
+
+describe('parseGitGraph', () => {
+  it('returns null for non-gitGraph input', () => {
+    expect(parseGitGraph('flowchart TD\n  A --> B')).toBeNull();
+    expect(parseGitGraph('sequenceDiagram\n  A->>B: hi')).toBeNull();
+    expect(parseGitGraph('')).toBeNull();
+    expect(parseGitGraph('A --> B')).toBeNull();
+  });
+
+  it('parses a linear gitGraph with no branches', () => {
+    const g = parseGitGraph('gitGraph\n  commit id: "abc"\n  commit id: "def"');
+    expect(g).not.toBeNull();
+    expect(g!.commits).toHaveLength(2);
+    expect(g!.commits[0]).toMatchObject({ id: 'abc', branch: 'main' });
+    expect(g!.commits[1]).toMatchObject({ id: 'def', branch: 'main' });
+    expect(g!.branches).toEqual(['main']);
+    expect(g!.merges).toHaveLength(0);
+  });
+
+  it('parses bare commit without id', () => {
+    const g = parseGitGraph('gitGraph\n  commit\n  commit');
+    expect(g!.commits).toHaveLength(2);
+    expect(g!.commits[0]!.id).toMatch(/^commit-/);
+  });
+
+  it('parses commit type HIGHLIGHT', () => {
+    const g = parseGitGraph('gitGraph\n  commit id: "x" type: HIGHLIGHT');
+    expect(g!.commits[0]).toMatchObject({ id: 'x', type: 'HIGHLIGHT' });
+  });
+
+  it('creates a new branch and assigns commits correctly', () => {
+    const text =
+      'gitGraph\n  commit id: "a"\n  branch feature\n  commit id: "b"';
+    const g = parseGitGraph(text);
+    expect(g!.branches).toContain('feature');
+    expect(g!.commits[0]).toMatchObject({ branch: 'main' });
+    expect(g!.commits[1]).toMatchObject({ branch: 'feature' });
+  });
+
+  it('switches branch with checkout', () => {
+    const text = [
+      'gitGraph',
+      '  commit id: "a"',
+      '  branch feat',
+      '  commit id: "b"',
+      '  checkout main',
+      '  commit id: "c"',
+    ].join('\n');
+    const g = parseGitGraph(text);
+    expect(g!.commits[2]).toMatchObject({ id: 'c', branch: 'main' });
+  });
+
+  it('records a merge', () => {
+    const text = [
+      'gitGraph',
+      '  commit id: "a"',
+      '  branch feat',
+      '  commit id: "b"',
+      '  checkout main',
+      '  merge feat',
+    ].join('\n');
+    const g = parseGitGraph(text);
+    expect(g!.merges).toHaveLength(1);
+    expect(g!.merges[0]).toMatchObject({
+      fromBranch: 'feat',
+      intoBranch: 'main',
+    });
+    // merge produces an extra commit on main
+    expect(g!.commits.filter((c) => c.branch === 'main')).toHaveLength(2);
+  });
+
+  it('ignores comment lines', () => {
+    const g = parseGitGraph('gitGraph\n  %% a comment\n  commit id: "x"');
+    expect(g!.commits).toHaveLength(1);
+  });
+});
+
+// ── buildGitGraphElements ──────────────────────────────────────────────────────
+
+describe('buildGitGraphElements', () => {
+  it('produces N rectangles and N-1 lines for N linear commits', () => {
+    const g = parseGitGraph(
+      'gitGraph\n  commit id: "a"\n  commit id: "b"\n  commit id: "c"',
+    );
+    const els = buildGitGraphElements(g!, STROKE);
+    const rects = els.filter((e) => e.type === 'rectangle');
+    const lines = els.filter((e) => e.type === 'line');
+    const arrows = els.filter((e) => e.type === 'arrow');
+    // 3 commits + 1 branch label = 4 rectangles
+    expect(rects).toHaveLength(4);
+    // 2 connectors between 3 commits
+    expect(lines).toHaveLength(2);
+    expect(arrows).toHaveLength(0);
+  });
+
+  it('produces an arrow for a merge', () => {
+    const text = [
+      'gitGraph',
+      '  commit id: "a"',
+      '  branch feat',
+      '  commit id: "b"',
+      '  checkout main',
+      '  merge feat',
+    ].join('\n');
+    const g = parseGitGraph(text);
+    const els = buildGitGraphElements(g!, STROKE);
+    const arrows = els.filter((e) => e.type === 'arrow');
+    expect(arrows.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('labels each commit rectangle with truncated id', () => {
+    const g = parseGitGraph('gitGraph\n  commit id: "abcdefgh_long"');
+    const els = buildGitGraphElements(g!, STROKE);
+    const commitRect = els.find(
+      (e): e is RectangleElement =>
+        e.type === 'rectangle' && (e as RectangleElement).label === 'abcdefg',
+    );
+    expect(commitRect).toBeDefined();
   });
 });

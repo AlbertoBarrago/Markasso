@@ -71,7 +71,11 @@ export function initImageImport(
       if (item.type === 'text/plain') {
         item.getAsString((text) => {
           const trimmed = text.trimStart();
-          if (/^(?:graph\s|flowchart\s|sequenceDiagram\b)/i.test(trimmed)) {
+          if (
+            /^(?:graph\s|flowchart\s|sequenceDiagram\b|gitGraph\b)/i.test(
+              trimmed,
+            )
+          ) {
             importMermaidText(trimmed, history);
           }
         });

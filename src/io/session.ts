@@ -41,7 +41,7 @@ export function loadSession(): SessionData | null {
     }
     const VALID_GRID_TYPES: GridType[] = ['dot', 'line', 'mm'];
     const gridVisible =
-      typeof d.gridVisible === 'boolean' ? d.gridVisible : false;
+      typeof d.gridVisible === 'boolean' ? d.gridVisible : true;
     const gridSize =
       typeof d.gridSize === 'number' && d.gridSize > 0 ? d.gridSize : 20;
     const gridType: GridType = VALID_GRID_TYPES.includes(d.gridType as GridType)

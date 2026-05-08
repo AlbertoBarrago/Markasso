@@ -3,7 +3,7 @@ import { fitToElements } from '../core/viewport';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
-import { importMermaid } from '../io/mermaid';
+import { importMermaidText } from '../io/mermaid';
 import { PRESETS } from '../io/presets';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
@@ -248,19 +248,169 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const importTrigger = mkBtn(IC.import, t('openMarkasso'));
   importTrigger.addEventListener('click', () => importInput.click());
 
-  // Import .mmd (Mermaid)
-  const mermaidInput = document.createElement('input');
-  mermaidInput.type = 'file';
-  mermaidInput.accept = '.mmd,.mermaid,text/plain';
-  mermaidInput.style.display = 'none';
-  container.appendChild(mermaidInput);
-  mermaidInput.addEventListener('change', () => {
-    const file = mermaidInput.files?.[0];
-    if (file) importMermaid(file, history);
-    mermaidInput.value = '';
+  // Mermaid dialog
+  const mermaidDialog = document.createElement('div');
+  mermaidDialog.id = 'mermaid-dialog';
+  mermaidDialog.style.cssText = [
+    'position:fixed',
+    'inset:0',
+    'z-index:2000',
+    'display:none',
+    'align-items:center',
+    'justify-content:center',
+    'background:rgba(0,0,0,0.55)',
+    'backdrop-filter:blur(4px)',
+  ].join(';');
+
+  const mermaidBox = document.createElement('div');
+  mermaidBox.style.cssText = [
+    'background:rgba(22,22,34,0.98)',
+    'border:1px solid rgba(255,255,255,0.12)',
+    'border-radius:12px',
+    'padding:20px',
+    'display:flex',
+    'flex-direction:column',
+    'gap:12px',
+    'width:420px',
+    'max-width:calc(100vw - 32px)',
+    'box-shadow:0 8px 40px rgba(0,0,0,0.7)',
+  ].join(';');
+
+  const mermaidHeader = document.createElement('div');
+  mermaidHeader.style.cssText =
+    'display:flex;align-items:center;justify-content:space-between;gap:8px';
+
+  const mermaidTitle = document.createElement('h3');
+  mermaidTitle.style.cssText =
+    'margin:0;font-size:14px;font-weight:600;color:#e2e2ef';
+  mermaidTitle.textContent = t('mermaidDialogTitle');
+
+  const mermaidFileInput = document.createElement('input');
+  mermaidFileInput.type = 'file';
+  mermaidFileInput.accept = '.mmd,.mermaid,text/plain';
+  mermaidFileInput.style.display = 'none';
+  container.appendChild(mermaidFileInput);
+
+  const mermaidLoadBtn = document.createElement('button');
+  mermaidLoadBtn.style.cssText = [
+    'background:none',
+    'border:none',
+    'color:rgba(255,255,255,0.4)',
+    'font-size:12px',
+    'cursor:pointer',
+    'padding:2px 4px',
+    'border-radius:4px',
+    'white-space:nowrap',
+  ].join(';');
+  mermaidLoadBtn.textContent = t('mermaidLoadFile');
+  mermaidLoadBtn.addEventListener('mouseenter', () => {
+    mermaidLoadBtn.style.color = 'rgba(255,255,255,0.7)';
   });
+  mermaidLoadBtn.addEventListener('mouseleave', () => {
+    mermaidLoadBtn.style.color = 'rgba(255,255,255,0.4)';
+  });
+  mermaidLoadBtn.addEventListener('click', () => mermaidFileInput.click());
+
+  mermaidFileInput.addEventListener('change', () => {
+    const file = mermaidFileInput.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      if (text) mermaidTextarea.value = text;
+    };
+    reader.readAsText(file);
+    mermaidFileInput.value = '';
+  });
+
+  mermaidHeader.append(mermaidTitle, mermaidLoadBtn);
+
+  const mermaidTextarea = document.createElement('textarea');
+  mermaidTextarea.style.cssText = [
+    'width:100%',
+    'height:240px',
+    'resize:vertical',
+    'background:rgba(0,0,0,0.3)',
+    'border:1px solid rgba(255,255,255,0.1)',
+    'border-radius:8px',
+    'color:#e2e2ef',
+    'font:13px/1.5 "Fira Code","Cascadia Code","JetBrains Mono",monospace',
+    'padding:10px 12px',
+    'box-sizing:border-box',
+    'outline:none',
+  ].join(';');
+  mermaidTextarea.placeholder = [
+    'flowchart TD',
+    '  A[Start] --> B{Decision}',
+    '  B -->|Yes| C[Done]',
+    '  B -->|No| A',
+  ].join('\n');
+  mermaidTextarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      doInsert();
+    }
+    if (e.key === 'Escape') hideMermaidDialog();
+  });
+
+  const mermaidActions = document.createElement('div');
+  mermaidActions.style.cssText =
+    'display:flex;justify-content:flex-end;gap:8px';
+
+  const mermaidCancelBtn = document.createElement('button');
+  mermaidCancelBtn.style.cssText = [
+    'background:rgba(255,255,255,0.07)',
+    'border:1px solid rgba(255,255,255,0.1)',
+    'border-radius:7px',
+    'color:#e2e2ef',
+    'font-size:13px',
+    'padding:7px 16px',
+    'cursor:pointer',
+  ].join(';');
+  mermaidCancelBtn.textContent = t('mermaidCancel');
+  mermaidCancelBtn.addEventListener('click', hideMermaidDialog);
+
+  const mermaidInsertBtn = document.createElement('button');
+  mermaidInsertBtn.style.cssText = [
+    'background:#c42059',
+    'border:none',
+    'border-radius:7px',
+    'color:#fff',
+    'font-size:13px',
+    'font-weight:600',
+    'padding:7px 20px',
+    'cursor:pointer',
+  ].join(';');
+  mermaidInsertBtn.textContent = t('mermaidInsert');
+  mermaidInsertBtn.addEventListener('click', doInsert);
+
+  mermaidActions.append(mermaidCancelBtn, mermaidInsertBtn);
+  mermaidBox.append(mermaidHeader, mermaidTextarea, mermaidActions);
+  mermaidDialog.appendChild(mermaidBox);
+  mermaidDialog.addEventListener('click', (e) => {
+    if (e.target === mermaidDialog) hideMermaidDialog();
+  });
+  document.body.appendChild(mermaidDialog);
+
+  function showMermaidDialog(): void {
+    mermaidTextarea.value = '';
+    mermaidDialog.style.display = 'flex';
+    requestAnimationFrame(() => mermaidTextarea.focus());
+  }
+
+  function hideMermaidDialog(): void {
+    mermaidDialog.style.display = 'none';
+  }
+
+  function doInsert(): void {
+    const code = mermaidTextarea.value.trim();
+    if (!code) return;
+    hideMermaidDialog();
+    importMermaidText(code, history);
+  }
+
   const mermaidTrigger = mkBtn(IC.mermaid, t('importMermaid'));
-  mermaidTrigger.addEventListener('click', () => mermaidInput.click());
+  mermaidTrigger.addEventListener('click', showMermaidDialog);
 
   importIsland.append(importTrigger, mermaidTrigger);
 

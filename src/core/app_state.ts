@@ -56,7 +56,7 @@ export function createAppState(): AppState {
     textMode: 'text',
     opacity: 1,
     roughness: 0,
-    gridVisible: false,
+    gridVisible: true,
     gridSize: 20,
     gridType: 'dot',
     strokeStyle: 'solid',

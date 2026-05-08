@@ -34,6 +34,26 @@ export interface ParsedDiagram {
   edges: MermaidEdge[];
 }
 
+// ── gitGraph types ─────────────────────────────────────────────────────────────
+
+interface GitCommit {
+  id: string;
+  branch: string;
+  type?: 'HIGHLIGHT' | 'REVERSE';
+}
+
+interface GitMerge {
+  fromBranch: string;
+  intoBranch: string;
+  afterCommitIndex: number;
+}
+
+export interface ParsedGitGraph {
+  branches: string[];
+  commits: GitCommit[];
+  merges: GitMerge[];
+}
+
 // ── Sequence diagram types ─────────────────────────────────────────────────────
 
 interface SequenceParticipant {
@@ -52,6 +72,13 @@ export interface ParsedSequenceDiagram {
   participants: SequenceParticipant[];
   messages: SequenceMessage[];
 }
+
+// ── gitGraph layout constants ─────────────────────────────────────────────────
+
+const GIT_COMMIT_W = 90;
+const GIT_COMMIT_H = 36;
+const GIT_COL_STEP = 130;
+const GIT_BRANCH_STEP = 90;
 
 // ── Layout constants ───────────────────────────────────────────────────────────
 
@@ -146,9 +173,25 @@ export function importMermaidText(text: string, history: History): void {
       return;
     }
 
+    // Try gitGraph
+    const gitGraph = parseGitGraph(text);
+    if (gitGraph) {
+      if (gitGraph.commits.length === 0) {
+        alert('No commits found in the git graph.');
+        return;
+      }
+      const elements = buildGitGraphElements(gitGraph, strokeColor, isDark);
+      if (elements.length === 0) {
+        alert('No elements could be created from this diagram.');
+        return;
+      }
+      dispatchElements(elements, history);
+      return;
+    }
+
     alert(
       'This does not appear to be a supported Mermaid diagram.\n' +
-        'Supported types: flowchart / graph, sequenceDiagram.',
+        'Supported types: flowchart / graph, sequenceDiagram, gitGraph.',
     );
   } catch (err) {
     console.error('[Markasso] Mermaid import error:', err);
@@ -749,4 +792,220 @@ export function buildSequenceElements(
   });
 
   return elements;
+}
+
+// ── gitGraph parser ────────────────────────────────────────────────────────────
+
+/** Exported for testing. Parses a Mermaid gitGraph text. */
+export function parseGitGraph(text: string): ParsedGitGraph | null {
+  const lines = text.split('\n').map((l) => l.trim());
+
+  let headerIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    if (!line || line.startsWith('%%')) continue;
+    if (/^gitGraph\b/i.test(line)) {
+      headerIdx = i;
+      break;
+    }
+    return null;
+  }
+  if (headerIdx === -1) return null;
+
+  const DEFAULT_BRANCH = 'main';
+  const branches: string[] = [DEFAULT_BRANCH];
+  const commits: GitCommit[] = [];
+  const merges: GitMerge[] = [];
+  let currentBranch = DEFAULT_BRANCH;
+  let autoId = 0;
+
+  for (let i = headerIdx + 1; i < lines.length; i++) {
+    const line = (lines[i] ?? '').replace(/%%.*$/, '').trim();
+    if (!line) continue;
+
+    // commit [id: "..."] [type: HIGHLIGHT|REVERSE]
+    if (/^commit\b/.test(line)) {
+      const idMatch = line.match(/\bid:\s*["']([^"']+)["']/);
+      const typeMatch = line.match(/\btype:\s*(HIGHLIGHT|REVERSE)\b/);
+      const id = idMatch ? idMatch[1]! : `commit-${autoId++}`;
+      const type = typeMatch
+        ? (typeMatch[1] as 'HIGHLIGHT' | 'REVERSE')
+        : undefined;
+      commits.push({ id, branch: currentBranch, ...(type ? { type } : {}) });
+      continue;
+    }
+
+    // branch <name>
+    const branchMatch = line.match(/^branch\s+(\S+)/);
+    if (branchMatch) {
+      const name = branchMatch[1]!;
+      if (!branches.includes(name)) branches.push(name);
+      currentBranch = name;
+      continue;
+    }
+
+    // checkout <name>
+    const checkoutMatch = line.match(/^checkout\s+(\S+)/);
+    if (checkoutMatch) {
+      const name = checkoutMatch[1]!;
+      if (!branches.includes(name)) branches.push(name);
+      currentBranch = name;
+      continue;
+    }
+
+    // merge <branch>
+    const mergeMatch = line.match(/^merge\s+(\S+)/);
+    if (mergeMatch) {
+      const fromBranch = mergeMatch[1]!;
+      merges.push({
+        fromBranch,
+        intoBranch: currentBranch,
+        afterCommitIndex: commits.length,
+      });
+      // A merge produces a commit on the current branch
+      commits.push({ id: `merge-${autoId++}`, branch: currentBranch });
+    }
+  }
+
+  return { branches, commits, merges };
+}
+
+// ── gitGraph element builder ───────────────────────────────────────────────────
+
+/** Exported for testing. Converts a parsed gitGraph to Markasso elements. */
+export function buildGitGraphElements(
+  diagram: ParsedGitGraph,
+  strokeColor: string,
+  _isDark = true,
+): Element[] {
+  const { branches, commits, merges } = diagram;
+  const shapeElements: Element[] = [];
+  const connectorElements: Element[] = [];
+
+  const baseStyle = { strokeWidth: 1.5, opacity: 1, roughness: 0 };
+
+  // Map commit index → element id (for connecting lines and merge arrows)
+  const commitElemIds: string[] = [];
+  // Per-branch: column of the last commit (for line connections)
+  const lastCommitByBranch = new Map<string, { col: number; elemId: string }>();
+  // Per-branch: last element id on that branch before a merge
+  const lastElemIdByBranch = new Map<string, string>();
+
+  // Track which merge targets which commit elem id (for arrows)
+  const mergeArrows: Array<{ fromElemId: string; toElemId: string }> = [];
+
+  // Snapshot last elemId per branch before each merge (at afterCommitIndex)
+  const mergeSnapshots = new Map<number, Map<string, string>>();
+  for (const m of merges) {
+    if (!mergeSnapshots.has(m.afterCommitIndex)) {
+      mergeSnapshots.set(m.afterCommitIndex, new Map());
+    }
+  }
+
+  commits.forEach((commit, col) => {
+    const branchRow = branches.indexOf(commit.branch);
+    const color = SEQ_COLORS[branchRow % SEQ_COLORS.length]!;
+
+    const x = col * GIT_COL_STEP;
+    const y = branchRow * GIT_BRANCH_STEP;
+    const elemId = crypto.randomUUID();
+    commitElemIds.push(elemId);
+
+    const isHighlight = commit.type === 'HIGHLIGHT';
+    const fillAlpha = isHighlight ? 0.35 : 0.18;
+
+    const el: RectangleElement = {
+      ...baseStyle,
+      id: elemId,
+      type: 'rectangle',
+      x,
+      y,
+      width: GIT_COMMIT_W,
+      height: GIT_COMMIT_H,
+      strokeColor: color,
+      fillColor: withAlpha(color, fillAlpha),
+      label: commit.id.slice(0, 7),
+      labelFontSize: 11,
+    };
+    shapeElements.push(el);
+
+    // Connect to previous commit on same branch
+    const prev = lastCommitByBranch.get(commit.branch);
+    if (prev) {
+      const line: LineElement = {
+        ...baseStyle,
+        id: crypto.randomUUID(),
+        type: 'line',
+        x: prev.col * GIT_COL_STEP + GIT_COMMIT_W,
+        y: branchRow * GIT_BRANCH_STEP + GIT_COMMIT_H / 2,
+        x2: x,
+        y2: y + GIT_COMMIT_H / 2,
+        strokeColor: color,
+        fillColor: 'transparent',
+        startElementId: prev.elemId,
+        endElementId: elemId,
+      };
+      connectorElements.push(line);
+    }
+
+    lastCommitByBranch.set(commit.branch, { col, elemId });
+    lastElemIdByBranch.set(commit.branch, elemId);
+
+    // Record snapshots for any merges at this index
+    const snap = mergeSnapshots.get(col + 1);
+    if (snap !== undefined) {
+      for (const [branch, id] of lastElemIdByBranch) {
+        snap.set(branch, id);
+      }
+    }
+  });
+
+  // Build merge arrows
+  for (const m of merges) {
+    const snap = mergeSnapshots.get(m.afterCommitIndex);
+    const fromElemId = snap?.get(m.fromBranch);
+    const toElemId = commitElemIds[m.afterCommitIndex];
+    if (fromElemId && toElemId) {
+      mergeArrows.push({ fromElemId, toElemId });
+    }
+  }
+
+  for (const { fromElemId, toElemId } of mergeArrows) {
+    const arrow: ArrowElement = {
+      ...baseStyle,
+      id: crypto.randomUUID(),
+      type: 'arrow',
+      x: 0,
+      y: 0,
+      x2: 0,
+      y2: 0,
+      strokeColor,
+      fillColor: 'transparent',
+      startElementId: fromElemId,
+      endElementId: toElemId,
+      strokeStyle: 'dashed',
+    };
+    connectorElements.push(arrow);
+  }
+
+  // Branch labels — one small rectangle per branch at x=-10
+  for (const [i, branch] of branches.entries()) {
+    const color = SEQ_COLORS[i % SEQ_COLORS.length]!;
+    const label: RectangleElement = {
+      ...baseStyle,
+      id: crypto.randomUUID(),
+      type: 'rectangle',
+      x: -GIT_COMMIT_W - 20,
+      y: i * GIT_BRANCH_STEP,
+      width: GIT_COMMIT_W,
+      height: GIT_COMMIT_H,
+      strokeColor: color,
+      fillColor: withAlpha(color, 0.1),
+      label: branch,
+      labelFontSize: 12,
+    };
+    shapeElements.unshift(label);
+  }
+
+  return [...shapeElements, ...connectorElements];
 }
