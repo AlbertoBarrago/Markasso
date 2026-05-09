@@ -248,7 +248,11 @@ export class SelectTool implements Tool {
 
     // 2. Check rotation handle
     if (selectedEls.length > 0) {
-      const rotHandlePos = getRotationHandleScreen(selectedEls, scene.viewport);
+      const rotHandlePos = getRotationHandleScreen(
+        selectedEls,
+        scene.viewport,
+        scene.elements,
+      );
       if (rotHandlePos) {
         const dist = Math.hypot(
           screenX - rotHandlePos.screenX,
@@ -867,7 +871,11 @@ export class SelectTool implements Tool {
       }
 
       // Check rotation handle
-      const rotHandlePos = getRotationHandleScreen(selectedEls, scene.viewport);
+      const rotHandlePos = getRotationHandleScreen(
+        selectedEls,
+        scene.viewport,
+        scene.elements,
+      );
       if (rotHandlePos) {
         const dist = Math.hypot(
           screenX - rotHandlePos.screenX,

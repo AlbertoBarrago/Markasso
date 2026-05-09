@@ -4,6 +4,15 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.5.1] — 2026-05-09
+
+### Fixed
+- **Arrow connector anchors** — endpoint handles of a selected arrow now sit on the shape's border instead of its geometric center; selection bounding box and rotation handle likewise reflect the true visible extent of the connector
+- **Arrow selection with connected shapes** — `drawSelection` and `getRotationHandleScreen` now receive the full element list, so `resolveArrowEndpoints` can locate connected shapes and clip correctly in all cases
+- **Border point for rotated shapes** — `getElementBorderPoint` now accounts for element rotation; the computed anchor point lands on the actual rotated boundary rather than the axis-aligned bounding box
+
+---
+
 ## [1.5.0] — 2026-05-09
 
 ### Added

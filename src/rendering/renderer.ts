@@ -57,6 +57,6 @@ export function render(
 
   const selected = getSelectedElements(scene);
   if (selected.length > 0) {
-    drawSelection(ctx, selected, viewport);
+    drawSelection(ctx, selected, viewport, scene.elements);
   }
 }

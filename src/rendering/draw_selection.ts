@@ -52,32 +52,55 @@ export function getElementBorderPoint(
   const b = getElementBounds(el);
   const cx = b.x + b.w / 2;
   const cy = b.y + b.h / 2;
-  const dx = targetX - cx;
-  const dy = targetY - cy;
+  const rot = ('rotation' in el ? el.rotation : undefined) ?? 0;
+
+  // Rotate direction into shape's local (un-rotated) coordinate space
+  let dx = targetX - cx;
+  let dy = targetY - cy;
+  if (rot) {
+    const cos = Math.cos(-rot);
+    const sin = Math.sin(-rot);
+    const ldx = dx * cos - dy * sin;
+    const ldy = dx * sin + dy * cos;
+    dx = ldx;
+    dy = ldy;
+  }
 
   if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) return [cx, b.y]; // fallback: top-center
 
+  let lx: number;
+  let ly: number;
+
   if (el.type === 'ellipse') {
     const angle = Math.atan2(dy, dx);
-    return [cx + (b.w / 2) * Math.cos(angle), cy + (b.h / 2) * Math.sin(angle)];
-  }
-
-  if (el.type === 'rhombus') {
+    lx = (b.w / 2) * Math.cos(angle);
+    ly = (b.h / 2) * Math.sin(angle);
+  } else if (el.type === 'rhombus') {
     // Diamond border: L1-norm intersection
     const hw = b.w / 2;
     const hh = b.h / 2;
     const t = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh);
-    return [cx + dx * t, cy + dy * t];
+    lx = dx * t;
+    ly = dy * t;
+  } else {
+    // Rectangle / text / image / freehand — axis-aligned border intersection
+    const hw = b.w / 2;
+    const hh = b.h / 2;
+    const t = Math.min(
+      Math.abs(dx) > 0.001 ? hw / Math.abs(dx) : Infinity,
+      Math.abs(dy) > 0.001 ? hh / Math.abs(dy) : Infinity,
+    );
+    lx = dx * t;
+    ly = dy * t;
   }
 
-  // Rectangle / text / image / freehand — axis-aligned border intersection
-  const hw = b.w / 2;
-  const hh = b.h / 2;
-  const t = Math.min(
-    Math.abs(dx) > 0.001 ? hw / Math.abs(dx) : Infinity,
-    Math.abs(dy) > 0.001 ? hh / Math.abs(dy) : Infinity,
-  );
-  return [cx + dx * t, cy + dy * t];
+  // Rotate result back to world space
+  if (rot) {
+    const cos = Math.cos(rot);
+    const sin = Math.sin(rot);
+    return [cx + lx * cos - ly * sin, cy + lx * sin + ly * cos];
+  }
+  return [cx + lx, cy + ly];
 }
 
 /**
@@ -233,6 +256,7 @@ export function getElementCenter(el: Element): [number, number] {
 export function getRotationHandleScreen(
   elements: ReadonlyArray<Element>,
   viewport: Viewport,
+  allElements?: ReadonlyArray<Element>,
 ): { screenX: number; screenY: number } | null {
   if (elements.length === 0) return null;
 
@@ -241,7 +265,7 @@ export function getRotationHandleScreen(
     maxX = -Infinity,
     maxY = -Infinity;
   for (const el of elements) {
-    const { x, y, w, h } = getElementBounds(el);
+    const { x, y, w, h } = getElementBounds(el, allElements);
     minX = Math.min(minX, x);
     minY = Math.min(minY, y);
     maxX = Math.max(maxX, x + w);
@@ -299,6 +323,7 @@ export function drawSelection(
   ctx: CanvasRenderingContext2D,
   elements: ReadonlyArray<Element>,
   viewport: Viewport,
+  allElements?: ReadonlyArray<Element>,
 ): void {
   if (elements.length === 0) return;
 
@@ -312,7 +337,7 @@ export function drawSelection(
     maxX = -Infinity,
     maxY = -Infinity;
   for (const el of elements) {
-    const { x, y, w, h } = getElementBounds(el);
+    const { x, y, w, h } = getElementBounds(el, allElements);
     minX = Math.min(minX, x);
     minY = Math.min(minY, y);
     maxX = Math.max(maxX, x + w);
@@ -414,7 +439,7 @@ export function drawSelection(
   if (elements.length === 1) {
     const el = elements[0]!;
     if (el.type === 'line' || el.type === 'arrow') {
-      const pts = resolveArrowEndpoints(el, elements);
+      const pts = resolveArrowEndpoints(el, allElements ?? elements);
       const [x1s, y1s] = worldToScreen(viewport, pts.x, pts.y);
       const [x2s, y2s] = worldToScreen(viewport, pts.x2, pts.y2);
 
