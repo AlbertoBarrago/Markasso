@@ -238,6 +238,16 @@ export class LineTool implements Tool {
     this.snapElementId = null;
   }
 
+  onCancel(ctx: ToolContext): void {
+    this.drawing = false;
+    this.preview = null;
+    this.startElementId = null;
+    this.endElementId = null;
+    this.snapIndicator = null;
+    this.snapElementId = null;
+    ctx.onPreviewUpdate?.();
+  }
+
   getCursor(): string {
     return 'crosshair';
   }

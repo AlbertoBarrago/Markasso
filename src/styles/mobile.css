@@ -186,6 +186,29 @@
     grid-column: 1 / -1;
     display: flex;
     align-items: center;
+    gap: 8px;
+  }
+
+  .mobile-tools-popup-lock-label {
+    flex: 1;
+    height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--island-border);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    cursor: pointer;
+    font:
+      600 13px / 1 system-ui,
+      -apple-system,
+      sans-serif;
+    text-align: left;
+  }
+
+  .mobile-tools-popup-lock-label.active {
+    background: var(--accent-light);
+    border-color: var(--accent);
+    color: var(--accent);
   }
 }
 
@@ -212,6 +235,11 @@
 
   .mobile-tools-popup-btn {
     width: 56px;
+    height: 56px;
+    border-radius: 12px;
+  }
+
+  .mobile-tools-popup-lock-label {
     height: 56px;
     border-radius: 12px;
   }

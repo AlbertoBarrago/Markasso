@@ -2,6 +2,7 @@ import type { Viewport } from '../core/viewport';
 import { fitToElements } from '../core/viewport';
 import type { Element } from '../elements/element';
 import type { History } from '../engine/history';
+import { validateElements } from './element_validation';
 
 // ── Format ──────────────────────────────────────────────────────────────────
 
@@ -77,12 +78,8 @@ function validateMarkassoFile(data: unknown): MarkassoFile | null {
       `[Markasso] File version ${d.version} is newer than supported (${FORMAT_VERSION}). Some elements may not load correctly.`,
     );
   }
-  if (!Array.isArray(d.elements)) return null;
-  for (const el of d.elements as unknown[]) {
-    if (typeof el !== 'object' || el === null) return null;
-    const e = el as Record<string, unknown>;
-    if (typeof e.type !== 'string' || typeof e.id !== 'string') return null;
-  }
+  const elements = validateElements(d.elements);
+  if (!elements) return null;
   let viewport: Viewport | undefined;
   if (typeof d.viewport === 'object' && d.viewport !== null) {
     const v = d.viewport as Record<string, unknown>;
@@ -101,6 +98,6 @@ function validateMarkassoFile(data: unknown): MarkassoFile | null {
   return {
     version: d.version as number,
     viewport: viewport ?? { offsetX: 0, offsetY: 0, zoom: 1 },
-    elements: d.elements as Element[],
+    elements,
   };
 }

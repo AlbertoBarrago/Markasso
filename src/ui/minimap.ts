@@ -15,13 +15,19 @@ export function initMinimap(workspace: HTMLElement, history: History): void {
   workspace.appendChild(container);
 
   const mmCanvas = document.createElement('canvas');
-  mmCanvas.width = MM_W * devicePixelRatio;
-  mmCanvas.height = MM_H * devicePixelRatio;
   mmCanvas.style.width = `${MM_W}px`;
   mmCanvas.style.height = `${MM_H}px`;
   container.appendChild(mmCanvas);
 
   const ctx = mmCanvas.getContext('2d')!;
+
+  function ensureMinimapBuffer(): void {
+    const width = Math.max(1, Math.round(MM_W * devicePixelRatio));
+    const height = Math.max(1, Math.round(MM_H * devicePixelRatio));
+    if (mmCanvas.width === width && mmCanvas.height === height) return;
+    mmCanvas.width = width;
+    mmCanvas.height = height;
+  }
 
   // ── State ─────────────────────────────────────────────────────────────────
   // Maps world coords ↔ minimap pixel coords
@@ -45,6 +51,7 @@ export function initMinimap(workspace: HTMLElement, history: History): void {
 
   // ── Render ────────────────────────────────────────────────────────────────
   function paint(): void {
+    ensureMinimapBuffer();
     const scene = history.present;
     const { elements, viewport } = scene;
 

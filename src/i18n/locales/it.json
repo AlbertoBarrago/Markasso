@@ -56,6 +56,8 @@
   "stickyNote": "Nota adesiva (N)",
   "eraser": "Gomma",
   "lockTool": "Blocca strumento (mantieni attivo dopo il disegno)",
+  "toolModeOnce": "Una volta",
+  "toolModeContinuous": "Continua",
   "undo": "Annulla (Ctrl+Z)",
   "redo": "Ripristina (Ctrl+Y)",
   "fitContent": "Adatta al contenuto (F)",

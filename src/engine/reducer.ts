@@ -29,6 +29,7 @@ export function reducer(scene: Scene, command: Command): Scene {
       };
 
     case 'UPDATE_ELEMENT':
+      if (!scene.elements.some((el) => el.id === command.id)) return scene;
       return {
         ...scene,
         elements: scene.elements.map((el) =>
@@ -37,6 +38,8 @@ export function reducer(scene: Scene, command: Command): Scene {
       };
 
     case 'MOVE_ELEMENT':
+      if (command.dx === 0 && command.dy === 0) return scene;
+      if (!scene.elements.some((el) => el.id === command.id)) return scene;
       return {
         ...scene,
         elements: scene.elements.map((el) => {
@@ -136,17 +139,17 @@ export function reducer(scene: Scene, command: Command): Scene {
                 patch.endElementId = endElementId;
               }
             }
-            // When disconnecting (null), explicitly remove the property
-            const base = { ...el, ...patch } as Element;
+            // When disconnecting (null), explicitly remove optional properties.
+            let base = { ...el, ...patch } as Element;
             if (startElementId === null) {
               const { startElementId: _s, ...rest } = base as typeof el;
               void _s;
-              return rest as Element;
+              base = rest as Element;
             }
             if (endElementId === null) {
               const { endElementId: _e, ...rest } = base as typeof el;
               void _e;
-              return rest as Element;
+              base = rest as Element;
             }
             return base;
           }
@@ -568,9 +571,24 @@ export function reducer(scene: Scene, command: Command): Scene {
               y: move.y,
               x2: el.x2 + dx,
               y2: el.y2 + dy,
+              ...(el.type === 'line' &&
+                el.cx !== undefined && { cx: el.cx + dx }),
+              ...(el.type === 'line' &&
+                el.cy !== undefined && { cy: el.cy + dy }),
             };
           }
-          if (el.type === 'freehand') {
+          if (el.type === 'curve') {
+            return {
+              ...el,
+              x: move.x,
+              y: move.y,
+              x2: el.x2 + dx,
+              y2: el.y2 + dy,
+              cx: el.cx + dx,
+              cy: el.cy + dy,
+            };
+          }
+          if (el.type === 'freehand' || el.type === 'polygon') {
             return {
               ...el,
               x: move.x,

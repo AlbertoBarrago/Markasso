@@ -1,6 +1,7 @@
 import type { ActiveTool } from '../core/app_state';
 import { elementClipboard } from '../core/clipboard';
 import { fitToElements } from '../core/viewport';
+import { cloneElementWithOffset } from '../elements/clone';
 import type { Element } from '../elements/element';
 import type { History } from '../engine/history';
 import type { SelectTool } from '../tools/select_tool';
@@ -126,18 +127,11 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       const selectedEls = scene.elements.filter((el) =>
         scene.selectedIds.has(el.id),
       );
-      const newIds: string[] = [];
-      for (const el of selectedEls) {
-        const newId = crypto.randomUUID();
-        newIds.push(newId);
-        history.dispatch({
-          type: 'CREATE_ELEMENT',
-          element: { ...el, id: newId },
-        });
-        history.dispatch({ type: 'MOVE_ELEMENT', id: newId, dx: 20, dy: 20 });
-      }
-      if (newIds.length > 0)
-        history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
+      const newElements = selectedEls.map((el) =>
+        cloneElementWithOffset(el, crypto.randomUUID(), 20, 20),
+      );
+      if (newElements.length > 0)
+        history.dispatch({ type: 'CREATE_ELEMENTS', elements: newElements });
       return;
     }
 

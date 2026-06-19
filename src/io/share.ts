@@ -1,4 +1,5 @@
 import type { Element } from '../elements/element';
+import { validateElements } from './element_validation';
 
 const SHORT_PREFIX = '#s=';
 const LEGACY_PREFIX = '#share=';
@@ -60,7 +61,7 @@ async function parseBytes(
 ): Promise<Element[] | null> {
   try {
     const raw = isGzip(bytes) ? await gzipDecode(bytes) : bytes;
-    return JSON.parse(new TextDecoder().decode(raw)) as Element[];
+    return validateElements(JSON.parse(new TextDecoder().decode(raw)));
   } catch {
     return null;
   }
@@ -93,7 +94,7 @@ export async function decodeScene(hash: string): Promise<Element[] | null> {
       try {
         const res = await fetch(`/api/share/${payload}`);
         if (!res.ok) return null;
-        return (await res.json()) as Element[];
+        return validateElements(await res.json());
       } catch {
         return null;
       }
@@ -116,10 +117,12 @@ export async function decodeScene(hash: string): Promise<Element[] | null> {
 
     if (isGzip(bytes)) {
       const decompressed = await gzipDecode(bytes);
-      return JSON.parse(new TextDecoder().decode(decompressed)) as Element[];
+      return validateElements(
+        JSON.parse(new TextDecoder().decode(decompressed)),
+      );
     }
     const json = decodeURIComponent(escape(binary));
-    return JSON.parse(json) as Element[];
+    return validateElements(JSON.parse(json));
   } catch {
     return null;
   }

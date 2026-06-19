@@ -102,6 +102,12 @@ export class RectangleTool implements Tool {
     this.preview = null;
   }
 
+  onCancel(ctx: ToolContext): void {
+    this.drawing = false;
+    this.preview = null;
+    ctx.onPreviewUpdate?.();
+  }
+
   getCursor(): string {
     return 'crosshair';
   }

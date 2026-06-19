@@ -9,7 +9,7 @@ const TYPE_ICONS: Record<string, string> = {
   rhombus: `<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l7 7-7 7-7-7z"/></svg>`,
   line: `<svg width="13" height="13" viewBox="0 0 20 20"><line x1="4" y1="16" x2="16" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
   arrow: `<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="16" x2="16" y2="4"/><path d="M9 4h7v7"/></svg>`,
-  freehand: `<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="1.25"><path clip-rule="evenodd" d="m7.6 15.7 7.8-7.8a2.4 2.4 0 10-3.3-3.3L4.3 12.4a3.3 3.3 0 00-1 2.4v2h2a3.3 3.3 0 002.4-1z"/></g></svg>`,
+  freehand: `<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M12.8 3.4l3.8 3.8-7.9 7.9-3.8-3.8z"/><path d="M4.9 11.3c-1.2 1-1.8 2.2-1.8 3.6 0 1.2-.4 2-1.1 2.7 2 .2 4.3-.2 5.8-1.7l.9-.8"/><path d="M11.6 4.6l3.8 3.8"/></svg>`,
   text: `<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4h12v2.5H12v9.5H8V6.5H4z"/></svg>`,
   image: `<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="16" height="14" rx="2"/><circle cx="7" cy="8" r="1.5"/><path d="M2 14l4-4 3 3 3-3 4 4"/></svg>`,
 };

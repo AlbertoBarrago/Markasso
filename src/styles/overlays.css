@@ -947,8 +947,15 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 200;
+  padding: 6px 10px;
   font-size: 11px;
-  color: var(--text-muted);
+  color: #ffffff;
+  background: rgba(12, 14, 18, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   pointer-events: none;
   white-space: nowrap;
   letter-spacing: 0.01em;
@@ -956,22 +963,29 @@
   transition: opacity 0.6s ease;
 }
 #hint-bar.hint-bar--visible {
-  opacity: 0.35;
+  opacity: 1;
 }
 #hint-bar kbd {
   font-size: 10px;
   font-family: inherit;
   font-weight: 600;
-  color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 4px;
   padding: 1px 5px;
 }
 
+[data-theme="light"] #hint-bar {
+  color: #000000;
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(0, 0, 0, 0.28);
+}
+
 [data-theme="light"] #hint-bar kbd {
-  background: rgba(0, 0, 0, 0.04);
-  border-color: rgba(0, 0, 0, 0.15);
+  color: #000000;
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.24);
 }
 
 @media (pointer: coarse), (max-width: 600px) {
