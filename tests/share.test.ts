@@ -102,6 +102,24 @@ describe('share codec', () => {
     expect(decoded).toEqual(SAMPLE_ELEMENTS);
   });
 
+  it('rejects malformed inline scene payloads', async () => {
+    const encoded = await encodeScene([
+      {
+        id: 'bad-freehand',
+        type: 'freehand',
+        x: 0,
+        y: 0,
+        strokeColor: '#111111',
+        fillColor: 'transparent',
+        strokeWidth: 1,
+        opacity: 1,
+        roughness: 0,
+      } as Element,
+    ]);
+
+    await expect(decodeScene(`#s=${encoded}`)).resolves.toBeNull();
+  });
+
   it('recognizes both current and legacy share hashes', () => {
     expect(isShareHash('#s=abc')).toBe(true);
     expect(isShareHash('#share=abc')).toBe(true);

@@ -74,3 +74,10 @@ When adding a new element type or command, add corresponding tests.
 ## Deployment
 
 GitHub Actions deploys tagged releases (`v*`) to GitHub Pages at `/Markasso/`.
+
+## Imported Claude Cowork project instructions
+
+MARKASSOis a zero-latency, framework-agnostic whiteboard engine. Built with
+  vanilla TypeScript and the Canvas 2D API, it delivers a high-performance
+  drawing experience with zero dependencies and a keyboard-first workflow.
+  It’s the "Vesper" of whiteboards: dark, fast, and focused.

@@ -418,6 +418,7 @@ describe('EraserTool — mobile touch sequence', () => {
 
     // Touch center of the rectangle (0,0,100,100)
     tool.onMouseDown(me(50, 50), 50, 50, ctx);
+    tool.onMouseUp(me(50, 50), 50, 50, ctx);
 
     expect(history.present.elements).toHaveLength(0);
   });
@@ -431,6 +432,7 @@ describe('EraserTool — mobile touch sequence', () => {
 
     // Touch well outside the element (and beyond the 4px pad)
     tool.onMouseDown(me(200, 200), 200, 200, ctx);
+    tool.onMouseUp(me(200, 200), 200, 200, ctx);
 
     expect(history.present.elements).toHaveLength(1);
   });
@@ -462,13 +464,37 @@ describe('EraserTool — mobile touch sequence', () => {
     const ctx = makeCtx(history);
 
     tool.onMouseDown(me(50, 50), 50, 50, ctx); // erases el-1
-    tool.onMouseUp(); // stops erasing
+    tool.onMouseUp(me(50, 50), 50, 50, ctx); // stops erasing
 
     // Moving over el-2 after touchend must not erase it
     tool.onMouseMove(me(250, 250), 250, 250, ctx);
 
     expect(history.present.elements).toHaveLength(1);
     expect(history.present.elements[0]?.id).toBe('el-2');
+  });
+
+  it('undo restores all elements erased in one drag', () => {
+    const history = new History(createScene());
+    history.dispatch({ type: 'CREATE_ELEMENT', element: makeRect() });
+    history.dispatch({
+      type: 'CREATE_ELEMENT',
+      element: makeRect({ id: 'el-2', x: 120, y: 0 }),
+    });
+
+    const tool = new EraserTool();
+    const ctx = makeCtx(history);
+
+    tool.onMouseDown(me(50, 50), 50, 50, ctx);
+    tool.onMouseMove(me(170, 50), 170, 50, ctx);
+    expect(history.present.elements).toHaveLength(0);
+
+    tool.onMouseUp(me(170, 50), 170, 50, ctx);
+    history.undo();
+
+    expect(history.present.elements.map((el) => el.id)).toEqual([
+      'el-1',
+      'el-2',
+    ]);
   });
 });
 

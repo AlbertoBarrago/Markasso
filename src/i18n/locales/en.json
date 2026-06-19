@@ -61,6 +61,8 @@
   "stickyNote": "Sticky note (N)",
   "eraser": "Eraser",
   "lockTool": "Lock tool (keep active after drawing)",
+  "toolModeOnce": "Once",
+  "toolModeContinuous": "Keep active",
   "undo": "Undo (Ctrl+Z)",
   "redo": "Redo (Ctrl+Y)",
   "fitContent": "Fit to content (F)",

@@ -1,4 +1,5 @@
 import { measureTextBounds } from '../core/text_measure';
+import { cloneElementWithOffset } from '../elements/clone';
 import type { Element } from '../elements/element';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
@@ -13,6 +14,26 @@ const SHARED_COLOR_PRESETS = [
 ];
 const FILL_PRESETS = ['transparent', ...SHARED_COLOR_PRESETS];
 const STROKE_PRESETS = FILL_PRESETS;
+
+function bindUndoTransaction(input: HTMLElement, history: History): void {
+  let active = false;
+  const begin = (): void => {
+    if (active) return;
+    active = true;
+    history.beginDrag();
+  };
+  const end = (): void => {
+    if (!active) return;
+    active = false;
+    history.endDrag();
+  };
+  input.addEventListener('pointerdown', begin);
+  input.addEventListener('keydown', begin);
+  input.addEventListener('pointerup', end);
+  input.addEventListener('keyup', end);
+  input.addEventListener('change', end);
+  input.addEventListener('blur', end);
+}
 
 // 15-color palette for the custom color popup (5 × 3 grid)
 // First slot is transparent — picking it resets the custom color slot back to "+"
@@ -295,6 +316,7 @@ export function initContextPanel(
     if (clean.length === 6) {
       const hex = `#${clean}`;
       updateShades(hex);
+      beginColorTransaction();
       currentPickerCallback?.({ preview: hex });
     }
   });
@@ -302,6 +324,19 @@ export function initContextPanel(
   let currentPickerCallback:
     | ((result: { pick?: string; preview?: string }) => void)
     | null = null;
+  let colorTransactionActive = false;
+
+  function beginColorTransaction(): void {
+    if (colorTransactionActive) return;
+    colorTransactionActive = true;
+    history.beginDrag();
+  }
+
+  function endColorTransaction(): void {
+    if (!colorTransactionActive) return;
+    colorTransactionActive = false;
+    history.endDrag();
+  }
 
   function updateShades(baseColor: string): void {
     shadesContainer.innerHTML = '';
@@ -321,6 +356,7 @@ export function initContextPanel(
   }
 
   function pickColor(color: string): void {
+    beginColorTransaction();
     currentPickerCallback?.({ pick: color });
     closePopup();
   }
@@ -370,6 +406,7 @@ export function initContextPanel(
   function closePopup(): void {
     popup.style.display = 'none';
     currentPickerCallback = null;
+    endColorTransaction();
   }
 
   // Close popup on outside click
@@ -844,6 +881,7 @@ export function initContextPanel(
   // ── Opacity slider ─────────────────────────────────────────────────────────
   const opacitySlider = panel.querySelector<HTMLInputElement>('#cp-opacity')!;
   const opacityVal = panel.querySelector('#cp-opacity-val')!;
+  bindUndoTransaction(opacitySlider, history);
   opacitySlider.addEventListener('input', () => {
     opacityVal.textContent = opacitySlider.value;
     history.dispatch({
@@ -1032,19 +1070,12 @@ export function initContextPanel(
       if (ids.length === 0) return;
 
       if (a.action === 'duplicate') {
-        const newIds: string[] = [];
-        for (const id of ids) {
-          const el = scene.elements.find((e) => e.id === id);
-          if (!el) continue;
-          const newId = crypto.randomUUID();
-          newIds.push(newId);
-          history.dispatch({
-            type: 'CREATE_ELEMENT',
-            element: { ...el, id: newId },
-          });
-          history.dispatch({ type: 'MOVE_ELEMENT', id: newId, dx: 20, dy: 20 });
-        }
-        history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
+        const newElements = ids
+          .map((id) => scene.elements.find((e) => e.id === id))
+          .filter((el): el is Element => el !== undefined)
+          .map((el) => cloneElementWithOffset(el, crypto.randomUUID(), 20, 20));
+        if (newElements.length > 0)
+          history.dispatch({ type: 'CREATE_ELEMENTS', elements: newElements });
       } else if (a.action === 'delete') {
         history.dispatch({ type: 'DELETE_ELEMENTS', ids });
       }

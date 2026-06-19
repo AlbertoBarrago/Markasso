@@ -56,6 +56,8 @@
   "stickyNote": "Haftnotiz (N)",
   "eraser": "Radierer",
   "lockTool": "Werkzeug sperren (nach dem Zeichnen aktiv lassen)",
+  "toolModeOnce": "Einmal",
+  "toolModeContinuous": "Aktiv halten",
   "undo": "Rückgängig (Ctrl+Z)",
   "redo": "Wiederholen (Ctrl+Y)",
   "fitContent": "An Inhalt anpassen (F)",

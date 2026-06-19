@@ -2,6 +2,7 @@ import type { GridType } from '../core/app_state';
 import type { Viewport } from '../core/viewport';
 import type { Element } from '../elements/element';
 import type { History } from '../engine/history';
+import { validateElements } from './element_validation';
 
 const STORAGE_KEY = 'markasso-session';
 const DEBOUNCE_MS = 500;
@@ -21,9 +22,8 @@ export function loadSession(): SessionData | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const d = JSON.parse(raw) as Record<string, unknown>;
-    if (!Array.isArray(d.elements) || (d.elements as unknown[]).length === 0)
-      return null;
-    const elements = d.elements as Element[];
+    const elements = validateElements(d.elements);
+    if (!elements || elements.length === 0) return null;
     let viewport: Viewport = { offsetX: 0, offsetY: 0, zoom: 1 };
     if (typeof d.viewport === 'object' && d.viewport !== null) {
       const v = d.viewport as Record<string, unknown>;

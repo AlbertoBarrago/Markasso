@@ -210,6 +210,34 @@ body {
   pointer-events: none;
 }
 
+.tb-tool-mode-label {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--island-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  cursor: pointer;
+  font:
+    600 10px / 1 system-ui,
+    -apple-system,
+    sans-serif;
+  white-space: nowrap;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+.tb-tool-mode-label:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.tb-tool-mode-label.active {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .tb-locked-indicator {
   color: var(--warning, #f59e0b) !important;
   width: 28px !important;

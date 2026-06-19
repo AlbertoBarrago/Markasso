@@ -97,6 +97,16 @@ export class TextTool implements Tool {
     this.commitSync(ctx);
   }
 
+  onCancel(_ctx: ToolContext): void {
+    this.isDragging = false;
+    if (this.textarea) {
+      this.textarea.remove();
+      this.textarea = null;
+      this.commitFn = null;
+      this.editingId = null;
+    }
+  }
+
   /** Get preview rectangle for rendering during drag (horizontal width only) */
   getPreview(): { x: number; y: number; width: number; height: number } | null {
     if (!this.isDragging || this.dragWidth < 5) return null;

@@ -56,6 +56,8 @@
   "stickyNote": "便利贴 (N)",
   "eraser": "橡皮",
   "lockTool": "锁定工具（绘制后保持激活）",
+  "toolModeOnce": "一次",
+  "toolModeContinuous": "连续",
   "undo": "撤销 (Ctrl+Z)",
   "redo": "重做 (Ctrl+Y)",
   "fitContent": "适应内容 (F)",

@@ -29,6 +29,7 @@ export class EraserTool implements Tool {
     ctx: ToolContext,
   ): void {
     this.erasing = true;
+    ctx.history.beginDrag();
     this.slashTrail = [{ worldX, worldY, time: Date.now() }];
     this.eraseAt(worldX, worldY, ctx);
   }
@@ -46,8 +47,22 @@ export class EraserTool implements Tool {
     this.eraseAt(worldX, worldY, ctx);
   }
 
-  onMouseUp(): void {
+  onMouseUp(
+    _e: MouseEvent,
+    _worldX: number,
+    _worldY: number,
+    ctx: ToolContext,
+  ): void {
+    if (!this.erasing) return;
     this.erasing = false;
+    ctx.history.endDrag();
+  }
+
+  onCancel(ctx: ToolContext): void {
+    if (!this.erasing) return;
+    this.erasing = false;
+    this.slashTrail = [];
+    ctx.history.endDrag();
   }
 
   onMouseLeave(): void {

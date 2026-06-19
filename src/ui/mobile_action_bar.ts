@@ -21,6 +21,26 @@ const FILL_PRESETS = [
   '#ffffff',
 ];
 
+function bindUndoTransaction(input: HTMLElement, history: History): void {
+  let active = false;
+  const begin = (): void => {
+    if (active) return;
+    active = true;
+    history.beginDrag();
+  };
+  const end = (): void => {
+    if (!active) return;
+    active = false;
+    history.endDrag();
+  };
+  input.addEventListener('pointerdown', begin);
+  input.addEventListener('keydown', begin);
+  input.addEventListener('pointerup', end);
+  input.addEventListener('keyup', end);
+  input.addEventListener('change', end);
+  input.addEventListener('blur', end);
+}
+
 const POPUP_COLORS = [
   'transparent',
   '#000000',
@@ -270,6 +290,7 @@ export function initMobileActionBar(
     hexInput.value = clean;
     if (clean.length === 6) {
       updateShades(`#${clean}`);
+      beginColorTransaction();
       currentColorCallback?.({ preview: `#${clean}` });
     }
   });
@@ -277,6 +298,19 @@ export function initMobileActionBar(
   let currentColorCallback:
     | ((result: { pick?: string; preview?: string }) => void)
     | null = null;
+  let colorTransactionActive = false;
+
+  function beginColorTransaction(): void {
+    if (colorTransactionActive) return;
+    colorTransactionActive = true;
+    history.beginDrag();
+  }
+
+  function endColorTransaction(): void {
+    if (!colorTransactionActive) return;
+    colorTransactionActive = false;
+    history.endDrag();
+  }
 
   function updateShades(baseColor: string): void {
     shadesContainer.innerHTML = '';
@@ -295,6 +329,7 @@ export function initMobileActionBar(
   }
 
   function pickColor(color: string): void {
+    beginColorTransaction();
     currentColorCallback?.({ pick: color });
     closeColorPopup();
   }
@@ -333,6 +368,7 @@ export function initMobileActionBar(
   function closeColorPopup(): void {
     colorPopup.style.display = 'none';
     currentColorCallback = null;
+    endColorTransaction();
   }
 
   // Close color popup on tap outside (capture so canvas taps work too)
@@ -510,6 +546,7 @@ export function initMobileActionBar(
   // ── Opacity slider ─────────────────────────────────────────────────────────
   const opacitySlider = sheet.querySelector<HTMLInputElement>('#mss-opacity')!;
   const opacityVal = sheet.querySelector('#mss-opacity-val')!;
+  bindUndoTransaction(opacitySlider, history);
   opacitySlider.addEventListener('input', () => {
     opacityVal.textContent = opacitySlider.value;
     history.dispatch({

@@ -20,7 +20,7 @@ const IC = {
   line: `<svg width="18" height="18" viewBox="0 0 20 20"><line x1="4" y1="16" x2="16" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
   arrow: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="16" x2="16" y2="4"/><path d="M9 4h7v7"/></svg>`,
   rombo: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l7 7-7 7-7-7z"/></svg>`,
-  freehand: `<svg width="18" height="18" aria-hidden="true" focusable="false" role="img" viewBox="0 0 20 20" class="" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="1.25"><path clip-rule="evenodd" d="m7.643 15.69 7.774-7.773a2.357 2.357 0 1 0-3.334-3.334L4.31 12.357a3.333 3.333 0 0 0-.977 2.357v1.953h1.953c.884 0 1.732-.352 2.357-.977Z"></path><path d="m11.25 5.417 3.333 3.333"></path></g></svg>`,
+  freehand: `<svg width="18" height="18" aria-hidden="true" focusable="false" role="img" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M12.8 3.4l3.8 3.8-7.9 7.9-3.8-3.8z"/><path d="M4.9 11.3c-1.2 1-1.8 2.2-1.8 3.6 0 1.2-.4 2-1.1 2.7 2 .2 4.3-.2 5.8-1.7l.9-.8"/><path d="M11.6 4.6l3.8 3.8"/></svg>`,
   text: `<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4h12v2.5H12v9.5H8V6.5H4z"/></svg>`,
   undo: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h9a4 4 0 010 8H8"/><path d="M7 5L4 8l3 3"/></svg>`,
   redo: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8H7a4 4 0 000 8h5"/><path d="M13 5l3 3-3 3"/></svg>`,
@@ -109,11 +109,19 @@ export function initToolbar(container: HTMLElement, history: History): void {
   lockBtn.setAttribute('aria-label', t('lockTool'));
   lockBtn.setAttribute('aria-pressed', 'false');
   lockBtn.innerHTML = IC.lockOpen;
-  lockBtn.addEventListener('click', () => {
+  const toggleToolLock = (): void => {
     const locked = history.present.appState.toolLocked;
     history.dispatch({ type: 'SET_TOOL_LOCK', locked: !locked });
-  });
+  };
+  lockBtn.addEventListener('click', toggleToolLock);
   centerPill.appendChild(lockBtn);
+
+  const lockModeBtn = document.createElement('button');
+  lockModeBtn.className = 'tb-tool-mode-label';
+  lockModeBtn.type = 'button';
+  lockModeBtn.title = t('lockTool');
+  lockModeBtn.addEventListener('click', toggleToolLock);
+  centerPill.appendChild(lockModeBtn);
 
   // Separator after lock
   const lockSep = document.createElement('span');
@@ -797,10 +805,18 @@ export function initToolbar(container: HTMLElement, history: History): void {
   mobileLockBtn.innerHTML = IC.lockOpen;
   mobileLockBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    const locked = history.present.appState.toolLocked;
-    history.dispatch({ type: 'SET_TOOL_LOCK', locked: !locked });
+    toggleToolLock();
   });
   lockRowEl.appendChild(mobileLockBtn);
+  const mobileLockLabel = document.createElement('button');
+  mobileLockLabel.className = 'mobile-tools-popup-lock-label';
+  mobileLockLabel.type = 'button';
+  mobileLockLabel.title = t('lockTool');
+  mobileLockLabel.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleToolLock();
+  });
+  lockRowEl.appendChild(mobileLockLabel);
   toolsPopup.appendChild(lockRowSep);
   toolsPopup.appendChild(lockRowEl);
 
@@ -834,6 +850,11 @@ export function initToolbar(container: HTMLElement, history: History): void {
     lockBtn.classList.toggle('active', toolLocked);
     lockBtn.setAttribute('aria-pressed', String(toolLocked));
     lockBtn.innerHTML = toolLocked ? IC.lock : IC.lockOpen;
+    lockModeBtn.textContent = toolLocked
+      ? t('toolModeContinuous')
+      : t('toolModeOnce');
+    lockModeBtn.classList.toggle('active', toolLocked);
+    lockModeBtn.setAttribute('aria-pressed', String(toolLocked));
     for (const [toolName, b] of toolBtns) {
       const isActive = toolName === activeTool;
       b.classList.toggle('active', isActive);
@@ -847,6 +868,11 @@ export function initToolbar(container: HTMLElement, history: History): void {
     mobileLockBtn.innerHTML = toolLocked ? IC.lock : IC.lockOpen;
     mobileLockBtn.classList.toggle('active', toolLocked);
     mobileLockBtn.setAttribute('aria-pressed', String(toolLocked));
+    mobileLockLabel.textContent = toolLocked
+      ? t('toolModeContinuous')
+      : t('toolModeOnce');
+    mobileLockLabel.classList.toggle('active', toolLocked);
+    mobileLockLabel.setAttribute('aria-pressed', String(toolLocked));
     toolsFab.dataset.tool = activeTool;
     undoBtn.disabled = !history.canUndo();
     redoBtn.disabled = !history.canRedo();

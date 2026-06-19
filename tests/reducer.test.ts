@@ -1271,4 +1271,98 @@ describe('reducer', () => {
     });
     expect(next.selectedIds.has('rect-1')).toBe(true);
   });
+
+  it('RESIZE_ELEMENT can disconnect both endpoints in one command', () => {
+    const arrow: ArrowElement = {
+      id: 'a1',
+      type: 'arrow',
+      x: 0,
+      y: 0,
+      x2: 100,
+      y2: 100,
+      startElementId: 'r1',
+      endElementId: 'r2',
+      strokeColor: '#000',
+      fillColor: 'transparent',
+      strokeWidth: 2,
+      opacity: 1,
+      roughness: 0,
+    };
+    const scene: Scene = {
+      ...createScene(),
+      elements: [arrow],
+    };
+    const next = reducer(scene, {
+      type: 'RESIZE_ELEMENT',
+      id: 'a1',
+      startElementId: null,
+      endElementId: null,
+    });
+    expect(next.elements[0]).not.toHaveProperty('startElementId');
+    expect(next.elements[0]).not.toHaveProperty('endElementId');
+  });
+
+  it('ALIGN_ELEMENTS translates curve geometry coherently', () => {
+    const curve: CurveElement = {
+      id: 'c1',
+      type: 'curve',
+      x: 0,
+      y: 0,
+      x2: 50,
+      y2: 10,
+      cx: 25,
+      cy: -20,
+      strokeColor: '#000',
+      fillColor: 'transparent',
+      strokeWidth: 2,
+      opacity: 1,
+      roughness: 0,
+    };
+    const scene: Scene = { ...createScene(), elements: [curve] };
+    const next = reducer(scene, {
+      type: 'ALIGN_ELEMENTS',
+      moves: [{ id: 'c1', x: 10, y: 15 }],
+    });
+    expect(next.elements[0]).toMatchObject({
+      x: 10,
+      y: 15,
+      x2: 60,
+      y2: 25,
+      cx: 35,
+      cy: -5,
+    });
+  });
+
+  it('ALIGN_ELEMENTS translates polygon points coherently', () => {
+    const polygon: PolygonElement = {
+      id: 'p1',
+      type: 'polygon',
+      x: 0,
+      y: 0,
+      points: [
+        [0, 0],
+        [50, 0],
+        [25, 25],
+      ],
+      closed: true,
+      strokeColor: '#000',
+      fillColor: 'transparent',
+      strokeWidth: 2,
+      opacity: 1,
+      roughness: 0,
+    };
+    const scene: Scene = { ...createScene(), elements: [polygon] };
+    const next = reducer(scene, {
+      type: 'ALIGN_ELEMENTS',
+      moves: [{ id: 'p1', x: 10, y: 5 }],
+    });
+    const moved = next.elements[0] as PolygonElement;
+    expect(moved.x).toBe(10);
+    expect(moved.y).toBe(5);
+    expect(moved.points).toEqual([
+      [10, 5],
+      [60, 5],
+      [35, 30],
+    ]);
+  });
 });

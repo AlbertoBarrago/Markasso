@@ -1,5 +1,6 @@
 import type { ActiveTool } from '../core/app_state';
 import { fitToElements } from '../core/viewport';
+import { cloneElementWithOffset } from '../elements/clone';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { exportMarkasso } from '../io/markasso';
@@ -151,7 +152,7 @@ export function initCommandPalette(
         id: 'freehand',
         label: t('pen'),
         hint: 'P',
-        icon: `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="1.25"><path clip-rule="evenodd" d="m7.6 15.7 7.8-7.8a2.4 2.4 0 10-3.3-3.3L4.3 12.4a3.3 3.3 0 00-1 2.4v2h2a3.3 3.3 0 002.4-1z"/><path d="m11.3 5.4 3.3 3.3"/></g></svg>`,
+        icon: `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M12.8 3.4l3.8 3.8-7.9 7.9-3.8-3.8z"/><path d="M4.9 11.3c-1.2 1-1.8 2.2-1.8 3.6 0 1.2-.4 2-1.1 2.7 2 .2 4.3-.2 5.8-1.7l.9-.8"/><path d="M11.6 4.6l3.8 3.8"/></svg>`,
       },
       {
         id: 'text',
@@ -311,18 +312,11 @@ export function initCommandPalette(
         const selectedEls = scene.elements.filter((el) =>
           scene.selectedIds.has(el.id),
         );
-        const newIds: string[] = [];
-        for (const el of selectedEls) {
-          const newId = crypto.randomUUID();
-          newIds.push(newId);
-          history.dispatch({
-            type: 'CREATE_ELEMENT',
-            element: { ...el, id: newId },
-          });
-          history.dispatch({ type: 'MOVE_ELEMENT', id: newId, dx: 20, dy: 20 });
-        }
-        if (newIds.length > 0)
-          history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
+        const newElements = selectedEls.map((el) =>
+          cloneElementWithOffset(el, crypto.randomUUID(), 20, 20),
+        );
+        if (newElements.length > 0)
+          history.dispatch({ type: 'CREATE_ELEMENTS', elements: newElements });
       },
     });
     items.push({

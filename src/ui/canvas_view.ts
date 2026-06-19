@@ -1,5 +1,6 @@
 import type { ActiveTool } from '../core/app_state';
 import { screenToWorld, worldToScreen } from '../core/viewport';
+import { cloneElementWithOffset } from '../elements/clone';
 import type {
   EllipseElement,
   LineElement,
@@ -56,6 +57,7 @@ export function initCanvasView(
   let panStartY = 0;
   let needsRender = true;
   let editingShapeLabelId: string | null = null;
+  let canvasDpr = window.devicePixelRatio;
 
   const toolCtx: ToolContext = {
     history,
@@ -94,8 +96,21 @@ export function initCanvasView(
   }
 
   function resizeCanvas(): void {
-    canvas.width = canvas.clientWidth * devicePixelRatio;
-    canvas.height = canvas.clientHeight * devicePixelRatio;
+    canvasDpr = window.devicePixelRatio;
+    canvas.width = Math.max(1, Math.round(canvas.clientWidth * canvasDpr));
+    canvas.height = Math.max(1, Math.round(canvas.clientHeight * canvasDpr));
+    needsRender = true;
+  }
+
+  function ensureCanvasBuffer(): void {
+    const dpr = window.devicePixelRatio;
+    const width = Math.max(1, Math.round(canvas.clientWidth * dpr));
+    const height = Math.max(1, Math.round(canvas.clientHeight * dpr));
+    if (dpr === canvasDpr && canvas.width === width && canvas.height === height)
+      return;
+    canvasDpr = dpr;
+    canvas.width = width;
+    canvas.height = height;
     needsRender = true;
   }
 
@@ -278,26 +293,20 @@ export function initCanvasView(
           label: t('duplicate'),
           icon: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="9" height="9" rx="1.5"/><path d="M13 7V5.5A1.5 1.5 0 0 0 11.5 4h-7A1.5 1.5 0 0 0 3 5.5v7A1.5 1.5 0 0 0 4.5 14H7"/></svg>`,
           action: () => {
-            const newIds: string[] = [];
             const sc = history.present;
-            for (const id of [...sc.selectedIds]) {
-              const el = sc.elements.find((e) => e.id === id);
-              if (!el) continue;
-              const newId = crypto.randomUUID();
-              newIds.push(newId);
+            const newElements = [...sc.selectedIds]
+              .map((id) => sc.elements.find((e) => e.id === id))
+              .filter(
+                (el): el is (typeof sc.elements)[number] => el !== undefined,
+              )
+              .map((el) =>
+                cloneElementWithOffset(el, crypto.randomUUID(), 20, 20),
+              );
+            if (newElements.length > 0)
               history.dispatch({
-                type: 'CREATE_ELEMENT',
-                element: { ...el, id: newId },
+                type: 'CREATE_ELEMENTS',
+                elements: newElements,
               });
-              history.dispatch({
-                type: 'MOVE_ELEMENT',
-                id: newId,
-                dx: 20,
-                dy: 20,
-              });
-            }
-            if (newIds.length > 0)
-              history.dispatch({ type: 'SELECT_ELEMENTS', ids: newIds });
             closeCtxMenu();
           },
         },
@@ -419,25 +428,12 @@ export function initCanvasView(
         clearTimeout(longPressTimer);
         longPressMoved = true;
         // Cancel any in-progress single-touch draw.
-        // Use onCancel() when available (e.g. PenTool) so the tool can discard
-        // the partial stroke rather than committing it — a second finger is
-        // almost always a pinch-to-zoom, not an intentional stroke end.
+        // A second finger is almost always pinch-to-zoom, not an intentional
+        // stroke end, so never synthesize mouseup here.
         const activeTool = getActiveTool();
         if (touch1Id !== -1) {
-          if (activeTool.onCancel) {
-            activeTool.onCancel(toolCtx);
-          } else {
-            const t1prev = getTouchById(e.touches, touch1Id);
-            if (t1prev) {
-              const [wx, wy] = getWorldCoordsFromTouch(t1prev);
-              activeTool.onMouseUp(
-                syntheticMouse('mouseup', t1prev.clientX, t1prev.clientY),
-                wx,
-                wy,
-                toolCtx,
-              );
-            }
-          }
+          activeTool.onCancel?.(toolCtx);
+          needsRender = true;
         }
         const t1 = e.touches.item(0)!;
         const t2 = e.touches.item(1)!;
@@ -689,6 +685,7 @@ export function initCanvasView(
 
   // rAF render loop
   function loop(): void {
+    ensureCanvasBuffer();
     // Keep rendering while eraser slash trail is fading out
     if ((TOOLS.eraser as EraserTool).pruneTrail()) needsRender = true;
     if (needsRender) {
