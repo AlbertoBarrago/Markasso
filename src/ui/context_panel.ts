@@ -15,6 +15,16 @@ const SHARED_COLOR_PRESETS = [
 const FILL_PRESETS = ['transparent', ...SHARED_COLOR_PRESETS];
 const STROKE_PRESETS = FILL_PRESETS;
 
+function hasShapeLabel(el: Element): el is Element & { labelColor?: string } {
+  return (
+    el.type === 'rectangle' ||
+    el.type === 'ellipse' ||
+    el.type === 'rhombus' ||
+    el.type === 'line' ||
+    el.type === 'arrow'
+  );
+}
+
 function bindUndoTransaction(input: HTMLElement, history: History): void {
   let active = false;
   const begin = (): void => {
@@ -440,6 +450,35 @@ export function initContextPanel(
     }
   }
 
+  function getLabelColorTargets(): Array<Element & { labelColor?: string }> {
+    const scene = history.present;
+    if (scene.appState.activeTool !== 'text') return [];
+    return [...scene.selectedIds]
+      .map((id) => scene.elements.find((el) => el.id === id))
+      .filter(
+        (el): el is Element & { labelColor?: string } =>
+          el !== undefined && hasShapeLabel(el),
+      );
+  }
+
+  function isEditingLabelColor(): boolean {
+    return getLabelColorTargets().length > 0;
+  }
+
+  function dispatchStrokeOrLabelColor(color: string): void {
+    history.dispatch(
+      isEditingLabelColor()
+        ? { type: 'APPLY_STYLE', labelColor: color }
+        : { type: 'APPLY_STYLE', strokeColor: color },
+    );
+  }
+
+  function currentStrokeOrLabelColor(): string {
+    const labelTarget = getLabelColorTargets()[0];
+    if (labelTarget) return labelTarget.labelColor ?? labelTarget.strokeColor;
+    return history.present.appState.strokeColor;
+  }
+
   // ── Stroke swatches ────────────────────────────────────────────────────────
   const strokeSwatches = panel.querySelector('#cp-stroke-swatches')!;
   for (const color of STROKE_PRESETS) {
@@ -454,9 +493,7 @@ export function initContextPanel(
     } else {
       sw.style.background = color;
     }
-    sw.addEventListener('click', () => {
-      history.dispatch({ type: 'APPLY_STYLE', strokeColor: color });
-    });
+    sw.addEventListener('click', () => dispatchStrokeOrLabelColor(color));
     strokeSwatches.appendChild(sw);
   }
 
@@ -465,12 +502,12 @@ export function initContextPanel(
   strokeMore.addEventListener('click', () => {
     const currentColor =
       customStroke ??
-      history.present.appState.strokeColor ??
+      currentStrokeOrLabelColor() ??
       STROKE_PRESETS[1] ??
       '#e2e2ef';
     openPopup(strokeMore, currentColor, ({ pick, preview }) => {
       if (preview) {
-        history.dispatch({ type: 'APPLY_STYLE', strokeColor: preview });
+        dispatchStrokeOrLabelColor(preview);
       }
       if (pick) {
         if (pick === 'transparent') {
@@ -481,7 +518,7 @@ export function initContextPanel(
           customStroke = pick;
           saveCustomColor('stroke', pick);
           updateMoreBtn(strokeMore, pick);
-          history.dispatch({ type: 'APPLY_STYLE', strokeColor: pick });
+          dispatchStrokeOrLabelColor(pick);
         }
       }
     });
@@ -1377,6 +1414,13 @@ export function initContextPanel(
     const first = selected[0]!;
     const allText = selected.every((el) => el.type === 'text');
     const allImage = selected.every((el) => el.type === 'image');
+    const labelColorMode =
+      scene.appState.activeTool === 'text' && selected.some(hasShapeLabel);
+    const firstLabelTarget = selected.find(hasShapeLabel);
+    const visibleStrokeColor =
+      labelColorMode && firstLabelTarget
+        ? (firstLabelTarget.labelColor ?? firstLabelTarget.strokeColor)
+        : first.strokeColor;
 
     // Update swatches
     panel
@@ -1384,12 +1428,12 @@ export function initContextPanel(
         '#cp-stroke-swatches .cp-color-swatch',
       )
       .forEach((sw) => {
-        sw.classList.toggle('active', sw.title === first.strokeColor);
+        sw.classList.toggle('active', sw.title === visibleStrokeColor);
       });
     strokeMore.classList.toggle(
       'active',
       !!customStroke &&
-        customStroke.toLowerCase() === first.strokeColor.toLowerCase(),
+        customStroke.toLowerCase() === visibleStrokeColor.toLowerCase(),
     );
     syncAriaPressed(colorRowStroke, '.cp-color-swatch, .cp-color-more');
     panel
@@ -1488,17 +1532,30 @@ export function initContextPanel(
     const FILL_TYPES = new Set(['rectangle', 'ellipse', 'rhombus', 'text']);
     const STYLE_TYPES = new Set(['rectangle', 'ellipse', 'rhombus', 'line']);
     const CAP_TYPES = new Set(['line', 'freehand']);
-    const hasFill = !allImage && selected.some((el) => FILL_TYPES.has(el.type));
+    const hasFill =
+      !labelColorMode &&
+      !allImage &&
+      selected.some((el) => FILL_TYPES.has(el.type));
     const hasStyle =
-      !allImage && !allText && selected.some((el) => STYLE_TYPES.has(el.type));
+      !labelColorMode &&
+      !allImage &&
+      !allText &&
+      selected.some((el) => STYLE_TYPES.has(el.type));
     const hasLineCap =
-      !allImage && !allText && selected.some((el) => CAP_TYPES.has(el.type));
+      !labelColorMode &&
+      !allImage &&
+      !allText &&
+      selected.some((el) => CAP_TYPES.has(el.type));
     const hasArrowHead =
-      !allImage && !allText && selected.some((el) => el.type === 'line');
+      !labelColorMode &&
+      !allImage &&
+      !allText &&
+      selected.some((el) => el.type === 'line');
     const hasBorder = selected.some(
-      (el) => el.type === 'rectangle' || el.type === 'rhombus',
+      (el) =>
+        !labelColorMode && (el.type === 'rectangle' || el.type === 'rhombus'),
     );
-    const hasWidth = !allText && !allImage;
+    const hasWidth = !labelColorMode && !allText && !allImage;
 
     // Update arrowhead presets (from first selected line element)
     const firstLine = selected.find((el) => el.type === 'line');
@@ -1518,7 +1575,7 @@ export function initContextPanel(
       .parentElement!.parentElement!;
     strokeSection.style.display = allImage ? 'none' : '';
     (strokeSection.querySelector('.cp-label') as HTMLElement).textContent =
-      allText ? t('color') : t('stroke');
+      allText || labelColorMode ? t('color') : t('stroke');
     panel.querySelector('#cp-fill-swatches')!.parentElement!
       .parentElement!.style.display = hasFill ? '' : 'none';
     panel.querySelector('#cp-width-presets')!.parentElement!.style.display =
