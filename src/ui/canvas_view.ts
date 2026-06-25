@@ -209,6 +209,12 @@ export function initCanvasView(
           wy >= by - 4 &&
           wy <= by + bh + 4
         ) {
+          history.dispatch({ type: 'SELECT_ELEMENTS', ids: [el.id] });
+          history.dispatch({
+            type: 'SET_TOOL',
+            tool: 'text',
+            keepSelection: true,
+          });
           openShapeLabelEditor(
             el as RectangleElement | EllipseElement | RhombusElement,
             history,
@@ -230,6 +236,12 @@ export function initCanvasView(
           distPointToSegment(wx, wy, line.x, line.y, line.x2, line.y2) <
           line.strokeWidth / 2 + 8;
         if (hitLabel || hitShaft) {
+          history.dispatch({ type: 'SELECT_ELEMENTS', ids: [line.id] });
+          history.dispatch({
+            type: 'SET_TOOL',
+            tool: 'text',
+            keepSelection: true,
+          });
           openArrowLabelEditor(line, history, canvas, (id) => {
             editingShapeLabelId = id;
             needsRender = true;
@@ -986,8 +998,21 @@ function openShapeLabelEditor(
   grow();
 
   onEditingChange(el.id);
+  const unsubscribe = history.subscribe((scene) => {
+    const latest = scene.elements.find((item) => item.id === el.id);
+    if (
+      latest?.type === 'rectangle' ||
+      latest?.type === 'ellipse' ||
+      latest?.type === 'rhombus'
+    ) {
+      ta.style.color =
+        latest.labelColor ??
+        contrastColor(latest.fillColor, latest.strokeColor);
+    }
+  });
 
   const doCommit = (): void => {
+    unsubscribe();
     onEditingChange(null);
     const content = ta.value.trim();
     ta.remove();
@@ -1101,7 +1126,15 @@ function openArrowLabelEditor(
   ta.addEventListener('input', grow);
   grow();
 
+  const unsubscribe = history.subscribe((scene) => {
+    const latest = scene.elements.find((item) => item.id === el.id);
+    if (latest?.type === 'line' || latest?.type === 'arrow') {
+      ta.style.color = latest.labelColor ?? latest.strokeColor;
+    }
+  });
+
   const doCommit = (): void => {
+    unsubscribe();
     onEditingChange?.(null);
     const content = ta.value.trim();
     ta.remove();
@@ -1122,6 +1155,7 @@ function openArrowLabelEditor(
     if (e.key === 'Escape') {
       e.stopPropagation();
       ta.removeEventListener('blur', doCommit);
+      unsubscribe();
       onEditingChange?.(null);
       ta.remove();
       return;

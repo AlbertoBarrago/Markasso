@@ -1128,6 +1128,37 @@ describe('reducer', () => {
     expect(next.appState.strokeWidth).toBe(4);
   });
 
+  it('APPLY_STYLE can patch shape label color', () => {
+    const scene: Scene = {
+      ...createScene(),
+      elements: [makeRect({ label: 'Title' })],
+      selectedIds: new Set(['rect-1']),
+    };
+    const next = reducer(scene, {
+      type: 'APPLY_STYLE',
+      labelColor: '#ff00aa',
+    });
+    expect((next.elements[0] as RectangleElement).labelColor).toBe('#ff00aa');
+  });
+
+  it('SET_SHAPE_LABEL preserves existing label color', () => {
+    const scene: Scene = {
+      ...createScene(),
+      elements: [makeRect({ label: 'Old', labelColor: '#ff00aa' })],
+      selectedIds: new Set(['rect-1']),
+    };
+    const next = reducer(scene, {
+      type: 'SET_SHAPE_LABEL',
+      id: 'rect-1',
+      label: 'New',
+      labelFontSize: 18,
+      labelFontFamily: 'Arial, sans-serif',
+    });
+    const el = next.elements[0] as RectangleElement;
+    expect(el.label).toBe('New');
+    expect(el.labelColor).toBe('#ff00aa');
+  });
+
   it('APPLY_STYLE with no selection uses lastCreatedId', () => {
     const scene: Scene = {
       ...createScene(),
