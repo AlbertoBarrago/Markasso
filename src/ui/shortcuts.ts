@@ -89,7 +89,8 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       return;
     }
 
-    // Delete/Backspace alone — close panels, clear selection, back to select tool
+    // Delete/Backspace alone — delete selected unlocked elements.
+    // Escape is the non-destructive way to clear selection.
     if (
       (e.key === 'Delete' || e.key === 'Backspace') &&
       !e.metaKey &&
@@ -98,7 +99,14 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       !e.altKey
     ) {
       e.preventDefault();
-      history.dispatch({ type: 'CLEAR_SELECTION' });
+      const scene = history.present;
+      const ids = [...scene.selectedIds].filter((id) => {
+        const el = scene.elements.find((el) => el.id === id);
+        return el && !el.locked;
+      });
+      if (ids.length > 0) {
+        history.dispatch({ type: 'DELETE_ELEMENTS', ids });
+      }
       history.dispatch({ type: 'SET_TOOL', tool: 'select' });
       return;
     }
