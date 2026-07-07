@@ -164,6 +164,139 @@
   }
 }
 
+/* ── What's new overlay ───────────────────────────────────────────────────── */
+#whats-new-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 520;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: all;
+  animation: wl-in 0.25s ease both;
+}
+
+#whats-new-overlay.wn-out {
+  animation: wl-out 0.2s ease both;
+}
+
+.wn-card {
+  width: min(460px, calc(100vw - 32px));
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--bg-island);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 48px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.wn-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.wn-title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.15;
+  color: var(--false-white);
+}
+
+.wn-desc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.wn-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wn-list li {
+  position: relative;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.wn-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.58em;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.wn-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.wn-link {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.wn-link:hover {
+  color: var(--text);
+}
+
+.wn-cta {
+  padding: 10px 16px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.wn-cta:hover {
+  opacity: 0.88;
+}
+
+@media (pointer: coarse), (max-width: 600px) {
+  .wn-card {
+    padding: 22px 20px;
+    gap: 14px;
+  }
+
+  .wn-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .wn-link,
+  .wn-cta {
+    text-align: center;
+  }
+}
+
 /* ── About modal ───────────────────────────────────────────────────────────── */
 .about-modal {
   position: fixed;
