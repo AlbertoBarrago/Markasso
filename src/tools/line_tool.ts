@@ -1,43 +1,11 @@
-import type { Element, LineElement } from '../elements/element';
+import type { LineElement } from '../elements/element';
 import {
-  distToShapeBoundary,
-  getElementBorderPoint,
-  getElementBounds,
+  findNearestElementSnapTarget,
+  getNearestElementBorderPoint,
 } from '../rendering/draw_selection';
 import type { Tool, ToolContext } from './tool';
 
 const SNAP_RADIUS_PX = 20;
-
-function distToPerimeter(
-  b: { x: number; y: number; w: number; h: number },
-  px: number,
-  py: number,
-): number {
-  const nearX = Math.max(b.x, Math.min(b.x + b.w, px));
-  const nearY = Math.max(b.y, Math.min(b.y + b.h, py));
-  return Math.hypot(px - nearX, py - nearY);
-}
-
-function bestSnapCandidate(
-  elements: ReadonlyArray<Element>,
-  px: number,
-  py: number,
-  snapRadius: number,
-): Element | null {
-  let best: Element | null = null;
-  let bestDist = Infinity;
-  for (const el of elements) {
-    if (el.type === 'line' || el.type === 'arrow') continue;
-    const b = getElementBounds(el);
-    if (distToPerimeter(b, px, py) > snapRadius) continue;
-    const d = distToShapeBoundary(el, b, px, py);
-    if (d < bestDist) {
-      bestDist = d;
-      best = el;
-    }
-  }
-  return best;
-}
 
 export class LineTool implements Tool {
   private drawing = false;
@@ -68,17 +36,16 @@ export class LineTool implements Tool {
     this.startElementId = null;
     let snappedX = worldX;
     let snappedY = worldY;
-    const startSnap = bestSnapCandidate(
+    const startSnap = findNearestElementSnapTarget(
       scene.elements,
       worldX,
       worldY,
       snapRadius,
     );
     if (startSnap) {
-      this.startElementId = startSnap.id;
-      const b = getElementBounds(startSnap);
-      snappedX = b.x + b.w / 2;
-      snappedY = b.y + b.h / 2;
+      this.startElementId = startSnap.elementId;
+      snappedX = startSnap.worldX;
+      snappedY = startSnap.worldY;
     }
 
     this.startX = snappedX;
@@ -97,16 +64,18 @@ export class LineTool implements Tool {
     if (!this.drawing) {
       this.snapIndicator = null;
       this.snapElementId = null;
-      const hoverSnap = bestSnapCandidate(
+      const hoverSnap = findNearestElementSnapTarget(
         scene.elements,
         worldX,
         worldY,
         snapRadius,
       );
       if (hoverSnap) {
-        const [bx, by] = getElementBorderPoint(hoverSnap, worldX, worldY);
-        this.snapIndicator = { worldX: bx, worldY: by };
-        this.snapElementId = hoverSnap.id;
+        this.snapIndicator = {
+          worldX: hoverSnap.worldX,
+          worldY: hoverSnap.worldY,
+        };
+        this.snapElementId = hoverSnap.elementId;
       }
       ctx.onPreviewUpdate?.();
       return;
@@ -118,17 +87,17 @@ export class LineTool implements Tool {
 
     this.snapIndicator = null;
     this.snapElementId = null;
-    const endSnapMove = bestSnapCandidate(scene.elements, x2, y2, snapRadius);
+    const endSnapMove = findNearestElementSnapTarget(
+      scene.elements,
+      x2,
+      y2,
+      snapRadius,
+    );
     if (endSnapMove) {
-      const [bx, by] = getElementBorderPoint(
-        endSnapMove,
-        this.startX,
-        this.startY,
-      );
-      x2 = bx;
-      y2 = by;
-      this.snapIndicator = { worldX: bx, worldY: by };
-      this.snapElementId = endSnapMove.id;
+      x2 = endSnapMove.worldX;
+      y2 = endSnapMove.worldY;
+      this.snapIndicator = { worldX: x2, worldY: y2 };
+      this.snapElementId = endSnapMove.elementId;
     }
 
     let previewStartX = this.startX;
@@ -138,7 +107,11 @@ export class LineTool implements Tool {
         (el) => el.id === this.startElementId,
       );
       if (startEl) {
-        [previewStartX, previewStartY] = getElementBorderPoint(startEl, x2, y2);
+        [previewStartX, previewStartY] = getNearestElementBorderPoint(
+          startEl,
+          this.startX,
+          this.startY,
+        );
       }
     }
 
@@ -155,6 +128,7 @@ export class LineTool implements Tool {
       opacity: appState.opacity,
       roughness: appState.roughness,
       strokeStyle: appState.strokeStyle,
+      arrowHead: 'end',
       ...(this.startElementId && { startElementId: this.startElementId }),
     };
     ctx.onPreviewUpdate?.();
@@ -175,16 +149,16 @@ export class LineTool implements Tool {
     let finalEndElementId: string | null = null;
     const scene = ctx.history.present;
     const snapRadius = SNAP_RADIUS_PX / scene.viewport.zoom;
-    const endSnapUp = bestSnapCandidate(scene.elements, x2, y2, snapRadius);
+    const endSnapUp = findNearestElementSnapTarget(
+      scene.elements,
+      x2,
+      y2,
+      snapRadius,
+    );
     if (endSnapUp) {
-      const [bx, by] = getElementBorderPoint(
-        endSnapUp,
-        this.startX,
-        this.startY,
-      );
-      x2 = bx;
-      y2 = by;
-      finalEndElementId = endSnapUp.id;
+      x2 = endSnapUp.worldX;
+      y2 = endSnapUp.worldY;
+      finalEndElementId = endSnapUp.elementId;
     }
 
     this.preview = null;
@@ -213,6 +187,7 @@ export class LineTool implements Tool {
       opacity: appState.opacity,
       roughness: appState.roughness,
       strokeStyle: appState.strokeStyle,
+      arrowHead: 'end',
       ...(this.startElementId && { startElementId: this.startElementId }),
       ...(finalEndElementId && { endElementId: finalEndElementId }),
     };

@@ -103,6 +103,134 @@ export function getElementBorderPoint(
   return [cx + lx, cy + ly];
 }
 
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n));
+}
+
+function rotatePoint(
+  x: number,
+  y: number,
+  cx: number,
+  cy: number,
+  angle: number,
+): [number, number] {
+  const dx = x - cx;
+  const dy = y - cy;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return [cx + dx * cos - dy * sin, cy + dx * sin + dy * cos];
+}
+
+function nearestRectBorderPoint(
+  b: { x: number; y: number; w: number; h: number },
+  px: number,
+  py: number,
+): [number, number] {
+  const x1 = b.x;
+  const y1 = b.y;
+  const x2 = b.x + b.w;
+  const y2 = b.y + b.h;
+  const inside = px >= x1 && px <= x2 && py >= y1 && py <= y2;
+
+  if (!inside) return [clamp(px, x1, x2), clamp(py, y1, y2)];
+
+  const distances = [
+    { d: Math.abs(px - x1), point: [x1, py] as [number, number] },
+    { d: Math.abs(x2 - px), point: [x2, py] as [number, number] },
+    { d: Math.abs(py - y1), point: [px, y1] as [number, number] },
+    { d: Math.abs(y2 - py), point: [px, y2] as [number, number] },
+  ];
+  distances.sort((a, b) => a.d - b.d);
+  return distances[0]!.point;
+}
+
+/**
+ * Returns the nearest visual border point to the user's pointer.
+ * This is intentionally pointer-driven: snap previews should attach where the
+ * cursor is, not where a center-to-center connector would later infer a border.
+ */
+export function getNearestElementBorderPoint(
+  el: Element,
+  px: number,
+  py: number,
+): [number, number] {
+  const b = getElementBounds(el);
+  const cx = b.x + b.w / 2;
+  const cy = b.y + b.h / 2;
+  const rotation = ('rotation' in el ? el.rotation : undefined) ?? 0;
+  const [localPx, localPy] = rotation
+    ? rotatePoint(px, py, cx, cy, -rotation)
+    : [px, py];
+
+  let localPoint: [number, number];
+
+  if (el.type === 'ellipse') {
+    const rx = b.w / 2;
+    const ry = b.h / 2;
+    const dx = localPx - cx;
+    const dy = localPy - cy;
+    if (
+      rx < 0.001 ||
+      ry < 0.001 ||
+      (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001)
+    ) {
+      localPoint = [cx, b.y];
+    } else {
+      const scale = 1 / Math.hypot(dx / rx, dy / ry);
+      localPoint = [cx + dx * scale, cy + dy * scale];
+    }
+  } else if (el.type === 'rhombus') {
+    const dx = localPx - cx;
+    const dy = localPy - cy;
+    const hw = b.w / 2;
+    const hh = b.h / 2;
+    if (
+      hw < 0.001 ||
+      hh < 0.001 ||
+      (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001)
+    ) {
+      localPoint = [cx, b.y];
+    } else {
+      const t = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh);
+      localPoint = [cx + dx * t, cy + dy * t];
+    }
+  } else {
+    localPoint = nearestRectBorderPoint(b, localPx, localPy);
+  }
+
+  return rotation
+    ? rotatePoint(localPoint[0], localPoint[1], cx, cy, rotation)
+    : localPoint;
+}
+
+export interface ElementSnapTarget {
+  elementId: string;
+  worldX: number;
+  worldY: number;
+  distance: number;
+}
+
+export function findNearestElementSnapTarget(
+  elements: ReadonlyArray<Element>,
+  px: number,
+  py: number,
+  snapRadius: number,
+  ignoreId?: string,
+): ElementSnapTarget | null {
+  let best: ElementSnapTarget | null = null;
+  for (const el of elements) {
+    if (el.id === ignoreId) continue;
+    if (el.type === 'line' || el.type === 'arrow') continue;
+    const [worldX, worldY] = getNearestElementBorderPoint(el, px, py);
+    const distance = Math.hypot(px - worldX, py - worldY);
+    if (distance > snapRadius) continue;
+    if (!best || distance < best.distance) {
+      best = { elementId: el.id, worldX, worldY, distance };
+    }
+  }
+  return best;
+}
+
 /**
  * Resolves the effective endpoints of a line/arrow element,
  * snapping to the border of connected elements (facing each other).
@@ -135,10 +263,22 @@ export function resolveArrowEndpoints(
   const endCx = endB ? endB.x + endB.w / 2 : x2;
   const endCy = endB ? endB.y + endB.h / 2 : y2;
 
-  // Border point of start element facing toward end
-  if (startEl) [x, y] = getElementBorderPoint(startEl, endCx, endCy);
-  // Border point of end element facing toward start
-  if (endEl) [x2, y2] = getElementBorderPoint(endEl, startCx, startCy);
+  if (startEl) {
+    const startBounds = getElementBounds(startEl);
+    const storedStartDist = distToShapeBoundary(startEl, startBounds, x, y);
+    [x, y] =
+      storedStartDist <= 1
+        ? getNearestElementBorderPoint(startEl, x, y)
+        : getElementBorderPoint(startEl, endCx, endCy);
+  }
+  if (endEl) {
+    const endBounds = getElementBounds(endEl);
+    const storedEndDist = distToShapeBoundary(endEl, endBounds, x2, y2);
+    [x2, y2] =
+      storedEndDist <= 1
+        ? getNearestElementBorderPoint(endEl, x2, y2)
+        : getElementBorderPoint(endEl, startCx, startCy);
+  }
 
   return { x, y, x2, y2 };
 }

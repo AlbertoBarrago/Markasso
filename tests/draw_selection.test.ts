@@ -8,9 +8,11 @@ import type {
 import type { Handle } from '../src/rendering/draw_selection';
 import {
   distToShapeBoundary,
+  findNearestElementSnapTarget,
   getElementBorderPoint,
   getElementBounds,
   getElementCenter,
+  getNearestElementBorderPoint,
   getRotationHandleScreen,
   getSelectionHandles,
   hitTestEndpoint,
@@ -114,12 +116,37 @@ describe('resolveArrowEndpoints', () => {
     // r2 border toward r1: t = min(30/280, 20/390) = 2/39 → x2 ≈ 315.64, y2 = 400
     const r1 = makeRect('r1', 0, 0, 100, 60);
     const r2 = makeRect('r2', 300, 400, 60, 40);
-    const arrow = makeArrow({ startElementId: 'r1', endElementId: 'r2' });
+    const arrow = makeArrow({
+      x: 999,
+      y: 999,
+      x2: 999,
+      y2: 999,
+      startElementId: 'r1',
+      endElementId: 'r2',
+    });
     const result = resolveArrowEndpoints(arrow, [r1, r2]);
     expect(result.x).toBeCloseTo(930 / 13, 5); // ≈ 71.54 (r1 bottom-right)
     expect(result.y).toBe(60); // r1 bottom edge
     expect(result.x2).toBeCloseTo(12310 / 39, 5); // ≈ 315.64 (r2 top-left)
     expect(result.y2).toBe(400); // r2 top edge
+  });
+
+  it('preserves stored border anchors when connected endpoints were snapped by cursor', () => {
+    const r1 = makeRect('r1', 0, 0, 100, 60);
+    const r2 = makeRect('r2', 300, 400, 60, 40);
+    const arrow = makeArrow({
+      x: 0,
+      y: 12,
+      x2: 330,
+      y2: 400,
+      startElementId: 'r1',
+      endElementId: 'r2',
+    });
+    const result = resolveArrowEndpoints(arrow, [r1, r2]);
+    expect(result.x).toBe(0);
+    expect(result.y).toBe(12);
+    expect(result.x2).toBe(330);
+    expect(result.y2).toBe(400);
   });
 
   it('falls back to stored position if connected element not found', () => {
@@ -382,6 +409,55 @@ describe('getElementBorderPoint', () => {
     const [bx, by] = getElementBorderPoint(ellipse, 100, 30);
     expect(bx).toBeGreaterThan(50);
     expect(by).toBeCloseTo(30, 0);
+  });
+});
+
+describe('getNearestElementBorderPoint', () => {
+  it('returns the nearest rect edge point under the cursor', () => {
+    const rect = makeRect('r1', 0, 0, 100, 60);
+    const [x, y] = getNearestElementBorderPoint(rect, -5, 12);
+    expect(x).toBe(0);
+    expect(y).toBe(12);
+  });
+
+  it('uses the nearest rect edge when cursor is inside the shape', () => {
+    const rect = makeRect('r1', 0, 0, 100, 60);
+    const [x, y] = getNearestElementBorderPoint(rect, 8, 20);
+    expect(x).toBe(0);
+    expect(y).toBe(20);
+  });
+
+  it('projects ellipse snap to the visual boundary', () => {
+    const ellipse = {
+      id: 'e1',
+      type: 'ellipse' as const,
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 60,
+      strokeColor: '#000',
+      fillColor: 'transparent',
+      strokeWidth: 2,
+      opacity: 1,
+      roughness: 0,
+    };
+    const [x, y] = getNearestElementBorderPoint(ellipse, 100, 30);
+    expect(x).toBeCloseTo(100, 1);
+    expect(y).toBeCloseTo(30, 1);
+  });
+});
+
+describe('findNearestElementSnapTarget', () => {
+  it('returns the closest border snap target within radius', () => {
+    const r1 = makeRect('r1', 0, 0, 100, 60);
+    const r2 = makeRect('r2', 200, 0, 100, 60);
+    const snap = findNearestElementSnapTarget([r1, r2], 104, 12, 20);
+    expect(snap).toMatchObject({ elementId: 'r1', worldX: 100, worldY: 12 });
+  });
+
+  it('returns null when no border is within radius', () => {
+    const rect = makeRect('r1', 0, 0, 100, 60);
+    expect(findNearestElementSnapTarget([rect], 150, 30, 20)).toBeNull();
   });
 });
 

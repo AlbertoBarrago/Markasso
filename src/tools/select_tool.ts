@@ -3,8 +3,7 @@ import type { Element } from '../elements/element';
 import { distToQuadraticCurve } from '../rendering/connector_geometry';
 import type { HandlePosition } from '../rendering/draw_selection';
 import {
-  distToShapeBoundary,
-  getElementBorderPoint,
+  findNearestElementSnapTarget,
   getElementBounds,
   getElementCenter,
   getRotationHandleScreen,
@@ -165,7 +164,7 @@ export class SelectTool implements Tool {
     // Format painter mode: apply captured style to clicked element
     if (this.formatPainterActive) {
       const scene = ctx.history.present;
-      const hit = hitTest(scene.elements, worldX, worldY);
+      const hit = hitTest(scene.elements, worldX, worldY, scene.viewport);
       if (hit) {
         // Build APPLY_STYLE command from captured style — only defined keys
         const style = this.formatPainterStyle;
@@ -326,7 +325,7 @@ export class SelectTool implements Tool {
     }
 
     // 4. Hit-test elements
-    const hit = hitTest(scene.elements, worldX, worldY);
+    const hit = hitTest(scene.elements, worldX, worldY, scene.viewport);
     if (hit) {
       if (e.altKey && !e.shiftKey) {
         // Alt+drag → clone
@@ -412,38 +411,19 @@ export class SelectTool implements Tool {
         (el.type === 'line' || el.type === 'arrow') &&
         this.endpointSide
       ) {
-        // Determine the "other end" position for computing border facing direction
-        const resolved = resolveArrowEndpoints(el, scene.elements);
-        const otherX = this.endpointSide === 'start' ? resolved.x2 : resolved.x;
-        const otherY = this.endpointSide === 'start' ? resolved.y2 : resolved.y;
-
-        // Check for snap to element perimeter
         const snapRadius = SNAP_RADIUS_PX / scene.viewport.zoom;
-        let snapTarget: {
-          worldX: number;
-          worldY: number;
-          elementId: string;
-        } | null = null;
-        let bestSnapDist = Infinity;
-        for (const candidate of scene.elements) {
-          if (candidate.id === el.id) continue;
-          if (candidate.type === 'line' || candidate.type === 'arrow') continue;
-          const b = getElementBounds(candidate);
-          const nearX = Math.max(b.x, Math.min(b.x + b.w, worldX));
-          const nearY = Math.max(b.y, Math.min(b.y + b.h, worldY));
-          if (Math.hypot(worldX - nearX, worldY - nearY) > snapRadius) continue;
-          const d = distToShapeBoundary(candidate, b, worldX, worldY);
-          if (d < bestSnapDist) {
-            bestSnapDist = d;
-            const [bx, by] = getElementBorderPoint(candidate, otherX, otherY);
-            snapTarget = { worldX: bx, worldY: by, elementId: candidate.id };
-          }
-        }
+        const snapTarget = findNearestElementSnapTarget(
+          scene.elements,
+          worldX,
+          worldY,
+          snapRadius,
+          el.id,
+        );
         this.endpointSnapTarget = snapTarget;
         this.endpointSnapIndicator = snapTarget
           ? { worldX: snapTarget.worldX, worldY: snapTarget.worldY }
           : null;
-        this.endpointSnapElementId = snapTarget ? snapTarget.elementId : null;
+        this.endpointSnapElementId = snapTarget?.elementId ?? null;
 
         const resolvedX = snapTarget ? snapTarget.worldX : worldX;
         const resolvedY = snapTarget ? snapTarget.worldY : worldY;
@@ -665,7 +645,7 @@ export class SelectTool implements Tool {
     // dragMode === 'none': update hover highlight
     if (this.dragMode === 'none') {
       const scene = ctx.history.present;
-      const hit = hitTest(scene.elements, worldX, worldY);
+      const hit = hitTest(scene.elements, worldX, worldY, scene.viewport);
       this.hoveredId = hit ? hit.id : null;
     }
   }
@@ -895,7 +875,7 @@ export class SelectTool implements Tool {
       if (hit) return HANDLE_CURSORS[hit];
     }
 
-    const hit = hitTest(scene.elements, worldX, worldY);
+    const hit = hitTest(scene.elements, worldX, worldY, scene.viewport);
     return hit ? 'move' : 'default';
   }
 }
@@ -1069,16 +1049,24 @@ function hitTest(
   elements: ReadonlyArray<Element>,
   wx: number,
   wy: number,
+  viewport: { zoom: number },
 ): Element | null {
   for (let i = elements.length - 1; i >= 0; i--) {
     const el = elements[i];
-    if (el && hitTestElement(el, wx, wy)) return el;
+    if (el && hitTestElement(el, wx, wy, viewport, elements)) return el;
   }
   return null;
 }
 
-function hitTestElement(el: Element, wx: number, wy: number): boolean {
-  const PAD = 4;
+function hitTestElement(
+  el: Element,
+  wx: number,
+  wy: number,
+  viewport: { zoom: number },
+  allElements: ReadonlyArray<Element>,
+): boolean {
+  const PAD = 4 / viewport.zoom;
+  const LINE_PAD = 8 / viewport.zoom;
 
   // For rotated elements, inverse-rotate the test point into element's local space
   let lx = wx;
@@ -1126,20 +1114,35 @@ function hitTestElement(el: Element, wx: number, wy: number): boolean {
     }
     case 'line':
       if (el.cx !== undefined && el.cy !== undefined) {
+        const pts = resolveArrowEndpoints(el, allElements);
         return (
-          distToQuadraticCurve(lx, ly, el.x, el.y, el.cx, el.cy, el.x2, el.y2) <
-          el.strokeWidth / 2 + PAD + 4
+          distToQuadraticCurve(
+            lx,
+            ly,
+            pts.x,
+            pts.y,
+            el.cx,
+            el.cy,
+            pts.x2,
+            pts.y2,
+          ) <
+          el.strokeWidth / 2 + LINE_PAD
         );
       }
+      {
+        const pts = resolveArrowEndpoints(el, allElements);
+        return (
+          distToSegment(lx, ly, pts.x, pts.y, pts.x2, pts.y2) <
+          el.strokeWidth / 2 + LINE_PAD
+        );
+      }
+    case 'arrow': {
+      const pts = resolveArrowEndpoints(el, allElements);
       return (
-        distToSegment(lx, ly, el.x, el.y, el.x2, el.y2) <
-        el.strokeWidth / 2 + PAD
+        distToSegment(lx, ly, pts.x, pts.y, pts.x2, pts.y2) <
+        el.strokeWidth / 2 + LINE_PAD
       );
-    case 'arrow':
-      return (
-        distToSegment(lx, ly, el.x, el.y, el.x2, el.y2) <
-        el.strokeWidth / 2 + PAD
-      );
+    }
     case 'curve':
       // Approximate hit test: check distance to the two segments endpoint→control→endpoint
       return (

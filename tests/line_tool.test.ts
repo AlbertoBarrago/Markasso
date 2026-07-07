@@ -1,5 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { distToPerimeterBounds, snap45 } from '../src/tools/line_tool';
+import type { Command } from '../src/commands/commands';
+import { createScene } from '../src/core/scene';
+import type { LineElement } from '../src/elements/element';
+import {
+  distToPerimeterBounds,
+  LineTool,
+  snap45,
+} from '../src/tools/line_tool';
+import type { ToolContext } from '../src/tools/tool';
+
+function makeToolContext(dispatched: Command[]): ToolContext {
+  return {
+    history: {
+      present: createScene(),
+      dispatch: (command: Command) => {
+        dispatched.push(command);
+      },
+    },
+    canvas: {} as HTMLCanvasElement,
+  } as ToolContext;
+}
 
 describe('snap45', () => {
   it('snaps to 0° (right) — output y is zero', () => {
@@ -74,5 +94,22 @@ describe('distToPerimeterBounds', () => {
 
   it('returns correct distance for a point outside (corner)', () => {
     expect(distToPerimeterBounds(box, 110, 70)).toBeCloseTo(Math.hypot(10, 10));
+  });
+});
+
+describe('LineTool', () => {
+  it('creates lines with an end arrowhead by default', () => {
+    const dispatched: Command[] = [];
+    const ctx = makeToolContext(dispatched);
+    const tool = new LineTool();
+
+    tool.onMouseDown({} as MouseEvent, 0, 0, ctx);
+    tool.onMouseUp({ shiftKey: false } as MouseEvent, 100, 0, ctx);
+
+    const createCommand = dispatched.find(
+      (cmd) => cmd.type === 'CREATE_ELEMENT',
+    );
+    expect(createCommand?.type).toBe('CREATE_ELEMENT');
+    expect((createCommand!.element as LineElement).arrowHead).toBe('end');
   });
 });
