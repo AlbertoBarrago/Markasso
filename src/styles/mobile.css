@@ -220,8 +220,8 @@
   }
 
   #mobile-tools-fab[data-tool]:not([data-tool="select"]):not(
-      [data-tool="hand"]
-    ) {
+    [data-tool="hand"]
+  ) {
     border-color: var(--accent);
     color: var(--accent);
   }

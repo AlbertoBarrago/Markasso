@@ -32,7 +32,7 @@ export class TextTool implements Tool {
     const elements = ctx.history.present.elements;
     for (let i = elements.length - 1; i >= 0; i--) {
       const el = elements[i];
-      if (!el || el.type !== 'text') continue;
+      if (el?.type !== 'text') continue;
       const PAD = 4;
       if (
         worldX >= el.x - PAD &&
