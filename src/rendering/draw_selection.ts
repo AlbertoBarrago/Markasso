@@ -357,6 +357,11 @@ export function drawSelection(
   const [sx, sy] = worldToScreen(viewport, minX, minY);
   const [ex, ey] = worldToScreen(viewport, maxX, maxY);
 
+  if (elements.length > 1) {
+    for (const el of elements)
+      drawSelectedElementOutline(ctx, el, viewport, allElements);
+  }
+
   // Dashed selection rectangle — light blue works on dark canvas
   ctx.strokeStyle = 'rgba(120,180,255,0.8)';
   ctx.lineWidth = 1.5;
@@ -497,6 +502,137 @@ export function drawSelection(
         }
       }
     }
+  }
+
+  ctx.restore();
+}
+
+function drawSelectedElementOutline(
+  ctx: CanvasRenderingContext2D,
+  element: Element,
+  viewport: Viewport,
+  allElements?: ReadonlyArray<Element>,
+): void {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(120,180,255,0.85)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+
+  const s = (wx: number, wy: number) => worldToScreen(viewport, wx, wy);
+  const PAD = 4;
+
+  switch (element.type) {
+    case 'line':
+    case 'arrow': {
+      const pts = resolveArrowEndpoints(element, allElements ?? [element]);
+      const [x1s, y1s] = s(pts.x, pts.y);
+      const [x2s, y2s] = s(pts.x2, pts.y2);
+      ctx.beginPath();
+      if (
+        element.type === 'line' &&
+        element.cx !== undefined &&
+        element.cy !== undefined
+      ) {
+        const [cxs, cys] = s(element.cx, element.cy);
+        ctx.moveTo(x1s, y1s);
+        ctx.quadraticCurveTo(cxs, cys, x2s, y2s);
+      } else {
+        ctx.moveTo(x1s, y1s);
+        ctx.lineTo(x2s, y2s);
+      }
+      ctx.stroke();
+      break;
+    }
+    case 'curve': {
+      const [x1s, y1s] = s(element.x, element.y);
+      const [cxs, cys] = s(element.cx, element.cy);
+      const [x2s, y2s] = s(element.x2, element.y2);
+      ctx.beginPath();
+      ctx.moveTo(x1s, y1s);
+      ctx.quadraticCurveTo(cxs, cys, x2s, y2s);
+      ctx.stroke();
+      break;
+    }
+    case 'freehand':
+    case 'polygon': {
+      if (element.points.length < 2) break;
+      ctx.beginPath();
+      const [p0x, p0y] = s(element.points[0]![0], element.points[0]![1]);
+      ctx.moveTo(p0x, p0y);
+      for (let i = 1; i < element.points.length; i++) {
+        const [px, py] = s(element.points[i]![0], element.points[i]![1]);
+        ctx.lineTo(px, py);
+      }
+      if (element.type === 'polygon' && element.closed) ctx.closePath();
+      ctx.stroke();
+      break;
+    }
+    case 'ellipse': {
+      const { x, y, w, h } = getElementBounds(element);
+      const [sx, sy] = s(x, y);
+      const [ex, ey] = s(x + w, y + h);
+      const rotation = element.rotation ?? 0;
+      const cx = (sx + ex) / 2;
+      const cy = (sy + ey) / 2;
+      const rx = Math.abs(ex - sx) / 2 + PAD;
+      const ry = Math.abs(ey - sy) / 2 + PAD;
+      if (rotation) {
+        ctx.translate(cx, cy);
+        ctx.rotate(rotation);
+        ctx.translate(-cx, -cy);
+      }
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      break;
+    }
+    case 'rhombus': {
+      const { x, y, w, h } = getElementBounds(element);
+      const [sx, sy] = s(x, y);
+      const [ex, ey] = s(x + w, y + h);
+      const rotation = element.rotation ?? 0;
+      const cx = (sx + ex) / 2;
+      const cy = (sy + ey) / 2;
+      if (rotation) {
+        ctx.translate(cx, cy);
+        ctx.rotate(rotation);
+        ctx.translate(-cx, -cy);
+      }
+      ctx.beginPath();
+      ctx.moveTo(cx, sy - PAD);
+      ctx.lineTo(ex + PAD, cy);
+      ctx.lineTo(cx, ey + PAD);
+      ctx.lineTo(sx - PAD, cy);
+      ctx.closePath();
+      break;
+    }
+    default: {
+      const { x, y, w, h } = getElementBounds(element);
+      const [sx, sy] = s(x, y);
+      const [ex, ey] = s(x + w, y + h);
+      const rotation = element.rotation ?? 0;
+      if (rotation) {
+        const [cx, cy] = getElementCenter(element);
+        const [scx, scy] = s(cx, cy);
+        ctx.translate(scx, scy);
+        ctx.rotate(rotation);
+        ctx.translate(-scx, -scy);
+      }
+      ctx.strokeRect(sx - PAD, sy - PAD, ex - sx + PAD * 2, ey - sy + PAD * 2);
+      break;
+    }
+  }
+
+  if (
+    element.type !== 'line' &&
+    element.type !== 'arrow' &&
+    element.type !== 'curve' &&
+    element.type !== 'freehand' &&
+    element.type !== 'polygon' &&
+    element.type !== 'rectangle' &&
+    element.type !== 'text' &&
+    element.type !== 'image'
+  ) {
+    ctx.stroke();
   }
 
   ctx.restore();
