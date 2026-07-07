@@ -6,7 +6,7 @@ export function isFocusInPanel(): boolean {
   // Keep global single-key shortcuts disabled while interacting with modal/panel UI.
   if (
     active.closest(
-      '#context-panel, .settings-panel, #welcome-overlay, #shortcuts-help',
+      '#context-panel, .settings-panel, #welcome-overlay, #whats-new-overlay, #shortcuts-help',
     )
   )
     return true;

@@ -18,6 +18,7 @@ import { initShortcutsHelp } from './src/ui/shortcuts_help';
 import { initStarCta } from './src/ui/star_cta';
 import { initToolbar } from './src/ui/toolbar';
 import { initWelcome } from './src/ui/welcome';
+import { initWhatsNew } from './src/ui/whats_new';
 
 function printConsoleGreeting(): void {
   const reset = 'color: inherit; font-size: 13px;';
@@ -110,7 +111,8 @@ async function bootstrap(): Promise<void> {
   initShortcutsHelp(appEl);
   initHintBar(appEl, hist);
   initSession(hist);
-  if (!session && !sharedElements) initWelcome(appEl, hist);
+  const showedWhatsNew = initWhatsNew(appEl);
+  if (!showedWhatsNew && !session && !sharedElements) initWelcome(appEl, hist);
 }
 
 bootstrap();
