@@ -23,11 +23,12 @@ Select a tool from the toolbar or press its keyboard shortcut.
 | Rhombus    | `D` or `3` | Draw diamond/rhombus shapes |
 | Ellipse    | `E` or `4` | Draw ellipses and circles |
 | Line       | `A` / `L` or `5` | Draw straight lines and lines with arrowheads |
-| Curve      | `C` | Draw quadratic bezier curves |
-| Polygon    | `O` | Draw multi-point polygons and polylines |
-| Pen        | `P` or `7` | Freehand drawing |
-| Text       | `T` or `8` | Add text |
+| Pen        | `P` or `6` | Freehand drawing |
+| Text       | `T` or `7` | Add text |
+| Sticky note | `N` | Add sticky notes (also available from the command palette) |
 | Eraser     | `0` | Erase elements by clicking or dragging over them |
+
+There is no separate curve tool: drag the midpoint handle of a line after placement to bend it into a quadratic bezier (see Connector Editing below).
 
 Press `Escape` to return to the Select tool at any time.
 
@@ -65,11 +66,8 @@ Hold `Shift` to snap the angle to 45° increments.
 
 **Connecting lines to shapes (Smart Links):** hover the line tool over any shape — a highlight and cyan ring appear on the nearest border point. Click and drag to start from that point. Move the end near another shape to connect it. The connector attaches to the border (not the center) and follows the shapes as they move. If you enable arrowheads, the tip follows the final tangent of the bend.
 
-### Curve
-Click to set the start point, drag to the end point, release to place the curve. A control point (diamond handle) appears at the midpoint — drag it to adjust the curve's bend. Select the curve and drag any of the three handles to reshape it.
-
-### Polygon
-Click to place each vertex. **Double-click** the last vertex (or click the first vertex again) to close the polygon. Press `Escape` to finish as an open polyline. Polygons support fill, stroke style, and opacity.
+### Curves
+There is no separate curve tool. Draw a line, then drag the control point (diamond handle) at its midpoint to bend it into a quadratic bezier. Select the curve and drag any of the three handles to reshape it.
 
 ### Pen (Freehand)
 Hold and drag to draw. The stroke is automatically smoothed when you release. The pen tool stays active after each stroke so you can keep drawing without re-selecting. Stylus pressure is recorded when available.
@@ -316,10 +314,8 @@ Switch between **Dark**, **Light**, and **System** themes from the Settings pane
 | `D` / `3` | Rhombus (Diamond) |
 | `E` / `4` | Ellipse |
 | `A` / `L` / `5` | Line + arrowheads |
-| `C` | Curve |
-| `O` | Polygon |
-| `P` / `7` | Pen |
-| `T` / `8` | Text |
+| `P` / `6` | Pen |
+| `T` / `7` | Text |
 | `N` | Sticky note |
 | `0` | Eraser |
 | `?` | Open keyboard shortcuts help dialog |

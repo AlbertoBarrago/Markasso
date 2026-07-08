@@ -16,6 +16,7 @@ const SECTIONS: ShortcutSection[] = [
       { label: 'Line / Arrowheads', key: 'A / L / 5' },
       { label: 'Pen', key: 'P / 6' },
       { label: 'Text', key: 'T / 7' },
+      { label: 'Sticky note', key: 'N' },
       { label: 'Eraser', key: '0' },
     ],
   },
