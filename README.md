@@ -70,11 +70,12 @@ That surprised me. And it's the only reason this repository exists in its curren
 | Rhombus (Diamond) | `D` / `3` |
 | Ellipse | `E` / `4` |
 | Line + arrowheads | `A` / `L` / `5` |
-| Curve (bezier) | `C` |
-| Polygon / Polyline | `O` |
-| Pen (freehand) | `P` / `7` |
-| Text | `T` / `8` |
+| Pen (freehand) | `P` / `6` |
+| Text | `T` / `7` |
+| Sticky note | `N` |
 | Eraser | `0` |
+
+Curves are made by dragging the midpoint handle of a line after placement — there is no separate curve tool.
 
 ### Canvas & Navigation
 
@@ -204,10 +205,8 @@ No `.env` files. No API keys. No containerization required.
 | `D` / `3` | Rhombus (Diamond) |
 | `E` / `4` | Ellipse |
 | `A` / `L` / `5` | Line + arrowheads |
-| `C` | Curve |
-| `O` | Polygon |
-| `P` / `7` | Pen (freehand) |
-| `T` / `8` | Text |
+| `P` / `6` | Pen (freehand) |
+| `T` / `7` | Text |
 | `N` | Sticky note |
 | `0` | Eraser |
 
