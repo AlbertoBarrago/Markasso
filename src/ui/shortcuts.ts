@@ -23,6 +23,7 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     ['6', () => history.dispatch({ type: 'SET_TOOL', tool: 'freehand' })],
     ['t', () => history.dispatch({ type: 'SET_TOOL', tool: 'text' })],
     ['7', () => history.dispatch({ type: 'SET_TOOL', tool: 'text' })],
+    ['n', () => history.dispatch({ type: 'SET_TOOL', tool: 'sticky' })],
     ['d', () => history.dispatch({ type: 'SET_TOOL', tool: 'rombo' })],
     ['3', () => history.dispatch({ type: 'SET_TOOL', tool: 'rombo' })],
     ['0', () => history.dispatch({ type: 'SET_TOOL', tool: 'eraser' })],
