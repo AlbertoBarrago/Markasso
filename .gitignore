@@ -30,3 +30,13 @@ CLAUDE.md
 
 # agent
 memory
+
+# Local secrets (not committed)
+.code
+CLAUDE.local.md
+
+# Terraform
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+*.tfvars
