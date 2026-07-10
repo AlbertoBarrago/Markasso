@@ -1,3 +1,4 @@
+import { initFaro } from './src/analytics/faro';
 import type { Scene } from './src/core/scene';
 import { createScene } from './src/core/scene';
 import { fitToElements } from './src/core/viewport';
@@ -44,6 +45,7 @@ function printConsoleGreeting(): void {
 }
 
 async function bootstrap(): Promise<void> {
+  initFaro();
   printConsoleGreeting();
   const appEl = document.getElementById('app') as HTMLElement;
   const toolbar = document.getElementById('toolbar') as HTMLElement;
