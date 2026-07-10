@@ -27,7 +27,7 @@ resource "grafana_dashboard" "web_traffic" {
         gridPos    = { h = 8, w = 12, x = 0, y = 0 }
         datasource = { type = "loki", uid = data.grafana_data_source.loki.uid }
         targets = [{
-          expr  = "sum(rate({app_name=\"markasso-web\", kind=\"event\", event_name=\"session_start\"}[5m]))"
+          expr  = "sum(rate({service_name=\"markasso-web\", kind=\"event\"} | logfmt | event_name=~\"session_start|session_resume\" [5m]))"
           refId = "A"
         }]
       },
@@ -38,7 +38,7 @@ resource "grafana_dashboard" "web_traffic" {
         gridPos    = { h = 8, w = 12, x = 12, y = 0 }
         datasource = { type = "loki", uid = data.grafana_data_source.loki.uid }
         targets = [{
-          expr  = "sum(rate({app_name=\"markasso-web\", kind=\"exception\"}[5m]))"
+          expr  = "sum(rate({service_name=\"markasso-web\", kind=\"event\"} | logfmt | event_name=~\"exception|faro.error\" [5m]))"
           refId = "A"
         }]
       },
@@ -49,7 +49,7 @@ resource "grafana_dashboard" "web_traffic" {
         gridPos    = { h = 10, w = 24, x = 0, y = 8 }
         datasource = { type = "loki", uid = data.grafana_data_source.loki.uid }
         targets = [{
-          expr  = "{app_name=\"markasso-web\"}"
+          expr  = "{service_name=\"markasso-web\", kind=\"event\"} | logfmt | event_name=\"session_start\" or event_name=\"session_resume\""
           refId = "A"
         }]
       }
