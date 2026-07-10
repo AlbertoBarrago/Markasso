@@ -29,7 +29,10 @@ export class History {
   private listeners: Listener[] = [];
   private _dragging = false;
 
-  constructor(initial: Scene = createScene()) {
+  constructor(
+    initial: Scene = createScene(),
+    private onCommand?: (command: Command | { type: 'UNDO' | 'REDO' }) => void,
+  ) {
     this._present = initial;
   }
 
@@ -66,6 +69,7 @@ export class History {
     }
 
     this._present = next;
+    this.onCommand?.(command);
     this.notify();
   }
 
@@ -73,6 +77,7 @@ export class History {
     if (this.past.length === 0) return;
     this.future.push(this._present);
     this._present = this.past.pop()!;
+    this.onCommand?.({ type: 'UNDO' });
     this.notify();
   }
 
@@ -80,6 +85,7 @@ export class History {
     if (this.future.length === 0) return;
     this.past.push(this._present);
     this._present = this.future.pop()!;
+    this.onCommand?.({ type: 'REDO' });
     this.notify();
   }
 
