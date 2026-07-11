@@ -412,6 +412,18 @@ describe('reducer', () => {
       return { ...scene, elements: [r1, r2, r3] };
     }
 
+    it('returns the original scene when every target already matches', () => {
+      const scene = makeScene();
+      const next = reducer(scene, {
+        type: 'ALIGN_ELEMENTS',
+        moves: [
+          { id: 'r1', x: 0, y: 0 },
+          { id: 'r2', x: 60, y: 30 },
+        ],
+      });
+      expect(next).toBe(scene);
+    });
+
     it('aligns left edges to minimum x', () => {
       const scene = makeScene();
       // r1 bounds x=0, r2 bounds x=60 → both align to x=0

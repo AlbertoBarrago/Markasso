@@ -7,6 +7,50 @@ export function assertNever(x: never): never {
   throw new Error(`Unhandled command: ${(x as { type: string }).type}`);
 }
 
+function translateElement(
+  element: Element,
+  dx: number,
+  dy: number,
+  x = element.x + dx,
+  y = element.y + dy,
+): Element {
+  if (element.type === 'line' || element.type === 'arrow') {
+    return {
+      ...element,
+      x,
+      y,
+      x2: element.x2 + dx,
+      y2: element.y2 + dy,
+      ...(element.type === 'line' &&
+        element.cx !== undefined && { cx: element.cx + dx }),
+      ...(element.type === 'line' &&
+        element.cy !== undefined && { cy: element.cy + dy }),
+    };
+  }
+  if (element.type === 'curve') {
+    return {
+      ...element,
+      x,
+      y,
+      x2: element.x2 + dx,
+      y2: element.y2 + dy,
+      cx: element.cx + dx,
+      cy: element.cy + dy,
+    };
+  }
+  if (element.type === 'freehand' || element.type === 'polygon') {
+    return {
+      ...element,
+      x,
+      y,
+      points: element.points.map(
+        ([pointX, pointY]) => [pointX + dx, pointY + dy] as const,
+      ),
+    };
+  }
+  return { ...element, x, y };
+}
+
 export function reducer(scene: Scene, command: Command): Scene {
   switch (command.type) {
     case 'CREATE_ELEMENT':
@@ -42,44 +86,11 @@ export function reducer(scene: Scene, command: Command): Scene {
       if (!scene.elements.some((el) => el.id === command.id)) return scene;
       return {
         ...scene,
-        elements: scene.elements.map((el) => {
-          if (el.id !== command.id) return el;
-          if (el.type === 'line' || el.type === 'arrow') {
-            return {
-              ...el,
-              x: el.x + command.dx,
-              y: el.y + command.dy,
-              x2: el.x2 + command.dx,
-              y2: el.y2 + command.dy,
-              ...(el.type === 'line' &&
-                el.cx !== undefined && { cx: el.cx + command.dx }),
-              ...(el.type === 'line' &&
-                el.cy !== undefined && { cy: el.cy + command.dy }),
-            };
-          }
-          if (el.type === 'curve') {
-            return {
-              ...el,
-              x: el.x + command.dx,
-              y: el.y + command.dy,
-              x2: el.x2 + command.dx,
-              y2: el.y2 + command.dy,
-              cx: el.cx + command.dx,
-              cy: el.cy + command.dy,
-            };
-          }
-          if (el.type === 'freehand' || el.type === 'polygon') {
-            return {
-              ...el,
-              x: el.x + command.dx,
-              y: el.y + command.dy,
-              points: el.points.map(
-                ([px, py]) => [px + command.dx, py + command.dy] as const,
-              ),
-            };
-          }
-          return { ...el, x: el.x + command.dx, y: el.y + command.dy };
-        }),
+        elements: scene.elements.map((el) =>
+          el.id === command.id
+            ? translateElement(el, command.dx, command.dy)
+            : el,
+        ),
       };
 
     case 'RESIZE_ELEMENT':
@@ -556,48 +567,20 @@ export function reducer(scene: Scene, command: Command): Scene {
 
     case 'ALIGN_ELEMENTS': {
       const movesMap = new Map(command.moves.map((m) => [m.id, m]));
+      let changed = false;
+      const elements = scene.elements.map((el) => {
+        const move = movesMap.get(el.id);
+        if (!move) return el;
+        const dx = move.x - el.x;
+        const dy = move.y - el.y;
+        if (dx === 0 && dy === 0) return el;
+        changed = true;
+        return translateElement(el, dx, dy, move.x, move.y);
+      });
+      if (!changed) return scene;
       return {
         ...scene,
-        elements: scene.elements.map((el) => {
-          const move = movesMap.get(el.id);
-          if (!move) return el;
-          const dx = move.x - el.x;
-          const dy = move.y - el.y;
-          if (dx === 0 && dy === 0) return el;
-          if (el.type === 'line' || el.type === 'arrow') {
-            return {
-              ...el,
-              x: move.x,
-              y: move.y,
-              x2: el.x2 + dx,
-              y2: el.y2 + dy,
-              ...(el.type === 'line' &&
-                el.cx !== undefined && { cx: el.cx + dx }),
-              ...(el.type === 'line' &&
-                el.cy !== undefined && { cy: el.cy + dy }),
-            };
-          }
-          if (el.type === 'curve') {
-            return {
-              ...el,
-              x: move.x,
-              y: move.y,
-              x2: el.x2 + dx,
-              y2: el.y2 + dy,
-              cx: el.cx + dx,
-              cy: el.cy + dy,
-            };
-          }
-          if (el.type === 'freehand' || el.type === 'polygon') {
-            return {
-              ...el,
-              x: move.x,
-              y: move.y,
-              points: el.points.map(([px, py]) => [px + dx, py + dy] as const),
-            };
-          }
-          return { ...el, x: move.x, y: move.y };
-        }),
+        elements,
       };
     }
 
