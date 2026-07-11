@@ -293,7 +293,7 @@ export function drawElement(
             1,
           );
         } else {
-          drawArrowShaft(
+          drawLine(
             ctx,
             pts.x,
             pts.y,
@@ -302,7 +302,7 @@ export function drawElement(
             roughness,
             seed,
           );
-          drawArrowShaft(
+          drawLine(
             ctx,
             pts.x + (pts.x2 - pts.x) * t2,
             pts.y + (pts.y2 - pts.y) * t2,
@@ -430,7 +430,7 @@ export function drawElement(
         const t1 = Math.max(0, 0.5 - gapT);
         const t2 = Math.min(1, 0.5 + gapT);
         // Draw shaft in two segments, skipping the label gap
-        drawArrowShaft(
+        drawLine(
           ctx,
           pts.x,
           pts.y,
@@ -439,7 +439,7 @@ export function drawElement(
           roughness,
           seed,
         );
-        drawArrowShaft(
+        drawLine(
           ctx,
           pts.x + (pts.x2 - pts.x) * t2,
           pts.y + (pts.y2 - pts.y) * t2,
@@ -802,45 +802,6 @@ function drawLine(
   ctx.stroke();
 }
 
-function drawArrowShaft(
-  ctx: CanvasRenderingContext2D,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-  roughness: number,
-  seed: number,
-): void {
-  const len = Math.hypot(x2 - x1, y2 - y1);
-  if (roughness < 0.05 || len < 1) {
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-  } else {
-    const px = -(y2 - y1) / len;
-    const py = (x2 - x1) / len;
-    const segs = Math.max(2, Math.round(len / 80));
-    const amp = roughness * Math.min(len * 0.04, 14);
-
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    for (let i = 0; i < segs; i++) {
-      const tCtrl = (i + 0.5) / segs;
-      const tEnd = (i + 1) / segs;
-      const cpx = x1 + (x2 - x1) * tCtrl + px * roughOffset(seed, i, 1, amp);
-      const cpy = y1 + (y2 - y1) * tCtrl + py * roughOffset(seed, i, 1, amp);
-      ctx.quadraticCurveTo(
-        cpx,
-        cpy,
-        x1 + (x2 - x1) * tEnd,
-        y1 + (y2 - y1) * tEnd,
-      );
-    }
-    ctx.stroke();
-  }
-}
-
 function drawQuadraticSegment(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -895,7 +856,7 @@ function drawArrow(
   roughness: number,
   seed: number,
 ): void {
-  drawArrowShaft(ctx, x1, y1, x2, y2, roughness, seed);
+  drawLine(ctx, x1, y1, x2, y2, roughness, seed);
   drawArrowHead(ctx, x1, y1, x2, y2, strokeWidth);
 }
 
