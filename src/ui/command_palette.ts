@@ -1,16 +1,11 @@
-import { track } from '../analytics/track';
-import {
-  buildShareUrl,
-  exportHTML,
-  exportMarkasso,
-  exportPNG,
-  exportSVG,
-} from '../analytics/tracked_actions';
 import type { ActiveTool } from '../core/app_state';
 import { fitToElements } from '../core/viewport';
 import { cloneElementWithOffset } from '../elements/clone';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
+import { exportMarkasso } from '../io/markasso';
+import { buildShareUrl } from '../io/share';
+import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 import type { SelectTool } from '../tools/select_tool';
 
 interface PaletteItem {
@@ -472,7 +467,6 @@ export function initCommandPalette(
 
   function executeItem(item: PaletteItem): void {
     closePalette();
-    track('command_palette_used', { command: item.id });
     item.execute();
   }
 

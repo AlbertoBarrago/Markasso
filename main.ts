@@ -1,6 +1,3 @@
-import { initFaro } from './src/analytics/faro';
-import { startHeartbeat } from './src/analytics/heartbeat';
-import { trackCommand } from './src/analytics/track_command';
 import type { Scene } from './src/core/scene';
 import { createScene } from './src/core/scene';
 import { fitToElements } from './src/core/viewport';
@@ -47,8 +44,6 @@ function printConsoleGreeting(): void {
 }
 
 async function bootstrap(): Promise<void> {
-  initFaro();
-  startHeartbeat();
   printConsoleGreeting();
   const appEl = document.getElementById('app') as HTMLElement;
   const toolbar = document.getElementById('toolbar') as HTMLElement;
@@ -95,7 +90,7 @@ async function bootstrap(): Promise<void> {
   } else {
     baseScene = createScene();
   }
-  const hist = new History(baseScene, trackCommand);
+  const hist = new History(baseScene);
 
   // Restore persisted UI settings before first paint
   applySettings(appEl, loadSettings());
