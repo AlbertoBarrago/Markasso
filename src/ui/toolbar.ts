@@ -1,12 +1,17 @@
+import {
+  buildShareUrl,
+  exportHTML,
+  exportMarkasso,
+  exportPNG,
+  exportSVG,
+} from '../analytics/tracked_actions';
 import type { ActiveTool } from '../core/app_state';
 import { fitToElements } from '../core/viewport';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
-import { exportMarkasso, importMarkasso } from '../io/markasso';
+import { importMarkasso } from '../io/markasso';
 import { importMermaidText } from '../io/mermaid';
 import { PRESETS } from '../io/presets';
-import { buildShareUrl } from '../io/share';
-import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 
 // ── SVG icons ──────────────────────────────────────────────────────────────────
 const IC = {
