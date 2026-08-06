@@ -1,0 +1,152 @@
+.tb-gesture-btn.active {
+  color: #fff;
+  background: var(--accent);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.16),
+    0 0 18px rgba(196, 32, 32, 0.55);
+}
+
+.gesture-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  pointer-events: none;
+}
+
+.gesture-status {
+  position: absolute;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--island-border);
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--bg-island);
+  box-shadow: var(--island-shadow);
+  backdrop-filter: blur(16px);
+  font:
+    500 12px / 1 system-ui,
+    sans-serif;
+}
+
+.gesture-status span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #44d17a;
+  box-shadow: 0 0 9px #44d17a;
+}
+
+.gesture-overlay[data-status="loading"] .gesture-status span {
+  background: #d5a329;
+}
+.gesture-overlay[data-status="error"] .gesture-status span {
+  background: #ef4444;
+}
+
+.gesture-overlay[data-outcome="created"] .gesture-status {
+  animation: gesture-commit 0.55s ease-out;
+  border-color: rgba(68, 209, 122, 0.65);
+}
+
+.gesture-overlay[data-outcome="rejected"] .gesture-status {
+  animation: gesture-reject 0.35s ease-out;
+}
+
+@keyframes gesture-commit {
+  0% {
+    transform: translateX(-50%) scale(0.92);
+  }
+  45% {
+    transform: translateX(-50%) scale(1.08);
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+@keyframes gesture-reject {
+  0%,
+  100% {
+    transform: translateX(-50%);
+  }
+  35% {
+    transform: translateX(calc(-50% - 5px));
+  }
+  70% {
+    transform: translateX(calc(-50% + 5px));
+  }
+}
+
+.gesture-preview {
+  position: absolute;
+  right: 18px;
+  bottom: 74px;
+  width: 176px;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background: #090505;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+}
+
+.gesture-preview::after {
+  content: "GESTURE MODE";
+  position: absolute;
+  left: 8px;
+  bottom: 7px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(0, 0, 0, 0.48);
+  font:
+    600 9px / 1 system-ui,
+    sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.gesture-preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  opacity: 0.72;
+}
+
+.gesture-feedback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.gesture-diagnostics {
+  position: absolute;
+  right: 18px;
+  bottom: 50px;
+  padding: 4px 7px;
+  border-radius: 5px;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(0, 0, 0, 0.58);
+  font:
+    500 10px / 1.2 ui-monospace,
+    monospace;
+}
+
+@media (max-width: 700px) {
+  .gesture-preview {
+    width: 126px;
+    right: 12px;
+    bottom: 70px;
+  }
+  .gesture-status {
+    top: 62px;
+    max-width: calc(100vw - 24px);
+    white-space: nowrap;
+  }
+}

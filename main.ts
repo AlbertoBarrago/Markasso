@@ -95,7 +95,28 @@ async function bootstrap(): Promise<void> {
   // Restore persisted UI settings before first paint
   applySettings(appEl, loadSettings());
 
-  initToolbar(toolbar, hist);
+  const { gestureButton } = initToolbar(toolbar, hist);
+  let gestureController:
+    | import('./src/gesture/gesture_controller').GestureController
+    | null = null;
+  gestureButton.addEventListener('click', async () => {
+    if (!gestureController) {
+      gestureButton.disabled = true;
+      try {
+        const { GestureController } = await import(
+          './src/gesture/gesture_controller'
+        );
+        gestureController = new GestureController(canvas, hist, gestureButton);
+      } catch {
+        gestureButton.disabled = false;
+        return;
+      }
+    }
+    gestureController.toggle();
+  });
+  window.addEventListener('pagehide', () => gestureController?.disable(), {
+    once: true,
+  });
   initSettings(appEl, toolbar, hist);
   initStarCta(appEl, toolbar);
   const { selectTool } = initCanvasView(canvas, hist);

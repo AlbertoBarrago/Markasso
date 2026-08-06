@@ -3,12 +3,11 @@ import { t } from '../i18n';
 
 const STORAGE_KEY = 'markasso-whats-new-version';
 
-const UPDATES = [
-  'Multi-selection is easier to read: selected elements now stay visible inside the group frame.',
-  'Connectors snap to the border you point at, making diagrams feel more precise.',
-  'Lines now start as arrows by default; remove the arrowhead from the style panel when you need a plain line.',
-  'Delete and Backspace remove selected elements. Escape is the safe way to deselect.',
-];
+const UPDATE_KEYS = [
+  'whatsNewGestureMode',
+  'whatsNewAirDrawing',
+  'whatsNewGesturePrivacy',
+] as const;
 
 export function initWhatsNew(appEl: HTMLElement): boolean {
   const version = pkg.version;
@@ -25,7 +24,7 @@ export function initWhatsNew(appEl: HTMLElement): boolean {
         ${t('whatsNewDesc')}
       </p>
       <ul class="wn-list">
-        ${UPDATES.map((item) => `<li>${item}</li>`).join('')}
+        ${UPDATE_KEYS.map((key) => `<li>${t(key)}</li>`).join('')}
       </ul>
       <div class="wn-actions">
         <a class="wn-link" href="https://github.com/AlbertoBarrago/Markasso" target="_blank" rel="noopener noreferrer">${t('whatsNewDetails')}</a>

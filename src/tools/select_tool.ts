@@ -1045,7 +1045,7 @@ function computeResize(
 
 // ── Hit testing ───────────────────────────────────────────────────────────────
 
-function hitTest(
+export function hitTest(
   elements: ReadonlyArray<Element>,
   wx: number,
   wy: number,
