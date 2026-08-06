@@ -50,6 +50,7 @@
   "duplicate": "Duplicate",
   "delete": "Delete",
   "hand": "Hand",
+  "gestureMode": "Gesture Mode (webcam hand tracking)",
   "select": "Select",
   "rectangle": "Rectangle",
   "ellipse": "Ellipse",
