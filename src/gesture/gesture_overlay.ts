@@ -31,6 +31,7 @@ export class GestureOverlay {
   private readonly root: HTMLElement;
   private readonly feedback: HTMLCanvasElement;
   private readonly status: HTMLElement;
+  private readonly diagnostics: HTMLElement | null;
   private outcome:
     | { type: 'created'; shape: StrokeShape; until: number }
     | { type: 'rejected'; until: number }
@@ -53,6 +54,7 @@ export class GestureOverlay {
     this.feedback = document.createElement('canvas');
     this.feedback.className = 'gesture-feedback';
     this.root.append(preview, this.feedback);
+    this.diagnostics = this.createDiagnostics();
     document.body.appendChild(this.root);
     this.resize();
     window.addEventListener('resize', this.resize);
@@ -72,6 +74,10 @@ export class GestureOverlay {
       this.outcome = null;
       delete this.root.dataset.outcome;
       this.setStatus(labelForFrame(frame));
+    }
+    if (this.diagnostics) {
+      const prediction = frame.prediction ?? 'none';
+      this.diagnostics.textContent = `${frame.state} · ${prediction} ${Math.round(frame.predictionConfidence * 100)}%`;
     }
     const ctx = this.feedback.getContext('2d')!;
     const dpr = window.devicePixelRatio;
@@ -137,6 +143,16 @@ export class GestureOverlay {
     this.feedback.width = Math.round(window.innerWidth * dpr);
     this.feedback.height = Math.round(window.innerHeight * dpr);
   };
+
+  private createDiagnostics(): HTMLElement | null {
+    if (!new URLSearchParams(window.location.search).has('gestureDebug')) {
+      return null;
+    }
+    const diagnostics = document.createElement('output');
+    diagnostics.className = 'gesture-diagnostics';
+    this.root.appendChild(diagnostics);
+    return diagnostics;
+  }
 
   private drawHand(
     ctx: CanvasRenderingContext2D,

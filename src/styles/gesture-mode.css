@@ -125,6 +125,19 @@
   height: 100%;
 }
 
+.gesture-diagnostics {
+  position: absolute;
+  right: 18px;
+  bottom: 50px;
+  padding: 4px 7px;
+  border-radius: 5px;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(0, 0, 0, 0.58);
+  font:
+    500 10px / 1.2 ui-monospace,
+    monospace;
+}
+
 @media (max-width: 700px) {
   .gesture-preview {
     width: 126px;

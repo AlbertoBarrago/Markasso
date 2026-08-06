@@ -1,48 +1,78 @@
 import { describe, expect, it } from 'vitest';
 import { GestureRecognizer } from '../src/gesture/gesture_recognizer';
-import type { GesturePoint } from '../src/gesture/types';
+import { hand } from './gesture_fixtures';
 
 describe('GestureRecognizer', () => {
-  it('maps an open hand to ready', () => {
-    expect(new GestureRecognizer().update(hand('open')).state).toBe('ready');
+  it('confirms an open hand before entering ready', () => {
+    const recognizer = new GestureRecognizer();
+    expect(recognizer.update(hand('open'), 0).state).toBe('absent');
+    expect(recognizer.update(hand('open'), 16).state).toBe('absent');
+    expect(recognizer.update(hand('open'), 32).state).toBe('ready');
   });
 
-  it('emits pinch lifecycle events', () => {
+  it('emits a stable pinch lifecycle', () => {
     const recognizer = new GestureRecognizer();
-    expect(recognizer.update(hand('pinch')).events[0]?.type).toBe(
+    expect(recognizer.update(hand('pinch'), 0).events).toHaveLength(0);
+    expect(recognizer.update(hand('pinch'), 16).events[0]?.type).toBe(
       'pinch-start',
     );
-    expect(recognizer.update(hand('pinch', 0.04)).events[0]?.type).toBe(
+    expect(recognizer.update(hand('pinch', 0.04), 32).events[0]?.type).toBe(
       'pinch-move',
     );
-    expect(recognizer.update(hand('open')).events[0]?.type).toBe('pinch-end');
+    recognizer.update(hand('open'), 48);
+    recognizer.update(hand('open'), 64);
+    expect(recognizer.update(hand('open'), 80).events[0]?.type).toBe(
+      'pinch-end',
+    );
   });
 
-  it('finishes an air stroke when the hand opens', () => {
+  it('finishes an air stroke only after a confirmed open hand', () => {
     const recognizer = new GestureRecognizer();
-    expect(recognizer.update(hand('point'), 0).state).toBe('arming');
+    recognizer.update(hand('point'), 0);
+    recognizer.update(hand('point'), 16);
+    expect(recognizer.update(hand('point'), 32).state).toBe('arming');
     expect(recognizer.update(hand('point'), 450).state).toBe('drawing');
-    for (let index = 1; index < 12; index++)
+    for (let index = 1; index < 12; index++) {
       recognizer.update(hand('point', index * 0.01), 450 + index * 34);
+    }
+    recognizer.update(hand('open', 0.11), 850);
+    recognizer.update(hand('open', 0.11), 866);
     expect(
       recognizer
-        .update(hand('open'), 900)
+        .update(hand('open', 0.11), 882)
         .events.some((event) => event.type === 'stroke-end'),
     ).toBe(true);
   });
+
+  it('bridges a brief tracking dropout and then resets', () => {
+    const recognizer = new GestureRecognizer();
+    recognizer.update(hand('open'), 0);
+    recognizer.update(hand('open'), 16);
+    expect(recognizer.update(hand('open'), 32).state).toBe('ready');
+    expect(recognizer.update(null, 180).state).toBe('ready');
+    expect(recognizer.update(null, 240).state).toBe('absent');
+  });
+
+  it('ignores a brief ambiguous pose while drawing', () => {
+    const recognizer = beginDrawing();
+    expect(recognizer.update(hand('none'), 470).state).toBe('drawing');
+    expect(recognizer.update(hand('point', 0.02), 486).state).toBe('drawing');
+  });
+
+  it('cancels drawing after a sustained ambiguous pose', () => {
+    const recognizer = beginDrawing();
+    for (const timestamp of [470, 503, 536, 569]) {
+      recognizer.update(hand('none'), timestamp);
+    }
+    expect(recognizer.update(hand('none'), 704).state).toBe('absent');
+  });
 });
 
-function hand(pose: 'open' | 'pinch' | 'point', offset = 0): GesturePoint[] {
-  const points = Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.55 }));
-  points[0] = { x: 0.5, y: 0.8 };
-  points[9] = { x: 0.5, y: 0.5 };
-  for (const pip of [6, 10, 14, 18]) points[pip] = { x: 0.5, y: 0.42 };
-  for (const tip of [8, 12, 16, 20])
-    points[tip] = { x: 0.5, y: pose === 'open' ? 0.2 : 0.58 };
-  points[8] = { x: 0.5 + offset, y: pose === 'point' ? 0.2 : points[8]!.y };
-  points[4] =
-    pose === 'pinch'
-      ? { x: points[8]!.x + 0.01, y: points[8]!.y + 0.01 }
-      : { x: 0.3, y: 0.5 };
-  return points;
+function beginDrawing(): GestureRecognizer {
+  const recognizer = new GestureRecognizer();
+  recognizer.update(hand('point'), 0);
+  recognizer.update(hand('point'), 16);
+  recognizer.update(hand('point'), 32);
+  recognizer.update(hand('point'), 450);
+  return recognizer;
 }

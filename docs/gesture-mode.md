@@ -14,6 +14,8 @@ Gesture Mode is an optional webcam-driven presentation feature. It is disabled b
 
 The preview is mirrored to match the user's expectation. Gesture coordinates are normalized, then converted through the current viewport before commands are dispatched.
 
+Pose detection uses palm-relative distances and finger joint angles, so it is independent of hand rotation and camera distance. Pose changes require multiple consecutive frames, pinch detection has hysteresis, and a 200 ms grace window bridges short tracking dropouts. Cursor coordinates pass through a One Euro filter: stationary jitter is suppressed while faster movements remain responsive.
+
 ## Runtime architecture
 
 The controller module itself is imported only after the toolbar action. `GestureController` owns camera permission, `MediaStream`, frame scheduling and disposal. It transfers at most one `ImageBitmap` at a time to a classic worker. The worker dynamically imports MediaPipe Tasks Vision 0.10.35, whose WASM bootstrap requires classic-worker `importScripts`, and performs synchronous inference away from the UI thread. `GestureRecognizer` converts landmarks into semantic events; `GestureCommandAdapter` is the only layer that knows Markasso commands.
@@ -27,10 +29,13 @@ Video pixels are processed locally by MediaPipe and are never stored or sent by 
 - Hidden tabs stop producing frames.
 - Disabling, navigation, permission errors, or worker errors stop every media track, terminate the worker and remove overlays.
 - Denied permission and unsupported browsers leave normal Markasso interaction untouched.
+- Air strokes are resampled to a fixed point count before geometric fitting. Rectangle, ellipse, and line candidates are confidence-scored; ambiguous strokes are rejected instead of creating a surprising element.
 
 ## Manual verification
 
 Use HTTPS or localhost. Verify permission granted and denied, selection/drag with undo, all three air shapes, toolbar state, tab backgrounding, reactivation, and that the browser camera indicator disappears immediately after disabling. Use browser performance tooling to confirm 30 FPS on target laptops; automated tests cannot benchmark a physical camera.
+
+Append `?gestureDebug=1` to the URL to show the recognizer state, current shape prediction, and confidence. The diagnostic UI is not created or updated during the normal experience.
 
 ## Extension points
 

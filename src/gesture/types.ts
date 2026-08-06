@@ -30,6 +30,7 @@ export interface GestureFrame {
   readonly trace: ReadonlyArray<GesturePoint>;
   readonly armProgress: number;
   readonly prediction: GestureShapeType | null;
+  readonly predictionConfidence: number;
   readonly events: ReadonlyArray<GestureEvent>;
 }
 

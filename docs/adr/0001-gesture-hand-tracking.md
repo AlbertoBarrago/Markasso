@@ -18,5 +18,7 @@ The CDN preserves Markasso's zero-package runtime baseline and creates no disabl
 - MediaPipe Tasks Vision remains marked as preview and must be retested before version upgrades.
 - `ImageBitmap` transfer has a per-frame cost, bounded by 640×480, 30 FPS and backpressure.
 - Heuristic shape recognition prioritizes predictable demo gestures over broad handwriting recognition.
+- Hand poses are derived from palm-relative geometry, then stabilized across consecutive frames with pinch hysteresis and a short dropout grace period. This adds a small, intentional transition latency in exchange for preventing accidental select, release, and draw commands.
+- Cursor motion uses a dependency-free One Euro filter. Stroke classification resamples input and confidence-scores geometric fits; ambiguous strokes are rejected rather than guessed.
 
 Self-hosting the pinned JS, WASM and model is the preferred migration if offline Gesture Mode or supply-chain independence becomes a requirement. A fresh MediaPipe major release should not be adopted until worker behavior and model compatibility are validated.

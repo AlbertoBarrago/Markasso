@@ -34,6 +34,26 @@ describe('classifyStroke', () => {
     ];
     expect(classifyStroke(points)?.type).toBe('rectangle');
   });
+
+  it('tolerates natural hand jitter around a closed shape', () => {
+    const points = Array.from({ length: 33 }, (_, index) => {
+      const angle = (index / 32) * Math.PI * 2;
+      const jitter = Math.sin(index * 2.7) * 0.006;
+      return {
+        x: 0.5 + Math.cos(angle) * (0.17 + jitter),
+        y: 0.5 + Math.sin(angle) * (0.12 - jitter),
+      };
+    });
+    expect(classifyStroke(points)?.type).toBe('ellipse');
+  });
+
+  it('rejects an ambiguous scribble', () => {
+    const points = Array.from({ length: 24 }, (_, index) => ({
+      x: 0.25 + (index / 23) * 0.5,
+      y: 0.45 + Math.sin(index * 1.7) * 0.13,
+    }));
+    expect(classifyStroke(points)).toBeNull();
+  });
 });
 
 function edge(x1: number, y1: number, x2: number, y2: number) {
