@@ -1,4 +1,6 @@
-import type { GestureFrame, GestureState } from './types';
+import { t } from '../i18n';
+import type { StrokeShape } from './stroke_classifier';
+import type { GestureFrame } from './types';
 
 const CONNECTIONS: ReadonlyArray<readonly [number, number]> = [
   [0, 1],
@@ -29,12 +31,15 @@ export class GestureOverlay {
   private readonly root: HTMLElement;
   private readonly feedback: HTMLCanvasElement;
   private readonly status: HTMLElement;
+  private outcome:
+    | { type: 'created'; shape: StrokeShape; until: number }
+    | { type: 'rejected'; until: number }
+    | null = null;
 
   constructor() {
     this.root = document.createElement('div');
     this.root.className = 'gesture-overlay';
-    this.root.innerHTML =
-      '<div class="gesture-status"><span></span><strong>Loading hand tracking…</strong></div>';
+    this.root.innerHTML = `<div class="gesture-status"><span></span><strong>${t('gestureLoading')}</strong></div>`;
     this.status = this.root.querySelector('.gesture-status strong')!;
     this.status.parentElement?.setAttribute('role', 'status');
     this.status.parentElement?.setAttribute('aria-live', 'polite');
@@ -62,7 +67,12 @@ export class GestureOverlay {
   }
 
   render(frame: GestureFrame): void {
-    this.setStatus(labelForState(frame.state));
+    const now = performance.now();
+    if (!this.outcome || now >= this.outcome.until) {
+      this.outcome = null;
+      delete this.root.dataset.outcome;
+      this.setStatus(labelForFrame(frame));
+    }
     const ctx = this.feedback.getContext('2d')!;
     const dpr = window.devicePixelRatio;
     const width = this.feedback.width / dpr;
@@ -81,6 +91,12 @@ export class GestureOverlay {
       ctx.stroke();
     }
     if (frame.landmarks) this.drawHand(ctx, frame.landmarks, width, height);
+    if (frame.state === 'arming' && frame.cursor) {
+      this.drawArmProgress(ctx, frame.cursor, frame.armProgress, width, height);
+    }
+    if (this.outcome?.type === 'created') {
+      this.drawCommittedShape(ctx, this.outcome.shape, width, height, now);
+    }
     if (frame.cursor) {
       ctx.beginPath();
       ctx.arc(
@@ -97,6 +113,18 @@ export class GestureOverlay {
       ctx.lineWidth = 2;
       ctx.stroke();
     }
+  }
+
+  showCreated(shape: StrokeShape): void {
+    this.outcome = { type: 'created', shape, until: performance.now() + 1100 };
+    this.root.dataset.outcome = 'created';
+    this.setStatus(createdLabel(shape.type));
+  }
+
+  showRejected(): void {
+    this.outcome = { type: 'rejected', until: performance.now() + 1100 };
+    this.root.dataset.outcome = 'rejected';
+    this.setStatus(t('gestureNotRecognized'), 'error');
   }
 
   dispose(): void {
@@ -128,17 +156,102 @@ export class GestureOverlay {
       ctx.stroke();
     }
   }
+
+  private drawArmProgress(
+    ctx: CanvasRenderingContext2D,
+    point: { x: number; y: number },
+    progress: number,
+    width: number,
+    height: number,
+  ): void {
+    ctx.beginPath();
+    ctx.arc(
+      point.x * width,
+      point.y * height,
+      20,
+      -Math.PI / 2,
+      -Math.PI / 2 + Math.PI * 2 * progress,
+    );
+    ctx.strokeStyle = '#c42020';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+  }
+
+  private drawCommittedShape(
+    ctx: CanvasRenderingContext2D,
+    shape: StrokeShape,
+    width: number,
+    height: number,
+    now: number,
+  ): void {
+    const remaining = Math.max(0, this.outcome!.until - now) / 1100;
+    ctx.save();
+    ctx.strokeStyle = `rgba(68, 209, 122, ${remaining})`;
+    ctx.lineWidth = 3 + remaining * 5;
+    ctx.beginPath();
+    if (shape.type === 'line') {
+      ctx.moveTo(shape.start.x * width, shape.start.y * height);
+      ctx.lineTo(shape.end.x * width, shape.end.y * height);
+    } else if (shape.type === 'rectangle') {
+      ctx.rect(
+        shape.x * width,
+        shape.y * height,
+        shape.width * width,
+        shape.height * height,
+      );
+    } else {
+      ctx.ellipse(
+        (shape.x + shape.width / 2) * width,
+        (shape.y + shape.height / 2) * height,
+        (shape.width * width) / 2,
+        (shape.height * height) / 2,
+        0,
+        0,
+        Math.PI * 2,
+      );
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
-function labelForState(state: GestureState): string {
-  switch (state) {
+function labelForFrame(frame: GestureFrame): string {
+  switch (frame.state) {
     case 'ready':
-      return 'Open hand · ready';
+      return t('gestureReady');
     case 'pinching':
-      return 'Pinch · select and drag';
+      return t('gesturePinch');
+    case 'arming':
+      return `${t('gestureHoldToDraw')} ${Math.round(frame.armProgress * 100)}%`;
     case 'drawing':
-      return 'Point · drawing in the air';
+      return frame.prediction
+        ? `${shapeLabel(frame.prediction)} · ${t('gestureReleaseToAdd')}`
+        : t('gestureDrawing');
     case 'absent':
-      return 'Show one hand to the camera';
+      return t('gestureShowHand');
+  }
+}
+
+function createdLabel(type: StrokeShape['type']): string {
+  switch (type) {
+    case 'rectangle':
+      return t('gestureRectangleAdded');
+    case 'ellipse':
+      return t('gestureEllipseAdded');
+    case 'line':
+      return t('gestureConnectorAdded');
+  }
+}
+
+function shapeLabel(type: GestureFrame['prediction']): string {
+  switch (type) {
+    case 'rectangle':
+      return t('rectangle');
+    case 'ellipse':
+      return t('ellipse');
+    case 'line':
+      return t('line');
+    case null:
+      return '';
   }
 }

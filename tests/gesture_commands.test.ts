@@ -32,6 +32,22 @@ describe('GestureCommandAdapter', () => {
     history.undo();
     expect(history.present.elements[0]).toMatchObject({ x: 10, y: 10 });
   });
+
+  it('reports whether an air stroke was committed', () => {
+    const history = new History(createScene());
+    const adapter = new GestureCommandAdapter(canvas(), history);
+    const points = Array.from({ length: 12 }, (_, index) => ({
+      x: 0.1 + index * 0.05,
+      y: 0.2,
+    }));
+    expect(adapter.handle({ type: 'stroke-end', points })?.type).toBe(
+      'created',
+    );
+    expect(history.present.elements).toHaveLength(1);
+    expect(
+      adapter.handle({ type: 'stroke-end', points: points.slice(0, 2) })?.type,
+    ).toBe('rejected');
+  });
 });
 
 function canvas(): HTMLCanvasElement {

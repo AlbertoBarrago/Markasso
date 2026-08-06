@@ -7,8 +7,10 @@ Gesture Mode is an optional webcam-driven presentation feature. It is disabled b
 - Open hand: ready; after a drag or air stroke, release.
 - Pinch: select the topmost unlocked element under the cursor.
 - Pinch and move: move that element as one undoable history operation.
-- Point with the index finger: record an air stroke.
+- Point with the index finger and hold still for 400 ms: arm air drawing. A progress ring makes the transition explicit and prevents accidental strokes.
+- Move the index finger: record an air stroke and show the currently recognized shape.
 - Open the hand: classify the stroke as a rectangle, ellipse, or connector and dispatch `CREATE_ELEMENT`.
+- Successful commits morph the trace into a green final-shape pulse and show a localized “added” confirmation. Rejected strokes show an explicit error without changing the scene.
 
 The preview is mirrored to match the user's expectation. Gesture coordinates are normalized, then converted through the current viewport before commands are dispatched.
 

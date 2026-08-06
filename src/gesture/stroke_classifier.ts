@@ -5,9 +5,20 @@ export type StrokeShape =
   | { type: 'rectangle'; x: number; y: number; width: number; height: number }
   | { type: 'ellipse'; x: number; y: number; width: number; height: number };
 
+export interface StrokeRecognition {
+  readonly shape: StrokeShape;
+  readonly confidence: number;
+}
+
 export function classifyStroke(
   points: ReadonlyArray<GesturePoint>,
 ): StrokeShape | null {
+  return recognizeStroke(points)?.shape ?? null;
+}
+
+export function recognizeStroke(
+  points: ReadonlyArray<GesturePoint>,
+): StrokeRecognition | null {
   if (points.length < 8) return null;
   const bounds = getBounds(points);
   const diagonal = Math.hypot(bounds.width, bounds.height);
@@ -17,7 +28,12 @@ export function classifyStroke(
   const end = points.at(-1)!;
   const pathLength = polylineLength(points);
   const directness = distance(start, end) / Math.max(pathLength, 0.001);
-  if (directness > 0.9) return { type: 'line', start, end };
+  if (directness > 0.9) {
+    return {
+      shape: { type: 'line', start, end },
+      confidence: clamp((directness - 0.9) / 0.1),
+    };
+  }
 
   const closed = distance(start, end) < diagonal * 0.3;
   if (!closed || bounds.width < 0.035 || bounds.height < 0.035) return null;
@@ -37,8 +53,16 @@ export function classifyStroke(
       return sum + Math.min(horizontal, vertical);
     }, 0) / points.length;
 
-  if (edgeFit < 0.045) return { type: 'rectangle', ...bounds };
-  return { type: 'ellipse', ...bounds };
+  if (edgeFit < 0.045) {
+    return {
+      shape: { type: 'rectangle', ...bounds },
+      confidence: clamp(1 - edgeFit / 0.045),
+    };
+  }
+  return {
+    shape: { type: 'ellipse', ...bounds },
+    confidence: clamp((edgeFit - 0.045) / 0.08),
+  };
 }
 
 function getBounds(points: ReadonlyArray<GesturePoint>) {
@@ -59,4 +83,8 @@ function polylineLength(points: ReadonlyArray<GesturePoint>): number {
 
 function distance(a: GesturePoint, b: GesturePoint): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function clamp(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }

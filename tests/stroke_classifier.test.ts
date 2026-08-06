@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { classifyStroke } from '../src/gesture/stroke_classifier';
+import {
+  classifyStroke,
+  recognizeStroke,
+} from '../src/gesture/stroke_classifier';
 
 describe('classifyStroke', () => {
   it('recognizes a straight connector stroke', () => {
@@ -8,6 +11,7 @@ describe('classifyStroke', () => {
       y: 0.2 + index * 0.002,
     }));
     expect(classifyStroke(points)?.type).toBe('line');
+    expect(recognizeStroke(points)?.confidence).toBeGreaterThan(0.7);
   });
 
   it('recognizes a circular stroke', () => {

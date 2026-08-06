@@ -1,3 +1,4 @@
+import { recognizeStroke } from './stroke_classifier';
 import type {
   GestureEvent,
   GestureFrame,
@@ -9,13 +10,20 @@ import type {
 const PINCH_ENTER_RATIO = 0.32;
 const PINCH_EXIT_RATIO = 0.46;
 const MIN_TRACE_POINTS = 8;
+const ARM_DURATION_MS = 400;
+const ARM_MOVEMENT_RADIUS = 0.025;
 
 export class GestureRecognizer {
   private state: GestureState = 'absent';
   private trace: GesturePoint[] = [];
   private smoothedCursor: GesturePoint | null = null;
+  private armStartedAt = 0;
+  private armOrigin: GesturePoint | null = null;
 
-  update(landmarks: HandLandmarks | null): GestureFrame {
+  update(
+    landmarks: HandLandmarks | null,
+    timestamp = performance.now(),
+  ): GestureFrame {
     if (!landmarks || landmarks.length < 21) return this.handleAbsent();
 
     const cursor = this.smooth(mirror(landmarks[8]!));
@@ -36,9 +44,10 @@ export class GestureRecognizer {
       fingerExtended(landmarks, tip, [6, 10, 14, 18][indexPosition]!),
     );
     const events: GestureEvent[] = [];
+    let armProgress = 0;
 
     if (isPinch) {
-      if (this.state === 'drawing') this.finishTrace(events);
+      this.cancelDrawing();
       events.push({
         type: this.state === 'pinching' ? 'pinch-move' : 'pinch-start',
         point: cursor,
@@ -47,26 +56,51 @@ export class GestureRecognizer {
     } else if (isPointing) {
       if (this.state === 'pinching')
         events.push({ type: 'pinch-end', point: cursor });
-      if (this.state !== 'drawing') {
-        this.trace = [cursor];
-        events.push({ type: 'stroke-start', point: cursor });
-      } else if (distance(this.trace.at(-1)!, cursor) > 0.006) {
-        this.trace.push(cursor);
-        events.push({ type: 'stroke-move', point: cursor });
+      if (this.state === 'drawing') {
+        if (distance(this.trace.at(-1)!, cursor) > 0.006) {
+          this.trace.push(cursor);
+          events.push({ type: 'stroke-move', point: cursor });
+        }
+      } else if (
+        this.state !== 'arming' ||
+        !this.armOrigin ||
+        distance(this.armOrigin, cursor) > ARM_MOVEMENT_RADIUS
+      ) {
+        this.state = 'arming';
+        this.armStartedAt = timestamp;
+        this.armOrigin = cursor;
+      } else {
+        armProgress = Math.min(
+          1,
+          (timestamp - this.armStartedAt) / ARM_DURATION_MS,
+        );
+        if (armProgress >= 1) {
+          this.state = 'drawing';
+          this.trace = [cursor];
+          this.armOrigin = null;
+          events.push({ type: 'stroke-start', point: cursor });
+        }
       }
-      this.state = 'drawing';
+      if (this.state === 'drawing' && this.trace.length === 0) {
+        this.trace.push(cursor);
+      }
     } else {
       if (this.state === 'pinching')
         events.push({ type: 'pinch-end', point: cursor });
       if (this.state === 'drawing' && isOpen) this.finishTrace(events);
+      if (this.state === 'arming') this.cancelDrawing();
       this.state = isOpen ? 'ready' : 'absent';
     }
+
+    const prediction = recognizeStroke(this.trace)?.shape.type ?? null;
 
     return {
       state: this.state,
       cursor,
       landmarks: landmarks.map(mirror),
       trace: [...this.trace],
+      armProgress,
+      prediction,
       events,
     };
   }
@@ -75,6 +109,8 @@ export class GestureRecognizer {
     this.state = 'absent';
     this.trace = [];
     this.smoothedCursor = null;
+    this.armOrigin = null;
+    this.armStartedAt = 0;
   }
 
   private handleAbsent(): GestureFrame {
@@ -91,6 +127,8 @@ export class GestureRecognizer {
       cursor: null,
       landmarks: null,
       trace: [],
+      armProgress: 0,
+      prediction: null,
       events,
     };
   }
@@ -100,6 +138,13 @@ export class GestureRecognizer {
       events.push({ type: 'stroke-end', points: [...this.trace] });
     }
     this.trace = [];
+    this.armOrigin = null;
+  }
+
+  private cancelDrawing(): void {
+    this.trace = [];
+    this.armOrigin = null;
+    this.armStartedAt = 0;
   }
 
   private smooth(point: GesturePoint): GesturePoint {

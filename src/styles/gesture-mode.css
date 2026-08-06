@@ -48,6 +48,40 @@
   background: #ef4444;
 }
 
+.gesture-overlay[data-outcome="created"] .gesture-status {
+  animation: gesture-commit 0.55s ease-out;
+  border-color: rgba(68, 209, 122, 0.65);
+}
+
+.gesture-overlay[data-outcome="rejected"] .gesture-status {
+  animation: gesture-reject 0.35s ease-out;
+}
+
+@keyframes gesture-commit {
+  0% {
+    transform: translateX(-50%) scale(0.92);
+  }
+  45% {
+    transform: translateX(-50%) scale(1.08);
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+@keyframes gesture-reject {
+  0%,
+  100% {
+    transform: translateX(-50%);
+  }
+  35% {
+    transform: translateX(calc(-50% - 5px));
+  }
+  70% {
+    transform: translateX(calc(-50% + 5px));
+  }
+}
+
 .gesture-preview {
   position: absolute;
   right: 18px;

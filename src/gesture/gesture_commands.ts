@@ -2,7 +2,7 @@ import { screenToWorld } from '../core/viewport';
 import type { Element, LineElement } from '../elements/element';
 import type { History } from '../engine/history';
 import { hitTest } from '../tools/select_tool';
-import { classifyStroke } from './stroke_classifier';
+import { classifyStroke, type StrokeShape } from './stroke_classifier';
 import type { GestureEvent, GesturePoint } from './types';
 
 export class GestureCommandAdapter {
@@ -14,23 +14,22 @@ export class GestureCommandAdapter {
     private readonly history: History,
   ) {}
 
-  handle(event: GestureEvent): void {
+  handle(event: GestureEvent): GestureCommandOutcome | null {
     switch (event.type) {
       case 'pinch-start':
         this.startPinch(event.point);
-        return;
+        return null;
       case 'pinch-move':
         this.movePinch(event.point);
-        return;
+        return null;
       case 'pinch-end':
         this.endPinch();
-        return;
+        return null;
       case 'stroke-end':
-        this.createStroke(event.points);
-        return;
+        return this.createStroke(event.points);
       case 'stroke-start':
       case 'stroke-move':
-        return;
+        return null;
     }
   }
 
@@ -70,9 +69,11 @@ export class GestureCommandAdapter {
     this.lastWorldPoint = null;
   }
 
-  private createStroke(points: ReadonlyArray<GesturePoint>): void {
+  private createStroke(
+    points: ReadonlyArray<GesturePoint>,
+  ): GestureCommandOutcome {
     const shape = classifyStroke(points);
-    if (!shape) return;
+    if (!shape) return { type: 'rejected' };
     const scene = this.history.present;
     const style = scene.appState;
     let element: Element;
@@ -99,6 +100,7 @@ export class GestureCommandAdapter {
       } as Element;
     }
     this.history.dispatch({ type: 'CREATE_ELEMENT', element });
+    return { type: 'created', shape };
   }
 
   private toWorld(point: GesturePoint): GesturePoint {
@@ -111,6 +113,10 @@ export class GestureCommandAdapter {
     return { x, y };
   }
 }
+
+export type GestureCommandOutcome =
+  | { type: 'created'; shape: StrokeShape }
+  | { type: 'rejected' };
 
 function baseElement<T extends 'rectangle' | 'ellipse' | 'line'>(
   type: T,

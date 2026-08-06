@@ -20,11 +20,13 @@ describe('GestureRecognizer', () => {
 
   it('finishes an air stroke when the hand opens', () => {
     const recognizer = new GestureRecognizer();
-    for (let index = 0; index < 12; index++)
-      recognizer.update(hand('point', index * 0.01));
+    expect(recognizer.update(hand('point'), 0).state).toBe('arming');
+    expect(recognizer.update(hand('point'), 450).state).toBe('drawing');
+    for (let index = 1; index < 12; index++)
+      recognizer.update(hand('point', index * 0.01), 450 + index * 34);
     expect(
       recognizer
-        .update(hand('open'))
+        .update(hand('open'), 900)
         .events.some((event) => event.type === 'stroke-end'),
     ).toBe(true);
   });

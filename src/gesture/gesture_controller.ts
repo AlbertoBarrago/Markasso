@@ -114,9 +114,17 @@ export class GestureController {
       return;
     }
     this.framePending = false;
-    const frame = this.recognizer.update(event.data.landmarks);
+    const frame = this.recognizer.update(
+      event.data.landmarks,
+      event.data.timestamp,
+    );
     frame.events.forEach((gestureEvent) => {
-      this.commands.handle(gestureEvent);
+      const outcome = this.commands.handle(gestureEvent);
+      if (outcome?.type === 'created') {
+        this.overlay?.showCreated(outcome.shape);
+      } else if (outcome?.type === 'rejected') {
+        this.overlay?.showRejected();
+      }
     });
     this.overlay?.render(frame);
     this.scheduleFrame();

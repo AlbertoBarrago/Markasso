@@ -6,7 +6,14 @@ export interface GesturePoint {
 
 export type HandLandmarks = ReadonlyArray<GesturePoint>;
 
-export type GestureState = 'absent' | 'ready' | 'pinching' | 'drawing';
+export type GestureState =
+  | 'absent'
+  | 'ready'
+  | 'pinching'
+  | 'arming'
+  | 'drawing';
+
+export type GestureShapeType = 'line' | 'rectangle' | 'ellipse';
 
 export type GestureEvent =
   | { type: 'pinch-start'; point: GesturePoint }
@@ -21,6 +28,8 @@ export interface GestureFrame {
   readonly cursor: GesturePoint | null;
   readonly landmarks: HandLandmarks | null;
   readonly trace: ReadonlyArray<GesturePoint>;
+  readonly armProgress: number;
+  readonly prediction: GestureShapeType | null;
   readonly events: ReadonlyArray<GestureEvent>;
 }
 
