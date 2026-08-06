@@ -62,7 +62,7 @@ export class GestureController {
       await this.overlay.video.play();
       this.worker = new Worker(
         new URL('./gesture_worker.ts', import.meta.url),
-        { type: 'module' },
+        { type: 'classic' },
       );
       this.worker.addEventListener('message', this.onWorkerMessage);
       this.worker.addEventListener('error', this.onWorkerError);
@@ -163,6 +163,7 @@ export class GestureController {
   }
 
   private fail(message: string): void {
+    console.error(`[Gesture Mode] ${message}`);
     this.disable();
     this.showTransientError(message);
   }
@@ -170,6 +171,6 @@ export class GestureController {
   private showTransientError(message: string): void {
     const overlay = new GestureOverlay();
     overlay.setStatus(message, 'error');
-    window.setTimeout(() => overlay.dispose(), 2500);
+    window.setTimeout(() => overlay.dispose(), 6000);
   }
 }

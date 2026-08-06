@@ -36,6 +36,8 @@ export class GestureOverlay {
     this.root.innerHTML =
       '<div class="gesture-status"><span></span><strong>Loading hand tracking…</strong></div>';
     this.status = this.root.querySelector('.gesture-status strong')!;
+    this.status.parentElement?.setAttribute('role', 'status');
+    this.status.parentElement?.setAttribute('aria-live', 'polite');
     const preview = document.createElement('div');
     preview.className = 'gesture-preview';
     this.video = document.createElement('video');

@@ -14,7 +14,7 @@ The preview is mirrored to match the user's expectation. Gesture coordinates are
 
 ## Runtime architecture
 
-The controller module itself is imported only after the toolbar action. `GestureController` owns camera permission, `MediaStream`, frame scheduling and disposal. It transfers at most one `ImageBitmap` at a time to a module worker. The worker lazily loads MediaPipe Tasks Vision 0.10.35 and performs synchronous inference away from the UI thread. `GestureRecognizer` converts landmarks into semantic events; `GestureCommandAdapter` is the only layer that knows Markasso commands.
+The controller module itself is imported only after the toolbar action. `GestureController` owns camera permission, `MediaStream`, frame scheduling and disposal. It transfers at most one `ImageBitmap` at a time to a classic worker. The worker dynamically imports MediaPipe Tasks Vision 0.10.35, whose WASM bootstrap requires classic-worker `importScripts`, and performs synchronous inference away from the UI thread. `GestureRecognizer` converts landmarks into semantic events; `GestureCommandAdapter` is the only layer that knows Markasso commands.
 
 Video pixels are processed locally by MediaPipe and are never stored or sent by Markasso. The MediaPipe code, WASM, and model are fetched only on first activation, so an internet connection is currently required. Google's MediaPipe privacy notice states that the Tasks API may send product usage metrics; camera frames remain on-device.
 
