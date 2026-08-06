@@ -122,8 +122,12 @@ export class GestureController {
     this.scheduleFrame();
   };
 
-  private readonly onWorkerError = (): void =>
-    this.fail('Hand tracking failed to load.');
+  private readonly onWorkerError = (event: ErrorEvent): void =>
+    this.fail(
+      event.message
+        ? `Hand tracking failed: ${event.message}`
+        : 'Hand tracking failed to load.',
+    );
 
   private scheduleFrame(): void {
     this.animationFrame = requestAnimationFrame(async (timestamp) => {

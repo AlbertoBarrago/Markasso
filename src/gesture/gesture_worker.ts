@@ -1,6 +1,24 @@
 /// <reference lib="webworker" />
 
-import type { HandLandmarks, WorkerRequest, WorkerResponse } from './types';
+interface WorkerLandmark {
+  readonly x: number;
+  readonly y: number;
+  readonly z?: number;
+}
+
+type WorkerRequest =
+  | { type: 'initialize' }
+  | { type: 'detect'; frame: ImageBitmap; timestamp: number }
+  | { type: 'dispose' };
+
+type WorkerResponse =
+  | { type: 'ready' }
+  | {
+      type: 'result';
+      landmarks: ReadonlyArray<WorkerLandmark> | null;
+      timestamp: number;
+    }
+  | { type: 'error'; message: string };
 
 const VERSION = '0.10.35';
 const MODULE_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}/+esm`;
@@ -57,7 +75,7 @@ self.onmessage = async (message: MessageEvent<WorkerRequest>) => {
         frame.close();
       }
       const hand = result.landmarks[0];
-      const landmarks: HandLandmarks | null = hand
+      const landmarks: ReadonlyArray<WorkerLandmark> | null = hand
         ? hand.map((point) => ({
             x: point.x,
             y: point.y,
