@@ -58,12 +58,22 @@ describe('GestureRecognizer', () => {
     expect(recognizer.update(hand('point', 0.02), 486).state).toBe('drawing');
   });
 
-  it('cancels drawing after a sustained ambiguous pose', () => {
+  it('keeps drawing through a prolonged ambiguous pose', () => {
     const recognizer = beginDrawing();
     for (const timestamp of [470, 503, 536, 569]) {
       recognizer.update(hand('none'), timestamp);
     }
-    expect(recognizer.update(hand('none'), 704).state).toBe('absent');
+    expect(recognizer.update(hand('none'), 704).state).toBe('drawing');
+    recognizer.update(hand('point', 0.02), 720);
+    expect(recognizer.update(hand('point', 0.02), 736).state).toBe('drawing');
+  });
+
+  it('cancels drawing when the pointing pose is lost for too long', () => {
+    const recognizer = beginDrawing();
+    for (const timestamp of [470, 503, 536, 569]) {
+      recognizer.update(hand('none'), timestamp);
+    }
+    expect(recognizer.update(hand('none'), 1_271).state).toBe('absent');
   });
 });
 

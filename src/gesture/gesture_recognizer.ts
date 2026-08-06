@@ -13,6 +13,7 @@ const MIN_TRACE_POINTS = 8;
 const ARM_DURATION_MS = 400;
 const ARM_MOVEMENT_RADIUS = 0.025;
 const TRACKING_GRACE_MS = 200;
+const DRAWING_POSE_GRACE_MS = 800;
 const POSE_CONFIRMATION_FRAMES: Record<HandPose, number> = {
   pinch: 2,
   open: 3,
@@ -91,7 +92,7 @@ export class GestureRecognizer {
         } else if (
           this.state === 'drawing' &&
           timestamp - (this.poseUncertainSince ?? timestamp) <=
-            TRACKING_GRACE_MS
+            DRAWING_POSE_GRACE_MS
         ) {
           break;
         } else if (this.state !== 'drawing') {
