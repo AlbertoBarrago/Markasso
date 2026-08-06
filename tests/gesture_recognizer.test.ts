@@ -29,8 +29,7 @@ describe('GestureRecognizer', () => {
   it('finishes an air stroke only after a confirmed open hand', () => {
     const recognizer = new GestureRecognizer();
     recognizer.update(hand('point'), 0);
-    recognizer.update(hand('point'), 16);
-    expect(recognizer.update(hand('point'), 32).state).toBe('arming');
+    expect(recognizer.update(hand('point'), 16).state).toBe('arming');
     expect(recognizer.update(hand('point'), 450).state).toBe('drawing');
     for (let index = 1; index < 12; index++) {
       recognizer.update(hand('point', index * 0.01), 450 + index * 34);
@@ -72,7 +71,6 @@ function beginDrawing(): GestureRecognizer {
   const recognizer = new GestureRecognizer();
   recognizer.update(hand('point'), 0);
   recognizer.update(hand('point'), 16);
-  recognizer.update(hand('point'), 32);
   recognizer.update(hand('point'), 450);
   return recognizer;
 }

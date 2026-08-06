@@ -30,4 +30,17 @@ describe('classifyHandPose', () => {
     expect(classifyHandPose(borderline, 'none')).not.toBe('pinch');
     expect(classifyHandPose(borderline, 'pinch')).toBe('pinch');
   });
+
+  it('recognizes pointing when one resting finger is partly extended', () => {
+    const realisticPoint = [...hand('point')];
+    realisticPoint[12] = { x: 0.52, y: 0.3 };
+    expect(classifyHandPose(realisticPoint, 'none')).toBe('point');
+  });
+
+  it('does not mistake multiple extended fingers for pointing', () => {
+    const ambiguousHand = [...hand('point')];
+    ambiguousHand[12] = { x: 0.47, y: 0.18 };
+    ambiguousHand[16] = { x: 0.54, y: 0.18 };
+    expect(classifyHandPose(ambiguousHand, 'none')).toBe('none');
+  });
 });

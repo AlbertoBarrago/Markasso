@@ -14,7 +14,7 @@ Gesture Mode is an optional webcam-driven presentation feature. It is disabled b
 
 The preview is mirrored to match the user's expectation. Gesture coordinates are normalized, then converted through the current viewport before commands are dispatched.
 
-Pose detection uses palm-relative distances and finger joint angles, so it is independent of hand rotation and camera distance. Pose changes require multiple consecutive frames, pinch detection has hysteresis, and a 200 ms grace window bridges short tracking dropouts. Cursor coordinates pass through a One Euro filter: stationary jitter is suppressed while faster movements remain responsive.
+Pose detection uses palm-relative distances and continuous finger-extension scores, so it is independent of hand rotation and camera distance. Pointing tolerates one partially extended resting finger and is confirmed in two frames; destructive transitions remain more conservative. Pinch detection has hysteresis, and a 200 ms grace window bridges short tracking dropouts. Cursor coordinates pass through a One Euro filter: stationary jitter is suppressed while faster movements remain responsive.
 
 ## Runtime architecture
 

@@ -8,7 +8,12 @@ const FINGERS = [
   [13, 14, 16],
   [17, 18, 20],
 ] as const;
-const EXTENDED_ANGLE = (155 * Math.PI) / 180;
+const EXTENSION_MIN_ANGLE = (105 * Math.PI) / 180;
+const EXTENSION_MAX_ANGLE = (170 * Math.PI) / 180;
+const OPEN_EXTENSION_SCORE = 0.77;
+const POINT_INDEX_SCORE = 0.62;
+const POINT_OTHER_EXTENSION_SCORE = 0.77;
+const POINT_DOMINANCE = 0.18;
 const PINCH_ENTER_RATIO = 0.32;
 const PINCH_EXIT_RATIO = 0.46;
 
@@ -23,12 +28,27 @@ export function classifyHandPose(
     previousPose === 'pinch' ? PINCH_EXIT_RATIO : PINCH_ENTER_RATIO;
   if (pinchRatio < pinchThreshold) return 'pinch';
 
-  const extended = FINGERS.map(
-    ([mcp, pip, tip]) =>
-      jointAngle(hand[mcp]!, hand[pip]!, hand[tip]!) > EXTENDED_ANGLE,
+  const extensionScores = FINGERS.map(([mcp, pip, tip]) =>
+    fingerExtensionScore(hand[mcp]!, hand[pip]!, hand[tip]!),
   );
-  if (extended.every(Boolean)) return 'open';
-  if (extended[0] && extended.slice(1).every((value) => !value)) return 'point';
+  if (extensionScores.every((score) => score >= OPEN_EXTENSION_SCORE)) {
+    return 'open';
+  }
+
+  const indexScore = extensionScores[0]!;
+  const otherScores = extensionScores.slice(1);
+  const averageOtherScore =
+    otherScores.reduce((sum, score) => sum + score, 0) / otherScores.length;
+  const extendedOtherFingers = otherScores.filter(
+    (score) => score >= POINT_OTHER_EXTENSION_SCORE,
+  ).length;
+  if (
+    indexScore >= POINT_INDEX_SCORE &&
+    indexScore - averageOtherScore >= POINT_DOMINANCE &&
+    extendedOtherFingers <= 1
+  ) {
+    return 'point';
+  }
   return 'none';
 }
 
@@ -49,4 +69,19 @@ function jointAngle(
   return Math.acos(
     Math.max(-1, Math.min(1, (ax * cx + ay * cy) / denominator)),
   );
+}
+
+function fingerExtensionScore(
+  mcp: GesturePoint,
+  pip: GesturePoint,
+  tip: GesturePoint,
+): number {
+  const angle = jointAngle(mcp, pip, tip);
+  return clamp(
+    (angle - EXTENSION_MIN_ANGLE) / (EXTENSION_MAX_ANGLE - EXTENSION_MIN_ANGLE),
+  );
+}
+
+function clamp(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }

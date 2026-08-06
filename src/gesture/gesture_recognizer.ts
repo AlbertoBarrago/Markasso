@@ -16,7 +16,7 @@ const TRACKING_GRACE_MS = 200;
 const POSE_CONFIRMATION_FRAMES: Record<HandPose, number> = {
   pinch: 2,
   open: 3,
-  point: 3,
+  point: 2,
   none: 4,
 };
 
