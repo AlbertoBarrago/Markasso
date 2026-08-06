@@ -14,6 +14,7 @@ const ARM_DURATION_MS = 400;
 const ARM_MOVEMENT_RADIUS = 0.025;
 const TRACKING_GRACE_MS = 200;
 const DRAWING_POSE_GRACE_MS = 800;
+const DRAWING_TRACKING_GRACE_MS = 1_000;
 const POSE_CONFIRMATION_FRAMES: Record<HandPose, number> = {
   pinch: 2,
   open: 3,
@@ -174,12 +175,14 @@ export class GestureRecognizer {
   }
 
   private handleTrackingLoss(timestamp: number): GestureFrame {
+    const gracePeriod =
+      this.state === 'drawing' ? DRAWING_TRACKING_GRACE_MS : TRACKING_GRACE_MS;
     if (
       this.lastCursor &&
       this.lastLandmarks &&
-      timestamp - this.lastTrackedAt <= TRACKING_GRACE_MS
+      timestamp - this.lastTrackedAt <= gracePeriod
     ) {
-      return this.frame(this.lastCursor, this.lastLandmarks, [], 0, null, 0);
+      return this.currentFrame(this.lastCursor, [], 0);
     }
     const events: GestureEvent[] = [];
     if (this.state === 'pinching' && this.lastCursor) {

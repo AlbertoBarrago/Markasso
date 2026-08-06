@@ -75,6 +75,17 @@ describe('GestureRecognizer', () => {
     }
     expect(recognizer.update(hand('none'), 1_271).state).toBe('absent');
   });
+
+  it('keeps drawing through a temporary full tracking loss', () => {
+    const recognizer = beginDrawing();
+    expect(recognizer.update(null, 1_200).state).toBe('drawing');
+    expect(recognizer.update(hand('point', 0.02), 1_216).state).toBe('drawing');
+  });
+
+  it('cancels drawing after a prolonged full tracking loss', () => {
+    const recognizer = beginDrawing();
+    expect(recognizer.update(null, 1_451).state).toBe('absent');
+  });
 });
 
 function beginDrawing(): GestureRecognizer {
