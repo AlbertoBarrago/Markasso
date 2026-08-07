@@ -7,7 +7,7 @@ describe('classifyHandPose', () => {
     ['open', 'open'],
     ['point', 'point'],
     ['pinch', 'pinch'],
-    ['none', 'none'],
+    ['none', 'fist'],
   ] as const)('recognizes a %s hand', (fixture, expected) => {
     expect(classifyHandPose(hand(fixture), 'none')).toBe(expected);
   });

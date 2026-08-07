@@ -9,6 +9,7 @@ import type {
   TextElement,
 } from '../elements/element';
 import type { History } from '../engine/history';
+import { gestureHover } from '../gesture/gesture_hover';
 import { t } from '../i18n';
 import { contrastColor, drawElement } from '../rendering/draw_element';
 import {
@@ -806,6 +807,16 @@ export function initCanvasView(
         (el) => el.id === selectTool.hoveredId && !scene.selectedIds.has(el.id),
       );
       if (hoveredEl) drawHoverHighlight(ctx2d, hoveredEl, scene.viewport);
+    }
+
+    // Draw hover highlight for the element the gesture hand is resting over
+    // (independent of the active toolbar tool — gesture mode works regardless)
+    if (gestureHover.id) {
+      const gestureHoveredEl = scene.elements.find(
+        (el) => el.id === gestureHover.id && !scene.selectedIds.has(el.id),
+      );
+      if (gestureHoveredEl)
+        drawHoverHighlight(ctx2d, gestureHoveredEl, scene.viewport);
     }
 
     // Draw hover highlight for arrow/line tool snap target (magnetic connection point)

@@ -58,6 +58,8 @@
   "gestureDrawing": "Draw in the air · open hand to finish",
   "gestureReleaseToAdd": "open hand to add",
   "gestureShowHand": "Show one hand to the camera",
+  "gestureHoldToDelete": "Hold fist to delete",
+  "gestureDeleted": "✓ Deleted",
   "gestureRectangleAdded": "✓ Rectangle added",
   "gestureEllipseAdded": "✓ Circle added",
   "gestureConnectorAdded": "✓ Connector added",

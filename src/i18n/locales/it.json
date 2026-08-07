@@ -53,6 +53,8 @@
   "gestureDrawing": "Disegna in aria · apri la mano per terminare",
   "gestureReleaseToAdd": "apri la mano per aggiungere",
   "gestureShowHand": "Mostra una mano alla webcam",
+  "gestureHoldToDelete": "Tieni il pugno chiuso per eliminare",
+  "gestureDeleted": "✓ Eliminato",
   "gestureRectangleAdded": "✓ Rettangolo aggiunto",
   "gestureEllipseAdded": "✓ Cerchio aggiunto",
   "gestureConnectorAdded": "✓ Connettore aggiunto",

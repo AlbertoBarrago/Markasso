@@ -118,12 +118,15 @@ export class GestureController {
       event.data.landmarks,
       event.data.timestamp,
     );
+    this.commands.updateHover(frame.state === 'ready' ? frame.cursor : null);
     frame.events.forEach((gestureEvent) => {
       const outcome = this.commands.handle(gestureEvent);
       if (outcome?.type === 'created') {
         this.overlay?.showCreated(outcome.shape);
       } else if (outcome?.type === 'rejected') {
         this.overlay?.showRejected();
+      } else if (outcome?.type === 'deleted') {
+        this.overlay?.showDeleted();
       }
     });
     this.overlay?.render(frame);

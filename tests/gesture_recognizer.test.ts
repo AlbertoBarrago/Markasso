@@ -86,6 +86,27 @@ describe('GestureRecognizer', () => {
     const recognizer = beginDrawing();
     expect(recognizer.update(null, 1_451).state).toBe('absent');
   });
+
+  it('fires a delete event after holding a fist over the same spot', () => {
+    const recognizer = new GestureRecognizer();
+    let frame = recognizer.update(hand('none'), 0);
+    for (let t = 16; t <= 900; t += 16) {
+      frame = recognizer.update(hand('none'), t);
+      if (frame.events.some((event) => event.type === 'delete')) break;
+    }
+    expect(frame.events.some((event) => event.type === 'delete')).toBe(true);
+  });
+
+  it('cancels the delete hold if the fist drifts away before firing', () => {
+    const recognizer = new GestureRecognizer();
+    for (let t = 0; t <= 160; t += 16) {
+      recognizer.update(hand('none'), t);
+    }
+    // Drift far enough to exceed the movement radius before the hold completes.
+    const frame = recognizer.update(hand('none', 0.2), 176);
+    expect(frame.events.some((event) => event.type === 'delete')).toBe(false);
+    expect(frame.state).toBe('deleting');
+  });
 });
 
 function beginDrawing(): GestureRecognizer {

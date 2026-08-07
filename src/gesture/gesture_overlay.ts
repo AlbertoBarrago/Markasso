@@ -35,6 +35,7 @@ export class GestureOverlay {
   private outcome:
     | { type: 'created'; shape: StrokeShape; until: number }
     | { type: 'rejected'; until: number }
+    | { type: 'deleted'; until: number }
     | null = null;
 
   constructor() {
@@ -98,7 +99,24 @@ export class GestureOverlay {
     }
     if (frame.landmarks) this.drawHand(ctx, frame.landmarks, width, height);
     if (frame.state === 'arming' && frame.cursor) {
-      this.drawArmProgress(ctx, frame.cursor, frame.armProgress, width, height);
+      this.drawArmProgress(
+        ctx,
+        frame.cursor,
+        frame.armProgress,
+        width,
+        height,
+        '#c42020',
+      );
+    }
+    if (frame.state === 'deleting' && frame.cursor) {
+      this.drawArmProgress(
+        ctx,
+        frame.cursor,
+        frame.armProgress,
+        width,
+        height,
+        '#ff8c1a',
+      );
     }
     if (this.outcome?.type === 'created') {
       this.drawCommittedShape(ctx, this.outcome.shape, width, height, now);
@@ -113,12 +131,22 @@ export class GestureOverlay {
         Math.PI * 2,
       );
       ctx.fillStyle =
-        frame.state === 'pinching' ? '#c42020' : 'rgba(255,255,255,.2)';
+        frame.state === 'pinching'
+          ? '#c42020'
+          : frame.state === 'deleting'
+            ? '#ff8c1a'
+            : 'rgba(255,255,255,.2)';
       ctx.fill();
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 2;
       ctx.stroke();
     }
+  }
+
+  showDeleted(): void {
+    this.outcome = { type: 'deleted', until: performance.now() + 700 };
+    this.root.dataset.outcome = 'deleted';
+    this.setStatus(t('gestureDeleted'));
   }
 
   showCreated(shape: StrokeShape): void {
@@ -179,6 +207,7 @@ export class GestureOverlay {
     progress: number,
     width: number,
     height: number,
+    color: string,
   ): void {
     ctx.beginPath();
     ctx.arc(
@@ -188,7 +217,7 @@ export class GestureOverlay {
       -Math.PI / 2,
       -Math.PI / 2 + Math.PI * 2 * progress,
     );
-    ctx.strokeStyle = '#c42020';
+    ctx.strokeStyle = color;
     ctx.lineWidth = 4;
     ctx.stroke();
   }
@@ -243,6 +272,8 @@ function labelForFrame(frame: GestureFrame): string {
       return frame.prediction
         ? `${shapeLabel(frame.prediction)} · ${t('gestureReleaseToAdd')}`
         : t('gestureDrawing');
+    case 'deleting':
+      return `${t('gestureHoldToDelete')} ${Math.round(frame.armProgress * 100)}%`;
     case 'absent':
       return t('gestureShowHand');
   }
