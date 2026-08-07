@@ -70,10 +70,10 @@ describe('GestureRecognizer', () => {
 
   it('cancels drawing when the pointing pose is lost for too long', () => {
     const recognizer = beginDrawing();
-    for (const timestamp of [470, 503, 536, 569]) {
+    for (const timestamp of [470, 503, 536, 569, 602, 635]) {
       recognizer.update(hand('none'), timestamp);
     }
-    expect(recognizer.update(hand('none'), 1_271).state).toBe('absent');
+    expect(recognizer.update(hand('none'), 1_771).state).toBe('absent');
   });
 
   it('keeps drawing through a temporary full tracking loss', () => {

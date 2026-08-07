@@ -13,7 +13,7 @@ const MIN_TRACE_POINTS = 8;
 const ARM_DURATION_MS = 400;
 const ARM_MOVEMENT_RADIUS = 0.025;
 const TRACKING_GRACE_MS = 200;
-const DRAWING_POSE_GRACE_MS = 800;
+const DRAWING_POSE_GRACE_MS = 1_300;
 const DRAWING_TRACKING_GRACE_MS = 1_000;
 const POSE_CONFIRMATION_FRAMES: Record<HandPose, number> = {
   pinch: 2,
@@ -21,6 +21,9 @@ const POSE_CONFIRMATION_FRAMES: Record<HandPose, number> = {
   point: 2,
   none: 4,
 };
+// While drawing, require more consecutive uncertain frames before dropping
+// 'point' — losing the pose mid-stroke is costlier than a slow entry.
+const DRAWING_NONE_CONFIRMATION_FRAMES = 6;
 
 export class GestureRecognizer {
   private state: GestureState = 'absent';
@@ -130,10 +133,11 @@ export class GestureRecognizer {
       this.candidatePose = rawPose;
       this.candidateFrames = 1;
     }
-    if (
-      rawPose !== this.stablePose &&
-      this.candidateFrames >= POSE_CONFIRMATION_FRAMES[rawPose]
-    ) {
+    const requiredFrames =
+      rawPose === 'none' && this.state === 'drawing'
+        ? DRAWING_NONE_CONFIRMATION_FRAMES
+        : POSE_CONFIRMATION_FRAMES[rawPose];
+    if (rawPose !== this.stablePose && this.candidateFrames >= requiredFrames) {
       this.stablePose = rawPose;
     }
     return this.stablePose;
