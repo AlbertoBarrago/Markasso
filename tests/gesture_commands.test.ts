@@ -33,6 +33,102 @@ describe('GestureCommandAdapter', () => {
     expect(history.present.elements[0]).toMatchObject({ x: 10, y: 10 });
   });
 
+  it('grabs an element slightly outside its bounds (gesture hit tolerance)', () => {
+    const scene = createScene();
+    const history = new History({
+      ...scene,
+      elements: [
+        {
+          id: 'rect',
+          type: 'rectangle',
+          x: 10,
+          y: 10,
+          width: 30,
+          height: 30,
+          strokeColor: '#fff',
+          fillColor: 'transparent',
+          strokeWidth: 2,
+          opacity: 1,
+          roughness: 0,
+        },
+      ],
+    });
+    const adapter = new GestureCommandAdapter(canvas(), history);
+    // World (42, 25) is 2px past the rectangle's right edge (x: 10..40) —
+    // a mouse click would miss, but the gesture's extra tolerance should hit.
+    adapter.handle({ type: 'pinch-start', point: { x: 0.42, y: 0.25 } });
+    expect(history.present.selectedIds.has('rect')).toBe(true);
+  });
+
+  it('deletes the element under a fist-hold delete event', () => {
+    const scene = createScene();
+    const history = new History({
+      ...scene,
+      elements: [
+        {
+          id: 'rect',
+          type: 'rectangle',
+          x: 10,
+          y: 10,
+          width: 30,
+          height: 30,
+          strokeColor: '#fff',
+          fillColor: 'transparent',
+          strokeWidth: 2,
+          opacity: 1,
+          roughness: 0,
+        },
+      ],
+    });
+    const adapter = new GestureCommandAdapter(canvas(), history);
+    const outcome = adapter.handle({
+      type: 'delete',
+      point: { x: 0.2, y: 0.2 },
+    });
+    expect(outcome?.type).toBe('deleted');
+    expect(history.present.elements).toHaveLength(0);
+  });
+
+  it('does not delete when the fist is not over any element', () => {
+    const history = new History(createScene());
+    const adapter = new GestureCommandAdapter(canvas(), history);
+    const outcome = adapter.handle({
+      type: 'delete',
+      point: { x: 0.9, y: 0.9 },
+    });
+    expect(outcome).toBeNull();
+  });
+
+  it('drags a line control point instead of the whole line when grabbed near it', () => {
+    const scene = createScene();
+    const history = new History({
+      ...scene,
+      elements: [
+        {
+          id: 'line',
+          type: 'line',
+          x: 10,
+          y: 10,
+          x2: 30,
+          y2: 10,
+          strokeColor: '#fff',
+          fillColor: 'transparent',
+          strokeWidth: 2,
+          opacity: 1,
+          roughness: 0,
+        },
+      ],
+      selectedIds: new Set(['line']),
+    });
+    const adapter = new GestureCommandAdapter(canvas(), history);
+    // Midpoint of the line is world (20, 10) — grab near it and drag down.
+    adapter.handle({ type: 'pinch-start', point: { x: 0.2, y: 0.1 } });
+    adapter.handle({ type: 'pinch-move', point: { x: 0.2, y: 0.3 } });
+    adapter.handle({ type: 'pinch-end', point: { x: 0.2, y: 0.3 } });
+    const line = history.present.elements[0];
+    expect(line).toMatchObject({ x: 10, y: 10, x2: 30, y2: 10, cy: 30 });
+  });
+
   it('reports whether an air stroke was committed', () => {
     const history = new History(createScene());
     const adapter = new GestureCommandAdapter(canvas(), history);

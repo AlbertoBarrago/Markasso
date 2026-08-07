@@ -1050,10 +1050,12 @@ export function hitTest(
   wx: number,
   wy: number,
   viewport: { zoom: number },
+  extraPadPx = 0,
 ): Element | null {
   for (let i = elements.length - 1; i >= 0; i--) {
     const el = elements[i];
-    if (el && hitTestElement(el, wx, wy, viewport, elements)) return el;
+    if (el && hitTestElement(el, wx, wy, viewport, elements, extraPadPx))
+      return el;
   }
   return null;
 }
@@ -1064,9 +1066,11 @@ function hitTestElement(
   wy: number,
   viewport: { zoom: number },
   allElements: ReadonlyArray<Element>,
+  extraPadPx = 0,
 ): boolean {
-  const PAD = 4 / viewport.zoom;
-  const LINE_PAD = 8 / viewport.zoom;
+  const extraPad = extraPadPx / viewport.zoom;
+  const PAD = 4 / viewport.zoom + extraPad;
+  const LINE_PAD = 8 / viewport.zoom + extraPad;
 
   // For rotated elements, inverse-rotate the test point into element's local space
   let lx = wx;

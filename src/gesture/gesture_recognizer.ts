@@ -12,6 +12,8 @@ import type {
 const MIN_TRACE_POINTS = 8;
 const ARM_DURATION_MS = 400;
 const ARM_MOVEMENT_RADIUS = 0.025;
+const DELETE_HOLD_MS = 600;
+const DELETE_MOVEMENT_RADIUS = 0.03;
 const TRACKING_GRACE_MS = 200;
 const DRAWING_POSE_GRACE_MS = 1_300;
 const DRAWING_TRACKING_GRACE_MS = 1_000;
@@ -19,6 +21,7 @@ const POSE_CONFIRMATION_FRAMES: Record<HandPose, number> = {
   pinch: 2,
   open: 3,
   point: 2,
+  fist: 3,
   none: 4,
 };
 // While drawing, require more consecutive uncertain frames before dropping
@@ -37,6 +40,8 @@ export class GestureRecognizer {
   private lastLandmarks: HandLandmarks | null = null;
   private lastTrackedAt = 0;
   private poseUncertainSince: number | null = null;
+  private deleteOrigin: GesturePoint | null = null;
+  private deleteStartedAt = 0;
   private readonly cursorFilter = new PointOneEuroFilter();
 
   update(
@@ -56,7 +61,7 @@ export class GestureRecognizer {
     const events: GestureEvent[] = [];
     let armProgress = 0;
 
-    if (rawPose === 'none') {
+    if (rawPose === 'none' || rawPose === 'fist') {
       this.poseUncertainSince ??= timestamp;
     } else {
       this.poseUncertainSince = null;
@@ -78,6 +83,30 @@ export class GestureRecognizer {
           events.push({ type: 'pinch-end', point: cursor });
         }
         armProgress = this.handlePointing(cursor, timestamp, events);
+        break;
+
+      case 'fist':
+        if (this.state === 'pinching') {
+          events.push({ type: 'pinch-end', point: cursor });
+          this.state = 'absent';
+          break;
+        }
+        // A fist is geometrically close to "no clear pose" — while drawing,
+        // tolerate it the same way 'none' is tolerated, so a brief tracking
+        // hiccup mid-stroke doesn't read as an accidental delete request.
+        if (this.state === 'drawing') {
+          if (
+            timestamp - (this.poseUncertainSince ?? timestamp) <=
+            DRAWING_POSE_GRACE_MS
+          ) {
+            break;
+          }
+          this.cancelDrawing();
+          this.state = 'absent';
+          break;
+        }
+        if (this.state === 'arming') this.cancelDrawing();
+        armProgress = this.handleFist(cursor, timestamp, events);
         break;
 
       case 'open':
@@ -124,6 +153,8 @@ export class GestureRecognizer {
     this.lastLandmarks = null;
     this.lastTrackedAt = 0;
     this.poseUncertainSince = null;
+    this.deleteOrigin = null;
+    this.deleteStartedAt = 0;
     this.cursorFilter.reset();
   }
 
@@ -134,7 +165,7 @@ export class GestureRecognizer {
       this.candidateFrames = 1;
     }
     const requiredFrames =
-      rawPose === 'none' && this.state === 'drawing'
+      (rawPose === 'none' || rawPose === 'fist') && this.state === 'drawing'
         ? DRAWING_NONE_CONFIRMATION_FRAMES
         : POSE_CONFIRMATION_FRAMES[rawPose];
     if (rawPose !== this.stablePose && this.candidateFrames >= requiredFrames) {
@@ -178,6 +209,33 @@ export class GestureRecognizer {
     return progress;
   }
 
+  private handleFist(
+    cursor: GesturePoint,
+    timestamp: number,
+    events: GestureEvent[],
+  ): number {
+    if (
+      this.state !== 'deleting' ||
+      !this.deleteOrigin ||
+      distance(this.deleteOrigin, cursor) > DELETE_MOVEMENT_RADIUS
+    ) {
+      this.state = 'deleting';
+      this.deleteStartedAt = timestamp;
+      this.deleteOrigin = cursor;
+      return 0;
+    }
+    const progress = Math.min(
+      1,
+      (timestamp - this.deleteStartedAt) / DELETE_HOLD_MS,
+    );
+    if (progress >= 1) {
+      events.push({ type: 'delete', point: cursor });
+      this.deleteOrigin = null;
+      this.state = 'ready';
+    }
+    return progress;
+  }
+
   private handleTrackingLoss(timestamp: number): GestureFrame {
     const gracePeriod =
       this.state === 'drawing' ? DRAWING_TRACKING_GRACE_MS : TRACKING_GRACE_MS;
@@ -201,6 +259,8 @@ export class GestureRecognizer {
     this.lastCursor = null;
     this.lastLandmarks = null;
     this.poseUncertainSince = null;
+    this.deleteOrigin = null;
+    this.deleteStartedAt = 0;
     return this.frame(null, null, events, 0, null, 0);
   }
 

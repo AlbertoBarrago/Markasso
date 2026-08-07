@@ -1,6 +1,6 @@
 import type { GesturePoint, HandLandmarks } from './types';
 
-export type HandPose = 'open' | 'pinch' | 'point' | 'none';
+export type HandPose = 'open' | 'pinch' | 'point' | 'fist' | 'none';
 
 const FINGERS = [
   [5, 6, 8],
@@ -16,6 +16,7 @@ const POINT_OTHER_EXTENSION_SCORE = 0.77;
 const POINT_DOMINANCE = 0.12;
 const PINCH_ENTER_RATIO = 0.32;
 const PINCH_EXIT_RATIO = 0.46;
+const FIST_MAX_EXTENSION = 0.3;
 
 export function classifyHandPose(
   hand: HandLandmarks,
@@ -48,6 +49,9 @@ export function classifyHandPose(
     extendedOtherFingers <= 1
   ) {
     return 'point';
+  }
+  if (extensionScores.every((score) => score <= FIST_MAX_EXTENSION)) {
+    return 'fist';
   }
   return 'none';
 }
