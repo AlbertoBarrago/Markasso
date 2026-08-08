@@ -99,21 +99,27 @@ async function bootstrap(): Promise<void> {
   let gestureController:
     | import('./src/gesture/gesture_controller').GestureController
     | null = null;
-  gestureButton.addEventListener('click', async () => {
-    if (!gestureController) {
-      gestureButton.disabled = true;
-      try {
-        const { GestureController } = await import(
-          './src/gesture/gesture_controller'
-        );
-        gestureController = new GestureController(canvas, hist, gestureButton);
-      } catch {
-        gestureButton.disabled = false;
-        return;
+  if (gestureButton) {
+    gestureButton.addEventListener('click', async () => {
+      if (!gestureController) {
+        gestureButton.disabled = true;
+        try {
+          const { GestureController } = await import(
+            './src/gesture/gesture_controller'
+          );
+          gestureController = new GestureController(
+            canvas,
+            hist,
+            gestureButton,
+          );
+        } catch {
+          gestureButton.disabled = false;
+          return;
+        }
       }
-    }
-    gestureController.toggle();
-  });
+      gestureController.toggle();
+    });
+  }
   window.addEventListener('pagehide', () => gestureController?.disable(), {
     once: true,
   });

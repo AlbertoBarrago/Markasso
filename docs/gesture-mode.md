@@ -1,6 +1,6 @@
 # Gesture Mode
 
-Gesture Mode is an optional webcam-driven presentation feature. It is disabled by default and leaves the existing mouse, keyboard, touch, canvas, and command paths unchanged.
+Gesture Mode is an optional desktop webcam-driven presentation feature. It is disabled by default and leaves the existing mouse, keyboard, touch, canvas, and command paths unchanged. The toolbar control is not created on touch-primary devices, so mobile and tablet sessions cannot load or activate the feature.
 
 ## Interaction
 
