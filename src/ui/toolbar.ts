@@ -97,7 +97,7 @@ const TOOLS: ToolDef[] = [
 export function initToolbar(
   container: HTMLElement,
   history: History,
-): { gestureButton: HTMLButtonElement } {
+): { gestureButton: HTMLButtonElement | null } {
   container.innerHTML = '';
 
   // ── Center-top: tool buttons pill ─────────────────────────────────────────
@@ -764,18 +764,16 @@ export function initToolbar(
   });
   presetsIsland.append(presetsTrigger, presetsPanel);
 
-  const gestureIsland = div('tb-island');
-  const gestureButton = mkBtn(IC.gesture, t('gestureMode'));
-  gestureButton.setAttribute('aria-pressed', 'false');
-  gestureButton.classList.add('tb-gesture-btn');
-  gestureIsland.appendChild(gestureButton);
-  topRight.append(
-    gestureIsland,
-    importIsland,
-    presetsIsland,
-    exportIsland,
-    shareIsland,
-  );
+  let gestureButton: HTMLButtonElement | null = null;
+  if (!window.matchMedia('(pointer: coarse)').matches) {
+    const gestureIsland = div('tb-island');
+    gestureButton = mkBtn(IC.gesture, t('gestureMode'));
+    gestureButton.setAttribute('aria-pressed', 'false');
+    gestureButton.classList.add('tb-gesture-btn');
+    gestureIsland.appendChild(gestureButton);
+    topRight.appendChild(gestureIsland);
+  }
+  topRight.append(importIsland, presetsIsland, exportIsland, shareIsland);
 
   // Top-left: settings button injected by settings.ts
   const topLeft = div('tb-island-topleft');
