@@ -42,7 +42,10 @@ class OneEuroFilter {
       rawDerivative,
       alpha(1, dt),
     );
-    const cutoff = 0.8 + 0.035 * Math.abs(this.filteredDerivative);
+    // Higher mincutoff (was 0.8) trims lag when the hand is nearly still;
+    // higher beta (was 0.035) lets the cutoff open up faster during quick
+    // motion, so the cursor keeps pace with the fingertip instead of trailing.
+    const cutoff = 1.4 + 0.09 * Math.abs(this.filteredDerivative);
     this.filteredValue = lerp(this.filteredValue, value, alpha(cutoff, dt));
     this.rawValue = value;
     this.timestamp = timestamp;

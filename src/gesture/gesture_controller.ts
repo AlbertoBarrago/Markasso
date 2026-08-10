@@ -4,7 +4,10 @@ import { GestureOverlay } from './gesture_overlay';
 import { GestureRecognizer } from './gesture_recognizer';
 import type { WorkerRequest, WorkerResponse } from './types';
 
-const FRAME_INTERVAL_MS = 1000 / 30;
+// Upper bound only — actual throughput is still paced by how fast the worker
+// finishes each inference (framePending backpressure below), so raising this
+// just lets us ask for the next frame sooner once the pipeline is free.
+const FRAME_INTERVAL_MS = 1000 / 60;
 
 export class GestureController {
   private worker: Worker | null = null;
