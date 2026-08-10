@@ -56,6 +56,8 @@
   "gestureRectangleAdded": "✓ 長方形を追加しました",
   "gestureEllipseAdded": "✓ 円を追加しました",
   "gestureConnectorAdded": "✓ コネクターを追加しました",
+
+  "gestureFreehandAdded": "✓ フリーハンドの線を追加しました",
   "gestureNotRecognized": "ジェスチャーを認識できません · 再試行してください",
   "select": "選択",
   "rectangle": "四角形",

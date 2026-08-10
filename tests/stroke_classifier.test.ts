@@ -47,10 +47,18 @@ describe('classifyStroke', () => {
     expect(classifyStroke(points)?.type).toBe('ellipse');
   });
 
-  it('rejects an ambiguous scribble', () => {
+  it('falls back to freehand for an ambiguous scribble instead of discarding it', () => {
     const points = Array.from({ length: 24 }, (_, index) => ({
       x: 0.25 + (index / 23) * 0.5,
       y: 0.45 + Math.sin(index * 1.7) * 0.13,
+    }));
+    expect(classifyStroke(points)?.type).toBe('freehand');
+  });
+
+  it('rejects a stroke too small to be intentional', () => {
+    const points = Array.from({ length: 10 }, (_, index) => ({
+      x: 0.5 + index * 0.001,
+      y: 0.5 + index * 0.001,
     }));
     expect(classifyStroke(points)).toBeNull();
   });

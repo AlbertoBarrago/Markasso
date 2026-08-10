@@ -1,5 +1,9 @@
 import { screenToWorld } from '../core/viewport';
-import type { Element, LineElement } from '../elements/element';
+import type {
+  Element,
+  FreehandElement,
+  LineElement,
+} from '../elements/element';
 import type { History } from '../engine/history';
 import { hitTest } from '../tools/select_tool';
 import { gestureHover } from './gesture_hover';
@@ -10,7 +14,8 @@ import type { GestureEvent, GesturePoint } from './types';
 // Hand tracking is far less precise than a mouse pointer, so gesture hit-testing
 // gets extra screen-space tolerance beyond the mouse SelectTool's defaults.
 const GESTURE_HIT_PAD_PX = 16;
-const CP_GRAB_RADIUS_PX = 24;
+const GESTURE_REGRAB_PAD_PX = 40;
+const CP_GRAB_RADIUS_PX = 32;
 
 export class GestureCommandAdapter {
   private draggedId: string | null = null;
@@ -101,13 +106,25 @@ export class GestureCommandAdapter {
       }
     }
 
-    const hit = hitTest(
+    let hit = hitTest(
       scene.elements,
       world.x,
       world.y,
       scene.viewport,
       GESTURE_HIT_PAD_PX,
     );
+    // A pinch that misses the normal hit test but still lands near the
+    // already-selected element is very likely an imprecise re-grab attempt,
+    // not a request to deselect — hand tracking jitter makes exact re-hits hard.
+    if ((!hit || hit.locked) && selected.length === 1) {
+      hit = hitTest(
+        selected,
+        world.x,
+        world.y,
+        scene.viewport,
+        GESTURE_REGRAB_PAD_PX,
+      );
+    }
     if (!hit || hit.locked) {
       this.history.dispatch({ type: 'CLEAR_SELECTION' });
       return;
@@ -165,6 +182,14 @@ export class GestureCommandAdapter {
         fillColor: 'transparent',
         arrowHead: 'end',
       } satisfies LineElement;
+    } else if (shape.type === 'freehand') {
+      const worldPoints = shape.points.map((point) => this.toWorld(point));
+      const origin = worldPoints[0]!;
+      element = {
+        ...baseElement('freehand', origin.x, origin.y, style),
+        fillColor: 'transparent',
+        points: worldPoints.map((point) => [point.x, point.y] as const),
+      } satisfies FreehandElement;
     } else {
       const start = this.toWorld({ x: shape.x, y: shape.y });
       const end = this.toWorld({
@@ -197,7 +222,7 @@ export type GestureCommandOutcome =
   | { type: 'rejected' }
   | { type: 'deleted' };
 
-function baseElement<T extends 'rectangle' | 'ellipse' | 'line'>(
+function baseElement<T extends 'rectangle' | 'ellipse' | 'line' | 'freehand'>(
   type: T,
   x: number,
   y: number,

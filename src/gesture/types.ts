@@ -14,7 +14,7 @@ export type GestureState =
   | 'drawing'
   | 'deleting';
 
-export type GestureShapeType = 'line' | 'rectangle' | 'ellipse';
+export type GestureShapeType = 'line' | 'rectangle' | 'ellipse' | 'freehand';
 
 export type GestureEvent =
   | { type: 'pinch-start'; point: GesturePoint }

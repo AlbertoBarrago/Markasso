@@ -244,7 +244,7 @@ export class GestureOverlay {
         shape.width * width,
         shape.height * height,
       );
-    } else {
+    } else if (shape.type === 'ellipse') {
       ctx.ellipse(
         (shape.x + shape.width / 2) * width,
         (shape.y + shape.height / 2) * height,
@@ -254,6 +254,13 @@ export class GestureOverlay {
         0,
         Math.PI * 2,
       );
+    } else {
+      shape.points.forEach((point, index) => {
+        const x = point.x * width;
+        const y = point.y * height;
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
     }
     ctx.stroke();
     ctx.restore();
@@ -287,6 +294,8 @@ function createdLabel(type: StrokeShape['type']): string {
       return t('gestureEllipseAdded');
     case 'line':
       return t('gestureConnectorAdded');
+    case 'freehand':
+      return t('gestureFreehandAdded');
   }
 }
 
@@ -298,6 +307,8 @@ function shapeLabel(type: GestureFrame['prediction']): string {
       return t('ellipse');
     case 'line':
       return t('line');
+    case 'freehand':
+      return t('pen');
     case null:
       return '';
   }

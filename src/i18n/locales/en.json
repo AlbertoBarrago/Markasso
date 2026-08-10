@@ -63,6 +63,8 @@
   "gestureRectangleAdded": "✓ Rectangle added",
   "gestureEllipseAdded": "✓ Circle added",
   "gestureConnectorAdded": "✓ Connector added",
+
+  "gestureFreehandAdded": "✓ Freehand stroke added",
   "gestureNotRecognized": "Gesture not recognized · try again",
   "select": "Select",
   "rectangle": "Rectangle",
