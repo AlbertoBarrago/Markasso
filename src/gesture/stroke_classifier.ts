@@ -4,7 +4,8 @@ import type { GesturePoint } from './types';
 export type StrokeShape =
   | { type: 'line'; start: GesturePoint; end: GesturePoint }
   | { type: 'rectangle'; x: number; y: number; width: number; height: number }
-  | { type: 'ellipse'; x: number; y: number; width: number; height: number };
+  | { type: 'ellipse'; x: number; y: number; width: number; height: number }
+  | { type: 'freehand'; points: ReadonlyArray<GesturePoint> };
 
 export interface StrokeRecognition {
   readonly shape: StrokeShape;
@@ -14,11 +15,27 @@ export interface StrokeRecognition {
 const SAMPLE_COUNT = 32;
 const MIN_DIAGONAL = 0.04;
 const MIN_CONFIDENCE = 0.35;
+// A gesture-drawn square/circle rarely closes as tightly as a mouse-drawn
+// one — give the closed-shape path more room before giving up on it.
+const CLOSURE_SHAPE_MAX = 0.4;
+// Hand jitter rounds corners, so a looser simplification tolerance and a
+// lighter corner-count penalty keep real rectangles from scoring as freehand.
+const CORNER_SIMPLIFY_FACTOR = 0.065;
+const CORNER_COUNT_PENALTY = 0.025;
+const RECTANGLE_SCORE_THRESHOLD = 0.2;
 
+// Only call this at stroke commit (stroke-end), not per-frame during the
+// live preview — the freehand fallback clones the full point list, which is
+// too costly to run every animation frame while a stroke is still growing.
 export function classifyStroke(
   points: ReadonlyArray<GesturePoint>,
 ): StrokeShape | null {
-  return recognizeStroke(points)?.shape ?? null;
+  const recognized = recognizeStroke(points)?.shape;
+  if (recognized) return recognized;
+  if (points.length < 8) return null;
+  const bounds = getBounds(points);
+  if (Math.hypot(bounds.width, bounds.height) < MIN_DIAGONAL) return null;
+  return { type: 'freehand', points: [...points] };
 }
 
 export function recognizeStroke(
@@ -46,7 +63,7 @@ export function recognizeStroke(
   }
 
   if (
-    closure >= 0.32 ||
+    closure >= CLOSURE_SHAPE_MAX ||
     pathLength < diagonal * 1.8 ||
     bounds.width < 0.035 ||
     bounds.height < 0.035
@@ -55,14 +72,15 @@ export function recognizeStroke(
   }
 
   const closedPoints = [...points.slice(0, -1), start];
-  const simplified = simplify(closedPoints, diagonal * 0.045);
+  const simplified = simplify(closedPoints, diagonal * CORNER_SIMPLIFY_FACTOR);
   const cornerCount = Math.max(0, simplified.length - 1);
   const rectangleScore =
-    boundingEdgeError(points, bounds) + Math.abs(cornerCount - 4) * 0.035;
+    boundingEdgeError(points, bounds) +
+    Math.abs(cornerCount - 4) * CORNER_COUNT_PENALTY;
   const ellipseScore = ellipseFitError(points, bounds);
   const isRectangle = rectangleScore < ellipseScore;
   const bestScore = Math.min(rectangleScore, ellipseScore);
-  const threshold = isRectangle ? 0.15 : 0.18;
+  const threshold = isRectangle ? RECTANGLE_SCORE_THRESHOLD : 0.18;
   if (bestScore >= threshold) return null;
 
   const margin = Math.abs(rectangleScore - ellipseScore);

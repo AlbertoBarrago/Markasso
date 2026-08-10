@@ -11,11 +11,17 @@ import type {
 
 const MIN_TRACE_POINTS = 8;
 const ARM_DURATION_MS = 400;
-const ARM_MOVEMENT_RADIUS = 0.025;
+const ARM_MOVEMENT_RADIUS = 0.04;
 const DELETE_HOLD_MS = 600;
-const DELETE_MOVEMENT_RADIUS = 0.03;
+const DELETE_MOVEMENT_RADIUS = 0.045;
 const TRACKING_GRACE_MS = 200;
+// Losing the 'point' pose to 'none' mid-stroke is usually a tracking hiccup
+// (occluded fingertip, brief low-confidence frame) — tolerate it generously.
 const DRAWING_POSE_GRACE_MS = 1_300;
+// A fist mid-stroke tolerates brief tracking noise before it cancels the
+// drawing outright — kept short so an intentional fist-to-delete right after
+// finishing a stroke doesn't have to wait out a long window.
+const DRAWING_POSE_GRACE_RECENT_MS = 500;
 const DRAWING_TRACKING_GRACE_MS = 1_000;
 const POSE_CONFIRMATION_FRAMES: Record<HandPose, number> = {
   pinch: 2,
@@ -43,6 +49,12 @@ export class GestureRecognizer {
   private deleteOrigin: GesturePoint | null = null;
   private deleteStartedAt = 0;
   private readonly cursorFilter = new PointOneEuroFilter();
+  // The index fingertip (landmark 8) curls in toward the palm when the hand
+  // closes into a fist, so tracking it there is noisy and never settles —
+  // the fist-hold timer kept resetting and the delete progress never
+  // completed. The palm center stays put while the fist is held, so use it
+  // instead for the fist/delete gesture specifically.
+  private readonly palmFilter = new PointOneEuroFilter();
 
   update(
     landmarks: HandLandmarks | null,
@@ -56,6 +68,8 @@ export class GestureRecognizer {
     this.lastLandmarks = landmarks.map(mirror);
     const cursor = this.cursorFilter.filter(mirror(landmarks[8]!), timestamp);
     this.lastCursor = cursor;
+    const rawPalm = mirror(midpoint(landmarks[0]!, landmarks[9]!));
+    const palm = this.palmFilter.filter(rawPalm, timestamp);
     const rawPose = classifyHandPose(landmarks, this.stablePose);
     const pose = this.stabilizePose(rawPose);
     const events: GestureEvent[] = [];
@@ -97,7 +111,7 @@ export class GestureRecognizer {
         if (this.state === 'drawing') {
           if (
             timestamp - (this.poseUncertainSince ?? timestamp) <=
-            DRAWING_POSE_GRACE_MS
+            DRAWING_POSE_GRACE_RECENT_MS
           ) {
             break;
           }
@@ -106,7 +120,7 @@ export class GestureRecognizer {
           break;
         }
         if (this.state === 'arming') this.cancelDrawing();
-        armProgress = this.handleFist(cursor, timestamp, events);
+        armProgress = this.handleFist(palm, timestamp, events);
         break;
 
       case 'open':
@@ -138,7 +152,14 @@ export class GestureRecognizer {
         break;
     }
 
-    return this.currentFrame(cursor, events, armProgress);
+    // While deleting, show the progress ring at the palm anchor that the
+    // hold is actually measured against, not the (now-folded, jittery)
+    // fingertip.
+    return this.currentFrame(
+      this.state === 'deleting' ? palm : cursor,
+      events,
+      armProgress,
+    );
   }
 
   reset(): void {
@@ -156,6 +177,7 @@ export class GestureRecognizer {
     this.deleteOrigin = null;
     this.deleteStartedAt = 0;
     this.cursorFilter.reset();
+    this.palmFilter.reset();
   }
 
   private stabilizePose(rawPose: HandPose): HandPose {
@@ -256,6 +278,7 @@ export class GestureRecognizer {
     this.candidateFrames = 0;
     this.cancelDrawing();
     this.cursorFilter.reset();
+    this.palmFilter.reset();
     this.lastCursor = null;
     this.lastLandmarks = null;
     this.poseUncertainSince = null;
@@ -320,4 +343,8 @@ function mirror(point: GesturePoint): GesturePoint {
     y: point.y,
     ...(point.z !== undefined && { z: point.z }),
   };
+}
+
+function midpoint(a: GesturePoint, b: GesturePoint): GesturePoint {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }

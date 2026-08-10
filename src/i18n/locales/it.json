@@ -58,6 +58,8 @@
   "gestureRectangleAdded": "✓ Rettangolo aggiunto",
   "gestureEllipseAdded": "✓ Cerchio aggiunto",
   "gestureConnectorAdded": "✓ Connettore aggiunto",
+
+  "gestureFreehandAdded": "✓ Tratto a mano libera aggiunto",
   "gestureNotRecognized": "Gesto non riconosciuto · riprova",
   "select": "Selezione",
   "rectangle": "Rettangolo",

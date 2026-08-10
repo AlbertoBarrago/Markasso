@@ -56,6 +56,8 @@
   "gestureRectangleAdded": "✓ 已添加矩形",
   "gestureEllipseAdded": "✓ 已添加圆形",
   "gestureConnectorAdded": "✓ 已添加连接线",
+
+  "gestureFreehandAdded": "✓ 已添加自由画线",
   "gestureNotRecognized": "未识别手势 · 请重试",
   "select": "选择",
   "rectangle": "矩形",
