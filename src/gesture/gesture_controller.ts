@@ -50,8 +50,14 @@ export class GestureController {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
+          // Most cameras (especially laptop-integrated ones) are natively
+          // 16:9 — requesting a 4:3 frame (640x480) makes the driver crop
+          // the sides of the sensor to fit, narrowing the real horizontal
+          // field of view a hand can move within before tracking is lost.
+          // 640x360 keeps roughly the same pixel count (so no extra
+          // inference cost) while matching the native aspect ratio.
           width: { ideal: 640 },
-          height: { ideal: 480 },
+          height: { ideal: 360 },
           frameRate: { ideal: 60, max: 60 },
           facingMode: 'user',
         },
