@@ -1,5 +1,8 @@
 import type { History } from '../engine/history';
-import { GestureCommandAdapter } from './gesture_commands';
+import {
+  GestureCommandAdapter,
+  type GestureCommandOutcome,
+} from './gesture_commands';
 import { GestureOverlay } from './gesture_overlay';
 import { GestureRecognizer } from './gesture_recognizer';
 import type { WorkerRequest, WorkerResponse } from './types';
@@ -124,18 +127,23 @@ export class GestureController {
     this.commands.setHandScale(frame.palmScale);
     this.commands.updateHover(frame.state === 'ready' ? frame.cursor : null);
     frame.events.forEach((gestureEvent) => {
-      const outcome = this.commands.handle(gestureEvent);
-      if (outcome?.type === 'created') {
-        this.overlay?.showCreated(outcome.shape);
-      } else if (outcome?.type === 'rejected') {
-        this.overlay?.showRejected();
-      } else if (outcome?.type === 'deleted') {
-        this.overlay?.showDeleted();
-      }
+      this.applyOutcome(this.commands.handle(gestureEvent));
     });
     this.overlay?.render(frame);
     this.scheduleFrame();
   };
+
+  private applyOutcome(outcome: GestureCommandOutcome | null): void {
+    if (outcome?.type === 'created') {
+      this.overlay?.showCreated(outcome.shape);
+    } else if (outcome?.type === 'rejected') {
+      this.overlay?.showRejected();
+    } else if (outcome?.type === 'deleted') {
+      this.overlay?.showDeleted();
+    } else if (outcome?.type === 'selected-all') {
+      this.overlay?.showSelectedAll();
+    }
+  }
 
   private readonly onWorkerError = (event: ErrorEvent): void =>
     this.fail(

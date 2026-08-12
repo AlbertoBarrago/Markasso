@@ -12,18 +12,18 @@ export type GestureState =
   | 'pinching'
   | 'arming'
   | 'drawing'
-  | 'deleting';
+  | 'selecting';
 
 export type GestureShapeType = 'line' | 'rectangle' | 'ellipse' | 'freehand';
 
 export type GestureEvent =
-  | { type: 'pinch-start'; point: GesturePoint }
+  | { type: 'pinch-start'; point: GesturePoint; timestamp: number }
   | { type: 'pinch-move'; point: GesturePoint }
-  | { type: 'pinch-end'; point: GesturePoint }
+  | { type: 'pinch-end'; point: GesturePoint; timestamp: number }
   | { type: 'stroke-start'; point: GesturePoint }
   | { type: 'stroke-move'; point: GesturePoint }
   | { type: 'stroke-end'; points: ReadonlyArray<GesturePoint> }
-  | { type: 'delete'; point: GesturePoint };
+  | { type: 'select-all' };
 
 export interface GestureFrame {
   readonly state: GestureState;

@@ -4,6 +4,19 @@ import type { Viewport } from '../core/viewport';
 // Physical mm → CSS pixels at 96 DPI standard
 const PX_PER_MM = 96 / 25.4; // ≈ 3.7795
 
+// The dot/line grid's cell count grows as the visible world area (~1/zoom for
+// line spacing, ~1/zoom² for dot count) — below this on-screen spacing the
+// grid would otherwise explode into hundreds of thousands of draw calls and
+// stall the render frame, making the whole canvas appear to vanish. Doubling
+// the effective step keeps the on-screen density bounded at any zoom level.
+const MIN_GRID_SCREEN_PX = 8;
+
+function effectiveGridStep(gridSize: number, zoom: number): number {
+  let step = gridSize;
+  while (step * zoom < MIN_GRID_SCREEN_PX) step *= 2;
+  return step;
+}
+
 export function drawGrid(
   ctx: CanvasRenderingContext2D,
   viewport: Viewport,
@@ -48,14 +61,15 @@ function drawDotGrid(
   const right = (w - offsetX) / zoom;
   const bottom = (h - offsetY) / zoom;
 
-  const startX = Math.floor(left / gridSize) * gridSize;
-  const startY = Math.floor(top / gridSize) * gridSize;
+  const step = effectiveGridStep(gridSize, zoom);
+  const startX = Math.floor(left / step) * step;
+  const startY = Math.floor(top / step) * step;
   const r = Math.max(0.8, zoom * 0.6);
 
   ctx.fillStyle = 'rgba(255,255,255,0.12)';
   ctx.beginPath();
-  for (let wx = startX; wx < right; wx += gridSize) {
-    for (let wy = startY; wy < bottom; wy += gridSize) {
+  for (let wx = startX; wx < right; wx += step) {
+    for (let wy = startY; wy < bottom; wy += step) {
       const sx = wx * zoom + offsetX;
       const sy = wy * zoom + offsetY;
       ctx.moveTo(sx + r, sy);
@@ -79,18 +93,19 @@ function drawLineGrid(
   const right = (w - offsetX) / zoom;
   const bottom = (h - offsetY) / zoom;
 
-  const startX = Math.floor(left / gridSize) * gridSize;
-  const startY = Math.floor(top / gridSize) * gridSize;
+  const step = effectiveGridStep(gridSize, zoom);
+  const startX = Math.floor(left / step) * step;
+  const startY = Math.floor(top / step) * step;
 
   ctx.strokeStyle = 'rgba(255,255,255,0.07)';
   ctx.lineWidth = 0.5;
   ctx.beginPath();
-  for (let wx = startX; wx < right + gridSize; wx += gridSize) {
+  for (let wx = startX; wx < right + step; wx += step) {
     const sx = wx * zoom + offsetX;
     ctx.moveTo(sx, 0);
     ctx.lineTo(sx, h);
   }
-  for (let wy = startY; wy < bottom + gridSize; wy += gridSize) {
+  for (let wy = startY; wy < bottom + step; wy += step) {
     const sy = wy * zoom + offsetY;
     ctx.moveTo(0, sy);
     ctx.lineTo(w, sy);

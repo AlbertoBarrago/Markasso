@@ -12,8 +12,13 @@ import type {
 const MIN_TRACE_POINTS = 8;
 const ARM_DURATION_MS = 400;
 const ARM_MOVEMENT_RADIUS = 0.04;
-const DELETE_HOLD_MS = 600;
-const DELETE_MOVEMENT_RADIUS = 0.045;
+const SELECT_ALL_HOLD_MS = 600;
+const SELECT_ALL_MOVEMENT_RADIUS = 0.045;
+// The open hand also confirms/ends other gestures (pinch-end, stroke-end), so
+// it's often briefly open right after finishing one — wait this long after
+// settling into 'open' before letting the select-all hold start counting, so
+// that natural resting doesn't read as a deliberate select-all request.
+const OPEN_SETTLE_MS = 700;
 const TRACKING_GRACE_MS = 200;
 // Losing the 'point' pose to 'none' mid-stroke is usually a tracking hiccup
 // (occluded fingertip, brief low-confidence frame) — tolerate it generously.
@@ -47,14 +52,13 @@ export class GestureRecognizer {
   private lastPalmScale: number | null = null;
   private lastTrackedAt = 0;
   private poseUncertainSince: number | null = null;
-  private deleteOrigin: GesturePoint | null = null;
-  private deleteStartedAt = 0;
+  private selectAllOrigin: GesturePoint | null = null;
+  private selectAllStartedAt = 0;
+  private openReadyAt = 0;
   private readonly cursorFilter = new PointOneEuroFilter();
-  // The index fingertip (landmark 8) curls in toward the palm when the hand
-  // closes into a fist, so tracking it there is noisy and never settles —
-  // the fist-hold timer kept resetting and the delete progress never
-  // completed. The palm center stays put while the fist is held, so use it
-  // instead for the fist/delete gesture specifically.
+  // The fingertip landmark is noisier than the palm center for poses that
+  // hold roughly still (e.g. an open hand held for select-all) — the palm
+  // stays put more reliably, so hold-based gestures track it instead.
   private readonly palmFilter = new PointOneEuroFilter();
 
   update(
@@ -93,29 +97,32 @@ export class GestureRecognizer {
     switch (pose) {
       case 'pinch':
         this.cancelDrawing();
-        events.push({
-          type: this.state === 'pinching' ? 'pinch-move' : 'pinch-start',
-          point: cursor,
-        });
+        if (this.state === 'pinching') {
+          events.push({ type: 'pinch-move', point: cursor });
+        } else {
+          events.push({ type: 'pinch-start', point: cursor, timestamp });
+        }
         this.state = 'pinching';
         break;
 
       case 'point':
         if (this.state === 'pinching') {
-          events.push({ type: 'pinch-end', point: cursor });
+          events.push({ type: 'pinch-end', point: cursor, timestamp });
         }
         armProgress = this.handlePointing(cursor, timestamp, events);
         break;
 
       case 'fist':
+        // A fist cancels whatever's in progress — deletion is now a
+        // double-pinch gesture handled at the command level, not a hold.
         if (this.state === 'pinching') {
-          events.push({ type: 'pinch-end', point: cursor });
+          events.push({ type: 'pinch-end', point: cursor, timestamp });
           this.state = 'absent';
           break;
         }
         // A fist is geometrically close to "no clear pose" — while drawing,
         // tolerate it the same way 'none' is tolerated, so a brief tracking
-        // hiccup mid-stroke doesn't read as an accidental delete request.
+        // hiccup mid-stroke doesn't read as an accidental cancel.
         if (this.state === 'drawing') {
           if (
             timestamp - (this.poseUncertainSince ?? timestamp) <=
@@ -128,21 +135,31 @@ export class GestureRecognizer {
           break;
         }
         if (this.state === 'arming') this.cancelDrawing();
-        armProgress = this.handleFist(palm, timestamp, events);
+        this.state = 'ready';
         break;
 
       case 'open':
         if (this.state === 'pinching') {
-          events.push({ type: 'pinch-end', point: cursor });
+          events.push({ type: 'pinch-end', point: cursor, timestamp });
         }
         if (this.state === 'drawing') this.finishTrace(events);
         if (this.state === 'arming') this.cancelDrawing();
-        this.state = 'ready';
+        if (this.state !== 'ready' && this.state !== 'selecting') {
+          // First frame landing on 'open' from any other state — settle at
+          // 'ready' rather than starting a select-all hold immediately, so
+          // merely showing an open hand doesn't itself start the countdown.
+          this.state = 'ready';
+          this.selectAllOrigin = null;
+          this.openReadyAt = timestamp;
+          break;
+        }
+        if (timestamp - this.openReadyAt < OPEN_SETTLE_MS) break;
+        armProgress = this.handleOpenHold(palm, timestamp, events);
         break;
 
       case 'none':
         if (this.state === 'pinching') {
-          events.push({ type: 'pinch-end', point: cursor });
+          events.push({ type: 'pinch-end', point: cursor, timestamp });
           this.state = 'absent';
         } else if (
           this.state === 'drawing' &&
@@ -160,11 +177,10 @@ export class GestureRecognizer {
         break;
     }
 
-    // While deleting, show the progress ring at the palm anchor that the
-    // hold is actually measured against, not the (now-folded, jittery)
-    // fingertip.
+    // While selecting, show the progress ring at the palm anchor that the
+    // hold is actually measured against.
     return this.currentFrame(
-      this.state === 'deleting' ? palm : cursor,
+      this.state === 'selecting' ? palm : cursor,
       events,
       armProgress,
     );
@@ -183,8 +199,9 @@ export class GestureRecognizer {
     this.lastPalmScale = null;
     this.lastTrackedAt = 0;
     this.poseUncertainSince = null;
-    this.deleteOrigin = null;
-    this.deleteStartedAt = 0;
+    this.selectAllOrigin = null;
+    this.selectAllStartedAt = 0;
+    this.openReadyAt = 0;
     this.cursorFilter.reset();
     this.palmFilter.reset();
   }
@@ -240,28 +257,28 @@ export class GestureRecognizer {
     return progress;
   }
 
-  private handleFist(
-    cursor: GesturePoint,
+  private handleOpenHold(
+    palmPoint: GesturePoint,
     timestamp: number,
     events: GestureEvent[],
   ): number {
     if (
-      this.state !== 'deleting' ||
-      !this.deleteOrigin ||
-      distance(this.deleteOrigin, cursor) > DELETE_MOVEMENT_RADIUS
+      this.state !== 'selecting' ||
+      !this.selectAllOrigin ||
+      distance(this.selectAllOrigin, palmPoint) > SELECT_ALL_MOVEMENT_RADIUS
     ) {
-      this.state = 'deleting';
-      this.deleteStartedAt = timestamp;
-      this.deleteOrigin = cursor;
+      this.state = 'selecting';
+      this.selectAllStartedAt = timestamp;
+      this.selectAllOrigin = palmPoint;
       return 0;
     }
     const progress = Math.min(
       1,
-      (timestamp - this.deleteStartedAt) / DELETE_HOLD_MS,
+      (timestamp - this.selectAllStartedAt) / SELECT_ALL_HOLD_MS,
     );
     if (progress >= 1) {
-      events.push({ type: 'delete', point: cursor });
-      this.deleteOrigin = null;
+      events.push({ type: 'select-all' });
+      this.selectAllOrigin = null;
       this.state = 'ready';
     }
     return progress;
@@ -279,7 +296,7 @@ export class GestureRecognizer {
     }
     const events: GestureEvent[] = [];
     if (this.state === 'pinching' && this.lastCursor) {
-      events.push({ type: 'pinch-end', point: this.lastCursor });
+      events.push({ type: 'pinch-end', point: this.lastCursor, timestamp });
     }
     this.state = 'absent';
     this.stablePose = 'none';
@@ -292,8 +309,9 @@ export class GestureRecognizer {
     this.lastLandmarks = null;
     this.lastPalmScale = null;
     this.poseUncertainSince = null;
-    this.deleteOrigin = null;
-    this.deleteStartedAt = 0;
+    this.selectAllOrigin = null;
+    this.selectAllStartedAt = 0;
+    this.openReadyAt = 0;
     return this.frame(null, null, events, 0, null, 0);
   }
 
