@@ -87,25 +87,27 @@ describe('GestureRecognizer', () => {
     expect(recognizer.update(null, 1_451).state).toBe('absent');
   });
 
-  it('fires a delete event after holding a fist over the same spot', () => {
+  it('settles at ready on an idle fist rather than arming a delete hold', () => {
     const recognizer = new GestureRecognizer();
     let frame = recognizer.update(hand('none'), 0);
     for (let t = 16; t <= 900; t += 16) {
       frame = recognizer.update(hand('none'), t);
-      if (frame.events.some((event) => event.type === 'delete')) break;
     }
-    expect(frame.events.some((event) => event.type === 'delete')).toBe(true);
+    expect(frame.state).toBe('ready');
+    expect(frame.events).toHaveLength(0);
   });
 
-  it('cancels the delete hold if the fist drifts away before firing', () => {
+  it('cancels an in-progress pinch when the hand closes into a fist', () => {
     const recognizer = new GestureRecognizer();
-    for (let t = 0; t <= 160; t += 16) {
-      recognizer.update(hand('none'), t);
+    recognizer.update(hand('pinch'), 0);
+    recognizer.update(hand('pinch'), 16);
+    let frame = recognizer.update(hand('none'), 32);
+    for (let t = 48; t <= 96; t += 16) {
+      frame = recognizer.update(hand('none'), t);
+      if (frame.events.some((event) => event.type === 'pinch-end')) break;
     }
-    // Drift far enough to exceed the movement radius before the hold completes.
-    const frame = recognizer.update(hand('none', 0.2), 176);
-    expect(frame.events.some((event) => event.type === 'delete')).toBe(false);
-    expect(frame.state).toBe('deleting');
+    expect(frame.events.some((event) => event.type === 'pinch-end')).toBe(true);
+    expect(frame.state).toBe('absent');
   });
 });
 

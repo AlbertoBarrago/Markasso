@@ -60,7 +60,7 @@ describe('GestureCommandAdapter', () => {
     expect(history.present.selectedIds.has('rect')).toBe(true);
   });
 
-  it('deletes the element under a fist-hold delete event', () => {
+  it('arms and then confirms deletion of an element via two fast swipes', () => {
     const scene = createScene();
     const history = new History({
       ...scene,
@@ -81,22 +81,57 @@ describe('GestureCommandAdapter', () => {
       ],
     });
     const adapter = new GestureCommandAdapter(canvas(), history);
-    const outcome = adapter.handle({
-      type: 'delete',
-      point: { x: 0.2, y: 0.2 },
-    });
-    expect(outcome?.type).toBe('deleted');
+    adapter.updateHover({ x: 0.2, y: 0.2 }, 0);
+    const armed = adapter.updateHover({ x: 0.35, y: 0.2 }, 100);
+    expect(armed?.type).toBe('delete-armed');
+    expect(history.present.elements).toHaveLength(1);
+
+    adapter.updateHover({ x: 0.35, y: 0.2 }, 150);
+    const deleted = adapter.updateHover({ x: 0.5, y: 0.2 }, 300);
+    expect(deleted?.type).toBe('deleted');
     expect(history.present.elements).toHaveLength(0);
   });
 
-  it('does not delete when the fist is not over any element', () => {
+  it('does not arm deletion when a swipe is not over any element', () => {
     const history = new History(createScene());
     const adapter = new GestureCommandAdapter(canvas(), history);
-    const outcome = adapter.handle({
-      type: 'delete',
-      point: { x: 0.9, y: 0.9 },
-    });
+    adapter.updateHover({ x: 0.9, y: 0.9 }, 0);
+    const outcome = adapter.updateHover({ x: 0.75, y: 0.9 }, 100);
     expect(outcome).toBeNull();
+  });
+
+  it('lets an armed deletion expire if not confirmed in time', () => {
+    const scene = createScene();
+    const history = new History({
+      ...scene,
+      elements: [
+        {
+          id: 'rect',
+          type: 'rectangle',
+          x: 10,
+          y: 10,
+          width: 30,
+          height: 30,
+          strokeColor: '#fff',
+          fillColor: 'transparent',
+          strokeWidth: 2,
+          opacity: 1,
+          roughness: 0,
+        },
+      ],
+    });
+    const adapter = new GestureCommandAdapter(canvas(), history);
+    adapter.updateHover({ x: 0.2, y: 0.2 }, 0);
+    const armed = adapter.updateHover({ x: 0.35, y: 0.2 }, 100);
+    expect(armed?.type).toBe('delete-armed');
+
+    // A confirming swipe well past the confirm window should no longer count
+    // as a confirmation (it may re-arm the element instead, but must not
+    // delete it outright).
+    adapter.updateHover({ x: 0.35, y: 0.2 }, 2_000);
+    const outcome = adapter.updateHover({ x: 0.5, y: 0.2 }, 2_150);
+    expect(outcome?.type).not.toBe('deleted');
+    expect(history.present.elements).toHaveLength(1);
   });
 
   it('drags a line control point instead of the whole line when grabbed near it', () => {

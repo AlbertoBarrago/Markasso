@@ -12,8 +12,6 @@ import type {
 const MIN_TRACE_POINTS = 8;
 const ARM_DURATION_MS = 400;
 const ARM_MOVEMENT_RADIUS = 0.04;
-const DELETE_HOLD_MS = 600;
-const DELETE_MOVEMENT_RADIUS = 0.045;
 const SELECT_ALL_HOLD_MS = 600;
 const SELECT_ALL_MOVEMENT_RADIUS = 0.045;
 // The open hand also confirms/ends other gestures (pinch-end, stroke-end), so
@@ -54,17 +52,13 @@ export class GestureRecognizer {
   private lastPalmScale: number | null = null;
   private lastTrackedAt = 0;
   private poseUncertainSince: number | null = null;
-  private deleteOrigin: GesturePoint | null = null;
-  private deleteStartedAt = 0;
   private selectAllOrigin: GesturePoint | null = null;
   private selectAllStartedAt = 0;
   private openReadyAt = 0;
   private readonly cursorFilter = new PointOneEuroFilter();
-  // The index fingertip (landmark 8) curls in toward the palm when the hand
-  // closes into a fist, so tracking it there is noisy and never settles —
-  // the fist-hold timer kept resetting and the delete progress never
-  // completed. The palm center stays put while the fist is held, so use it
-  // instead for the fist/delete gesture specifically.
+  // The fingertip landmark is noisier than the palm center for poses that
+  // hold roughly still (e.g. an open hand held for select-all) — the palm
+  // stays put more reliably, so hold-based gestures track it instead.
   private readonly palmFilter = new PointOneEuroFilter();
 
   update(
@@ -118,6 +112,8 @@ export class GestureRecognizer {
         break;
 
       case 'fist':
+        // A fist cancels whatever's in progress — deletion itself is now a
+        // swipe-and-confirm gesture handled at the hover level, not a hold.
         if (this.state === 'pinching') {
           events.push({ type: 'pinch-end', point: cursor });
           this.state = 'absent';
@@ -125,7 +121,7 @@ export class GestureRecognizer {
         }
         // A fist is geometrically close to "no clear pose" — while drawing,
         // tolerate it the same way 'none' is tolerated, so a brief tracking
-        // hiccup mid-stroke doesn't read as an accidental delete request.
+        // hiccup mid-stroke doesn't read as an accidental cancel.
         if (this.state === 'drawing') {
           if (
             timestamp - (this.poseUncertainSince ?? timestamp) <=
@@ -138,7 +134,7 @@ export class GestureRecognizer {
           break;
         }
         if (this.state === 'arming') this.cancelDrawing();
-        armProgress = this.handleFist(palm, timestamp, events);
+        this.state = 'ready';
         break;
 
       case 'open':
@@ -180,12 +176,10 @@ export class GestureRecognizer {
         break;
     }
 
-    // While deleting/selecting, show the progress ring at the palm anchor
-    // that the hold is actually measured against, not the fingertip (folded
-    // and jittery for a fist, and not meaningfully distinct from palm for an
-    // open hand).
+    // While selecting, show the progress ring at the palm anchor that the
+    // hold is actually measured against.
     return this.currentFrame(
-      this.state === 'deleting' || this.state === 'selecting' ? palm : cursor,
+      this.state === 'selecting' ? palm : cursor,
       events,
       armProgress,
     );
@@ -204,8 +198,6 @@ export class GestureRecognizer {
     this.lastPalmScale = null;
     this.lastTrackedAt = 0;
     this.poseUncertainSince = null;
-    this.deleteOrigin = null;
-    this.deleteStartedAt = 0;
     this.selectAllOrigin = null;
     this.selectAllStartedAt = 0;
     this.openReadyAt = 0;
@@ -264,33 +256,6 @@ export class GestureRecognizer {
     return progress;
   }
 
-  private handleFist(
-    cursor: GesturePoint,
-    timestamp: number,
-    events: GestureEvent[],
-  ): number {
-    if (
-      this.state !== 'deleting' ||
-      !this.deleteOrigin ||
-      distance(this.deleteOrigin, cursor) > DELETE_MOVEMENT_RADIUS
-    ) {
-      this.state = 'deleting';
-      this.deleteStartedAt = timestamp;
-      this.deleteOrigin = cursor;
-      return 0;
-    }
-    const progress = Math.min(
-      1,
-      (timestamp - this.deleteStartedAt) / DELETE_HOLD_MS,
-    );
-    if (progress >= 1) {
-      events.push({ type: 'delete', point: cursor });
-      this.deleteOrigin = null;
-      this.state = 'ready';
-    }
-    return progress;
-  }
-
   private handleOpenHold(
     palmPoint: GesturePoint,
     timestamp: number,
@@ -343,8 +308,6 @@ export class GestureRecognizer {
     this.lastLandmarks = null;
     this.lastPalmScale = null;
     this.poseUncertainSince = null;
-    this.deleteOrigin = null;
-    this.deleteStartedAt = 0;
     this.selectAllOrigin = null;
     this.selectAllStartedAt = 0;
     this.openReadyAt = 0;

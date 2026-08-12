@@ -32,6 +32,15 @@ const CP_GRAB_RADIUS_PX = 32;
 // shape's own top edge and steal resize/move pinches.
 const ROTATION_GRAB_PAD_PX = 26;
 
+// Deleting is a swipe-and-confirm gesture rather than a pose hold: a fast
+// lateral movement while hovering (no pinch) arms deletion of whatever's
+// underneath, and a second fast movement within the confirm window commits
+// it — this avoids relying on a closed fist, whose fingertip landmark is
+// unreliable once curled into the palm.
+const SWIPE_MIN_DIST = 0.12;
+const SWIPE_MAX_MS = 220;
+const DELETE_CONFIRM_WINDOW_MS = 1_500;
+
 // Typical wrist-to-middle-MCP distance (normalized image space) for a hand at
 // a comfortable distance from the camera — the baseline the padding above was
 // tuned against. A smaller palmScale (small hand, or hand farther from the
@@ -66,6 +75,10 @@ export class GestureCommandAdapter {
   private rotateInitialAngle = 0;
   private rotateInitialRotation = 0;
   private handScale = 1;
+  private lastHoverPoint: GesturePoint | null = null;
+  private lastHoverAt = 0;
+  private pendingDeleteId: string | null = null;
+  private pendingDeleteUntil = 0;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -105,8 +118,6 @@ export class GestureCommandAdapter {
         return null;
       case 'stroke-end':
         return this.createStroke(event.points);
-      case 'delete':
-        return this.deleteAt(event.point);
       case 'select-all':
         return this.selectAll();
       case 'stroke-start':
@@ -123,9 +134,34 @@ export class GestureCommandAdapter {
     return { type: 'selected-all' };
   }
 
-  /** Updates the hover highlight while the hand points/rests over the canvas without pinching. */
-  updateHover(point: GesturePoint | null): void {
-    if (!point || this.draggedId || this.cpElId) return;
+  /**
+   * Updates the hover highlight while the hand points/rests over the canvas
+   * without pinching, and detects the swipe-to-delete gesture: a fast
+   * lateral movement arms deletion of whatever's underneath, and a second
+   * fast movement within the confirm window commits it.
+   */
+  updateHover(
+    point: GesturePoint | null,
+    timestamp: number,
+  ): GestureCommandOutcome | null {
+    if (this.pendingDeleteId && timestamp > this.pendingDeleteUntil) {
+      this.pendingDeleteId = null;
+    }
+    let outcome: GestureCommandOutcome | null = null;
+    if (point && this.lastHoverPoint && !this.draggedId && !this.cpElId) {
+      const dt = timestamp - this.lastHoverAt;
+      if (
+        dt > 0 &&
+        dt <= SWIPE_MAX_MS &&
+        distance(this.lastHoverPoint, point) >= SWIPE_MIN_DIST
+      ) {
+        outcome = this.handleSwipe(this.lastHoverPoint, timestamp);
+      }
+    }
+    this.lastHoverPoint = point;
+    this.lastHoverAt = timestamp;
+
+    if (!point || this.draggedId || this.cpElId) return outcome;
     const world = this.toWorld(point);
     const scene = this.history.present;
     const hit = hitTest(
@@ -136,15 +172,29 @@ export class GestureCommandAdapter {
       this.hitPad,
     );
     gestureHover.id = hit && !hit.locked ? hit.id : null;
+    return outcome;
   }
 
   dispose(): void {
     this.endPinch();
     gestureHover.id = null;
+    this.pendingDeleteId = null;
   }
 
-  private deleteAt(point: GesturePoint): GestureCommandOutcome | null {
-    const world = this.toWorld(point);
+  private handleSwipe(
+    swipeOrigin: GesturePoint,
+    timestamp: number,
+  ): GestureCommandOutcome | null {
+    if (this.pendingDeleteId) {
+      const id = this.pendingDeleteId;
+      this.pendingDeleteId = null;
+      const el = this.history.present.elements.find((e) => e.id === id);
+      if (!el || el.locked) return null;
+      this.history.dispatch({ type: 'DELETE_ELEMENTS', ids: [id] });
+      gestureHover.id = null;
+      return { type: 'deleted' };
+    }
+    const world = this.toWorld(swipeOrigin);
     const scene = this.history.present;
     const hit = hitTest(
       scene.elements,
@@ -154,9 +204,9 @@ export class GestureCommandAdapter {
       this.hitPad,
     );
     if (!hit || hit.locked) return null;
-    this.history.dispatch({ type: 'DELETE_ELEMENTS', ids: [hit.id] });
-    gestureHover.id = null;
-    return { type: 'deleted' };
+    this.pendingDeleteId = hit.id;
+    this.pendingDeleteUntil = timestamp + DELETE_CONFIRM_WINDOW_MS;
+    return { type: 'delete-armed' };
   }
 
   private startPinch(point: GesturePoint): void {
@@ -390,6 +440,7 @@ export type GestureCommandOutcome =
   | { type: 'created'; shape: StrokeShape }
   | { type: 'rejected' }
   | { type: 'deleted' }
+  | { type: 'delete-armed' }
   | { type: 'selected-all' };
 
 function baseElement<T extends 'rectangle' | 'ellipse' | 'line' | 'freehand'>(

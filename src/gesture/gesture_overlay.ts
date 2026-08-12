@@ -36,6 +36,7 @@ export class GestureOverlay {
     | { type: 'created'; shape: StrokeShape; until: number }
     | { type: 'rejected'; until: number }
     | { type: 'deleted'; until: number }
+    | { type: 'delete-armed'; until: number }
     | { type: 'selected-all'; until: number }
     | null = null;
 
@@ -109,16 +110,6 @@ export class GestureOverlay {
         '#c42020',
       );
     }
-    if (frame.state === 'deleting' && frame.cursor) {
-      this.drawArmProgress(
-        ctx,
-        frame.cursor,
-        frame.armProgress,
-        width,
-        height,
-        '#ff8c1a',
-      );
-    }
     if (frame.state === 'selecting' && frame.cursor) {
       this.drawArmProgress(
         ctx,
@@ -142,11 +133,7 @@ export class GestureOverlay {
         Math.PI * 2,
       );
       ctx.fillStyle =
-        frame.state === 'pinching'
-          ? '#c42020'
-          : frame.state === 'deleting'
-            ? '#ff8c1a'
-            : 'rgba(255,255,255,.2)';
+        frame.state === 'pinching' ? '#c42020' : 'rgba(255,255,255,.2)';
       ctx.fill();
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 2;
@@ -158,6 +145,13 @@ export class GestureOverlay {
     this.outcome = { type: 'deleted', until: performance.now() + 700 };
     this.root.dataset.outcome = 'deleted';
     this.setStatus(t('gestureDeleted'));
+  }
+
+  /** Shown while a swipe has armed an element for deletion, waiting for a confirming second swipe. Matches gesture_commands.ts's DELETE_CONFIRM_WINDOW_MS. */
+  showDeleteArmed(): void {
+    this.outcome = { type: 'delete-armed', until: performance.now() + 1_500 };
+    this.root.dataset.outcome = 'delete-armed';
+    this.setStatus(t('gestureConfirmDelete'), 'error');
   }
 
   showCreated(shape: StrokeShape): void {
@@ -296,8 +290,6 @@ function labelForFrame(frame: GestureFrame): string {
       return frame.prediction
         ? `${shapeLabel(frame.prediction)} · ${t('gestureReleaseToAdd')}`
         : t('gestureDrawing');
-    case 'deleting':
-      return `${t('gestureHoldToDelete')} ${Math.round(frame.armProgress * 100)}%`;
     case 'selecting':
       return `${t('gestureHoldToSelectAll')} ${Math.round(frame.armProgress * 100)}%`;
     case 'absent':
