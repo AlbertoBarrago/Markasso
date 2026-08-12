@@ -25,6 +25,12 @@ import type { GestureEvent, GesturePoint } from './types';
 const GESTURE_HIT_PAD_PX = 16;
 const GESTURE_REGRAB_PAD_PX = 40;
 const CP_GRAB_RADIUS_PX = 32;
+// The rotation handle sits ROTATION_HANDLE_OFFSET (34px) above the shape
+// with nothing else nearby to confuse it with, so it can afford a bigger
+// tolerance than the default hit pad — but capped below that 34px offset so
+// a very large hand-scale reading can't extend the hit zone down into the
+// shape's own top edge and steal resize/move pinches.
+const ROTATION_GRAB_PAD_PX = 26;
 
 // Typical wrist-to-middle-MCP distance (normalized image space) for a hand at
 // a comfortable distance from the camera — the baseline the padding above was
@@ -188,7 +194,7 @@ export class GestureCommandAdapter {
           screen.x - rotHandle.screenX,
           screen.y - rotHandle.screenY,
         ) <=
-          ROTATION_HANDLE_R + this.hitPad
+          ROTATION_HANDLE_R + ROTATION_GRAB_PAD_PX * this.handScale
       ) {
         this.rotateElId = el.id;
         this.rotateCenter = getElementCenter(el);
