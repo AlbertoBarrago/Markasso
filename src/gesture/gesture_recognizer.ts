@@ -44,6 +44,7 @@ export class GestureRecognizer {
   private armOrigin: GesturePoint | null = null;
   private lastCursor: GesturePoint | null = null;
   private lastLandmarks: HandLandmarks | null = null;
+  private lastPalmScale: number | null = null;
   private lastTrackedAt = 0;
   private poseUncertainSince: number | null = null;
   private deleteOrigin: GesturePoint | null = null;
@@ -66,6 +67,7 @@ export class GestureRecognizer {
 
     this.lastTrackedAt = timestamp;
     this.lastLandmarks = landmarks.map(mirror);
+    this.lastPalmScale = distance(landmarks[0]!, landmarks[9]!);
     const cursor = this.cursorFilter.filter(mirror(landmarks[8]!), timestamp);
     this.lastCursor = cursor;
     const rawPalm = mirror(midpoint(landmarks[0]!, landmarks[9]!));
@@ -80,7 +82,13 @@ export class GestureRecognizer {
     } else {
       this.poseUncertainSince = null;
     }
-    if (rawPose !== pose) return this.currentFrame(cursor, [], armProgress);
+    // A raw misclassification for a single frame (e.g. the index finger's
+    // angle to the camera shifting mid-curve) would otherwise stall an
+    // in-progress stroke every time it happens — trace this frame using the
+    // already-debounced pose instead of bailing, as long as we're mid-draw.
+    if (rawPose !== pose && this.state !== 'drawing') {
+      return this.currentFrame(cursor, [], armProgress);
+    }
 
     switch (pose) {
       case 'pinch':
@@ -172,6 +180,7 @@ export class GestureRecognizer {
     this.armStartedAt = 0;
     this.lastCursor = null;
     this.lastLandmarks = null;
+    this.lastPalmScale = null;
     this.lastTrackedAt = 0;
     this.poseUncertainSince = null;
     this.deleteOrigin = null;
@@ -281,6 +290,7 @@ export class GestureRecognizer {
     this.palmFilter.reset();
     this.lastCursor = null;
     this.lastLandmarks = null;
+    this.lastPalmScale = null;
     this.poseUncertainSince = null;
     this.deleteOrigin = null;
     this.deleteStartedAt = 0;
@@ -328,6 +338,7 @@ export class GestureRecognizer {
       state: this.state,
       cursor,
       landmarks,
+      palmScale: this.lastPalmScale,
       trace: [...this.trace],
       armProgress,
       prediction,

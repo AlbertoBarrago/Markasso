@@ -29,6 +29,8 @@ export interface GestureFrame {
   readonly state: GestureState;
   readonly cursor: GesturePoint | null;
   readonly landmarks: HandLandmarks | null;
+  /** Wrist-to-middle-MCP distance in normalized image space; null while tracking is lost. Smaller values mean a smaller or more distant hand, which needs looser hit tolerances to compensate for relatively larger tracking jitter. */
+  readonly palmScale: number | null;
   readonly trace: ReadonlyArray<GesturePoint>;
   readonly armProgress: number;
   readonly prediction: GestureShapeType | null;

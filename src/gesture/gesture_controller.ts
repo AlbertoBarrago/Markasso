@@ -49,7 +49,7 @@ export class GestureController {
         video: {
           width: { ideal: 640 },
           height: { ideal: 480 },
-          frameRate: { ideal: 30, max: 30 },
+          frameRate: { ideal: 60, max: 60 },
           facingMode: 'user',
         },
         audio: false,
@@ -121,6 +121,7 @@ export class GestureController {
       event.data.landmarks,
       event.data.timestamp,
     );
+    this.commands.setHandScale(frame.palmScale);
     this.commands.updateHover(frame.state === 'ready' ? frame.cursor : null);
     frame.events.forEach((gestureEvent) => {
       const outcome = this.commands.handle(gestureEvent);
