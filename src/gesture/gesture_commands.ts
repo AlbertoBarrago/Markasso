@@ -17,16 +17,46 @@ const GESTURE_HIT_PAD_PX = 16;
 const GESTURE_REGRAB_PAD_PX = 40;
 const CP_GRAB_RADIUS_PX = 32;
 
+// Typical wrist-to-middle-MCP distance (normalized image space) for a hand at
+// a comfortable distance from the camera — the baseline the padding above was
+// tuned against. A smaller palmScale (small hand, or hand farther from the
+// camera) means the same absolute landmark jitter maps to a larger fraction
+// of the hand, so hit tolerances scale up to compensate.
+const REFERENCE_PALM_SCALE = 0.18;
+const HAND_SCALE_MIN = 0.75;
+const HAND_SCALE_MAX = 2.5;
+
 export class GestureCommandAdapter {
   private draggedId: string | null = null;
   private lastWorldPoint: GesturePoint | null = null;
   private cpElId: string | null = null;
   private cpDragOffset: GesturePoint | null = null;
+  private handScale = 1;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
     private readonly history: History,
   ) {}
+
+  /** Adjusts hit-test tolerances to the current hand's apparent size, so a smaller/farther hand doesn't feel less forgiving than a larger/closer one. */
+  setHandScale(palmScale: number | null): void {
+    this.handScale =
+      palmScale === null
+        ? 1
+        : clamp(
+            REFERENCE_PALM_SCALE / palmScale,
+            HAND_SCALE_MIN,
+            HAND_SCALE_MAX,
+          );
+  }
+
+  private get hitPad(): number {
+    return GESTURE_HIT_PAD_PX * this.handScale;
+  }
+
+  private get regrabPad(): number {
+    return GESTURE_REGRAB_PAD_PX * this.handScale;
+  }
 
   handle(event: GestureEvent): GestureCommandOutcome | null {
     switch (event.type) {
@@ -59,7 +89,7 @@ export class GestureCommandAdapter {
       world.x,
       world.y,
       scene.viewport,
-      GESTURE_HIT_PAD_PX,
+      this.hitPad,
     );
     gestureHover.id = hit && !hit.locked ? hit.id : null;
   }
@@ -77,7 +107,7 @@ export class GestureCommandAdapter {
       world.x,
       world.y,
       scene.viewport,
-      GESTURE_HIT_PAD_PX,
+      this.hitPad,
     );
     if (!hit || hit.locked) return null;
     this.history.dispatch({ type: 'DELETE_ELEMENTS', ids: [hit.id] });
@@ -111,19 +141,13 @@ export class GestureCommandAdapter {
       world.x,
       world.y,
       scene.viewport,
-      GESTURE_HIT_PAD_PX,
+      this.hitPad,
     );
     // A pinch that misses the normal hit test but still lands near the
     // already-selected element is very likely an imprecise re-grab attempt,
     // not a request to deselect — hand tracking jitter makes exact re-hits hard.
     if ((!hit || hit.locked) && selected.length === 1) {
-      hit = hitTest(
-        selected,
-        world.x,
-        world.y,
-        scene.viewport,
-        GESTURE_REGRAB_PAD_PX,
-      );
+      hit = hitTest(selected, world.x, world.y, scene.viewport, this.regrabPad);
     }
     if (!hit || hit.locked) {
       this.history.dispatch({ type: 'CLEAR_SELECTION' });
@@ -240,4 +264,8 @@ function baseElement<T extends 'rectangle' | 'ellipse' | 'line' | 'freehand'>(
     roughness: style.roughness,
     strokeStyle: style.strokeStyle,
   };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
