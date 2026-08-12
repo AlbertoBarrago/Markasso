@@ -82,7 +82,13 @@ export class GestureRecognizer {
     } else {
       this.poseUncertainSince = null;
     }
-    if (rawPose !== pose) return this.currentFrame(cursor, [], armProgress);
+    // A raw misclassification for a single frame (e.g. the index finger's
+    // angle to the camera shifting mid-curve) would otherwise stall an
+    // in-progress stroke every time it happens — trace this frame using the
+    // already-debounced pose instead of bailing, as long as we're mid-draw.
+    if (rawPose !== pose && this.state !== 'drawing') {
+      return this.currentFrame(cursor, [], armProgress);
+    }
 
     switch (pose) {
       case 'pinch':
