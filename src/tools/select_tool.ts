@@ -27,6 +27,12 @@ type DragMode =
 
 const SNAP_RADIUS_PX = 20;
 
+// The smallest on-screen size (CSS px) a resized element is allowed to
+// shrink to — below this the shape anti-aliases down to near-zero pixel
+// coverage and effectively disappears, regardless of how far zoomed in/out
+// the canvas is. Actual world-space floors are derived as this / zoom.
+export const MIN_RESIZE_SCREEN_PX = 8;
+
 const HANDLE_CURSORS: Record<HandlePosition, string> = {
   nw: 'nw-resize',
   n: 'ns-resize',
@@ -493,6 +499,7 @@ export class SelectTool implements Tool {
           e.shiftKey,
           this.resizeInitialSignX,
           this.resizeInitialSignY,
+          scene.viewport.zoom,
         );
         if (resized) {
           ctx.history.dispatch({
@@ -521,6 +528,7 @@ export class SelectTool implements Tool {
           e.shiftKey,
           this.resizeInitialSignX,
           this.resizeInitialSignY,
+          MIN_RESIZE_SCREEN_PX / scene.viewport.zoom,
         );
         if (newBounds && ob.w > 0 && ob.h > 0) {
           const scaleX = newBounds.w / ob.w;
@@ -895,7 +903,7 @@ type ResizePayload = {
   points?: ReadonlyArray<readonly [number, number]>;
 };
 
-function anchorX(
+export function anchorX(
   h: HandlePosition,
   b: { x: number; y: number; w: number; h: number },
 ): number {
@@ -904,7 +912,7 @@ function anchorX(
   return b.x + b.w / 2; // n/s — unused (x axis fixed)
 }
 
-function anchorY(
+export function anchorY(
   h: HandlePosition,
   b: { x: number; y: number; w: number; h: number },
 ): number {
@@ -923,6 +931,11 @@ function newBoundsFromHandle(
   shiftKey = false,
   initialSignX = 1,
   initialSignY = 1,
+  // World-space floor below which the element would render at a sub-pixel
+  // screen size and appear to vanish — callers pass this scaled by the
+  // current zoom (e.g. MIN_RESIZE_SCREEN_PX / zoom) so the on-screen size
+  // stays perceptible regardless of how zoomed in/out the canvas is.
+  minSize = 8,
 ): { x: number; y: number; w: number; h: number } | null {
   const fixX = handle === 'n' || handle === 's';
   const fixY = handle === 'w' || handle === 'e';
@@ -955,7 +968,7 @@ function newBoundsFromHandle(
 
   const w = maxX - minX;
   const h = maxY - minY;
-  if (w < 8 || h < 8) return null;
+  if (w < minSize || h < minSize) return null;
   return { x: minX, y: minY, w, h };
 }
 
@@ -1016,7 +1029,7 @@ function scaleElement(
   }
 }
 
-function computeResize(
+export function computeResize(
   el: Element,
   handle: HandlePosition,
   ax: number,
@@ -1027,6 +1040,7 @@ function computeResize(
   shiftKey = false,
   initialSignX = 1,
   initialSignY = 1,
+  zoom = 1,
 ): ResizePayload | null {
   const nb = newBoundsFromHandle(
     handle,
@@ -1038,6 +1052,7 @@ function computeResize(
     shiftKey,
     initialSignX,
     initialSignY,
+    MIN_RESIZE_SCREEN_PX / zoom,
   );
   if (!nb) return null;
   return scaleElement(el, nb.x, nb.y, nb.w, nb.h);

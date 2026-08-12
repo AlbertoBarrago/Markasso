@@ -5,7 +5,16 @@ import type {
   LineElement,
 } from '../elements/element';
 import type { History } from '../engine/history';
-import { hitTest } from '../tools/select_tool';
+import {
+  getElementBounds,
+  getElementCenter,
+  getRotationHandleScreen,
+  getSelectionHandles,
+  type HandlePosition,
+  hitTestHandle,
+  ROTATION_HANDLE_R,
+} from '../rendering/draw_selection';
+import { anchorX, anchorY, computeResize, hitTest } from '../tools/select_tool';
 import { gestureHover } from './gesture_hover';
 import { distance } from './landmark_geometry';
 import { classifyStroke, type StrokeShape } from './stroke_classifier';
@@ -26,11 +35,30 @@ const REFERENCE_PALM_SCALE = 0.18;
 const HAND_SCALE_MIN = 0.75;
 const HAND_SCALE_MAX = 2.5;
 
+// Element types resized via their own dedicated control-point drag rather
+// than a generic bounding-box corner (line/arrow endpoints & curve handles).
+const NON_CORNER_RESIZE_TYPES = new Set(['line', 'arrow']);
+
 export class GestureCommandAdapter {
   private draggedId: string | null = null;
   private lastWorldPoint: GesturePoint | null = null;
   private cpElId: string | null = null;
   private cpDragOffset: GesturePoint | null = null;
+  private resizeElId: string | null = null;
+  private resizeHandle: HandlePosition | null = null;
+  private resizeOrigEl: Element | null = null;
+  private resizeOrigBounds: {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } | null = null;
+  private resizeAnchorX = 0;
+  private resizeAnchorY = 0;
+  private rotateElId: string | null = null;
+  private rotateCenter: readonly [number, number] = [0, 0];
+  private rotateInitialAngle = 0;
+  private rotateInitialRotation = 0;
   private handScale = 1;
 
   constructor(
@@ -73,10 +101,20 @@ export class GestureCommandAdapter {
         return this.createStroke(event.points);
       case 'delete':
         return this.deleteAt(event.point);
+      case 'select-all':
+        return this.selectAll();
       case 'stroke-start':
       case 'stroke-move':
         return null;
     }
+  }
+
+  private selectAll(): GestureCommandOutcome | null {
+    const scene = this.history.present;
+    const ids = scene.elements.filter((el) => !el.locked).map((el) => el.id);
+    if (ids.length === 0) return null;
+    this.history.dispatch({ type: 'SELECT_ELEMENTS', ids });
+    return { type: 'selected-all' };
   }
 
   /** Updates the hover highlight while the hand points/rests over the canvas without pinching. */
@@ -136,6 +174,56 @@ export class GestureCommandAdapter {
       }
     }
 
+    if (selected.length === 1 && !selected[0]!.locked) {
+      const el = selected[0]!;
+      const screen = this.toScreen(point);
+      const rotHandle = getRotationHandleScreen(
+        [el],
+        scene.viewport,
+        scene.elements,
+      );
+      if (
+        rotHandle &&
+        Math.hypot(
+          screen.x - rotHandle.screenX,
+          screen.y - rotHandle.screenY,
+        ) <=
+          ROTATION_HANDLE_R + this.hitPad
+      ) {
+        this.rotateElId = el.id;
+        this.rotateCenter = getElementCenter(el);
+        this.rotateInitialAngle = Math.atan2(
+          world.y - this.rotateCenter[1],
+          world.x - this.rotateCenter[0],
+        );
+        this.rotateInitialRotation = el.rotation ?? 0;
+        this.history.beginDrag();
+        return;
+      }
+    }
+
+    if (
+      selected.length === 1 &&
+      !selected[0]!.locked &&
+      !NON_CORNER_RESIZE_TYPES.has(selected[0]!.type)
+    ) {
+      const el = selected[0]!;
+      const screen = this.toScreen(point);
+      const handles = getSelectionHandles([el], scene.viewport);
+      const handle = hitTestHandle(handles, screen.x, screen.y, this.hitPad);
+      if (handle) {
+        this.resizeElId = el.id;
+        this.resizeHandle = handle;
+        this.resizeOrigEl = el;
+        const bounds = getElementBounds(el);
+        this.resizeOrigBounds = bounds;
+        this.resizeAnchorX = anchorX(handle, bounds);
+        this.resizeAnchorY = anchorY(handle, bounds);
+        this.history.beginDrag();
+        return;
+      }
+    }
+
     let hit = hitTest(
       scene.elements,
       world.x,
@@ -161,6 +249,17 @@ export class GestureCommandAdapter {
 
   private movePinch(point: GesturePoint): void {
     const world = this.toWorld(point);
+    if (this.rotateElId) {
+      const [cx, cy] = this.rotateCenter;
+      const angle = Math.atan2(world.y - cy, world.x - cx);
+      this.history.dispatch({
+        type: 'SET_ROTATION',
+        id: this.rotateElId,
+        rotation:
+          this.rotateInitialRotation + (angle - this.rotateInitialAngle),
+      });
+      return;
+    }
     if (this.cpElId && this.cpDragOffset) {
       this.history.dispatch({
         type: 'RESIZE_ELEMENT',
@@ -168,6 +267,34 @@ export class GestureCommandAdapter {
         cx: world.x - this.cpDragOffset.x,
         cy: world.y - this.cpDragOffset.y,
       });
+      return;
+    }
+    if (
+      this.resizeElId &&
+      this.resizeHandle &&
+      this.resizeOrigEl &&
+      this.resizeOrigBounds
+    ) {
+      const resized = computeResize(
+        this.resizeOrigEl,
+        this.resizeHandle,
+        this.resizeAnchorX,
+        this.resizeAnchorY,
+        world.x,
+        world.y,
+        this.resizeOrigBounds,
+        false,
+        1,
+        1,
+        this.history.present.viewport.zoom,
+      );
+      if (resized) {
+        this.history.dispatch({
+          type: 'RESIZE_ELEMENT',
+          id: this.resizeElId,
+          ...resized,
+        });
+      }
       return;
     }
     if (!this.draggedId || !this.lastWorldPoint) return;
@@ -181,11 +308,17 @@ export class GestureCommandAdapter {
   }
 
   private endPinch(): void {
-    if (this.draggedId || this.cpElId) this.history.endDrag();
+    if (this.draggedId || this.cpElId || this.resizeElId || this.rotateElId)
+      this.history.endDrag();
     this.draggedId = null;
     this.lastWorldPoint = null;
     this.cpElId = null;
     this.cpDragOffset = null;
+    this.resizeElId = null;
+    this.resizeHandle = null;
+    this.resizeOrigEl = null;
+    this.resizeOrigBounds = null;
+    this.rotateElId = null;
   }
 
   private createStroke(
@@ -239,12 +372,19 @@ export class GestureCommandAdapter {
     );
     return { x, y };
   }
+
+  /** Converts a normalized [0,1] camera-space point to CSS-pixel canvas-relative screen space, matching the coordinate space getSelectionHandles/hitTestHandle use for the mouse tool. */
+  private toScreen(point: GesturePoint): GesturePoint {
+    const rect = this.canvas.getBoundingClientRect();
+    return { x: point.x * rect.width, y: point.y * rect.height };
+  }
 }
 
 export type GestureCommandOutcome =
   | { type: 'created'; shape: StrokeShape }
   | { type: 'rejected' }
-  | { type: 'deleted' };
+  | { type: 'deleted' }
+  | { type: 'selected-all' };
 
 function baseElement<T extends 'rectangle' | 'ellipse' | 'line' | 'freehand'>(
   type: T,

@@ -131,6 +131,8 @@ export class GestureController {
         this.overlay?.showRejected();
       } else if (outcome?.type === 'deleted') {
         this.overlay?.showDeleted();
+      } else if (outcome?.type === 'selected-all') {
+        this.overlay?.showSelectedAll();
       }
     });
     this.overlay?.render(frame);

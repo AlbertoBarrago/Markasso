@@ -14,6 +14,13 @@ const ARM_DURATION_MS = 400;
 const ARM_MOVEMENT_RADIUS = 0.04;
 const DELETE_HOLD_MS = 600;
 const DELETE_MOVEMENT_RADIUS = 0.045;
+const SELECT_ALL_HOLD_MS = 600;
+const SELECT_ALL_MOVEMENT_RADIUS = 0.045;
+// The open hand also confirms/ends other gestures (pinch-end, stroke-end), so
+// it's often briefly open right after finishing one — wait this long after
+// settling into 'open' before letting the select-all hold start counting, so
+// that natural resting doesn't read as a deliberate select-all request.
+const OPEN_SETTLE_MS = 700;
 const TRACKING_GRACE_MS = 200;
 // Losing the 'point' pose to 'none' mid-stroke is usually a tracking hiccup
 // (occluded fingertip, brief low-confidence frame) — tolerate it generously.
@@ -49,6 +56,9 @@ export class GestureRecognizer {
   private poseUncertainSince: number | null = null;
   private deleteOrigin: GesturePoint | null = null;
   private deleteStartedAt = 0;
+  private selectAllOrigin: GesturePoint | null = null;
+  private selectAllStartedAt = 0;
+  private openReadyAt = 0;
   private readonly cursorFilter = new PointOneEuroFilter();
   // The index fingertip (landmark 8) curls in toward the palm when the hand
   // closes into a fist, so tracking it there is noisy and never settles —
@@ -137,7 +147,17 @@ export class GestureRecognizer {
         }
         if (this.state === 'drawing') this.finishTrace(events);
         if (this.state === 'arming') this.cancelDrawing();
-        this.state = 'ready';
+        if (this.state !== 'ready' && this.state !== 'selecting') {
+          // First frame landing on 'open' from any other state — settle at
+          // 'ready' rather than starting a select-all hold immediately, so
+          // merely showing an open hand doesn't itself start the countdown.
+          this.state = 'ready';
+          this.selectAllOrigin = null;
+          this.openReadyAt = timestamp;
+          break;
+        }
+        if (timestamp - this.openReadyAt < OPEN_SETTLE_MS) break;
+        armProgress = this.handleOpenHold(palm, timestamp, events);
         break;
 
       case 'none':
@@ -160,11 +180,12 @@ export class GestureRecognizer {
         break;
     }
 
-    // While deleting, show the progress ring at the palm anchor that the
-    // hold is actually measured against, not the (now-folded, jittery)
-    // fingertip.
+    // While deleting/selecting, show the progress ring at the palm anchor
+    // that the hold is actually measured against, not the fingertip (folded
+    // and jittery for a fist, and not meaningfully distinct from palm for an
+    // open hand).
     return this.currentFrame(
-      this.state === 'deleting' ? palm : cursor,
+      this.state === 'deleting' || this.state === 'selecting' ? palm : cursor,
       events,
       armProgress,
     );
@@ -185,6 +206,9 @@ export class GestureRecognizer {
     this.poseUncertainSince = null;
     this.deleteOrigin = null;
     this.deleteStartedAt = 0;
+    this.selectAllOrigin = null;
+    this.selectAllStartedAt = 0;
+    this.openReadyAt = 0;
     this.cursorFilter.reset();
     this.palmFilter.reset();
   }
@@ -267,6 +291,33 @@ export class GestureRecognizer {
     return progress;
   }
 
+  private handleOpenHold(
+    palmPoint: GesturePoint,
+    timestamp: number,
+    events: GestureEvent[],
+  ): number {
+    if (
+      this.state !== 'selecting' ||
+      !this.selectAllOrigin ||
+      distance(this.selectAllOrigin, palmPoint) > SELECT_ALL_MOVEMENT_RADIUS
+    ) {
+      this.state = 'selecting';
+      this.selectAllStartedAt = timestamp;
+      this.selectAllOrigin = palmPoint;
+      return 0;
+    }
+    const progress = Math.min(
+      1,
+      (timestamp - this.selectAllStartedAt) / SELECT_ALL_HOLD_MS,
+    );
+    if (progress >= 1) {
+      events.push({ type: 'select-all' });
+      this.selectAllOrigin = null;
+      this.state = 'ready';
+    }
+    return progress;
+  }
+
   private handleTrackingLoss(timestamp: number): GestureFrame {
     const gracePeriod =
       this.state === 'drawing' ? DRAWING_TRACKING_GRACE_MS : TRACKING_GRACE_MS;
@@ -294,6 +345,9 @@ export class GestureRecognizer {
     this.poseUncertainSince = null;
     this.deleteOrigin = null;
     this.deleteStartedAt = 0;
+    this.selectAllOrigin = null;
+    this.selectAllStartedAt = 0;
+    this.openReadyAt = 0;
     return this.frame(null, null, events, 0, null, 0);
   }
 

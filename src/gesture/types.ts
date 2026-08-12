@@ -12,7 +12,8 @@ export type GestureState =
   | 'pinching'
   | 'arming'
   | 'drawing'
-  | 'deleting';
+  | 'deleting'
+  | 'selecting';
 
 export type GestureShapeType = 'line' | 'rectangle' | 'ellipse' | 'freehand';
 
@@ -23,7 +24,8 @@ export type GestureEvent =
   | { type: 'stroke-start'; point: GesturePoint }
   | { type: 'stroke-move'; point: GesturePoint }
   | { type: 'stroke-end'; points: ReadonlyArray<GesturePoint> }
-  | { type: 'delete'; point: GesturePoint };
+  | { type: 'delete'; point: GesturePoint }
+  | { type: 'select-all' };
 
 export interface GestureFrame {
   readonly state: GestureState;

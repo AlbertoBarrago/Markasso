@@ -66,6 +66,8 @@
 
   "gestureFreehandAdded": "✓ Freehand stroke added",
   "gestureNotRecognized": "Gesture not recognized · try again",
+  "gestureHoldToSelectAll": "Hold your hand open and still to select all",
+  "gestureSelectedAll": "✓ Selected all",
   "select": "Select",
   "rectangle": "Rectangle",
   "ellipse": "Ellipse",

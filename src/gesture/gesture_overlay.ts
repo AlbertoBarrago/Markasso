@@ -36,6 +36,7 @@ export class GestureOverlay {
     | { type: 'created'; shape: StrokeShape; until: number }
     | { type: 'rejected'; until: number }
     | { type: 'deleted'; until: number }
+    | { type: 'selected-all'; until: number }
     | null = null;
 
   constructor() {
@@ -118,6 +119,16 @@ export class GestureOverlay {
         '#ff8c1a',
       );
     }
+    if (frame.state === 'selecting' && frame.cursor) {
+      this.drawArmProgress(
+        ctx,
+        frame.cursor,
+        frame.armProgress,
+        width,
+        height,
+        '#3a8bff',
+      );
+    }
     if (this.outcome?.type === 'created') {
       this.drawCommittedShape(ctx, this.outcome.shape, width, height, now);
     }
@@ -159,6 +170,12 @@ export class GestureOverlay {
     this.outcome = { type: 'rejected', until: performance.now() + 1100 };
     this.root.dataset.outcome = 'rejected';
     this.setStatus(t('gestureNotRecognized'), 'error');
+  }
+
+  showSelectedAll(): void {
+    this.outcome = { type: 'selected-all', until: performance.now() + 700 };
+    this.root.dataset.outcome = 'selected-all';
+    this.setStatus(t('gestureSelectedAll'));
   }
 
   dispose(): void {
@@ -281,6 +298,8 @@ function labelForFrame(frame: GestureFrame): string {
         : t('gestureDrawing');
     case 'deleting':
       return `${t('gestureHoldToDelete')} ${Math.round(frame.armProgress * 100)}%`;
+    case 'selecting':
+      return `${t('gestureHoldToSelectAll')} ${Math.round(frame.armProgress * 100)}%`;
     case 'absent':
       return t('gestureShowHand');
   }

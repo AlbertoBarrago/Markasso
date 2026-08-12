@@ -61,6 +61,8 @@
 
   "gestureFreehandAdded": "✓ Tratto a mano libera aggiunto",
   "gestureNotRecognized": "Gesto non riconosciuto · riprova",
+  "gestureHoldToSelectAll": "Tieni la mano aperta e ferma per selezionare tutto",
+  "gestureSelectedAll": "✓ Tutto selezionato",
   "select": "Selezione",
   "rectangle": "Rettangolo",
   "ellipse": "Ellisse",
