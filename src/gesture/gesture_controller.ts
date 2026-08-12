@@ -125,11 +125,12 @@ export class GestureController {
       event.data.timestamp,
     );
     this.commands.setHandScale(frame.palmScale);
-    const hoverOutcome = this.commands.updateHover(
-      frame.state === 'ready' ? frame.cursor : null,
+    this.commands.updateHover(frame.state === 'ready' ? frame.cursor : null);
+    const swipeOutcome = this.commands.checkDeleteSwipe(
+      frame.state === 'arming' ? frame.cursor : null,
       event.data.timestamp,
     );
-    this.applyOutcome(hoverOutcome);
+    this.applyOutcome(swipeOutcome);
     frame.events.forEach((gestureEvent) => {
       this.applyOutcome(this.commands.handle(gestureEvent));
     });

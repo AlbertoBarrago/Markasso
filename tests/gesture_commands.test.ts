@@ -81,13 +81,13 @@ describe('GestureCommandAdapter', () => {
       ],
     });
     const adapter = new GestureCommandAdapter(canvas(), history);
-    adapter.updateHover({ x: 0.2, y: 0.2 }, 0);
-    const armed = adapter.updateHover({ x: 0.35, y: 0.2 }, 100);
+    adapter.checkDeleteSwipe({ x: 0.2, y: 0.2 }, 0);
+    const armed = adapter.checkDeleteSwipe({ x: 0.35, y: 0.2 }, 100);
     expect(armed?.type).toBe('delete-armed');
     expect(history.present.elements).toHaveLength(1);
 
-    adapter.updateHover({ x: 0.35, y: 0.2 }, 150);
-    const deleted = adapter.updateHover({ x: 0.5, y: 0.2 }, 300);
+    adapter.checkDeleteSwipe({ x: 0.35, y: 0.2 }, 150);
+    const deleted = adapter.checkDeleteSwipe({ x: 0.5, y: 0.2 }, 300);
     expect(deleted?.type).toBe('deleted');
     expect(history.present.elements).toHaveLength(0);
   });
@@ -95,8 +95,8 @@ describe('GestureCommandAdapter', () => {
   it('does not arm deletion when a swipe is not over any element', () => {
     const history = new History(createScene());
     const adapter = new GestureCommandAdapter(canvas(), history);
-    adapter.updateHover({ x: 0.9, y: 0.9 }, 0);
-    const outcome = adapter.updateHover({ x: 0.75, y: 0.9 }, 100);
+    adapter.checkDeleteSwipe({ x: 0.9, y: 0.9 }, 0);
+    const outcome = adapter.checkDeleteSwipe({ x: 0.75, y: 0.9 }, 100);
     expect(outcome).toBeNull();
   });
 
@@ -121,15 +121,15 @@ describe('GestureCommandAdapter', () => {
       ],
     });
     const adapter = new GestureCommandAdapter(canvas(), history);
-    adapter.updateHover({ x: 0.2, y: 0.2 }, 0);
-    const armed = adapter.updateHover({ x: 0.35, y: 0.2 }, 100);
+    adapter.checkDeleteSwipe({ x: 0.2, y: 0.2 }, 0);
+    const armed = adapter.checkDeleteSwipe({ x: 0.35, y: 0.2 }, 100);
     expect(armed?.type).toBe('delete-armed');
 
     // A confirming swipe well past the confirm window should no longer count
     // as a confirmation (it may re-arm the element instead, but must not
     // delete it outright).
-    adapter.updateHover({ x: 0.35, y: 0.2 }, 2_000);
-    const outcome = adapter.updateHover({ x: 0.5, y: 0.2 }, 2_150);
+    adapter.checkDeleteSwipe({ x: 0.35, y: 0.2 }, 2_000);
+    const outcome = adapter.checkDeleteSwipe({ x: 0.5, y: 0.2 }, 2_150);
     expect(outcome?.type).not.toBe('deleted');
     expect(history.present.elements).toHaveLength(1);
   });

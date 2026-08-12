@@ -37,8 +37,8 @@ const ROTATION_GRAB_PAD_PX = 26;
 // underneath, and a second fast movement within the confirm window commits
 // it — this avoids relying on a closed fist, whose fingertip landmark is
 // unreliable once curled into the palm.
-const SWIPE_MIN_DIST = 0.12;
-const SWIPE_MAX_MS = 220;
+const SWIPE_MIN_DIST = 0.07;
+const SWIPE_MAX_MS = 320;
 const DELETE_CONFIRM_WINDOW_MS = 1_500;
 
 // Typical wrist-to-middle-MCP distance (normalized image space) for a hand at
@@ -75,8 +75,8 @@ export class GestureCommandAdapter {
   private rotateInitialAngle = 0;
   private rotateInitialRotation = 0;
   private handScale = 1;
-  private lastHoverPoint: GesturePoint | null = null;
-  private lastHoverAt = 0;
+  private lastSwipePoint: GesturePoint | null = null;
+  private lastSwipeAt = 0;
   private pendingDeleteId: string | null = null;
   private pendingDeleteUntil = 0;
 
@@ -134,34 +134,9 @@ export class GestureCommandAdapter {
     return { type: 'selected-all' };
   }
 
-  /**
-   * Updates the hover highlight while the hand points/rests over the canvas
-   * without pinching, and detects the swipe-to-delete gesture: a fast
-   * lateral movement arms deletion of whatever's underneath, and a second
-   * fast movement within the confirm window commits it.
-   */
-  updateHover(
-    point: GesturePoint | null,
-    timestamp: number,
-  ): GestureCommandOutcome | null {
-    if (this.pendingDeleteId && timestamp > this.pendingDeleteUntil) {
-      this.pendingDeleteId = null;
-    }
-    let outcome: GestureCommandOutcome | null = null;
-    if (point && this.lastHoverPoint && !this.draggedId && !this.cpElId) {
-      const dt = timestamp - this.lastHoverAt;
-      if (
-        dt > 0 &&
-        dt <= SWIPE_MAX_MS &&
-        distance(this.lastHoverPoint, point) >= SWIPE_MIN_DIST
-      ) {
-        outcome = this.handleSwipe(this.lastHoverPoint, timestamp);
-      }
-    }
-    this.lastHoverPoint = point;
-    this.lastHoverAt = timestamp;
-
-    if (!point || this.draggedId || this.cpElId) return outcome;
+  /** Updates the hover highlight while the hand rests open over the canvas without pinching. */
+  updateHover(point: GesturePoint | null): void {
+    if (!point || this.draggedId || this.cpElId) return;
     const world = this.toWorld(point);
     const scene = this.history.present;
     const hit = hitTest(
@@ -172,6 +147,36 @@ export class GestureCommandAdapter {
       this.hitPad,
     );
     gestureHover.id = hit && !hit.locked ? hit.id : null;
+  }
+
+  /**
+   * Detects the swipe-to-delete gesture from the pointing-finger cursor
+   * (fed only while the pose is 'arming' — pointing, not yet drawing, and
+   * distinct from the open-palm-hold used for select-all so the two don't
+   * compete over the same "hand open" input): a fast lateral movement arms
+   * deletion of whatever's underneath, and a second fast movement within
+   * the confirm window commits it.
+   */
+  checkDeleteSwipe(
+    point: GesturePoint | null,
+    timestamp: number,
+  ): GestureCommandOutcome | null {
+    if (this.pendingDeleteId && timestamp > this.pendingDeleteUntil) {
+      this.pendingDeleteId = null;
+    }
+    let outcome: GestureCommandOutcome | null = null;
+    if (point && this.lastSwipePoint && !this.draggedId && !this.cpElId) {
+      const dt = timestamp - this.lastSwipeAt;
+      if (
+        dt > 0 &&
+        dt <= SWIPE_MAX_MS &&
+        distance(this.lastSwipePoint, point) >= SWIPE_MIN_DIST
+      ) {
+        outcome = this.handleSwipe(this.lastSwipePoint, point, timestamp);
+      }
+    }
+    this.lastSwipePoint = point;
+    this.lastSwipeAt = timestamp;
     return outcome;
   }
 
@@ -183,6 +188,7 @@ export class GestureCommandAdapter {
 
   private handleSwipe(
     swipeOrigin: GesturePoint,
+    swipeEnd: GesturePoint,
     timestamp: number,
   ): GestureCommandOutcome | null {
     if (this.pendingDeleteId) {
@@ -194,19 +200,32 @@ export class GestureCommandAdapter {
       gestureHover.id = null;
       return { type: 'deleted' };
     }
-    const world = this.toWorld(swipeOrigin);
+    // A fast swipe is imprecise by nature, and cursor smoothing lags the
+    // real fingertip during quick motion — check both ends of the swipe
+    // with a generous tolerance rather than just the (likely-lagging)
+    // start point.
     const scene = this.history.present;
-    const hit = hitTest(
-      scene.elements,
-      world.x,
-      world.y,
-      scene.viewport,
-      this.hitPad,
-    );
+    const hit =
+      this.swipeHitTest(swipeOrigin, scene) ??
+      this.swipeHitTest(swipeEnd, scene);
     if (!hit || hit.locked) return null;
     this.pendingDeleteId = hit.id;
     this.pendingDeleteUntil = timestamp + DELETE_CONFIRM_WINDOW_MS;
     return { type: 'delete-armed' };
+  }
+
+  private swipeHitTest(
+    point: GesturePoint,
+    scene: History['present'],
+  ): Element | null {
+    const world = this.toWorld(point);
+    return hitTest(
+      scene.elements,
+      world.x,
+      world.y,
+      scene.viewport,
+      this.regrabPad,
+    );
   }
 
   private startPinch(point: GesturePoint): void {
