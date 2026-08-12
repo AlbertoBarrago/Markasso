@@ -126,11 +126,6 @@ export class GestureController {
     );
     this.commands.setHandScale(frame.palmScale);
     this.commands.updateHover(frame.state === 'ready' ? frame.cursor : null);
-    const swipeOutcome = this.commands.checkDeleteSwipe(
-      frame.state === 'arming' ? frame.cursor : null,
-      event.data.timestamp,
-    );
-    this.applyOutcome(swipeOutcome);
     frame.events.forEach((gestureEvent) => {
       this.applyOutcome(this.commands.handle(gestureEvent));
     });
@@ -145,8 +140,6 @@ export class GestureController {
       this.overlay?.showRejected();
     } else if (outcome?.type === 'deleted') {
       this.overlay?.showDeleted();
-    } else if (outcome?.type === 'delete-armed') {
-      this.overlay?.showDeleteArmed();
     } else if (outcome?.type === 'selected-all') {
       this.overlay?.showSelectedAll();
     }

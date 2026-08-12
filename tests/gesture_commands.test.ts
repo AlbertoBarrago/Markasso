@@ -25,9 +25,17 @@ describe('GestureCommandAdapter', () => {
       ],
     });
     const adapter = new GestureCommandAdapter(canvas(), history);
-    adapter.handle({ type: 'pinch-start', point: { x: 0.2, y: 0.2 } });
+    adapter.handle({
+      type: 'pinch-start',
+      point: { x: 0.2, y: 0.2 },
+      timestamp: 0,
+    });
     adapter.handle({ type: 'pinch-move', point: { x: 0.3, y: 0.25 } });
-    adapter.handle({ type: 'pinch-end', point: { x: 0.3, y: 0.25 } });
+    adapter.handle({
+      type: 'pinch-end',
+      point: { x: 0.3, y: 0.25 },
+      timestamp: 16,
+    });
     expect(history.present.elements[0]).toMatchObject({ x: 20, y: 15 });
     history.undo();
     expect(history.present.elements[0]).toMatchObject({ x: 10, y: 10 });
@@ -56,11 +64,15 @@ describe('GestureCommandAdapter', () => {
     const adapter = new GestureCommandAdapter(canvas(), history);
     // World (42, 25) is 2px past the rectangle's right edge (x: 10..40) —
     // a mouse click would miss, but the gesture's extra tolerance should hit.
-    adapter.handle({ type: 'pinch-start', point: { x: 0.42, y: 0.25 } });
+    adapter.handle({
+      type: 'pinch-start',
+      point: { x: 0.42, y: 0.25 },
+      timestamp: 0,
+    });
     expect(history.present.selectedIds.has('rect')).toBe(true);
   });
 
-  it('arms and then confirms deletion of an element via two fast swipes', () => {
+  it('deletes an element on a double-pinch tap without dragging it', () => {
     const scene = createScene();
     const history = new History({
       ...scene,
@@ -81,26 +93,28 @@ describe('GestureCommandAdapter', () => {
       ],
     });
     const adapter = new GestureCommandAdapter(canvas(), history);
-    adapter.checkDeleteSwipe({ x: 0.2, y: 0.2 }, 0);
-    const armed = adapter.checkDeleteSwipe({ x: 0.35, y: 0.2 }, 100);
-    expect(armed?.type).toBe('delete-armed');
+    adapter.handle({
+      type: 'pinch-start',
+      point: { x: 0.2, y: 0.2 },
+      timestamp: 0,
+    });
+    adapter.handle({
+      type: 'pinch-end',
+      point: { x: 0.2, y: 0.2 },
+      timestamp: 16,
+    });
     expect(history.present.elements).toHaveLength(1);
 
-    adapter.checkDeleteSwipe({ x: 0.35, y: 0.2 }, 150);
-    const deleted = adapter.checkDeleteSwipe({ x: 0.5, y: 0.2 }, 300);
-    expect(deleted?.type).toBe('deleted');
+    const outcome = adapter.handle({
+      type: 'pinch-start',
+      point: { x: 0.2, y: 0.2 },
+      timestamp: 200,
+    });
+    expect(outcome?.type).toBe('deleted');
     expect(history.present.elements).toHaveLength(0);
   });
 
-  it('does not arm deletion when a swipe is not over any element', () => {
-    const history = new History(createScene());
-    const adapter = new GestureCommandAdapter(canvas(), history);
-    adapter.checkDeleteSwipe({ x: 0.9, y: 0.9 }, 0);
-    const outcome = adapter.checkDeleteSwipe({ x: 0.75, y: 0.9 }, 100);
-    expect(outcome).toBeNull();
-  });
-
-  it('lets an armed deletion expire if not confirmed in time', () => {
+  it('does not delete when the second pinch comes after the double-tap window', () => {
     const scene = createScene();
     const history = new History({
       ...scene,
@@ -121,15 +135,64 @@ describe('GestureCommandAdapter', () => {
       ],
     });
     const adapter = new GestureCommandAdapter(canvas(), history);
-    adapter.checkDeleteSwipe({ x: 0.2, y: 0.2 }, 0);
-    const armed = adapter.checkDeleteSwipe({ x: 0.35, y: 0.2 }, 100);
-    expect(armed?.type).toBe('delete-armed');
+    adapter.handle({
+      type: 'pinch-start',
+      point: { x: 0.2, y: 0.2 },
+      timestamp: 0,
+    });
+    adapter.handle({
+      type: 'pinch-end',
+      point: { x: 0.2, y: 0.2 },
+      timestamp: 16,
+    });
 
-    // A confirming swipe well past the confirm window should no longer count
-    // as a confirmation (it may re-arm the element instead, but must not
-    // delete it outright).
-    adapter.checkDeleteSwipe({ x: 0.35, y: 0.2 }, 2_000);
-    const outcome = adapter.checkDeleteSwipe({ x: 0.5, y: 0.2 }, 2_150);
+    const outcome = adapter.handle({
+      type: 'pinch-start',
+      point: { x: 0.2, y: 0.2 },
+      timestamp: 2_000,
+    });
+    expect(outcome?.type).not.toBe('deleted');
+    expect(history.present.elements).toHaveLength(1);
+  });
+
+  it('does not delete when the element was dragged between the two pinches', () => {
+    const scene = createScene();
+    const history = new History({
+      ...scene,
+      elements: [
+        {
+          id: 'rect',
+          type: 'rectangle',
+          x: 10,
+          y: 10,
+          width: 30,
+          height: 30,
+          strokeColor: '#fff',
+          fillColor: 'transparent',
+          strokeWidth: 2,
+          opacity: 1,
+          roughness: 0,
+        },
+      ],
+    });
+    const adapter = new GestureCommandAdapter(canvas(), history);
+    adapter.handle({
+      type: 'pinch-start',
+      point: { x: 0.2, y: 0.2 },
+      timestamp: 0,
+    });
+    adapter.handle({ type: 'pinch-move', point: { x: 0.4, y: 0.2 } });
+    adapter.handle({
+      type: 'pinch-end',
+      point: { x: 0.4, y: 0.2 },
+      timestamp: 16,
+    });
+
+    const outcome = adapter.handle({
+      type: 'pinch-start',
+      point: { x: 0.4, y: 0.2 },
+      timestamp: 100,
+    });
     expect(outcome?.type).not.toBe('deleted');
     expect(history.present.elements).toHaveLength(1);
   });
@@ -157,9 +220,17 @@ describe('GestureCommandAdapter', () => {
     });
     const adapter = new GestureCommandAdapter(canvas(), history);
     // Midpoint of the line is world (20, 10) — grab near it and drag down.
-    adapter.handle({ type: 'pinch-start', point: { x: 0.2, y: 0.1 } });
+    adapter.handle({
+      type: 'pinch-start',
+      point: { x: 0.2, y: 0.1 },
+      timestamp: 0,
+    });
     adapter.handle({ type: 'pinch-move', point: { x: 0.2, y: 0.3 } });
-    adapter.handle({ type: 'pinch-end', point: { x: 0.2, y: 0.3 } });
+    adapter.handle({
+      type: 'pinch-end',
+      point: { x: 0.2, y: 0.3 },
+      timestamp: 16,
+    });
     const line = history.present.elements[0];
     expect(line).toMatchObject({ x: 10, y: 10, x2: 30, y2: 10, cy: 30 });
   });

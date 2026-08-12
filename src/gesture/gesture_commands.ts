@@ -32,14 +32,13 @@ const CP_GRAB_RADIUS_PX = 32;
 // shape's own top edge and steal resize/move pinches.
 const ROTATION_GRAB_PAD_PX = 26;
 
-// Deleting is a swipe-and-confirm gesture rather than a pose hold: a fast
-// lateral movement while hovering (no pinch) arms deletion of whatever's
-// underneath, and a second fast movement within the confirm window commits
-// it — this avoids relying on a closed fist, whose fingertip landmark is
-// unreliable once curled into the palm.
-const SWIPE_MIN_DIST = 0.07;
-const SWIPE_MAX_MS = 320;
-const DELETE_CONFIRM_WINDOW_MS = 1_500;
+// Deleting is a double-pinch (tap-tap) gesture rather than a pose hold or a
+// swipe: pinching the same element twice in quick succession without
+// dragging it deletes it immediately. Pinch is by far the most reliably
+// tracked pose in the system (already driving select/drag/resize/rotate),
+// so this avoids the tracking problems a closed fist or a fast swipe had.
+const DOUBLE_TAP_MS = 500;
+const TAP_MOVE_THRESHOLD_PX = 10;
 
 // Typical wrist-to-middle-MCP distance (normalized image space) for a hand at
 // a comfortable distance from the camera — the baseline the padding above was
@@ -75,10 +74,10 @@ export class GestureCommandAdapter {
   private rotateInitialAngle = 0;
   private rotateInitialRotation = 0;
   private handScale = 1;
-  private lastSwipePoint: GesturePoint | null = null;
-  private lastSwipeAt = 0;
-  private pendingDeleteId: string | null = null;
-  private pendingDeleteUntil = 0;
+  private tapOriginWorld: GesturePoint | null = null;
+  private pinchMoved = false;
+  private lastTapElId: string | null = null;
+  private lastTapAt = 0;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -108,13 +107,12 @@ export class GestureCommandAdapter {
   handle(event: GestureEvent): GestureCommandOutcome | null {
     switch (event.type) {
       case 'pinch-start':
-        this.startPinch(event.point);
-        return null;
+        return this.startPinch(event.point, event.timestamp);
       case 'pinch-move':
         this.movePinch(event.point);
         return null;
       case 'pinch-end':
-        this.endPinch();
+        this.endPinch(event.timestamp);
         return null;
       case 'stroke-end':
         return this.createStroke(event.points);
@@ -149,89 +147,40 @@ export class GestureCommandAdapter {
     gestureHover.id = hit && !hit.locked ? hit.id : null;
   }
 
-  /**
-   * Detects the swipe-to-delete gesture from the pointing-finger cursor
-   * (fed only while the pose is 'arming' — pointing, not yet drawing, and
-   * distinct from the open-palm-hold used for select-all so the two don't
-   * compete over the same "hand open" input): a fast lateral movement arms
-   * deletion of whatever's underneath, and a second fast movement within
-   * the confirm window commits it.
-   */
-  checkDeleteSwipe(
-    point: GesturePoint | null,
+  dispose(): void {
+    this.endPinch(0);
+    gestureHover.id = null;
+  }
+
+  private startPinch(
+    point: GesturePoint,
     timestamp: number,
   ): GestureCommandOutcome | null {
-    if (this.pendingDeleteId && timestamp > this.pendingDeleteUntil) {
-      this.pendingDeleteId = null;
-    }
-    let outcome: GestureCommandOutcome | null = null;
-    if (point && this.lastSwipePoint && !this.draggedId && !this.cpElId) {
-      const dt = timestamp - this.lastSwipeAt;
-      if (
-        dt > 0 &&
-        dt <= SWIPE_MAX_MS &&
-        distance(this.lastSwipePoint, point) >= SWIPE_MIN_DIST
-      ) {
-        outcome = this.handleSwipe(this.lastSwipePoint, point, timestamp);
+    gestureHover.id = null;
+    this.pinchMoved = false;
+    this.tapOriginWorld = null;
+    const world = this.toWorld(point);
+    const scene = this.history.present;
+
+    // A double-tap-delete takes priority over any handle grab — otherwise
+    // tapping a small selected element near one of its resize/rotation
+    // handles (very plausible given how generous their tolerances are)
+    // would grab that handle instead of ever registering as a delete.
+    if (this.lastTapElId && timestamp - this.lastTapAt <= DOUBLE_TAP_MS) {
+      const tapHit = hitTest(
+        scene.elements,
+        world.x,
+        world.y,
+        scene.viewport,
+        this.hitPad,
+      );
+      if (tapHit && tapHit.id === this.lastTapElId) {
+        this.lastTapElId = null;
+        this.history.dispatch({ type: 'DELETE_ELEMENTS', ids: [tapHit.id] });
+        gestureHover.id = null;
+        return { type: 'deleted' };
       }
     }
-    this.lastSwipePoint = point;
-    this.lastSwipeAt = timestamp;
-    return outcome;
-  }
-
-  dispose(): void {
-    this.endPinch();
-    gestureHover.id = null;
-    this.pendingDeleteId = null;
-  }
-
-  private handleSwipe(
-    swipeOrigin: GesturePoint,
-    swipeEnd: GesturePoint,
-    timestamp: number,
-  ): GestureCommandOutcome | null {
-    if (this.pendingDeleteId) {
-      const id = this.pendingDeleteId;
-      this.pendingDeleteId = null;
-      const el = this.history.present.elements.find((e) => e.id === id);
-      if (!el || el.locked) return null;
-      this.history.dispatch({ type: 'DELETE_ELEMENTS', ids: [id] });
-      gestureHover.id = null;
-      return { type: 'deleted' };
-    }
-    // A fast swipe is imprecise by nature, and cursor smoothing lags the
-    // real fingertip during quick motion — check both ends of the swipe
-    // with a generous tolerance rather than just the (likely-lagging)
-    // start point.
-    const scene = this.history.present;
-    const hit =
-      this.swipeHitTest(swipeOrigin, scene) ??
-      this.swipeHitTest(swipeEnd, scene);
-    if (!hit || hit.locked) return null;
-    this.pendingDeleteId = hit.id;
-    this.pendingDeleteUntil = timestamp + DELETE_CONFIRM_WINDOW_MS;
-    return { type: 'delete-armed' };
-  }
-
-  private swipeHitTest(
-    point: GesturePoint,
-    scene: History['present'],
-  ): Element | null {
-    const world = this.toWorld(point);
-    return hitTest(
-      scene.elements,
-      world.x,
-      world.y,
-      scene.viewport,
-      this.regrabPad,
-    );
-  }
-
-  private startPinch(point: GesturePoint): void {
-    gestureHover.id = null;
-    const world = this.toWorld(point);
-    const scene = this.history.present;
 
     const selected = scene.elements.filter((el) =>
       scene.selectedIds.has(el.id),
@@ -245,7 +194,7 @@ export class GestureCommandAdapter {
         this.cpElId = line.id;
         this.cpDragOffset = { x: world.x - cpX, y: world.y - cpY };
         this.history.beginDrag();
-        return;
+        return null;
       }
     }
 
@@ -273,7 +222,7 @@ export class GestureCommandAdapter {
         );
         this.rotateInitialRotation = el.rotation ?? 0;
         this.history.beginDrag();
-        return;
+        return null;
       }
     }
 
@@ -295,7 +244,7 @@ export class GestureCommandAdapter {
         this.resizeAnchorX = anchorX(handle, bounds);
         this.resizeAnchorY = anchorY(handle, bounds);
         this.history.beginDrag();
-        return;
+        return null;
       }
     }
 
@@ -314,12 +263,14 @@ export class GestureCommandAdapter {
     }
     if (!hit || hit.locked) {
       this.history.dispatch({ type: 'CLEAR_SELECTION' });
-      return;
+      return null;
     }
     this.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
     this.draggedId = hit.id;
     this.lastWorldPoint = world;
+    this.tapOriginWorld = world;
     this.history.beginDrag();
+    return null;
   }
 
   private movePinch(point: GesturePoint): void {
@@ -373,6 +324,13 @@ export class GestureCommandAdapter {
       return;
     }
     if (!this.draggedId || !this.lastWorldPoint) return;
+    if (
+      this.tapOriginWorld &&
+      distance(this.tapOriginWorld, world) >
+        TAP_MOVE_THRESHOLD_PX / this.history.present.viewport.zoom
+    ) {
+      this.pinchMoved = true;
+    }
     this.history.dispatch({
       type: 'MOVE_ELEMENT',
       id: this.draggedId,
@@ -382,11 +340,17 @@ export class GestureCommandAdapter {
     this.lastWorldPoint = world;
   }
 
-  private endPinch(): void {
+  private endPinch(timestamp: number): void {
     if (this.draggedId || this.cpElId || this.resizeElId || this.rotateElId)
       this.history.endDrag();
+    // A plain drag-select that never actually moved is a tap — remember it
+    // so a second tap on the same element within the window deletes it.
+    this.lastTapElId =
+      this.draggedId && !this.pinchMoved ? this.draggedId : null;
+    this.lastTapAt = timestamp;
     this.draggedId = null;
     this.lastWorldPoint = null;
+    this.tapOriginWorld = null;
     this.cpElId = null;
     this.cpDragOffset = null;
     this.resizeElId = null;
@@ -459,7 +423,6 @@ export type GestureCommandOutcome =
   | { type: 'created'; shape: StrokeShape }
   | { type: 'rejected' }
   | { type: 'deleted' }
-  | { type: 'delete-armed' }
   | { type: 'selected-all' };
 
 function baseElement<T extends 'rectangle' | 'ellipse' | 'line' | 'freehand'>(
