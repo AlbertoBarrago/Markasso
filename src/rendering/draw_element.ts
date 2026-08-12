@@ -648,11 +648,15 @@ function drawEllipse(
 
   // Wobbly stroke: perturb radius at each angle step
   const steps = 48;
-  const amp = roughness * Math.min(rx, ry) * 0.05;
+  // Guard against a zero-area ellipse (width or height collapsed to 0) —
+  // dividing by zero here would produce NaN coordinates and silently drop
+  // the whole stroke path instead of just skipping the wobble.
+  const minRadius = Math.min(rx, ry) || 1;
+  const amp = roughness * minRadius * 0.05;
   ctx.beginPath();
   for (let i = 0; i <= steps; i++) {
     const angle = (i / steps) * Math.PI * 2;
-    const perturbation = 1 + roughOffset(seed, i, 1, amp) / Math.min(rx, ry);
+    const perturbation = 1 + roughOffset(seed, i, 1, amp) / minRadius;
     const px = cx + rx * perturbation * Math.cos(angle);
     const py = cy + ry * perturbation * Math.sin(angle);
     if (i === 0) ctx.moveTo(px, py);
