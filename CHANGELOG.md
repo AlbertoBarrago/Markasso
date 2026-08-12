@@ -21,6 +21,7 @@ All notable changes to this project will be documented here.
 - **Curved gesture strokes** — tracing a curved shape (e.g. a "C") no longer stalls mid-stroke on a single frame of ambiguous hand-pose classification
 - **Canvas vanishing below ~13% zoom** — the default dot/line grid's cell count grew as roughly 1/zoom², stalling the render frame for seconds; grid step is now capped so on-screen cell spacing never drops below a fixed floor
 - **Zero-area ellipse rendering** — guards against a NaN in the rough-stroke perturbation that could silently drop the whole stroke path
+- **Gesture camera field of view** — requesting a 4:3 frame from a typically 16:9 camera cropped the sides of the sensor, narrowing the real horizontal area a hand could move within before tracking dropped; now requests 16:9 at roughly the same pixel count
 
 ---
 
