@@ -4,6 +4,26 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.6.0] — 2026-08-12
+
+### Added
+- **Gesture resize** — pinch a corner of the selected element's bounding box to resize it, reusing the same math as the mouse resize handles
+- **Gesture rotation** — pinch the rotation handle above a selected element to rotate it, with a wide gesture-friendly hit tolerance
+- **Gesture select-all** — hold an open, still hand for ~600ms while idle to select every unlocked element
+- **Gesture delete (double-pinch)** — pinch an element, release without dragging it, then pinch it again within half a second to delete it immediately; replaces the earlier fist-hold delete, whose fingertip tracking was unreliable once the hand closed
+
+### Changed
+- **Gesture camera frame rate** — raised from 30fps to 60fps to match the inference loop's ceiling
+- **Gesture hit tolerances** — now scale with the tracked hand's apparent size, so a smaller or more distant hand isn't less forgiving than one held close to the camera
+- **Element resize floor** — now scales with the current zoom instead of a fixed world-space minimum, so an element can no longer be resized down to an invisible sub-pixel size at low zoom
+
+### Fixed
+- **Curved gesture strokes** — tracing a curved shape (e.g. a "C") no longer stalls mid-stroke on a single frame of ambiguous hand-pose classification
+- **Canvas vanishing below ~13% zoom** — the default dot/line grid's cell count grew as roughly 1/zoom², stalling the render frame for seconds; grid step is now capped so on-screen cell spacing never drops below a fixed floor
+- **Zero-area ellipse rendering** — guards against a NaN in the rough-stroke perturbation that could silently drop the whole stroke path
+
+---
+
 ## [1.5.1] — 2026-05-09
 
 ### Fixed
