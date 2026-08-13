@@ -611,9 +611,9 @@ export function initToolbar(
   });
   sharePanel.append(
     shareCopyLinkItem,
-    shareBlueskyItem,
     shareXItem,
     shareRedditItem,
+    shareBlueskyItem,
   );
 
   let sharePanelOpen = false;
