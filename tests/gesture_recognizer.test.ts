@@ -26,19 +26,28 @@ describe('GestureRecognizer', () => {
     );
   });
 
+  it('starts drawing immediately once pointing is confirmed', () => {
+    const recognizer = new GestureRecognizer();
+    recognizer.update(hand('point'), 0);
+    const frame = recognizer.update(hand('point'), 16);
+    expect(frame.state).toBe('drawing');
+    expect(frame.events.some((event) => event.type === 'stroke-start')).toBe(
+      true,
+    );
+  });
+
   it('finishes an air stroke only after a confirmed open hand', () => {
     const recognizer = new GestureRecognizer();
     recognizer.update(hand('point'), 0);
-    expect(recognizer.update(hand('point'), 16).state).toBe('arming');
-    expect(recognizer.update(hand('point'), 450).state).toBe('drawing');
+    recognizer.update(hand('point'), 16);
     for (let index = 1; index < 12; index++) {
-      recognizer.update(hand('point', index * 0.01), 450 + index * 34);
+      recognizer.update(hand('point', index * 0.01), 16 + index * 34);
     }
-    recognizer.update(hand('open', 0.11), 850);
-    recognizer.update(hand('open', 0.11), 866);
+    recognizer.update(hand('open', 0.11), 420);
+    recognizer.update(hand('open', 0.11), 436);
     expect(
       recognizer
-        .update(hand('open', 0.11), 882)
+        .update(hand('open', 0.11), 452)
         .events.some((event) => event.type === 'stroke-end'),
     ).toBe(true);
   });

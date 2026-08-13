@@ -10,7 +10,6 @@ export type GestureState =
   | 'absent'
   | 'ready'
   | 'pinching'
-  | 'arming'
   | 'drawing'
   | 'selecting';
 

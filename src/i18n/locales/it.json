@@ -49,7 +49,6 @@
   "gestureLoading": "Avvio del rilevamento della mano…",
   "gestureReady": "Mano aperta · pronto",
   "gesturePinch": "Pizzica · seleziona e trascina · doppio pizzico per eliminare",
-  "gestureHoldToDraw": "Tieni fermo per disegnare",
   "gestureDrawing": "Disegna in aria · apri la mano per terminare",
   "gestureReleaseToAdd": "apri la mano per aggiungere",
   "gestureShowHand": "Mostra una mano alla webcam",
@@ -57,7 +56,6 @@
   "gestureRectangleAdded": "✓ Rettangolo aggiunto",
   "gestureEllipseAdded": "✓ Cerchio aggiunto",
   "gestureConnectorAdded": "✓ Connettore aggiunto",
-
   "gestureFreehandAdded": "✓ Tratto a mano libera aggiunto",
   "gestureNotRecognized": "Gesto non riconosciuto · riprova",
   "gestureHoldToSelectAll": "Tieni la mano aperta e ferma per selezionare tutto",
