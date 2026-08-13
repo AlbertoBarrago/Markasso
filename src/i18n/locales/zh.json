@@ -49,6 +49,7 @@
   "gestureLoading": "正在加载手部追踪…",
   "gestureReady": "张开手掌 · 已就绪",
   "gesturePinch": "捏合 · 选择并拖动",
+  "gestureHoldToDraw": "保持不动以开始绘制",
   "gestureDrawing": "在空中绘制 · 张开手掌结束",
   "gestureReleaseToAdd": "张开手掌以添加",
   "gestureShowHand": "请向摄像头展示一只手",

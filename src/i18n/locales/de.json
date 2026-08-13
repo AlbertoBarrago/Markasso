@@ -49,6 +49,7 @@
   "gestureLoading": "Handtracking wird geladen…",
   "gestureReady": "Offene Hand · bereit",
   "gesturePinch": "Zusammenführen · auswählen und ziehen",
+  "gestureHoldToDraw": "Stillhalten zum Zeichnen",
   "gestureDrawing": "In die Luft zeichnen · Hand zum Beenden öffnen",
   "gestureReleaseToAdd": "Hand zum Hinzufügen öffnen",
   "gestureShowHand": "Eine Hand in die Kamera halten",

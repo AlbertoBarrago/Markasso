@@ -54,6 +54,7 @@
   "gestureLoading": "Loading hand tracking…",
   "gestureReady": "Open hand · ready · fist to delete selection",
   "gesturePinch": "Pinch · select and drag",
+  "gestureHoldToDraw": "Hold still to draw",
   "gestureDrawing": "Draw in the air · open hand to finish",
   "gestureReleaseToAdd": "open hand to add",
   "gestureShowHand": "Show one hand to the camera",

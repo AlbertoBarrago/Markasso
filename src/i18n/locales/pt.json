@@ -49,6 +49,7 @@
   "gestureLoading": "Carregando rastreamento da mão…",
   "gestureReady": "Mão aberta · pronto",
   "gesturePinch": "Pinçar · selecionar e arrastar",
+  "gestureHoldToDraw": "Mantenha imóvel para desenhar",
   "gestureDrawing": "Desenhe no ar · abra a mão para terminar",
   "gestureReleaseToAdd": "abra a mão para adicionar",
   "gestureShowHand": "Mostre uma mão para a câmera",

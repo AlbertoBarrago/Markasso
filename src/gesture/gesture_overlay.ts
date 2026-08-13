@@ -99,6 +99,16 @@ export class GestureOverlay {
       ctx.stroke();
     }
     if (frame.landmarks) this.drawHand(ctx, frame.landmarks, width, height);
+    if (frame.state === 'arming' && frame.cursor) {
+      this.drawArmProgress(
+        ctx,
+        frame.cursor,
+        frame.armProgress,
+        width,
+        height,
+        '#c42020',
+      );
+    }
     if (frame.state === 'selecting' && frame.cursor) {
       this.drawArmProgress(
         ctx,
@@ -266,6 +276,8 @@ function labelForFrame(frame: GestureFrame): string {
       return t('gestureReady');
     case 'pinching':
       return t('gesturePinch');
+    case 'arming':
+      return `${t('gestureHoldToDraw')} ${Math.round(frame.armProgress * 100)}%`;
     case 'drawing':
       return frame.prediction
         ? `${shapeLabel(frame.prediction)} · ${t('gestureReleaseToAdd')}`

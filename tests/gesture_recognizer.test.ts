@@ -26,28 +26,45 @@ describe('GestureRecognizer', () => {
     );
   });
 
-  it('starts drawing immediately once pointing is confirmed', () => {
+  it('arms a stroke while settling, then starts drawing once it holds', () => {
     const recognizer = new GestureRecognizer();
     recognizer.update(hand('point'), 0);
-    const frame = recognizer.update(hand('point'), 16);
+    expect(recognizer.update(hand('point'), 16).state).toBe('arming');
+    const frame = recognizer.update(hand('point'), 250);
     expect(frame.state).toBe('drawing');
     expect(frame.events.some((event) => event.type === 'stroke-start')).toBe(
       true,
     );
   });
 
+  it('keeps repositioning without arming while the hand keeps moving', () => {
+    const recognizer = new GestureRecognizer();
+    recognizer.update(hand('point'), 0);
+    recognizer.update(hand('point'), 16);
+    // Each step is a large, deliberate move (well past ARM_MOVEMENT_RADIUS)
+    // spaced out enough for cursor smoothing to catch up, so the arm timer
+    // keeps resetting instead of ever reaching 'drawing' — free
+    // repositioning, even though a full ARM_DURATION_MS window has passed.
+    let frame = recognizer.update(hand('point'), 16);
+    for (let index = 1; index <= 5; index++) {
+      frame = recognizer.update(hand('point', index * 0.2), 16 + index * 150);
+    }
+    expect(frame.state).toBe('arming');
+  });
+
   it('finishes an air stroke only after a confirmed open hand', () => {
     const recognizer = new GestureRecognizer();
     recognizer.update(hand('point'), 0);
     recognizer.update(hand('point'), 16);
+    recognizer.update(hand('point'), 250);
     for (let index = 1; index < 12; index++) {
-      recognizer.update(hand('point', index * 0.01), 16 + index * 34);
+      recognizer.update(hand('point', index * 0.01), 250 + index * 34);
     }
-    recognizer.update(hand('open', 0.11), 420);
-    recognizer.update(hand('open', 0.11), 436);
+    recognizer.update(hand('open', 0.11), 650);
+    recognizer.update(hand('open', 0.11), 666);
     expect(
       recognizer
-        .update(hand('open', 0.11), 452)
+        .update(hand('open', 0.11), 682)
         .events.some((event) => event.type === 'stroke-end'),
     ).toBe(true);
   });

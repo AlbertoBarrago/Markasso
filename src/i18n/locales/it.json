@@ -49,6 +49,7 @@
   "gestureLoading": "Avvio del rilevamento della mano…",
   "gestureReady": "Mano aperta · pronto · pugno per eliminare la selezione",
   "gesturePinch": "Pizzica · seleziona e trascina",
+  "gestureHoldToDraw": "Tieni fermo per disegnare",
   "gestureDrawing": "Disegna in aria · apri la mano per terminare",
   "gestureReleaseToAdd": "apri la mano per aggiungere",
   "gestureShowHand": "Mostra una mano alla webcam",

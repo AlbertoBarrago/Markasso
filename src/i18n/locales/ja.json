@@ -49,6 +49,7 @@
   "gestureLoading": "手の追跡を読み込み中…",
   "gestureReady": "手を開く · 準備完了",
   "gesturePinch": "ピンチ · 選択して移動",
+  "gestureHoldToDraw": "静止して描画を開始",
   "gestureDrawing": "空中に描く · 手を開いて終了",
   "gestureReleaseToAdd": "手を開いて追加",
   "gestureShowHand": "カメラに片手を見せてください",
