@@ -10,8 +10,15 @@ import type {
 } from './types';
 
 const MIN_TRACE_POINTS = 8;
-const ARM_DURATION_MS = 400;
-const ARM_MOVEMENT_RADIUS = 0.04;
+// Pointing arms a stroke rather than starting it immediately — this is the
+// window to move the hand into position before committing to a start point.
+// Short enough not to feel laggy, but real: instant-start was tried and
+// didn't give enough time to aim before the stroke's first point locked in.
+const ARM_DURATION_MS = 220;
+// Deliberately more forgiving than a plain "hold still" radius — the goal
+// is to tell repositioning (large, deliberate movement) apart from natural
+// hand tremor while settling on the target, not to demand statue-stillness.
+const ARM_MOVEMENT_RADIUS = 0.05;
 const SELECT_ALL_HOLD_MS = 600;
 const SELECT_ALL_MOVEMENT_RADIUS = 0.045;
 // The open hand also confirms/ends other gestures (pinch-end, stroke-end), so
@@ -45,8 +52,8 @@ export class GestureRecognizer {
   private candidatePose: HandPose = 'none';
   private candidateFrames = 0;
   private trace: GesturePoint[] = [];
-  private armStartedAt = 0;
   private armOrigin: GesturePoint | null = null;
+  private armStartedAt = 0;
   private lastCursor: GesturePoint | null = null;
   private lastLandmarks: HandLandmarks | null = null;
   private lastPalmScale: number | null = null;
@@ -100,23 +107,21 @@ export class GestureRecognizer {
         if (this.state === 'pinching') {
           events.push({ type: 'pinch-move', point: cursor });
         } else {
-          events.push({ type: 'pinch-start', point: cursor, timestamp });
+          events.push({ type: 'pinch-start', point: cursor });
         }
         this.state = 'pinching';
         break;
 
       case 'point':
         if (this.state === 'pinching') {
-          events.push({ type: 'pinch-end', point: cursor, timestamp });
+          events.push({ type: 'pinch-end', point: cursor });
         }
         armProgress = this.handlePointing(cursor, timestamp, events);
         break;
 
       case 'fist':
-        // A fist cancels whatever's in progress — deletion is now a
-        // double-pinch gesture handled at the command level, not a hold.
         if (this.state === 'pinching') {
-          events.push({ type: 'pinch-end', point: cursor, timestamp });
+          events.push({ type: 'pinch-end', point: cursor });
           this.state = 'absent';
           break;
         }
@@ -134,13 +139,28 @@ export class GestureRecognizer {
           this.state = 'absent';
           break;
         }
-        if (this.state === 'arming') this.cancelDrawing();
+        // A fist while merely arming (still positioning to draw) just
+        // cancels that, same as any other pose change mid-arm — it's not a
+        // deliberate delete request.
+        if (this.state === 'arming') {
+          this.cancelDrawing();
+          this.state = 'ready';
+          break;
+        }
+        // Deletion is instant, not a hold: fire once on the frame the fist
+        // is first confirmed (not on every subsequent frame it's held), the
+        // same "act immediately, don't make the user hold still" principle
+        // that fixed drawing. GestureCommandAdapter deletes whatever's
+        // currently selected — a fist needs no target coordinate.
+        if (this.state !== 'ready' && this.state !== 'selecting') {
+          events.push({ type: 'delete' });
+        }
         this.state = 'ready';
         break;
 
       case 'open':
         if (this.state === 'pinching') {
-          events.push({ type: 'pinch-end', point: cursor, timestamp });
+          events.push({ type: 'pinch-end', point: cursor });
         }
         if (this.state === 'drawing') this.finishTrace(events);
         if (this.state === 'arming') this.cancelDrawing();
@@ -159,7 +179,7 @@ export class GestureRecognizer {
 
       case 'none':
         if (this.state === 'pinching') {
-          events.push({ type: 'pinch-end', point: cursor, timestamp });
+          events.push({ type: 'pinch-end', point: cursor });
           this.state = 'absent';
         } else if (
           this.state === 'drawing' &&
@@ -239,6 +259,9 @@ export class GestureRecognizer {
       !this.armOrigin ||
       distance(this.armOrigin, cursor) > ARM_MOVEMENT_RADIUS
     ) {
+      // Still repositioning (or just started pointing) — keep resetting the
+      // window so moving toward the intended start point never gets read as
+      // "holding", and only settling there starts the count.
       this.state = 'arming';
       this.armStartedAt = timestamp;
       this.armOrigin = cursor;
@@ -296,7 +319,7 @@ export class GestureRecognizer {
     }
     const events: GestureEvent[] = [];
     if (this.state === 'pinching' && this.lastCursor) {
-      events.push({ type: 'pinch-end', point: this.lastCursor, timestamp });
+      events.push({ type: 'pinch-end', point: this.lastCursor });
     }
     this.state = 'absent';
     this.stablePose = 'none';

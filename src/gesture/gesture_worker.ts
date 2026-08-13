@@ -54,14 +54,29 @@ self.onmessage = async (message: MessageEvent<WorkerRequest>) => {
         /* @vite-ignore */ MODULE_URL
       )) as VisionModule;
       const fileset = await vision.FilesetResolver.forVisionTasks(WASM_URL);
-      landmarker = await vision.HandLandmarker.createFromOptions(fileset, {
-        baseOptions: { modelAssetPath: MODEL_URL, delegate: 'CPU' },
-        runningMode: 'VIDEO',
+      const options = (delegate: 'GPU' | 'CPU') => ({
+        baseOptions: { modelAssetPath: MODEL_URL, delegate },
+        runningMode: 'VIDEO' as const,
         numHands: 1,
         minHandDetectionConfidence: 0.6,
         minHandPresenceConfidence: 0.6,
         minTrackingConfidence: 0.55,
       });
+      // GPU delegate gives noticeably more stable landmarks than CPU, but
+      // isn't guaranteed to be available in every worker/browser context
+      // (needs WebGL support inside the worker) — fall back to CPU if it
+      // fails to initialize rather than breaking Gesture Mode outright.
+      try {
+        landmarker = await vision.HandLandmarker.createFromOptions(
+          fileset,
+          options('GPU'),
+        );
+      } catch {
+        landmarker = await vision.HandLandmarker.createFromOptions(
+          fileset,
+          options('CPU'),
+        );
+      }
       respond({ type: 'ready' });
       return;
     }

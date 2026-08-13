@@ -26,19 +26,45 @@ describe('GestureRecognizer', () => {
     );
   });
 
-  it('finishes an air stroke only after a confirmed open hand', () => {
+  it('arms a stroke while settling, then starts drawing once it holds', () => {
     const recognizer = new GestureRecognizer();
     recognizer.update(hand('point'), 0);
     expect(recognizer.update(hand('point'), 16).state).toBe('arming');
-    expect(recognizer.update(hand('point'), 450).state).toBe('drawing');
-    for (let index = 1; index < 12; index++) {
-      recognizer.update(hand('point', index * 0.01), 450 + index * 34);
+    const frame = recognizer.update(hand('point'), 250);
+    expect(frame.state).toBe('drawing');
+    expect(frame.events.some((event) => event.type === 'stroke-start')).toBe(
+      true,
+    );
+  });
+
+  it('keeps repositioning without arming while the hand keeps moving', () => {
+    const recognizer = new GestureRecognizer();
+    recognizer.update(hand('point'), 0);
+    recognizer.update(hand('point'), 16);
+    // Each step is a large, deliberate move (well past ARM_MOVEMENT_RADIUS)
+    // spaced out enough for cursor smoothing to catch up, so the arm timer
+    // keeps resetting instead of ever reaching 'drawing' — free
+    // repositioning, even though a full ARM_DURATION_MS window has passed.
+    let frame = recognizer.update(hand('point'), 16);
+    for (let index = 1; index <= 5; index++) {
+      frame = recognizer.update(hand('point', index * 0.2), 16 + index * 150);
     }
-    recognizer.update(hand('open', 0.11), 850);
-    recognizer.update(hand('open', 0.11), 866);
+    expect(frame.state).toBe('arming');
+  });
+
+  it('finishes an air stroke only after a confirmed open hand', () => {
+    const recognizer = new GestureRecognizer();
+    recognizer.update(hand('point'), 0);
+    recognizer.update(hand('point'), 16);
+    recognizer.update(hand('point'), 250);
+    for (let index = 1; index < 12; index++) {
+      recognizer.update(hand('point', index * 0.01), 250 + index * 34);
+    }
+    recognizer.update(hand('open', 0.11), 650);
+    recognizer.update(hand('open', 0.11), 666);
     expect(
       recognizer
-        .update(hand('open', 0.11), 882)
+        .update(hand('open', 0.11), 682)
         .events.some((event) => event.type === 'stroke-end'),
     ).toBe(true);
   });
@@ -87,14 +113,15 @@ describe('GestureRecognizer', () => {
     expect(recognizer.update(null, 1_451).state).toBe('absent');
   });
 
-  it('settles at ready on an idle fist rather than arming a delete hold', () => {
+  it('fires a single instant delete event when a fist is confirmed, not a repeated hold', () => {
     const recognizer = new GestureRecognizer();
-    let frame = recognizer.update(hand('none'), 0);
-    for (let t = 16; t <= 900; t += 16) {
-      frame = recognizer.update(hand('none'), t);
+    const deleteFrames: boolean[] = [];
+    for (let t = 0; t <= 96; t += 16) {
+      const frame = recognizer.update(hand('none'), t);
+      deleteFrames.push(frame.events.some((event) => event.type === 'delete'));
     }
-    expect(frame.state).toBe('ready');
-    expect(frame.events).toHaveLength(0);
+    expect(deleteFrames.filter(Boolean)).toHaveLength(1);
+    expect(recognizer.update(hand('none'), 112).state).toBe('ready');
   });
 
   it('cancels an in-progress pinch when the hand closes into a fist', () => {

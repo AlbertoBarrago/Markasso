@@ -32,14 +32,6 @@ const CP_GRAB_RADIUS_PX = 32;
 // shape's own top edge and steal resize/move pinches.
 const ROTATION_GRAB_PAD_PX = 26;
 
-// Deleting is a double-pinch (tap-tap) gesture rather than a pose hold or a
-// swipe: pinching the same element twice in quick succession without
-// dragging it deletes it immediately. Pinch is by far the most reliably
-// tracked pose in the system (already driving select/drag/resize/rotate),
-// so this avoids the tracking problems a closed fist or a fast swipe had.
-const DOUBLE_TAP_MS = 500;
-const TAP_MOVE_THRESHOLD_PX = 10;
-
 // Typical wrist-to-middle-MCP distance (normalized image space) for a hand at
 // a comfortable distance from the camera — the baseline the padding above was
 // tuned against. A smaller palmScale (small hand, or hand farther from the
@@ -74,10 +66,6 @@ export class GestureCommandAdapter {
   private rotateInitialAngle = 0;
   private rotateInitialRotation = 0;
   private handScale = 1;
-  private tapOriginWorld: GesturePoint | null = null;
-  private pinchMoved = false;
-  private lastTapElId: string | null = null;
-  private lastTapAt = 0;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -107,17 +95,19 @@ export class GestureCommandAdapter {
   handle(event: GestureEvent): GestureCommandOutcome | null {
     switch (event.type) {
       case 'pinch-start':
-        return this.startPinch(event.point, event.timestamp);
+        return this.startPinch(event.point);
       case 'pinch-move':
         this.movePinch(event.point);
         return null;
       case 'pinch-end':
-        this.endPinch(event.timestamp);
+        this.endPinch();
         return null;
       case 'stroke-end':
         return this.createStroke(event.points);
       case 'select-all':
         return this.selectAll();
+      case 'delete':
+        return this.deleteSelected();
       case 'stroke-start':
       case 'stroke-move':
         return null;
@@ -130,6 +120,17 @@ export class GestureCommandAdapter {
     if (ids.length === 0) return null;
     this.history.dispatch({ type: 'SELECT_ELEMENTS', ids });
     return { type: 'selected-all' };
+  }
+
+  private deleteSelected(): GestureCommandOutcome | null {
+    const scene = this.history.present;
+    const ids = scene.elements
+      .filter((el) => scene.selectedIds.has(el.id) && !el.locked)
+      .map((el) => el.id);
+    if (ids.length === 0) return null;
+    this.history.dispatch({ type: 'DELETE_ELEMENTS', ids });
+    gestureHover.id = null;
+    return { type: 'deleted' };
   }
 
   /** Updates the hover highlight while the hand rests open over the canvas without pinching. */
@@ -148,39 +149,14 @@ export class GestureCommandAdapter {
   }
 
   dispose(): void {
-    this.endPinch(0);
+    this.endPinch();
     gestureHover.id = null;
   }
 
-  private startPinch(
-    point: GesturePoint,
-    timestamp: number,
-  ): GestureCommandOutcome | null {
+  private startPinch(point: GesturePoint): GestureCommandOutcome | null {
     gestureHover.id = null;
-    this.pinchMoved = false;
-    this.tapOriginWorld = null;
     const world = this.toWorld(point);
     const scene = this.history.present;
-
-    // A double-tap-delete takes priority over any handle grab — otherwise
-    // tapping a small selected element near one of its resize/rotation
-    // handles (very plausible given how generous their tolerances are)
-    // would grab that handle instead of ever registering as a delete.
-    if (this.lastTapElId && timestamp - this.lastTapAt <= DOUBLE_TAP_MS) {
-      const tapHit = hitTest(
-        scene.elements,
-        world.x,
-        world.y,
-        scene.viewport,
-        this.hitPad,
-      );
-      if (tapHit && tapHit.id === this.lastTapElId) {
-        this.lastTapElId = null;
-        this.history.dispatch({ type: 'DELETE_ELEMENTS', ids: [tapHit.id] });
-        gestureHover.id = null;
-        return { type: 'deleted' };
-      }
-    }
 
     const selected = scene.elements.filter((el) =>
       scene.selectedIds.has(el.id),
@@ -255,20 +231,25 @@ export class GestureCommandAdapter {
       scene.viewport,
       this.hitPad,
     );
-    // A pinch that misses the normal hit test but still lands near the
+    // A pinch that misses the normal hit test but still lands near an
     // already-selected element is very likely an imprecise re-grab attempt,
-    // not a request to deselect — hand tracking jitter makes exact re-hits hard.
-    if ((!hit || hit.locked) && selected.length === 1) {
+    // not a request to deselect — hand tracking jitter makes exact re-hits
+    // hard, especially against a whole selected group.
+    if ((!hit || hit.locked) && selected.length > 0) {
       hit = hitTest(selected, world.x, world.y, scene.viewport, this.regrabPad);
     }
     if (!hit || hit.locked) {
       this.history.dispatch({ type: 'CLEAR_SELECTION' });
       return null;
     }
-    this.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
+    // Pinching an element that's already part of the current selection
+    // drags the whole selection together (e.g. after select-all) — only
+    // collapse to just this element when it wasn't already selected.
+    if (!scene.selectedIds.has(hit.id)) {
+      this.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
+    }
     this.draggedId = hit.id;
     this.lastWorldPoint = world;
-    this.tapOriginWorld = world;
     this.history.beginDrag();
     return null;
   }
@@ -324,33 +305,24 @@ export class GestureCommandAdapter {
       return;
     }
     if (!this.draggedId || !this.lastWorldPoint) return;
-    if (
-      this.tapOriginWorld &&
-      distance(this.tapOriginWorld, world) >
-        TAP_MOVE_THRESHOLD_PX / this.history.present.viewport.zoom
-    ) {
-      this.pinchMoved = true;
+    const dx = world.x - this.lastWorldPoint.x;
+    const dy = world.y - this.lastWorldPoint.y;
+    const scene = this.history.present;
+    // Move every currently-selected element together (not just the one
+    // pinched), so dragging after a select-all moves the whole group.
+    for (const el of scene.elements) {
+      if (scene.selectedIds.has(el.id) && !el.locked) {
+        this.history.dispatch({ type: 'MOVE_ELEMENT', id: el.id, dx, dy });
+      }
     }
-    this.history.dispatch({
-      type: 'MOVE_ELEMENT',
-      id: this.draggedId,
-      dx: world.x - this.lastWorldPoint.x,
-      dy: world.y - this.lastWorldPoint.y,
-    });
     this.lastWorldPoint = world;
   }
 
-  private endPinch(timestamp: number): void {
+  private endPinch(): void {
     if (this.draggedId || this.cpElId || this.resizeElId || this.rotateElId)
       this.history.endDrag();
-    // A plain drag-select that never actually moved is a tap — remember it
-    // so a second tap on the same element within the window deletes it.
-    this.lastTapElId =
-      this.draggedId && !this.pinchMoved ? this.draggedId : null;
-    this.lastTapAt = timestamp;
     this.draggedId = null;
     this.lastWorldPoint = null;
-    this.tapOriginWorld = null;
     this.cpElId = null;
     this.cpDragOffset = null;
     this.resizeElId = null;

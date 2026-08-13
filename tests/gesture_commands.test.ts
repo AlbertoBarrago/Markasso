@@ -25,20 +25,62 @@ describe('GestureCommandAdapter', () => {
       ],
     });
     const adapter = new GestureCommandAdapter(canvas(), history);
-    adapter.handle({
-      type: 'pinch-start',
-      point: { x: 0.2, y: 0.2 },
-      timestamp: 0,
-    });
+    adapter.handle({ type: 'pinch-start', point: { x: 0.2, y: 0.2 } });
     adapter.handle({ type: 'pinch-move', point: { x: 0.3, y: 0.25 } });
-    adapter.handle({
-      type: 'pinch-end',
-      point: { x: 0.3, y: 0.25 },
-      timestamp: 16,
-    });
+    adapter.handle({ type: 'pinch-end', point: { x: 0.3, y: 0.25 } });
     expect(history.present.elements[0]).toMatchObject({ x: 20, y: 15 });
     history.undo();
     expect(history.present.elements[0]).toMatchObject({ x: 10, y: 10 });
+  });
+
+  it('drags every selected element together when pinching an already-selected one', () => {
+    const scene = createScene();
+    const history = new History({
+      ...scene,
+      elements: [
+        {
+          id: 'rect1',
+          type: 'rectangle',
+          x: 10,
+          y: 10,
+          width: 20,
+          height: 20,
+          strokeColor: '#fff',
+          fillColor: 'transparent',
+          strokeWidth: 2,
+          opacity: 1,
+          roughness: 0,
+        },
+        {
+          id: 'rect2',
+          type: 'rectangle',
+          x: 60,
+          y: 60,
+          width: 20,
+          height: 20,
+          strokeColor: '#fff',
+          fillColor: 'transparent',
+          strokeWidth: 2,
+          opacity: 1,
+          roughness: 0,
+        },
+      ],
+      selectedIds: new Set(['rect1', 'rect2']),
+    });
+    const adapter = new GestureCommandAdapter(canvas(), history);
+    // Pinch lands on rect1 (world 10..30, 10..30), already part of the
+    // selection — the whole group should move together, not collapse to
+    // just rect1.
+    adapter.handle({ type: 'pinch-start', point: { x: 0.15, y: 0.15 } });
+    adapter.handle({ type: 'pinch-move', point: { x: 0.25, y: 0.25 } });
+    adapter.handle({ type: 'pinch-end', point: { x: 0.25, y: 0.25 } });
+    expect(history.present.selectedIds).toEqual(new Set(['rect1', 'rect2']));
+    expect(
+      history.present.elements.find((el) => el.id === 'rect1'),
+    ).toMatchObject({ x: 20, y: 20 });
+    expect(
+      history.present.elements.find((el) => el.id === 'rect2'),
+    ).toMatchObject({ x: 70, y: 70 });
   });
 
   it('grabs an element slightly outside its bounds (gesture hit tolerance)', () => {
@@ -64,15 +106,11 @@ describe('GestureCommandAdapter', () => {
     const adapter = new GestureCommandAdapter(canvas(), history);
     // World (42, 25) is 2px past the rectangle's right edge (x: 10..40) —
     // a mouse click would miss, but the gesture's extra tolerance should hit.
-    adapter.handle({
-      type: 'pinch-start',
-      point: { x: 0.42, y: 0.25 },
-      timestamp: 0,
-    });
+    adapter.handle({ type: 'pinch-start', point: { x: 0.42, y: 0.25 } });
     expect(history.present.selectedIds.has('rect')).toBe(true);
   });
 
-  it('deletes an element on a double-pinch tap without dragging it', () => {
+  it('deletes the selected element on a delete event', () => {
     const scene = createScene();
     const history = new History({
       ...scene,
@@ -91,71 +129,22 @@ describe('GestureCommandAdapter', () => {
           roughness: 0,
         },
       ],
+      selectedIds: new Set(['rect']),
     });
     const adapter = new GestureCommandAdapter(canvas(), history);
-    adapter.handle({
-      type: 'pinch-start',
-      point: { x: 0.2, y: 0.2 },
-      timestamp: 0,
-    });
-    adapter.handle({
-      type: 'pinch-end',
-      point: { x: 0.2, y: 0.2 },
-      timestamp: 16,
-    });
-    expect(history.present.elements).toHaveLength(1);
-
-    const outcome = adapter.handle({
-      type: 'pinch-start',
-      point: { x: 0.2, y: 0.2 },
-      timestamp: 200,
-    });
+    const outcome = adapter.handle({ type: 'delete' });
     expect(outcome?.type).toBe('deleted');
     expect(history.present.elements).toHaveLength(0);
   });
 
-  it('does not delete when the second pinch comes after the double-tap window', () => {
-    const scene = createScene();
-    const history = new History({
-      ...scene,
-      elements: [
-        {
-          id: 'rect',
-          type: 'rectangle',
-          x: 10,
-          y: 10,
-          width: 30,
-          height: 30,
-          strokeColor: '#fff',
-          fillColor: 'transparent',
-          strokeWidth: 2,
-          opacity: 1,
-          roughness: 0,
-        },
-      ],
-    });
+  it('does nothing on a delete event when nothing is selected', () => {
+    const history = new History(createScene());
     const adapter = new GestureCommandAdapter(canvas(), history);
-    adapter.handle({
-      type: 'pinch-start',
-      point: { x: 0.2, y: 0.2 },
-      timestamp: 0,
-    });
-    adapter.handle({
-      type: 'pinch-end',
-      point: { x: 0.2, y: 0.2 },
-      timestamp: 16,
-    });
-
-    const outcome = adapter.handle({
-      type: 'pinch-start',
-      point: { x: 0.2, y: 0.2 },
-      timestamp: 2_000,
-    });
-    expect(outcome?.type).not.toBe('deleted');
-    expect(history.present.elements).toHaveLength(1);
+    const outcome = adapter.handle({ type: 'delete' });
+    expect(outcome).toBeNull();
   });
 
-  it('does not delete when the element was dragged between the two pinches', () => {
+  it('does not delete a locked element', () => {
     const scene = createScene();
     const history = new History({
       ...scene,
@@ -172,28 +161,14 @@ describe('GestureCommandAdapter', () => {
           strokeWidth: 2,
           opacity: 1,
           roughness: 0,
+          locked: true,
         },
       ],
+      selectedIds: new Set(['rect']),
     });
     const adapter = new GestureCommandAdapter(canvas(), history);
-    adapter.handle({
-      type: 'pinch-start',
-      point: { x: 0.2, y: 0.2 },
-      timestamp: 0,
-    });
-    adapter.handle({ type: 'pinch-move', point: { x: 0.4, y: 0.2 } });
-    adapter.handle({
-      type: 'pinch-end',
-      point: { x: 0.4, y: 0.2 },
-      timestamp: 16,
-    });
-
-    const outcome = adapter.handle({
-      type: 'pinch-start',
-      point: { x: 0.4, y: 0.2 },
-      timestamp: 100,
-    });
-    expect(outcome?.type).not.toBe('deleted');
+    const outcome = adapter.handle({ type: 'delete' });
+    expect(outcome).toBeNull();
     expect(history.present.elements).toHaveLength(1);
   });
 
@@ -220,17 +195,9 @@ describe('GestureCommandAdapter', () => {
     });
     const adapter = new GestureCommandAdapter(canvas(), history);
     // Midpoint of the line is world (20, 10) — grab near it and drag down.
-    adapter.handle({
-      type: 'pinch-start',
-      point: { x: 0.2, y: 0.1 },
-      timestamp: 0,
-    });
+    adapter.handle({ type: 'pinch-start', point: { x: 0.2, y: 0.1 } });
     adapter.handle({ type: 'pinch-move', point: { x: 0.2, y: 0.3 } });
-    adapter.handle({
-      type: 'pinch-end',
-      point: { x: 0.2, y: 0.3 },
-      timestamp: 16,
-    });
+    adapter.handle({ type: 'pinch-end', point: { x: 0.2, y: 0.3 } });
     const line = history.present.elements[0];
     expect(line).toMatchObject({ x: 10, y: 10, x2: 30, y2: 10, cy: 30 });
   });
