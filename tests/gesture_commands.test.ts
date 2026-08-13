@@ -33,6 +33,56 @@ describe('GestureCommandAdapter', () => {
     expect(history.present.elements[0]).toMatchObject({ x: 10, y: 10 });
   });
 
+  it('drags every selected element together when pinching an already-selected one', () => {
+    const scene = createScene();
+    const history = new History({
+      ...scene,
+      elements: [
+        {
+          id: 'rect1',
+          type: 'rectangle',
+          x: 10,
+          y: 10,
+          width: 20,
+          height: 20,
+          strokeColor: '#fff',
+          fillColor: 'transparent',
+          strokeWidth: 2,
+          opacity: 1,
+          roughness: 0,
+        },
+        {
+          id: 'rect2',
+          type: 'rectangle',
+          x: 60,
+          y: 60,
+          width: 20,
+          height: 20,
+          strokeColor: '#fff',
+          fillColor: 'transparent',
+          strokeWidth: 2,
+          opacity: 1,
+          roughness: 0,
+        },
+      ],
+      selectedIds: new Set(['rect1', 'rect2']),
+    });
+    const adapter = new GestureCommandAdapter(canvas(), history);
+    // Pinch lands on rect1 (world 10..30, 10..30), already part of the
+    // selection — the whole group should move together, not collapse to
+    // just rect1.
+    adapter.handle({ type: 'pinch-start', point: { x: 0.15, y: 0.15 } });
+    adapter.handle({ type: 'pinch-move', point: { x: 0.25, y: 0.25 } });
+    adapter.handle({ type: 'pinch-end', point: { x: 0.25, y: 0.25 } });
+    expect(history.present.selectedIds).toEqual(new Set(['rect1', 'rect2']));
+    expect(
+      history.present.elements.find((el) => el.id === 'rect1'),
+    ).toMatchObject({ x: 20, y: 20 });
+    expect(
+      history.present.elements.find((el) => el.id === 'rect2'),
+    ).toMatchObject({ x: 70, y: 70 });
+  });
+
   it('grabs an element slightly outside its bounds (gesture hit tolerance)', () => {
     const scene = createScene();
     const history = new History({

@@ -231,17 +231,23 @@ export class GestureCommandAdapter {
       scene.viewport,
       this.hitPad,
     );
-    // A pinch that misses the normal hit test but still lands near the
+    // A pinch that misses the normal hit test but still lands near an
     // already-selected element is very likely an imprecise re-grab attempt,
-    // not a request to deselect — hand tracking jitter makes exact re-hits hard.
-    if ((!hit || hit.locked) && selected.length === 1) {
+    // not a request to deselect — hand tracking jitter makes exact re-hits
+    // hard, especially against a whole selected group.
+    if ((!hit || hit.locked) && selected.length > 0) {
       hit = hitTest(selected, world.x, world.y, scene.viewport, this.regrabPad);
     }
     if (!hit || hit.locked) {
       this.history.dispatch({ type: 'CLEAR_SELECTION' });
       return null;
     }
-    this.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
+    // Pinching an element that's already part of the current selection
+    // drags the whole selection together (e.g. after select-all) — only
+    // collapse to just this element when it wasn't already selected.
+    if (!scene.selectedIds.has(hit.id)) {
+      this.history.dispatch({ type: 'SELECT_ELEMENTS', ids: [hit.id] });
+    }
     this.draggedId = hit.id;
     this.lastWorldPoint = world;
     this.history.beginDrag();
@@ -299,12 +305,16 @@ export class GestureCommandAdapter {
       return;
     }
     if (!this.draggedId || !this.lastWorldPoint) return;
-    this.history.dispatch({
-      type: 'MOVE_ELEMENT',
-      id: this.draggedId,
-      dx: world.x - this.lastWorldPoint.x,
-      dy: world.y - this.lastWorldPoint.y,
-    });
+    const dx = world.x - this.lastWorldPoint.x;
+    const dy = world.y - this.lastWorldPoint.y;
+    const scene = this.history.present;
+    // Move every currently-selected element together (not just the one
+    // pinched), so dragging after a select-all moves the whole group.
+    for (const el of scene.elements) {
+      if (scene.selectedIds.has(el.id) && !el.locked) {
+        this.history.dispatch({ type: 'MOVE_ELEMENT', id: el.id, dx, dy });
+      }
+    }
     this.lastWorldPoint = world;
   }
 
