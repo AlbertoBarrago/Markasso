@@ -200,7 +200,7 @@ body {
 .tb-btn.active {
   background: var(--accent-light);
   color: var(--accent);
-  outline: 2px solid var(--accent);
+  outline: 1px solid var(--accent);
 }
 .tb-btn:disabled {
   opacity: 0.3;
@@ -213,6 +213,7 @@ body {
 .tb-tool-mode-label {
   height: 28px;
   padding: 0 8px;
+  margin-left: 4px;
   border: 1px solid var(--island-border);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
