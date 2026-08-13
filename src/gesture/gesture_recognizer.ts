@@ -96,23 +96,21 @@ export class GestureRecognizer {
         if (this.state === 'pinching') {
           events.push({ type: 'pinch-move', point: cursor });
         } else {
-          events.push({ type: 'pinch-start', point: cursor, timestamp });
+          events.push({ type: 'pinch-start', point: cursor });
         }
         this.state = 'pinching';
         break;
 
       case 'point':
         if (this.state === 'pinching') {
-          events.push({ type: 'pinch-end', point: cursor, timestamp });
+          events.push({ type: 'pinch-end', point: cursor });
         }
         this.handlePointing(cursor, events);
         break;
 
       case 'fist':
-        // A fist cancels whatever's in progress — deletion is now a
-        // double-pinch gesture handled at the command level, not a hold.
         if (this.state === 'pinching') {
-          events.push({ type: 'pinch-end', point: cursor, timestamp });
+          events.push({ type: 'pinch-end', point: cursor });
           this.state = 'absent';
           break;
         }
@@ -130,12 +128,20 @@ export class GestureRecognizer {
           this.state = 'absent';
           break;
         }
+        // Deletion is instant, not a hold: fire once on the frame the fist
+        // is first confirmed (not on every subsequent frame it's held), the
+        // same "act immediately, don't make the user hold still" principle
+        // that fixed drawing. GestureCommandAdapter deletes whatever's
+        // currently selected — a fist needs no target coordinate.
+        if (this.state !== 'ready' && this.state !== 'selecting') {
+          events.push({ type: 'delete' });
+        }
         this.state = 'ready';
         break;
 
       case 'open':
         if (this.state === 'pinching') {
-          events.push({ type: 'pinch-end', point: cursor, timestamp });
+          events.push({ type: 'pinch-end', point: cursor });
         }
         if (this.state === 'drawing') this.finishTrace(events);
         if (this.state !== 'ready' && this.state !== 'selecting') {
@@ -153,7 +159,7 @@ export class GestureRecognizer {
 
       case 'none':
         if (this.state === 'pinching') {
-          events.push({ type: 'pinch-end', point: cursor, timestamp });
+          events.push({ type: 'pinch-end', point: cursor });
           this.state = 'absent';
         } else if (
           this.state === 'drawing' &&
@@ -269,7 +275,7 @@ export class GestureRecognizer {
     }
     const events: GestureEvent[] = [];
     if (this.state === 'pinching' && this.lastCursor) {
-      events.push({ type: 'pinch-end', point: this.lastCursor, timestamp });
+      events.push({ type: 'pinch-end', point: this.lastCursor });
     }
     this.state = 'absent';
     this.stablePose = 'none';

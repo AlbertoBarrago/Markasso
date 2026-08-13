@@ -96,14 +96,15 @@ describe('GestureRecognizer', () => {
     expect(recognizer.update(null, 1_451).state).toBe('absent');
   });
 
-  it('settles at ready on an idle fist rather than arming a delete hold', () => {
+  it('fires a single instant delete event when a fist is confirmed, not a repeated hold', () => {
     const recognizer = new GestureRecognizer();
-    let frame = recognizer.update(hand('none'), 0);
-    for (let t = 16; t <= 900; t += 16) {
-      frame = recognizer.update(hand('none'), t);
+    const deleteFrames: boolean[] = [];
+    for (let t = 0; t <= 96; t += 16) {
+      const frame = recognizer.update(hand('none'), t);
+      deleteFrames.push(frame.events.some((event) => event.type === 'delete'));
     }
-    expect(frame.state).toBe('ready');
-    expect(frame.events).toHaveLength(0);
+    expect(deleteFrames.filter(Boolean)).toHaveLength(1);
+    expect(recognizer.update(hand('none'), 112).state).toBe('ready');
   });
 
   it('cancels an in-progress pinch when the hand closes into a fist', () => {
