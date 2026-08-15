@@ -6,13 +6,15 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022"],
     "skipLibCheck": true,
     "isolatedModules": true,
-    "resolveJsonModule": true,
     "noEmit": true,
-    "types": ["vite/client"]
+    "types": ["vitest/globals"]
   },
-  "include": ["src", "main.ts", "vite.config.ts", "tests"],
-  "exclude": ["src/worker.ts", "tests/worker.test.ts"]
+  "include": [
+    "src/worker.ts",
+    "tests/worker.test.ts",
+    "worker-configuration.d.ts"
+  ]
 }

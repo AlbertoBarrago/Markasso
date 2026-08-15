@@ -28,6 +28,8 @@ export class History {
   private future: Scene[] = [];
   private listeners: Listener[] = [];
   private _dragging = false;
+  private dragHasUndoableChanges = false;
+  private dragFuture: Scene[] | null = null;
 
   constructor(
     initial: Scene = createScene(),
@@ -43,27 +45,47 @@ export class History {
   /** Call at the start of a drag (move/resize/rotate). Records the pre-drag
    *  state once so the entire drag undoes in a single Ctrl+Z step. */
   beginDrag(): void {
+    if (this._dragging) return;
     this.past.push(this._present);
+    this.dragFuture = this.future;
     this.future = [];
     this._dragging = true;
+    this.dragHasUndoableChanges = false;
   }
 
   /** Call at the end of a drag. Pops the undo entry if nothing actually changed. */
   endDrag(): void {
+    if (!this._dragging) return;
     this._dragging = false;
-    if (
-      this.past.length > 0 &&
-      this.past[this.past.length - 1] === this._present
-    ) {
+    if (!this.dragHasUndoableChanges) {
       this.past.pop();
+      this.future = this.dragFuture ?? [];
     }
+    this.dragHasUndoableChanges = false;
+    this.dragFuture = null;
+  }
+
+  /** Cancel an in-progress drag and restore its pre-drag element state. */
+  cancelDrag(): void {
+    if (!this._dragging) return;
+    const beforeDrag = this.past.pop();
+    this._dragging = false;
+    this.dragHasUndoableChanges = false;
+    this.future = this.dragFuture ?? [];
+    this.dragFuture = null;
+    if (!beforeDrag) return;
+    this._present = restoreSnapshot(beforeDrag, this._present, false);
+    this.notify();
   }
 
   dispatch(command: Command): void {
     const next = reducer(this._present, command);
     if (next === this._present) return;
 
-    if (!this._dragging && !EPHEMERAL_COMMANDS.has(command.type)) {
+    const isEphemeral = EPHEMERAL_COMMANDS.has(command.type);
+    if (this._dragging && !isEphemeral) {
+      this.dragHasUndoableChanges = true;
+    } else if (!this._dragging && !isEphemeral) {
       this.past.push(this._present);
       this.future = [];
     }
@@ -74,17 +96,25 @@ export class History {
   }
 
   undo(): void {
+    if (this._dragging) {
+      this.cancelDrag();
+      return;
+    }
     if (this.past.length === 0) return;
     this.future.push(this._present);
-    this._present = this.past.pop()!;
+    this._present = restoreSnapshot(this.past.pop()!, this._present);
     this.onCommand?.({ type: 'UNDO' });
     this.notify();
   }
 
   redo(): void {
+    if (this._dragging) {
+      this.cancelDrag();
+      return;
+    }
     if (this.future.length === 0) return;
     this.past.push(this._present);
-    this._present = this.future.pop()!;
+    this._present = restoreSnapshot(this.future.pop()!, this._present);
     this.onCommand?.({ type: 'REDO' });
     this.notify();
   }
@@ -106,4 +136,37 @@ export class History {
   private notify(): void {
     for (const l of this.listeners) l(this._present);
   }
+}
+
+function restoreSnapshot(
+  snapshot: Scene,
+  current: Scene,
+  preserveSelection = true,
+): Scene {
+  const elementIds = new Set(snapshot.elements.map((element) => element.id));
+  const selectedIds = preserveSelection
+    ? new Set([...current.selectedIds].filter((id) => elementIds.has(id)))
+    : new Set(snapshot.selectedIds);
+  const currentLastCreatedId = current.appState.lastCreatedId;
+
+  return {
+    ...snapshot,
+    selectedIds,
+    viewport: current.viewport,
+    appState: {
+      ...snapshot.appState,
+      activeTool: current.appState.activeTool,
+      strokeColor: current.appState.strokeColor,
+      fillColor: current.appState.fillColor,
+      strokeWidth: current.appState.strokeWidth,
+      gridVisible: current.appState.gridVisible,
+      gridType: current.appState.gridType,
+      toolLocked: current.appState.toolLocked,
+      justCreatedText: current.appState.justCreatedText,
+      lastCreatedId:
+        currentLastCreatedId && elementIds.has(currentLastCreatedId)
+          ? currentLastCreatedId
+          : null,
+    },
+  };
 }

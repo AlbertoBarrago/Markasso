@@ -9,9 +9,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "pnpm typecheck && vite build",
     "preview": "pnpm run build && wrangler dev",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.worker.json",
     "lint": "biome check --write .",
     "test": "vitest run",
     "test:watch": "vitest",

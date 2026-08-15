@@ -122,7 +122,7 @@ export function exportSVG(scene: Scene, withBackground = true): void {
   ];
   if (withBackground) {
     parts.push(
-      `<rect width="${round(w)}" height="${round(h)}" fill="${getCanvasBg()}"/>`,
+      `<rect width="${round(w)}" height="${round(h)}" fill="${escapeXml(getCanvasBg())}"/>`,
     );
   }
 
@@ -260,7 +260,7 @@ function elementToSVG(el: Element, ox: number, oy: number): string {
             : '';
       const pts = el.points.map(([x, y]) => `${x + ox},${y + oy}`).join(' ');
       const tag = el.closed ? 'polygon' : 'polyline';
-      return `<${tag} points="${pts}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" opacity="${el.opacity}" ${dash}/>`;
+      return `<${tag} points="${pts}" fill="${escapeXml(fill)}" stroke="${escapeXml(stroke)}" stroke-width="${sw}" opacity="${el.opacity}" ${dash}/>`;
     }
     case 'curve': {
       const stroke = el.strokeColor;
@@ -277,7 +277,7 @@ function elementToSVG(el: Element, ox: number, oy: number): string {
       const y2 = el.y2 + oy;
       const cx = el.cx + ox;
       const cy = el.cy + oy;
-      return `<path d="M ${x} ${y} Q ${cx} ${cy} ${x2} ${y2}" fill="none" stroke="${stroke}" stroke-width="${sw}" opacity="${el.opacity}" ${dash}/>`;
+      return `<path d="M ${x} ${y} Q ${cx} ${cy} ${x2} ${y2}" fill="none" stroke="${escapeXml(stroke)}" stroke-width="${sw}" opacity="${el.opacity}" ${dash}/>`;
     }
   }
 }
@@ -307,7 +307,7 @@ function shapeProps(el: {
   strokeStyle?: string;
 }): string {
   const fill = el.fillColor === 'transparent' ? 'none' : el.fillColor;
-  return `fill="${fill}" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" opacity="${el.opacity}"${strokeDashAttr(el)}`;
+  return `fill="${escapeXml(fill)}" stroke="${escapeXml(el.strokeColor)}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" opacity="${el.opacity}"${strokeDashAttr(el)}`;
 }
 
 function rotateAttr(el: Element, ox: number, oy: number): string {
@@ -400,7 +400,7 @@ function lineToSVG(el: LineElement, ox: number, oy: number): string {
     y1 = el.y + oy;
   const x2 = el.x2 + ox,
     y2 = el.y2 + oy;
-  const sp = `stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"${strokeDashAttr(el)}`;
+  const sp = `stroke="${escapeXml(el.strokeColor)}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"${strokeDashAttr(el)}`;
   const rot = rotateAttr(el, ox, oy);
   const parts: string[] = [];
   if (el.cx !== undefined && el.cy !== undefined) {
@@ -455,7 +455,7 @@ function arrowToSVG(el: ArrowElement, ox: number, oy: number): string {
   const ay1 = y2 - headLen * Math.sin(angle - Math.PI / 6);
   const ax2 = x2 - headLen * Math.cos(angle + Math.PI / 6);
   const ay2 = y2 - headLen * Math.sin(angle + Math.PI / 6);
-  const sp = `stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"`;
+  const sp = `stroke="${escapeXml(el.strokeColor)}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"`;
   const rot = rotateAttr(el, ox, oy);
   return [
     `<line x1="${round(x1)}" y1="${round(y1)}" x2="${round(x2)}" y2="${round(y2)}" ${sp}${rot}/>`,
@@ -490,7 +490,7 @@ function freehandToSVG(el: FreehandElement, ox: number, oy: number): string {
     parts.push(`L ${round(last[0] + ox)} ${round(last[1] + oy)}`);
   }
 
-  return `<path d="${parts.join(' ')}" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"${rotateAttr(el, ox, oy)}/>`;
+  return `<path d="${parts.join(' ')}" stroke="${escapeXml(el.strokeColor)}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"${rotateAttr(el, ox, oy)}/>`;
 }
 
 function wrapTextApprox(
@@ -529,7 +529,7 @@ function textToSVG(el: TextElement, ox: number, oy: number): string {
         `<tspan x="${round(el.x + ox)}" dy="${i === 0 ? 0 : round(lineHeight)}">${escapeXml(line)}</tspan>`,
     )
     .join('');
-  return `<text x="${round(el.x + ox)}" y="${round(el.y + oy)}" font-family="${el.fontFamily}" font-size="${el.fontSize}" fill="${el.strokeColor}" opacity="${el.opacity}" dominant-baseline="hanging"${rotateAttr(el, ox, oy)}>${tspans}</text>`;
+  return `<text x="${round(el.x + ox)}" y="${round(el.y + oy)}" font-family="${escapeXml(el.fontFamily)}" font-size="${el.fontSize}" fill="${escapeXml(el.strokeColor)}" opacity="${el.opacity}" dominant-baseline="hanging"${rotateAttr(el, ox, oy)}>${tspans}</text>`;
 }
 
 function shapeLabelToSVG(
@@ -551,7 +551,7 @@ function shapeLabelToSVG(
         `<tspan x="${round(cx)}" y="${round(startY + i * lineHeight + lineHeight / 2)}">${escapeXml(line)}</tspan>`,
     )
     .join('');
-  return `<text font-family="${fontFamily}" font-size="${fontSize}" fill="${color}" opacity="${opacity}" text-anchor="middle">${tspans}</text>`;
+  return `<text font-family="${escapeXml(fontFamily)}" font-size="${fontSize}" fill="${escapeXml(color)}" opacity="${opacity}" text-anchor="middle">${tspans}</text>`;
 }
 
 function imageToSVG(el: ImageElement, ox: number, oy: number): string {
@@ -559,7 +559,7 @@ function imageToSVG(el: ImageElement, ox: number, oy: number): string {
   const y = (el.height < 0 ? el.y + el.height : el.y) + oy;
   const w = Math.abs(el.width);
   const h = Math.abs(el.height);
-  return `<image href="${el.src}" x="${round(x)}" y="${round(y)}" width="${round(w)}" height="${round(h)}" opacity="${el.opacity}"${rotateAttr(el, ox, oy)} preserveAspectRatio="none"/>`;
+  return `<image href="${escapeXml(el.src)}" x="${round(x)}" y="${round(y)}" width="${round(w)}" height="${round(h)}" opacity="${el.opacity}"${rotateAttr(el, ox, oy)} preserveAspectRatio="none"/>`;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

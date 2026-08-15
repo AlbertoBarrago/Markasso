@@ -103,6 +103,24 @@ describe('reducer', () => {
     expect(el.y).toBe(17);
   });
 
+  it('MOVE_ELEMENTS shifts the requested elements atomically', () => {
+    const scene: Scene = {
+      ...createScene(),
+      elements: [makeRect({ id: 'a' }), makeRect({ id: 'b', x: 50 })],
+      selectedIds: new Set(['a', 'b']),
+    };
+    const next = reducer(scene, {
+      type: 'MOVE_ELEMENTS',
+      ids: ['a', 'b'],
+      dx: 5,
+      dy: -2,
+    });
+    expect(next.elements.map(({ x, y }) => [x, y])).toEqual([
+      [15, 18],
+      [55, 18],
+    ]);
+  });
+
   it('SELECT_ELEMENTS and CLEAR_SELECTION', () => {
     const scene: Scene = {
       ...createScene(),

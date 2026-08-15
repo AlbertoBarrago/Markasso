@@ -7,6 +7,7 @@ export type Command =
   | { type: 'CREATE_ELEMENTS'; elements: Element[] }
   | { type: 'UPDATE_ELEMENT'; id: string; props: Partial<Element> }
   | { type: 'MOVE_ELEMENT'; id: string; dx: number; dy: number }
+  | { type: 'MOVE_ELEMENTS'; ids: string[]; dx: number; dy: number }
   | {
       type: 'RESIZE_ELEMENT';
       id: string;

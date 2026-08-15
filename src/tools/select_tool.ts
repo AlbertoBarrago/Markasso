@@ -1,4 +1,5 @@
 import { worldToScreen } from '../core/viewport';
+import { cloneElementsWithOffset } from '../elements/clone';
 import type { Element } from '../elements/element';
 import { distToQuadraticCurve } from '../rendering/connector_geometry';
 import type { HandlePosition } from '../rendering/draw_selection';
@@ -579,9 +580,7 @@ export class SelectTool implements Tool {
           (el) => altIds.includes(el.id) && !el.locked,
         );
         if (altEls.length > 0) {
-          const newElements = altEls.map(
-            (el) => ({ ...el, id: crypto.randomUUID() }) as Element,
-          );
+          const newElements = cloneElementsWithOffset(altEls, 0, 0);
           ctx.history.dispatch({
             type: 'CREATE_ELEMENTS',
             elements: newElements,
@@ -608,9 +607,7 @@ export class SelectTool implements Tool {
           (el) => idsToClone.includes(el.id) && !el.locked,
         );
         if (elsToClone.length > 0) {
-          const newElements = elsToClone.map(
-            (el) => ({ ...el, id: crypto.randomUUID() }) as Element,
-          );
+          const newElements = cloneElementsWithOffset(elsToClone, 0, 0);
           ctx.history.dispatch({
             type: 'CREATE_ELEMENTS',
             elements: newElements,
@@ -627,9 +624,7 @@ export class SelectTool implements Tool {
         const el = elements.find((e) => e.id === id);
         return el && !el.locked;
       });
-      for (const id of ids) {
-        ctx.history.dispatch({ type: 'MOVE_ELEMENT', id, dx, dy });
-      }
+      ctx.history.dispatch({ type: 'MOVE_ELEMENTS', ids, dx, dy });
       this.lastWorldX = worldX;
       this.lastWorldY = worldY;
 
@@ -771,13 +766,27 @@ export class SelectTool implements Tool {
     this.rotateElId = null;
   }
 
-  onDeactivate(_ctx: ToolContext): void {
+  onCancel(ctx: ToolContext): void {
+    ctx.history.cancelDrag();
+    this.resetInteractionState();
+  }
+
+  onDeactivate(ctx: ToolContext): void {
+    ctx.history.cancelDrag();
+    this.resetInteractionState();
+  }
+
+  private resetInteractionState(): void {
     this.dragMode = 'none';
     this.marqueeActive = false;
     this.shiftClonePending = false;
     this.shiftCloneTarget = null;
     this.altClonePending = false;
     this.altCloneTarget = null;
+    this.endpointSnapTarget = null;
+    this.endpointSnapIndicator = null;
+    this.endpointSnapElementId = null;
+    this.alignGuides = [];
   }
 
   onKeyDown(e: KeyboardEvent, ctx: ToolContext): void {
@@ -816,9 +825,7 @@ export class SelectTool implements Tool {
     if (dx !== 0 || dy !== 0) {
       e.preventDefault();
       const ids = [...ctx.history.present.selectedIds];
-      for (const id of ids) {
-        ctx.history.dispatch({ type: 'MOVE_ELEMENT', id, dx, dy });
-      }
+      ctx.history.dispatch({ type: 'MOVE_ELEMENTS', ids, dx, dy });
     }
   }
 

@@ -1,4 +1,3 @@
-import { elementClipboard } from '../core/clipboard';
 import type { ImageElement } from '../elements/element';
 import type { History } from '../engine/history';
 import { importMarkasso } from '../io/markasso';
@@ -63,7 +62,7 @@ export function initImageImport(
 
   // Paste handler (Ctrl+V with image or Mermaid text in clipboard)
   document.addEventListener('paste', (e) => {
-    if (elementClipboard.elements.length > 0) return; // element paste handled via keydown
+    if (e.defaultPrevented) return;
     const items = e.clipboardData?.items;
     if (!items) return;
 
