@@ -1,5 +1,5 @@
 import { measureTextBounds } from '../core/text_measure';
-import { cloneElementWithOffset } from '../elements/clone';
+import { cloneElementsWithOffset } from '../elements/clone';
 import type { Element } from '../elements/element';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
@@ -821,10 +821,10 @@ export function initContextPanel(
       if (ids.length === 0) return;
 
       if (a.action === 'duplicate') {
-        const newElements = ids
+        const elements = ids
           .map((id) => scene.elements.find((e) => e.id === id))
-          .filter((el): el is Element => el !== undefined)
-          .map((el) => cloneElementWithOffset(el, crypto.randomUUID(), 20, 20));
+          .filter((el): el is Element => el !== undefined);
+        const newElements = cloneElementsWithOffset(elements, 20, 20);
         if (newElements.length > 0)
           history.dispatch({ type: 'CREATE_ELEMENTS', elements: newElements });
       } else if (a.action === 'delete') {

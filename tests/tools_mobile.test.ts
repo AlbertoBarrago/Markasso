@@ -496,6 +496,20 @@ describe('EraserTool — mobile touch sequence', () => {
       'el-2',
     ]);
   });
+
+  it('restores elements when an erase gesture is cancelled', () => {
+    const history = new History(createScene());
+    history.dispatch({ type: 'CREATE_ELEMENT', element: makeRect() });
+    const tool = new EraserTool();
+    const ctx = makeCtx(history);
+
+    tool.onMouseDown(me(50, 50), 50, 50, ctx);
+    expect(history.present.elements).toHaveLength(0);
+
+    tool.onCancel(ctx);
+    expect(history.present.elements).toHaveLength(1);
+    expect(history.present.elements[0]?.id).toBe('el-1');
+  });
 });
 
 // ---------------------------------------------------------------------------

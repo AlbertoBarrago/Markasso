@@ -62,7 +62,11 @@ export class EraserTool implements Tool {
     if (!this.erasing) return;
     this.erasing = false;
     this.slashTrail = [];
-    ctx.history.endDrag();
+    ctx.history.cancelDrag();
+  }
+
+  onDeactivate(ctx: ToolContext): void {
+    this.onCancel(ctx);
   }
 
   onMouseLeave(): void {

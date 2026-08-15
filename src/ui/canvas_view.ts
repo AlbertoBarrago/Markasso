@@ -1,6 +1,6 @@
 import type { ActiveTool } from '../core/app_state';
 import { screenToWorld, worldToScreen } from '../core/viewport';
-import { cloneElementWithOffset } from '../elements/clone';
+import { cloneElementsWithOffset } from '../elements/clone';
 import type {
   EllipseElement,
   LineElement,
@@ -307,14 +307,12 @@ export function initCanvasView(
           icon: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="9" height="9" rx="1.5"/><path d="M13 7V5.5A1.5 1.5 0 0 0 11.5 4h-7A1.5 1.5 0 0 0 3 5.5v7A1.5 1.5 0 0 0 4.5 14H7"/></svg>`,
           action: () => {
             const sc = history.present;
-            const newElements = [...sc.selectedIds]
+            const elements = [...sc.selectedIds]
               .map((id) => sc.elements.find((e) => e.id === id))
               .filter(
                 (el): el is (typeof sc.elements)[number] => el !== undefined,
-              )
-              .map((el) =>
-                cloneElementWithOffset(el, crypto.randomUUID(), 20, 20),
               );
+            const newElements = cloneElementsWithOffset(elements, 20, 20);
             if (newElements.length > 0)
               history.dispatch({
                 type: 'CREATE_ELEMENTS',

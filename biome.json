@@ -1,7 +1,13 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.2/schema.json",
   "files": {
-    "includes": ["**", "!dist", "!coverage", "!.wrangler"]
+    "includes": [
+      "**",
+      "!dist",
+      "!coverage",
+      "!.wrangler",
+      "!worker-configuration.d.ts"
+    ]
   },
   "formatter": {
     "enabled": true,

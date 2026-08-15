@@ -2,7 +2,7 @@ import type { GridType } from '../core/app_state';
 import type { Viewport } from '../core/viewport';
 import type { Element } from '../elements/element';
 import type { History } from '../engine/history';
-import { validateElements } from './element_validation';
+import { validateElements, validateViewport } from './element_validation';
 
 const STORAGE_KEY = 'markasso-session';
 const DEBOUNCE_MS = 500;
@@ -24,21 +24,11 @@ export function loadSession(): SessionData | null {
     const d = JSON.parse(raw) as Record<string, unknown>;
     const elements = validateElements(d.elements);
     if (!elements || elements.length === 0) return null;
-    let viewport: Viewport = { offsetX: 0, offsetY: 0, zoom: 1 };
-    if (typeof d.viewport === 'object' && d.viewport !== null) {
-      const v = d.viewport as Record<string, unknown>;
-      if (
-        typeof v.offsetX === 'number' &&
-        typeof v.offsetY === 'number' &&
-        typeof v.zoom === 'number'
-      ) {
-        viewport = {
-          offsetX: v.offsetX,
-          offsetY: v.offsetY,
-          zoom: v.zoom,
-        };
-      }
-    }
+    const viewport: Viewport = validateViewport(d.viewport) ?? {
+      offsetX: 0,
+      offsetY: 0,
+      zoom: 1,
+    };
     const VALID_GRID_TYPES: GridType[] = ['dot', 'line', 'mm'];
     const gridVisible =
       typeof d.gridVisible === 'boolean' ? d.gridVisible : true;

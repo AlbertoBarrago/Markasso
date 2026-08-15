@@ -38,10 +38,6 @@ function matchesQuery(el: Element, q: string): boolean {
   return false;
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
 export function initElementSearch(
   _workspace: HTMLElement,
   history: History,
@@ -107,17 +103,18 @@ export function initElementSearch(
       if (isSelected) li.classList.add('selected');
 
       const icon = TYPE_ICONS[el.type] ?? '';
-      const label = escapeHtml(getElementLabel(el));
-
       const fillColor =
         el.fillColor !== 'transparent' ? el.fillColor : el.strokeColor;
-      const colorSwatch = `<span class="el-search-swatch" style="background:${escapeHtml(fillColor)}"></span>`;
-
-      li.innerHTML = `
-        <span class="el-search-item-icon">${icon}</span>
-        <span class="el-search-item-label">${label}</span>
-        ${colorSwatch}
-      `;
+      const iconEl = document.createElement('span');
+      iconEl.className = 'el-search-item-icon';
+      iconEl.innerHTML = icon;
+      const labelEl = document.createElement('span');
+      labelEl.className = 'el-search-item-label';
+      labelEl.textContent = getElementLabel(el);
+      const colorSwatch = document.createElement('span');
+      colorSwatch.className = 'el-search-swatch';
+      colorSwatch.style.backgroundColor = fillColor;
+      li.append(iconEl, labelEl, colorSwatch);
       li.addEventListener('mouseenter', () => setActive(i, false));
       li.addEventListener('click', () => selectElement(el));
       list.appendChild(li);

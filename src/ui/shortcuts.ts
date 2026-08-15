@@ -1,13 +1,18 @@
 import type { ActiveTool } from '../core/app_state';
-import { elementClipboard } from '../core/clipboard';
+import {
+  ELEMENT_CLIPBOARD_MIME,
+  ELEMENT_CLIPBOARD_TEXT_PREFIX,
+  serializeElementClipboard,
+} from '../core/clipboard';
 import { fitToElements } from '../core/viewport';
-import { cloneElementWithOffset } from '../elements/clone';
-import type { Element } from '../elements/element';
+import { cloneElementsWithOffset } from '../elements/clone';
 import type { History } from '../engine/history';
+import { validateElements } from '../io/element_validation';
 import type { SelectTool } from '../tools/select_tool';
 import { isFocusInPanel } from './keyboard_utils';
 
 export function initShortcuts(history: History, selectTool: SelectTool): void {
+  let pasteCount = 0;
   const shortcuts = new Map<string, () => void>([
     ['h', () => history.dispatch({ type: 'SET_TOOL', tool: 'hand' })],
     ['v', () => history.dispatch({ type: 'SET_TOOL', tool: 'select' })],
@@ -70,20 +75,21 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       return;
     }
 
-    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-      e.preventDefault();
-      history.undo();
-      return;
-    }
+    const key = e.key.toLowerCase();
     if (
       (e.ctrlKey || e.metaKey) &&
-      (e.key === 'y' || (e.shiftKey && e.key === 'z'))
+      (key === 'y' || (e.shiftKey && key === 'z'))
     ) {
       e.preventDefault();
       history.redo();
       return;
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && key === 'z') {
+      e.preventDefault();
+      history.undo();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && key === 'a') {
       e.preventDefault();
       const ids = history.present.elements.map((el) => el.id);
       if (ids.length > 0) history.dispatch({ type: 'SELECT_ELEMENTS', ids });
@@ -130,22 +136,20 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     }
 
     // Ctrl+D — duplicate selected elements with a small offset
-    if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+    if ((e.ctrlKey || e.metaKey) && key === 'd') {
       e.preventDefault();
       const scene = history.present;
       const selectedEls = scene.elements.filter((el) =>
         scene.selectedIds.has(el.id),
       );
-      const newElements = selectedEls.map((el) =>
-        cloneElementWithOffset(el, crypto.randomUUID(), 20, 20),
-      );
+      const newElements = cloneElementsWithOffset(selectedEls, 20, 20);
       if (newElements.length > 0)
         history.dispatch({ type: 'CREATE_ELEMENTS', elements: newElements });
       return;
     }
 
     // Ctrl+Alt+C (Cmd+Alt+C) — copy style of first selected element (format painter)
-    if ((e.ctrlKey || e.metaKey) && e.altKey && e.key === 'c') {
+    if ((e.ctrlKey || e.metaKey) && e.altKey && key === 'c') {
       e.preventDefault();
       const scene = history.present;
       const selected = scene.elements.filter((el) =>
@@ -155,65 +159,6 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
         selectTool.activateFormatPainter(selected[0]);
       }
       return;
-    }
-
-    // Ctrl+C — copy selected elements to internal clipboard
-    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key === 'c') {
-      if (window.getSelection()?.toString()) return; // let browser handle text selection copy
-      const scene = history.present;
-      const selected = scene.elements.filter((el) =>
-        scene.selectedIds.has(el.id),
-      );
-      if (selected.length > 0) {
-        elementClipboard.elements = selected;
-        elementClipboard.pasteCount = 0;
-      }
-      return;
-    }
-
-    // Ctrl+V — paste elements from internal clipboard
-    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-      const { elements } = elementClipboard;
-      if (elements.length > 0) {
-        e.preventDefault();
-        elementClipboard.pasteCount += 1;
-        const offset = elementClipboard.pasteCount * 20;
-        const idMap = new Map(
-          elements.map((el) => [el.id, crypto.randomUUID()]),
-        );
-        const newElements: Element[] = elements.map((el) => {
-          const newId = idMap.get(el.id)!;
-          if (el.type === 'freehand') {
-            return {
-              ...el,
-              id: newId,
-              x: el.x + offset,
-              y: el.y + offset,
-              points: el.points.map(
-                ([px, py]) => [px + offset, py + offset] as const,
-              ),
-            };
-          }
-          if (el.type === 'line' || el.type === 'arrow') {
-            return {
-              ...el,
-              id: newId,
-              x: el.x + offset,
-              y: el.y + offset,
-              x2: el.x2 + offset,
-              y2: el.y2 + offset,
-              ...(el.type === 'line' &&
-                el.cx !== undefined && { cx: el.cx + offset }),
-              ...(el.type === 'line' &&
-                el.cy !== undefined && { cy: el.cy + offset }),
-            };
-          }
-          return { ...el, id: newId, x: el.x + offset, y: el.y + offset };
-        });
-        history.dispatch({ type: 'CREATE_ELEMENTS', elements: newElements });
-        return;
-      }
-      // no internal clipboard → fall through to native paste (image paste)
     }
 
     // Ctrl+Shift+] — bring to front
@@ -243,7 +188,7 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     }
 
     // Ctrl+G — group selected elements
-    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'g') {
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && key === 'g') {
       e.preventDefault();
       const ids = [...history.present.selectedIds];
       if (ids.length > 1) {
@@ -257,7 +202,7 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     }
 
     // Ctrl+Shift+G — ungroup
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'G') {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && key === 'g') {
       e.preventDefault();
       const scene = history.present;
       const groupIds = new Set(
@@ -335,4 +280,60 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       }
     }
   });
+
+  document.addEventListener('copy', (e) => {
+    if (window.getSelection()?.toString() || !e.clipboardData) return;
+    const scene = history.present;
+    const selected = scene.elements.filter((element) =>
+      scene.selectedIds.has(element.id),
+    );
+    if (selected.length === 0) return;
+
+    const serialized = serializeElementClipboard(selected);
+    e.clipboardData.setData(
+      'text/plain',
+      `${ELEMENT_CLIPBOARD_TEXT_PREFIX}${serialized}`,
+    );
+    try {
+      e.clipboardData.setData(ELEMENT_CLIPBOARD_MIME, serialized);
+    } catch {
+      // The text fallback keeps element paste working on restricted browsers.
+    }
+    pasteCount = 0;
+    e.preventDefault();
+  });
+
+  document.addEventListener(
+    'paste',
+    (e) => {
+      if (!e.clipboardData) return;
+      const customData = e.clipboardData.getData(ELEMENT_CLIPBOARD_MIME);
+      const textData = e.clipboardData.getData('text/plain');
+      const serialized =
+        customData ||
+        (textData.startsWith(ELEMENT_CLIPBOARD_TEXT_PREFIX)
+          ? textData.slice(ELEMENT_CLIPBOARD_TEXT_PREFIX.length)
+          : '');
+      if (!serialized) return;
+
+      try {
+        const payload = JSON.parse(serialized) as Record<string, unknown>;
+        if (payload.version !== 1) return;
+        const elements = validateElements(payload.elements);
+        if (!elements || elements.length === 0) return;
+
+        pasteCount += 1;
+        const offset = pasteCount * 20;
+        history.dispatch({
+          type: 'CREATE_ELEMENTS',
+          elements: cloneElementsWithOffset(elements, offset, offset),
+        });
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      } catch {
+        // Ignore malformed clipboard data and let other paste handlers proceed.
+      }
+    },
+    true,
+  );
 }

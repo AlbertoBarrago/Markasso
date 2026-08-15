@@ -4,13 +4,23 @@
   "compatibility_date": "2026-04-07",
   "main": "src/worker.ts",
   "assets": {
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application"
   },
-  "compatibility_flags": ["nodejs_compat"],
   "kv_namespaces": [
     {
       "binding": "SHARE_LINKS",
       "id": "ba266ca029f34cc2998e017067eca662"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "SHARE_RATE_LIMITER",
+      "namespace_id": "27081501",
+      "simple": {
+        "limit": 30,
+        "period": 60
+      }
     }
   ]
 }

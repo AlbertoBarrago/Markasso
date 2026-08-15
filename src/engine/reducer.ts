@@ -93,6 +93,18 @@ export function reducer(scene: Scene, command: Command): Scene {
         ),
       };
 
+    case 'MOVE_ELEMENTS': {
+      if (command.dx === 0 && command.dy === 0) return scene;
+      const ids = new Set(command.ids);
+      if (!scene.elements.some((el) => ids.has(el.id))) return scene;
+      return {
+        ...scene,
+        elements: scene.elements.map((el) =>
+          ids.has(el.id) ? translateElement(el, command.dx, command.dy) : el,
+        ),
+      };
+    }
+
     case 'RESIZE_ELEMENT':
       return {
         ...scene,

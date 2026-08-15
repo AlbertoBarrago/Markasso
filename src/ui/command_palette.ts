@@ -1,6 +1,6 @@
 import type { ActiveTool } from '../core/app_state';
 import { fitToElements } from '../core/viewport';
-import { cloneElementWithOffset } from '../elements/clone';
+import { cloneElementsWithOffset } from '../elements/clone';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { exportMarkasso } from '../io/markasso';
@@ -312,9 +312,7 @@ export function initCommandPalette(
         const selectedEls = scene.elements.filter((el) =>
           scene.selectedIds.has(el.id),
         );
-        const newElements = selectedEls.map((el) =>
-          cloneElementWithOffset(el, crypto.randomUUID(), 20, 20),
-        );
+        const newElements = cloneElementsWithOffset(selectedEls, 20, 20);
         if (newElements.length > 0)
           history.dispatch({ type: 'CREATE_ELEMENTS', elements: newElements });
       },
