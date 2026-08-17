@@ -8,6 +8,7 @@ import {
 } from './connector_geometry';
 import { getElementCenter, resolveArrowEndpoints } from './draw_selection';
 import { getCachedImage } from './image_cache';
+import { getIsLightTheme } from './theme_cache';
 
 export function contrastColor(fill: string, fallback: string): string {
   if (!fill || fill === 'transparent' || fill === 'none') return fallback;
@@ -23,8 +24,7 @@ export function contrastColor(fill: string, fallback: string): string {
 
 function resolveStrokeColorForTheme(strokeColor: string): string {
   if (typeof document === 'undefined') return strokeColor;
-  const resolvedTheme = document.documentElement.getAttribute('data-theme');
-  if (resolvedTheme !== 'light') return strokeColor;
+  if (!getIsLightTheme()) return strokeColor;
   return strokeColor.toLowerCase() === '#e2e2ef' ? '#000000' : strokeColor;
 }
 
@@ -34,9 +34,7 @@ function resolveStrokeColorForTheme(strokeColor: string): string {
  */
 function resolveShadowColorForTheme(shadowColor: string): string {
   if (typeof document === 'undefined') return shadowColor;
-  const isLight =
-    document.documentElement.getAttribute('data-theme') === 'light';
-  if (isLight) return shadowColor;
+  if (getIsLightTheme()) return shadowColor;
   // Convert black-based rgba to a white glow
   const lc = shadowColor.toLowerCase().replace(/\s/g, '');
   if (lc.startsWith('rgba(0,0,0') || lc === '#000' || lc === '#000000') {

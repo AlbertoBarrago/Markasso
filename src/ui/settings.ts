@@ -5,6 +5,7 @@ import type { History } from '../engine/history';
 import { getLocale, LOCALES, type Locale, setLocale, t } from '../i18n';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { exportPNG, exportSVG } from '../rendering/export';
+import { invalidateThemeCache } from '../rendering/theme_cache';
 
 // ── Theme ─────────────────────────────────────────────────────────────────
 export type ThemeMode = 'light' | 'dark' | 'device';
@@ -25,6 +26,7 @@ export function applyTheme(mode: ThemeMode): void {
         : 'dark'
       : mode;
   document.documentElement.setAttribute('data-theme', resolved);
+  invalidateThemeCache();
 }
 
 // Apply at module load to avoid flash of wrong theme
