@@ -4,6 +4,14 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.6.1] — 2026-08-18
+
+### Changed
+- **Freehand pen tool** — strokes now taper with pressure (real stylus pressure, or synthesized from gesture speed for mouse/trackpad) instead of a constant width; point sampling scales with zoom so curves stay smooth when zoomed in; the live preview no longer lags behind the cursor while drawing
+- **Renderer** — canvas theme lookups (background color, dark/light) are now cached instead of re-read from the DOM every frame; elements outside the visible viewport are skipped during render, improving performance on boards with many elements
+
+---
+
 ## [1.6.0] — 2026-08-12
 
 ### Added
