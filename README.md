@@ -15,7 +15,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5.x-646cff?logo=vite&logoColor=white)
 ![Vitest](https://img.shields.io/badge/Tested-Vitest-6e9f18?logo=vitest&logoColor=white)
-![Coverage](https://img.shields.io/badge/coverage-68%25-yellow)
+![Coverage](https://img.shields.io/badge/coverage-69%25-yellow)
 ![Status](https://img.shields.io/badge/status-stable-blue)
 ![Zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
