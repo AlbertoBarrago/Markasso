@@ -7,6 +7,7 @@ import {
   getQuadraticTangent,
 } from './connector_geometry';
 import { getElementCenter, resolveArrowEndpoints } from './draw_selection';
+import { buildFreehandOutline } from './freehand_outline';
 import { getCachedImage } from './image_cache';
 import { getIsLightTheme } from './theme_cache';
 
@@ -493,7 +494,7 @@ export function drawElement(
       break;
     }
     case 'freehand':
-      drawFreehand(ctx, el.points, el.strokeWidth, el.pressures);
+      drawFreehand(ctx, el.points, el.strokeWidth, strokeColor, el.pressures);
       break;
     case 'text':
       ctx.setLineDash([]);
@@ -866,6 +867,7 @@ function drawFreehand(
   ctx: CanvasRenderingContext2D,
   points: ReadonlyArray<readonly [number, number]>,
   baseWidth: number,
+  color: string,
   pressures?: ReadonlyArray<number>,
 ): void {
   if (points.length < 2) return;
@@ -873,50 +875,20 @@ function drawFreehand(
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
-  // With pressure: draw each segment separately with varying width
-  if (pressures && pressures.length === points.length) {
-    for (let i = 0; i < points.length - 1; i++) {
-      const p1 = points[i]!;
-      const p2 = points[i + 1]!;
-      const avgPressure =
-        ((pressures[i] ?? 0.5) + (pressures[i + 1] ?? 0.5)) / 2;
-      ctx.lineWidth = Math.max(0.5, baseWidth * avgPressure * 2);
-      ctx.beginPath();
-      ctx.moveTo(p1[0], p1[1]);
-      ctx.lineTo(p2[0], p2[1]);
-      ctx.stroke();
-    }
-    return;
-  }
+  const outline = buildFreehandOutline(points, pressures, baseWidth);
+  if (outline.length < 3) return;
 
-  const p0 = points[0]!;
+  ctx.save();
+  ctx.setLineDash([]);
+  ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.moveTo(p0[0], p0[1]);
-
-  if (points.length === 2) {
-    const p1 = points[1]!;
-    ctx.lineTo(p1[0], p1[1]);
-  } else {
-    // Use native cubic Bézier curves for smooth rendering
-    const tension = 0.5;
-
-    for (let i = 0; i < points.length - 1; i++) {
-      const p1_curr = points[i]!;
-      const p2_curr = points[i + 1]!;
-      const p0_prev = points[Math.max(0, i - 1)]!;
-      const p3_next = points[Math.min(points.length - 1, i + 2)]!;
-
-      // Catmull-Rom control points
-      const cp1x = p1_curr[0] + ((p2_curr[0] - p0_prev[0]) * tension) / 3;
-      const cp1y = p1_curr[1] + ((p2_curr[1] - p0_prev[1]) * tension) / 3;
-      const cp2x = p2_curr[0] - ((p3_next[0] - p1_curr[0]) * tension) / 3;
-      const cp2y = p2_curr[1] - ((p3_next[1] - p1_curr[1]) * tension) / 3;
-
-      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2_curr[0], p2_curr[1]);
-    }
+  ctx.moveTo(outline[0]![0], outline[0]![1]);
+  for (let i = 1; i < outline.length; i++) {
+    ctx.lineTo(outline[i]![0], outline[i]![1]);
   }
-
-  ctx.stroke();
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
 }
 
 export function buildWrappedLines(

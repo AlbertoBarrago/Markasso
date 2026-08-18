@@ -113,7 +113,11 @@ export interface PolygonElement extends BaseElement {
 export interface FreehandElement extends BaseElement {
   readonly type: 'freehand';
   readonly points: ReadonlyArray<readonly [number, number]>;
-  /** Per-point pressure values (0-1). Present only for stylus input. */
+  /**
+   * Per-point pressure values (0-1), driving the stroke's variable width.
+   * From real hardware pressure for stylus input, or synthesized from
+   * gesture speed otherwise (slower → thicker).
+   */
   readonly pressures?: ReadonlyArray<number>;
 }
 
