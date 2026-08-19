@@ -14,6 +14,14 @@ const PRESSURE_MIN = 0.25;
 const PRESSURE_MAX = 1;
 const DEFAULT_START_PRESSURE = 0.6;
 
+// A real pause has no pointermove events at all, so `lastTimestamp` stays
+// frozen at the last recorded point. If a gap this large elapses before the
+// next point, the implied distance/time speed is meaninglessly low (it
+// includes the idle time, not just the resumed motion) — treating it as
+// "slow" would spike the synthetic pressure to max right at the resume
+// point. Above this threshold we keep the previous pressure instead.
+const PAUSE_GAP_MS = 150;
+
 function velocityToPressure(speed: number): number {
   const ratio = Math.min(
     1,
@@ -66,10 +74,13 @@ export class PenTool implements Tool {
     this.lastTimestamp = e.timeStamp;
 
     const pe = e as PointerEvent;
+    const lastPressure = this.pressures[this.pressures.length - 1]!;
     const pressure =
       pe.pointerType === 'pen' && pe.pressure > 0
         ? pe.pressure
-        : velocityToPressure(dt > 0 ? dist / dt : 0);
+        : dt > PAUSE_GAP_MS
+          ? lastPressure
+          : velocityToPressure(dt > 0 ? dist / dt : 0);
 
     this.points.push([worldX, worldY]);
     this.pressures.push(pressure);
