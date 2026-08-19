@@ -43,9 +43,9 @@ describe('element validation', () => {
     ).toBeNull();
   });
 
-  it('rejects duplicate IDs and unsafe colors', () => {
+  it('rejects unsafe colors', () => {
     const element = {
-      id: 'duplicate',
+      id: 'unsafe',
       type: 'rectangle',
       x: 0,
       y: 0,
@@ -58,12 +58,65 @@ describe('element validation', () => {
       roughness: 0,
     };
     expect(validateElements([element])).toBeNull();
-    expect(
-      validateElements([
-        { ...element, strokeColor: '#000' },
-        { ...element, strokeColor: '#fff' },
-      ]),
-    ).toBeNull();
+  });
+
+  it('drops the later element when two IDs collide, keeping the first', () => {
+    const element = {
+      id: 'duplicate',
+      type: 'rectangle',
+      x: 0,
+      y: 0,
+      width: 10,
+      height: 10,
+      strokeColor: '#000',
+      fillColor: 'transparent',
+      strokeWidth: 1,
+      opacity: 1,
+      roughness: 0,
+    };
+    const result = validateElements([
+      { ...element, strokeColor: '#000' },
+      { ...element, strokeColor: '#fff' },
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result?.[0]?.strokeColor).toBe('#000');
+  });
+
+  it('keeps the valid elements when only some are malformed, instead of wiping the whole scene', () => {
+    const good1 = {
+      id: 'good-1',
+      type: 'rectangle',
+      x: 0,
+      y: 0,
+      width: 10,
+      height: 10,
+      strokeColor: '#000',
+      fillColor: 'transparent',
+      strokeWidth: 1,
+      opacity: 1,
+      roughness: 0,
+    };
+    const good2 = { ...good1, id: 'good-2', x: 50 };
+    const badText = {
+      id: 'bad-text',
+      type: 'text',
+      x: 0,
+      y: 0,
+      width: 10,
+      height: 10,
+      strokeColor: '#000',
+      fillColor: 'transparent',
+      strokeWidth: 1,
+      opacity: 1,
+      roughness: 0,
+      content: 'hello',
+      fontSize: Number.NaN, // malformed — must not take the whole array down
+      fontFamily: 'Arial',
+    };
+
+    const result = validateElements([good1, badText, good2]);
+    expect(result).toHaveLength(2);
+    expect(result?.map((el) => el.id)).toEqual(['good-1', 'good-2']);
   });
 
   it('rejects malformed optional fields and empty point lists', () => {

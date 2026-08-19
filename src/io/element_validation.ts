@@ -232,16 +232,29 @@ export function isValidElement(value: unknown): value is Element {
   return false;
 }
 
+/**
+ * Filters out individually malformed or duplicate-ID elements instead of
+ * rejecting the whole array — a single corrupted element (e.g. one bad text
+ * element saved mid-session) must not wipe out every other valid shape on
+ * next load. Callers that need "reject the whole payload if it's garbage"
+ * semantics (file import, the share-link worker) still get that for free:
+ * if every element in a non-empty input is invalid, nothing survives and
+ * this still returns null.
+ */
 export function validateElements(value: unknown): Element[] | null {
   if (!Array.isArray(value) || value.length > MAX_ELEMENTS) return null;
-  if (!value.every(isValidElement)) return null;
+  if (value.length === 0) return [];
 
-  const ids = new Set<string>();
+  const seenIds = new Set<string>();
+  const valid: Element[] = [];
   for (const element of value) {
-    if (ids.has(element.id)) return null;
-    ids.add(element.id);
+    if (!isValidElement(element)) continue;
+    if (seenIds.has(element.id)) continue;
+    seenIds.add(element.id);
+    valid.push(element);
   }
-  return value;
+
+  return valid.length > 0 ? valid : null;
 }
 
 export function validateViewport(value: unknown): Viewport | null {
