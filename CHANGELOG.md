@@ -4,6 +4,14 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.6.2] — 2026-08-19
+
+### Fixed
+- **Freehand pen tool pausing mid-stroke** — resuming a stroke after a brief pause no longer produces a pressure spike (a sudden thick blob right at the resume point); the stale time gap from the pause is no longer read as "very slow movement"
+- **Session autosave data loss** — a single malformed element saved to the browser session (e.g. a corrupted text element) no longer wipes out every other valid shape on the next reload; only the malformed element is dropped
+
+---
+
 ## [1.6.1] — 2026-08-18
 
 ### Changed
