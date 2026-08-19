@@ -37,11 +37,17 @@ import type { ToolContext } from '../src/tools/tool';
  * Tools that do not use the event (pen, eraser) prefix the param with `_`.
  * Tools that do (hand, select, rect shiftKey) only read the listed props.
  */
-function me(clientX = 0, clientY = 0, shiftKey = false): MouseEvent {
+function me(
+  clientX = 0,
+  clientY = 0,
+  shiftKey = false,
+  timeStamp = 0,
+): MouseEvent {
   return {
     clientX,
     clientY,
     shiftKey,
+    timeStamp,
     preventDefault: () => {},
   } as unknown as MouseEvent;
 }
@@ -232,6 +238,36 @@ describe('PenTool — mobile touch sequence', () => {
 
     expect(history.present.elements).toHaveLength(2);
     expect(history.present.elements[1]?.type).toBe('freehand');
+  });
+
+  it('does not spike pressure to max when the stroke resumes after a pause', () => {
+    const history = new History(createScene());
+    const tool = new PenTool();
+    const ctx = makeCtx(history);
+
+    tool.onMouseDown(me(0, 0, false, 0), 0, 0, ctx);
+    // Normal-paced move: establishes a baseline (non-extreme) pressure
+    tool.onMouseMove(me(20, 0, false, 20), 20, 0, ctx);
+
+    const pressuresBeforePause = [
+      ...(tool as unknown as { pressures: number[] }).pressures,
+    ];
+    const baselinePressure =
+      pressuresBeforePause[pressuresBeforePause.length - 1]!;
+
+    // Long real-world gap (no events fire during a true pause), then resume
+    // moving the same on-screen distance as the earlier "normal" step.
+    tool.onMouseMove(me(40, 0, false, 2020), 40, 0, ctx);
+
+    const pressuresAfterResume = (tool as unknown as { pressures: number[] })
+      .pressures;
+    const resumedPressure =
+      pressuresAfterResume[pressuresAfterResume.length - 1]!;
+
+    // A stale dt spanning the pause must not read as "very slow" and spike
+    // the synthetic pressure to its max — it should carry the last pressure
+    // forward for a seamless resume instead.
+    expect(resumedPressure).toBeCloseTo(baselinePressure, 5);
   });
 });
 
