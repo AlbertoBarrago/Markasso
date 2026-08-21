@@ -27,6 +27,8 @@ export type GestureEvent =
   | { type: 'delete' };
 
 export interface GestureFrame {
+  /** Capture timestamp in the main-thread performance time origin. */
+  readonly timestamp: number;
   readonly state: GestureState;
   readonly cursor: GesturePoint | null;
   readonly landmarks: HandLandmarks | null;
@@ -46,5 +48,17 @@ export type WorkerRequest =
 
 export type WorkerResponse =
   | { type: 'ready' }
-  | { type: 'result'; landmarks: HandLandmarks | null; timestamp: number }
+  | {
+      type: 'result';
+      landmarks: HandLandmarks | null;
+      timestamp: number;
+      inferenceDurationMs: number;
+    }
   | { type: 'error'; message: string };
+
+export interface GestureDiagnostics {
+  readonly cameraFps: number;
+  readonly inferenceFps: number;
+  readonly inferenceDurationMs: number;
+  readonly latencyMs: number;
+}

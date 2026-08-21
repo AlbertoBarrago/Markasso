@@ -1,6 +1,9 @@
 import { t } from '../i18n';
+import { PointMotionPredictor } from './motion_filter';
 import type { StrokeShape } from './stroke_classifier';
-import type { GestureFrame } from './types';
+import type { GestureDiagnostics, GestureFrame, GesturePoint } from './types';
+
+const MAX_FEEDBACK_DPR = 1.5;
 
 const CONNECTIONS: ReadonlyArray<readonly [number, number]> = [
   [0, 1],
@@ -32,6 +35,11 @@ export class GestureOverlay {
   private readonly feedback: HTMLCanvasElement;
   private readonly status: HTMLElement;
   private readonly diagnostics: HTMLElement | null;
+  private readonly cursorPredictor = new PointMotionPredictor();
+  private latestFrame: GestureFrame | null = null;
+  private latestDiagnostics: GestureDiagnostics | null = null;
+  private animationFrame = 0;
+  private dpr = 1;
   private outcome:
     | { type: 'created'; shape: StrokeShape; until: number }
     | { type: 'rejected'; until: number }
@@ -60,18 +68,36 @@ export class GestureOverlay {
     document.body.appendChild(this.root);
     this.resize();
     window.addEventListener('resize', this.resize);
+    this.animationFrame = requestAnimationFrame(this.tick);
   }
 
   setStatus(
     message: string,
     state: 'loading' | 'active' | 'error' = 'active',
   ): void {
-    this.status.textContent = message;
+    if (this.status.textContent !== message) this.status.textContent = message;
     this.root.dataset.status = state;
   }
 
   render(frame: GestureFrame): void {
-    const now = performance.now();
+    this.latestFrame = frame;
+    if (frame.cursor && frame.landmarks) {
+      this.cursorPredictor.update(frame.cursor, frame.timestamp);
+    } else {
+      this.cursorPredictor.reset();
+    }
+  }
+
+  setDiagnostics(diagnostics: GestureDiagnostics): void {
+    this.latestDiagnostics = diagnostics;
+  }
+
+  private readonly tick = (now: number): void => {
+    if (this.latestFrame) this.draw(this.latestFrame, now);
+    this.animationFrame = requestAnimationFrame(this.tick);
+  };
+
+  private draw(frame: GestureFrame, now: number): void {
     if (!this.outcome || now >= this.outcome.until) {
       this.outcome = null;
       delete this.root.dataset.outcome;
@@ -79,40 +105,49 @@ export class GestureOverlay {
     }
     if (this.diagnostics) {
       const prediction = frame.prediction ?? 'none';
-      this.diagnostics.textContent = `${frame.state} · ${prediction} ${Math.round(frame.predictionConfidence * 100)}%`;
+      const metrics = this.latestDiagnostics;
+      const metricLabel = metrics
+        ? ` · cam ${metrics.cameraFps.toFixed(0)} · infer ${metrics.inferenceFps.toFixed(0)} fps/${metrics.inferenceDurationMs.toFixed(0)} ms · latency ${metrics.latencyMs.toFixed(0)} ms`
+        : '';
+      const label = `${frame.state} · ${prediction} ${Math.round(frame.predictionConfidence * 100)}%${metricLabel}`;
+      if (this.diagnostics.textContent !== label) {
+        this.diagnostics.textContent = label;
+      }
     }
     const ctx = this.feedback.getContext('2d')!;
-    const dpr = window.devicePixelRatio;
+    const dpr = this.dpr;
     const width = this.feedback.width / dpr;
     const height = this.feedback.height / dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
-    if (frame.trace.length > 1) {
-      ctx.beginPath();
-      frame.trace.forEach((point, index) => {
-        const method = index === 0 ? 'moveTo' : 'lineTo';
-        ctx[method](point.x * width, point.y * height);
-      });
+    const predictedCursor =
+      this.cursorPredictor.predict(now, width, height) ?? frame.cursor;
+    const displayTrace = [...frame.trace];
+    if (frame.state === 'drawing' && predictedCursor) {
+      displayTrace.push(predictedCursor);
+    }
+    if (displayTrace.length > 1) {
+      drawSmoothTrace(ctx, displayTrace, width, height);
       ctx.strokeStyle = 'rgba(196, 32, 32, .8)';
       ctx.lineWidth = 4;
       ctx.lineCap = 'round';
       ctx.stroke();
     }
     if (frame.landmarks) this.drawHand(ctx, frame.landmarks, width, height);
-    if (frame.state === 'arming' && frame.cursor) {
+    if (frame.state === 'arming' && predictedCursor) {
       this.drawArmProgress(
         ctx,
-        frame.cursor,
+        predictedCursor,
         frame.armProgress,
         width,
         height,
         '#c42020',
       );
     }
-    if (frame.state === 'selecting' && frame.cursor) {
+    if (frame.state === 'selecting' && predictedCursor) {
       this.drawArmProgress(
         ctx,
-        frame.cursor,
+        predictedCursor,
         frame.armProgress,
         width,
         height,
@@ -122,11 +157,11 @@ export class GestureOverlay {
     if (this.outcome?.type === 'created') {
       this.drawCommittedShape(ctx, this.outcome.shape, width, height, now);
     }
-    if (frame.cursor) {
+    if (predictedCursor) {
       ctx.beginPath();
       ctx.arc(
-        frame.cursor.x * width,
-        frame.cursor.y * height,
+        predictedCursor.x * width,
+        predictedCursor.y * height,
         frame.state === 'pinching' ? 8 : 12,
         0,
         Math.PI * 2,
@@ -165,14 +200,15 @@ export class GestureOverlay {
   }
 
   dispose(): void {
+    cancelAnimationFrame(this.animationFrame);
     window.removeEventListener('resize', this.resize);
     this.root.remove();
   }
 
   private readonly resize = (): void => {
-    const dpr = window.devicePixelRatio;
-    this.feedback.width = Math.round(window.innerWidth * dpr);
-    this.feedback.height = Math.round(window.innerHeight * dpr);
+    this.dpr = Math.min(window.devicePixelRatio, MAX_FEEDBACK_DPR);
+    this.feedback.width = Math.round(window.innerWidth * this.dpr);
+    this.feedback.height = Math.round(window.innerHeight * this.dpr);
   };
 
   private createDiagnostics(): HTMLElement | null {
@@ -268,6 +304,29 @@ export class GestureOverlay {
     ctx.stroke();
     ctx.restore();
   }
+}
+
+function drawSmoothTrace(
+  ctx: CanvasRenderingContext2D,
+  points: ReadonlyArray<GesturePoint>,
+  width: number,
+  height: number,
+): void {
+  const first = points[0]!;
+  ctx.beginPath();
+  ctx.moveTo(first.x * width, first.y * height);
+  for (let index = 1; index < points.length - 1; index++) {
+    const current = points[index]!;
+    const next = points[index + 1]!;
+    ctx.quadraticCurveTo(
+      current.x * width,
+      current.y * height,
+      ((current.x + next.x) / 2) * width,
+      ((current.y + next.y) / 2) * height,
+    );
+  }
+  const last = points.at(-1)!;
+  ctx.lineTo(last.x * width, last.y * height);
 }
 
 function labelForFrame(frame: GestureFrame): string {

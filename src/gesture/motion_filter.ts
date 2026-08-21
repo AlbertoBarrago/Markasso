@@ -18,6 +18,67 @@ export class PointOneEuroFilter {
   }
 }
 
+const DEFAULT_PREDICTION_HORIZON_MS = 40;
+const DEFAULT_MAX_PREDICTION_PX = 40;
+const VELOCITY_SMOOTHING = 0.45;
+
+/**
+ * Short-horizon visual predictor. It never changes recognition samples; it
+ * only estimates where the already-filtered cursor is at render time.
+ */
+export class PointMotionPredictor {
+  private point: GesturePoint | null = null;
+  private timestamp: number | null = null;
+  private velocityX = 0;
+  private velocityY = 0;
+
+  update(point: GesturePoint, timestamp: number): void {
+    if (this.point && this.timestamp !== null) {
+      const dt = timestamp - this.timestamp;
+      if (dt > 0) {
+        const velocityX = (point.x - this.point.x) / dt;
+        const velocityY = (point.y - this.point.y) / dt;
+        this.velocityX = lerp(this.velocityX, velocityX, VELOCITY_SMOOTHING);
+        this.velocityY = lerp(this.velocityY, velocityY, VELOCITY_SMOOTHING);
+      }
+    }
+    this.point = point;
+    this.timestamp = timestamp;
+  }
+
+  predict(
+    timestamp: number,
+    viewportWidth: number,
+    viewportHeight: number,
+  ): GesturePoint | null {
+    if (!this.point || this.timestamp === null) return null;
+    const horizon = Math.min(
+      Math.max(timestamp - this.timestamp, 0),
+      DEFAULT_PREDICTION_HORIZON_MS,
+    );
+    let dx = this.velocityX * horizon;
+    let dy = this.velocityY * horizon;
+    const distancePx = Math.hypot(dx * viewportWidth, dy * viewportHeight);
+    if (distancePx > DEFAULT_MAX_PREDICTION_PX) {
+      const scale = DEFAULT_MAX_PREDICTION_PX / distancePx;
+      dx *= scale;
+      dy *= scale;
+    }
+    return {
+      x: this.point.x + dx,
+      y: this.point.y + dy,
+      ...(this.point.z !== undefined && { z: this.point.z }),
+    };
+  }
+
+  reset(): void {
+    this.point = null;
+    this.timestamp = null;
+    this.velocityX = 0;
+    this.velocityY = 0;
+  }
+}
+
 class OneEuroFilter {
   private rawValue: number | null = null;
   private filteredValue: number | null = null;

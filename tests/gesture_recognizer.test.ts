@@ -104,13 +104,47 @@ describe('GestureRecognizer', () => {
 
   it('keeps drawing through a temporary full tracking loss', () => {
     const recognizer = beginDrawing();
-    expect(recognizer.update(null, 1_200).state).toBe('drawing');
-    expect(recognizer.update(hand('point', 0.02), 1_216).state).toBe('drawing');
+    expect(recognizer.update(null, 700).state).toBe('drawing');
+    expect(recognizer.update(hand('point', 0.02), 716).state).toBe('drawing');
   });
 
   it('cancels drawing after a prolonged full tracking loss', () => {
     const recognizer = beginDrawing();
     expect(recognizer.update(null, 1_451).state).toBe('absent');
+  });
+
+  it('commits a valid partial stroke after a prolonged tracking loss', () => {
+    const recognizer = beginDrawing();
+    for (let index = 1; index <= 10; index++) {
+      recognizer.update(hand('point', index * 0.01), 450 + index * 34, {
+        width: 1_000,
+        height: 1_000,
+      });
+    }
+
+    const frame = recognizer.update(null, 1_200);
+
+    expect(frame.state).toBe('absent');
+    expect(frame.events.some((event) => event.type === 'stroke-end')).toBe(
+      true,
+    );
+  });
+
+  it('uses CSS pixels when deciding whether to record a trace point', () => {
+    const smallViewport = beginDrawing();
+    const largeViewport = beginDrawing();
+
+    const smallFrame = smallViewport.update(hand('point', 0.01), 484, {
+      width: 500,
+      height: 500,
+    });
+    const largeFrame = largeViewport.update(hand('point', 0.01), 484, {
+      width: 1_000,
+      height: 1_000,
+    });
+
+    expect(smallFrame.trace).toHaveLength(1);
+    expect(largeFrame.trace).toHaveLength(2);
   });
 
   it('fires a single instant delete event when a fist is confirmed, not a repeated hold', () => {
