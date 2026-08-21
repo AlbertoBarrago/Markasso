@@ -17,6 +17,7 @@ type WorkerResponse =
       type: 'result';
       landmarks: ReadonlyArray<WorkerLandmark> | null;
       timestamp: number;
+      inferenceDurationMs: number;
     }
   | { type: 'error'; message: string };
 
@@ -83,6 +84,7 @@ self.onmessage = async (message: MessageEvent<WorkerRequest>) => {
     if (message.data.type === 'detect') {
       const { frame, timestamp } = message.data;
       let result: HandLandmarkerResult;
+      const inferenceStartedAt = performance.now();
       try {
         if (!landmarker) throw new Error('Hand tracker is not initialized');
         result = landmarker.detectForVideo(frame, timestamp);
@@ -97,7 +99,12 @@ self.onmessage = async (message: MessageEvent<WorkerRequest>) => {
             ...(point.z !== undefined && { z: point.z }),
           }))
         : null;
-      respond({ type: 'result', landmarks, timestamp });
+      respond({
+        type: 'result',
+        landmarks,
+        timestamp,
+        inferenceDurationMs: performance.now() - inferenceStartedAt,
+      });
       return;
     }
     landmarker?.close();
