@@ -12,15 +12,6 @@ import type {
 const MIN_TRACE_POINTS = 8;
 const MIN_TRACE_POINT_DISTANCE_PX = 2;
 const LIVE_RECOGNITION_INTERVAL_MS = 100;
-// Pointing arms a stroke rather than starting it immediately — this is the
-// window to move the hand into position before committing to a start point.
-// Short enough not to feel laggy, but real: instant-start was tried and
-// didn't give enough time to aim before the stroke's first point locked in.
-const ARM_DURATION_MS = 220;
-// Deliberately more forgiving than a plain "hold still" radius — the goal
-// is to tell repositioning (large, deliberate movement) apart from natural
-// hand tremor while settling on the target, not to demand statue-stillness.
-const ARM_MOVEMENT_RADIUS = 0.05;
 const SELECT_ALL_HOLD_MS = 600;
 const SELECT_ALL_MOVEMENT_RADIUS = 0.045;
 // The open hand also confirms/ends other gestures (pinch-end, stroke-end), so
@@ -41,7 +32,7 @@ const DRAWING_TRACKING_GRACE_MS = 350;
 const POSE_CONFIRMATION_FRAMES: Record<HandPose, number> = {
   pinch: 2,
   open: 3,
-  point: 2,
+  point: 1,
   fist: 3,
   none: 4,
 };
@@ -55,8 +46,6 @@ export class GestureRecognizer {
   private candidatePose: HandPose = 'none';
   private candidateFrames = 0;
   private trace: GesturePoint[] = [];
-  private armOrigin: GesturePoint | null = null;
-  private armStartedAt = 0;
   private lastCursor: GesturePoint | null = null;
   private lastLandmarks: HandLandmarks | null = null;
   private lastPalmScale: number | null = null;
@@ -124,7 +113,6 @@ export class GestureRecognizer {
         }
         armProgress = this.handlePointing(
           cursor,
-          timestamp,
           events,
           viewport.width,
           viewport.height,
@@ -151,14 +139,6 @@ export class GestureRecognizer {
           this.state = 'absent';
           break;
         }
-        // A fist while merely arming (still positioning to draw) just
-        // cancels that, same as any other pose change mid-arm — it's not a
-        // deliberate delete request.
-        if (this.state === 'arming') {
-          this.cancelDrawing();
-          this.state = 'ready';
-          break;
-        }
         // Deletion is instant, not a hold: fire once on the frame the fist
         // is first confirmed (not on every subsequent frame it's held), the
         // same "act immediately, don't make the user hold still" principle
@@ -175,7 +155,6 @@ export class GestureRecognizer {
           events.push({ type: 'pinch-end', point: cursor });
         }
         if (this.state === 'drawing') this.finishTrace(events);
-        if (this.state === 'arming') this.cancelDrawing();
         if (this.state !== 'ready' && this.state !== 'selecting') {
           // First frame landing on 'open' from any other state — settle at
           // 'ready' rather than starting a select-all hold immediately, so
@@ -200,7 +179,6 @@ export class GestureRecognizer {
         ) {
           break;
         } else if (this.state !== 'drawing') {
-          if (this.state === 'arming') this.cancelDrawing();
           this.state = 'absent';
         } else {
           this.finishTrace(events);
@@ -225,8 +203,6 @@ export class GestureRecognizer {
     this.candidatePose = 'none';
     this.candidateFrames = 0;
     this.trace = [];
-    this.armOrigin = null;
-    this.armStartedAt = 0;
     this.lastCursor = null;
     this.lastLandmarks = null;
     this.lastPalmScale = null;
@@ -259,7 +235,6 @@ export class GestureRecognizer {
 
   private handlePointing(
     cursor: GesturePoint,
-    timestamp: number,
     events: GestureEvent[],
     viewportWidth: number,
     viewportHeight: number,
@@ -278,30 +253,10 @@ export class GestureRecognizer {
       }
       return 1;
     }
-    if (
-      this.state !== 'arming' ||
-      !this.armOrigin ||
-      distance(this.armOrigin, cursor) > ARM_MOVEMENT_RADIUS
-    ) {
-      // Still repositioning (or just started pointing) — keep resetting the
-      // window so moving toward the intended start point never gets read as
-      // "holding", and only settling there starts the count.
-      this.state = 'arming';
-      this.armStartedAt = timestamp;
-      this.armOrigin = cursor;
-      return 0;
-    }
-    const progress = Math.min(
-      1,
-      (timestamp - this.armStartedAt) / ARM_DURATION_MS,
-    );
-    if (progress >= 1) {
-      this.state = 'drawing';
-      this.trace = [cursor];
-      this.armOrigin = null;
-      events.push({ type: 'stroke-start', point: cursor });
-    }
-    return progress;
+    this.state = 'drawing';
+    this.trace = [cursor];
+    events.push({ type: 'stroke-start', point: cursor });
+    return 1;
   }
 
   private handleOpenHold(
@@ -396,8 +351,6 @@ export class GestureRecognizer {
 
   private cancelDrawing(): void {
     this.trace = [];
-    this.armOrigin = null;
-    this.armStartedAt = 0;
     this.lastRecognitionAt = Number.NEGATIVE_INFINITY;
     this.cachedRecognition = null;
   }

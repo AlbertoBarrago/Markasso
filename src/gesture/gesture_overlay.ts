@@ -82,7 +82,10 @@ export class GestureOverlay {
   render(frame: GestureFrame): void {
     this.latestFrame = frame;
     if (frame.cursor && frame.landmarks) {
-      this.cursorPredictor.update(frame.cursor, frame.timestamp);
+      // Prediction starts when the sample reaches the renderer. Using the
+      // capture timestamp would include inference latency and jump straight
+      // to the maximum prediction distance on every worker response.
+      this.cursorPredictor.update(frame.cursor, performance.now());
     } else {
       this.cursorPredictor.reset();
     }
@@ -134,16 +137,6 @@ export class GestureOverlay {
       ctx.stroke();
     }
     if (frame.landmarks) this.drawHand(ctx, frame.landmarks, width, height);
-    if (frame.state === 'arming' && predictedCursor) {
-      this.drawArmProgress(
-        ctx,
-        predictedCursor,
-        frame.armProgress,
-        width,
-        height,
-        '#c42020',
-      );
-    }
     if (frame.state === 'selecting' && predictedCursor) {
       this.drawArmProgress(
         ctx,
@@ -335,8 +328,6 @@ function labelForFrame(frame: GestureFrame): string {
       return t('gestureReady');
     case 'pinching':
       return t('gesturePinch');
-    case 'arming':
-      return `${t('gestureHoldToDraw')} ${Math.round(frame.armProgress * 100)}%`;
     case 'drawing':
       return frame.prediction
         ? `${shapeLabel(frame.prediction)} · ${t('gestureReleaseToAdd')}`
