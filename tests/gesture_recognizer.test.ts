@@ -80,6 +80,26 @@ describe('GestureRecognizer', () => {
     );
   });
 
+  it('restarts the release hold after a brief tracking dropout', () => {
+    const recognizer = beginValidDrawing();
+    recognizer.update(hand('open', 0.11), 650);
+    recognizer.update(hand('open', 0.11), 666);
+    recognizer.update(hand('open', 0.11), 682);
+
+    expect(recognizer.update(null, 700).state).toBe('drawing');
+    for (const timestamp of [716, 748, 780, 812, 844, 876]) {
+      const frame = recognizer.update(hand('open', 0.11), timestamp);
+      expect(frame.events.some((event) => event.type === 'stroke-end')).toBe(
+        false,
+      );
+    }
+    expect(
+      recognizer
+        .update(hand('open', 0.11), 908)
+        .events.some((event) => event.type === 'stroke-end'),
+    ).toBe(true);
+  });
+
   it('bridges a brief tracking dropout and then resets', () => {
     const recognizer = new GestureRecognizer();
     recognizer.update(hand('open'), 0);
