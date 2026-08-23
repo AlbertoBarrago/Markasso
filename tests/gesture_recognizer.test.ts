@@ -68,6 +68,22 @@ describe('GestureRecognizer', () => {
     expect(recognizer.update(null, 240).state).toBe('absent');
   });
 
+  it('treats invalid landmarks as tracking loss without poisoning motion state', () => {
+    const recognizer = new GestureRecognizer();
+    recognizer.update(hand('open'), 0);
+    recognizer.update(hand('open'), 16);
+    expect(recognizer.update(hand('open'), 32).state).toBe('ready');
+    const invalidHand = hand('open').map((point, index) =>
+      index === 8 ? { ...point, x: Number.NaN } : point,
+    );
+
+    expect(recognizer.update(invalidHand, 180).state).toBe('ready');
+    expect(recognizer.update(invalidHand, 240).state).toBe('absent');
+    expect(
+      Number.isFinite(recognizer.update(hand('point'), 256).cursor?.x),
+    ).toBe(true);
+  });
+
   it('ignores a brief ambiguous pose while drawing', () => {
     const recognizer = beginDrawing();
     expect(recognizer.update(hand('none'), 470).state).toBe('drawing');
@@ -120,6 +136,28 @@ describe('GestureRecognizer', () => {
     );
   });
 
+  it('ends the current action instead of bridging a stalled inference gap', () => {
+    const recognizer = beginDrawing();
+    for (let index = 1; index <= 10; index++) {
+      recognizer.update(hand('point', index * 0.01), 450 + index * 16, {
+        width: 1_000,
+        height: 1_000,
+      });
+    }
+
+    const recovered = recognizer.update(hand('point', 0.5), 1_200, {
+      width: 1_000,
+      height: 1_000,
+    });
+
+    expect(recovered.state).toBe('absent');
+    expect(recovered.trace).toHaveLength(0);
+    expect(recovered.events.some((event) => event.type === 'stroke-end')).toBe(
+      true,
+    );
+    expect(recognizer.update(hand('point', 0.5), 1_216).trace).toHaveLength(1);
+  });
+
   it('uses CSS pixels when deciding whether to record a trace point', () => {
     const smallViewport = beginDrawing();
     const largeViewport = beginDrawing();
@@ -165,7 +203,8 @@ describe('GestureRecognizer', () => {
 function beginDrawing(): GestureRecognizer {
   const recognizer = new GestureRecognizer();
   recognizer.update(hand('point'), 0);
-  recognizer.update(hand('point'), 16);
-  recognizer.update(hand('point'), 450);
+  for (const timestamp of [16, 100, 200, 300, 400, 450]) {
+    recognizer.update(hand('point'), timestamp);
+  }
   return recognizer;
 }

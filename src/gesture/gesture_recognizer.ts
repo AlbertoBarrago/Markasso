@@ -49,7 +49,7 @@ export class GestureRecognizer {
   private lastCursor: GesturePoint | null = null;
   private lastLandmarks: HandLandmarks | null = null;
   private lastPalmScale: number | null = null;
-  private lastTrackedAt = 0;
+  private lastTrackedAt: number | null = null;
   private poseUncertainSince: number | null = null;
   private selectAllOrigin: GesturePoint | null = null;
   private selectAllStartedAt = 0;
@@ -67,7 +67,13 @@ export class GestureRecognizer {
     timestamp = performance.now(),
     viewport = { width: 1_000, height: 1_000 },
   ): GestureFrame {
-    if (!landmarks || landmarks.length < 21) {
+    if (!isValidHand(landmarks)) {
+      return this.handleTrackingLoss(timestamp);
+    }
+    if (
+      this.lastTrackedAt !== null &&
+      timestamp - this.lastTrackedAt > this.trackingGracePeriod()
+    ) {
       return this.handleTrackingLoss(timestamp);
     }
 
@@ -206,7 +212,7 @@ export class GestureRecognizer {
     this.lastCursor = null;
     this.lastLandmarks = null;
     this.lastPalmScale = null;
-    this.lastTrackedAt = 0;
+    this.lastTrackedAt = null;
     this.poseUncertainSince = null;
     this.selectAllOrigin = null;
     this.selectAllStartedAt = 0;
@@ -287,12 +293,11 @@ export class GestureRecognizer {
   }
 
   private handleTrackingLoss(timestamp: number): GestureFrame {
-    const gracePeriod =
-      this.state === 'drawing' ? DRAWING_TRACKING_GRACE_MS : TRACKING_GRACE_MS;
     if (
       this.lastCursor &&
       this.lastLandmarks &&
-      timestamp - this.lastTrackedAt <= gracePeriod
+      this.lastTrackedAt !== null &&
+      timestamp - this.lastTrackedAt <= this.trackingGracePeriod()
     ) {
       return this.currentFrame(this.lastCursor, [], 0, timestamp);
     }
@@ -311,11 +316,18 @@ export class GestureRecognizer {
     this.lastCursor = null;
     this.lastLandmarks = null;
     this.lastPalmScale = null;
+    this.lastTrackedAt = null;
     this.poseUncertainSince = null;
     this.selectAllOrigin = null;
     this.selectAllStartedAt = 0;
     this.openReadyAt = 0;
     return this.frame(timestamp, null, null, events, 0, null, 0);
+  }
+
+  private trackingGracePeriod(): number {
+    return this.state === 'drawing'
+      ? DRAWING_TRACKING_GRACE_MS
+      : TRACKING_GRACE_MS;
   }
 
   private currentFrame(
@@ -401,4 +413,19 @@ function mirror(point: GesturePoint): GesturePoint {
 
 function midpoint(a: GesturePoint, b: GesturePoint): GesturePoint {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+function isValidHand(
+  landmarks: HandLandmarks | null,
+): landmarks is HandLandmarks {
+  return (
+    landmarks !== null &&
+    landmarks.length >= 21 &&
+    landmarks.every(
+      (point) =>
+        Number.isFinite(point.x) &&
+        Number.isFinite(point.y) &&
+        (point.z === undefined || Number.isFinite(point.z)),
+    )
+  );
 }

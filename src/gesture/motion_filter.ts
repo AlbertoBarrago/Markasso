@@ -1,10 +1,27 @@
 import type { GesturePoint } from './types';
 
+const MAX_SAMPLE_GAP_MS = 500;
+
 export class PointOneEuroFilter {
   private readonly x = new OneEuroFilter();
   private readonly y = new OneEuroFilter();
+  private timestamp: number | null = null;
 
   filter(point: GesturePoint, timestamp: number): GesturePoint {
+    if (this.timestamp !== null && timestamp <= this.timestamp) {
+      return {
+        x: this.x.value ?? point.x,
+        y: this.y.value ?? point.y,
+        ...(point.z !== undefined && { z: point.z }),
+      };
+    }
+    if (
+      this.timestamp !== null &&
+      timestamp - this.timestamp > MAX_SAMPLE_GAP_MS
+    ) {
+      this.reset();
+    }
+    this.timestamp = timestamp;
     return {
       x: this.x.filter(point.x, timestamp),
       y: this.y.filter(point.y, timestamp),
@@ -15,16 +32,21 @@ export class PointOneEuroFilter {
   reset(): void {
     this.x.reset();
     this.y.reset();
+    this.timestamp = null;
   }
 }
 
 const DEFAULT_PREDICTION_HORIZON_MS = 40;
 const DEFAULT_MAX_PREDICTION_PX = 40;
+const PREDICTION_STALE_AFTER_MS = 80;
+const PREDICTION_SETTLE_MS = 120;
+const MAX_PREDICTOR_SAMPLE_GAP_MS = 250;
 const VELOCITY_SMOOTHING = 0.45;
 
 /**
- * Short-horizon visual predictor. It never changes recognition samples; it
- * only estimates where the already-filtered cursor is at render time.
+ * Short-horizon interaction predictor. It never changes recognition samples;
+ * it estimates where the filtered cursor is between camera frames so visual
+ * feedback and direct manipulation can share the same responsive position.
  */
 export class PointMotionPredictor {
   private point: GesturePoint | null = null;
@@ -35,7 +57,11 @@ export class PointMotionPredictor {
   update(point: GesturePoint, timestamp: number): void {
     if (this.point && this.timestamp !== null) {
       const dt = timestamp - this.timestamp;
-      if (dt > 0) {
+      if (dt <= 0) return;
+      if (dt > MAX_PREDICTOR_SAMPLE_GAP_MS) {
+        this.velocityX = 0;
+        this.velocityY = 0;
+      } else {
         const velocityX = (point.x - this.point.x) / dt;
         const velocityY = (point.y - this.point.y) / dt;
         this.velocityX = lerp(this.velocityX, velocityX, VELOCITY_SMOOTHING);
@@ -56,8 +82,16 @@ export class PointMotionPredictor {
       Math.max(timestamp - this.timestamp, 0),
       DEFAULT_PREDICTION_HORIZON_MS,
     );
-    let dx = this.velocityX * horizon;
-    let dy = this.velocityY * horizon;
+    const age = Math.max(timestamp - this.timestamp, 0);
+    const staleFactor =
+      age <= PREDICTION_STALE_AFTER_MS
+        ? 1
+        : Math.max(
+            0,
+            1 - (age - PREDICTION_STALE_AFTER_MS) / PREDICTION_SETTLE_MS,
+          );
+    let dx = this.velocityX * horizon * staleFactor;
+    let dy = this.velocityY * horizon * staleFactor;
     const distancePx = Math.hypot(dx * viewportWidth, dy * viewportHeight);
     if (distancePx > DEFAULT_MAX_PREDICTION_PX) {
       const scale = DEFAULT_MAX_PREDICTION_PX / distancePx;
@@ -65,8 +99,8 @@ export class PointMotionPredictor {
       dy *= scale;
     }
     return {
-      x: this.point.x + dx,
-      y: this.point.y + dy,
+      x: clamp(this.point.x + dx, 0, 1),
+      y: clamp(this.point.y + dy, 0, 1),
       ...(this.point.z !== undefined && { z: this.point.z }),
     };
   }
@@ -84,6 +118,10 @@ class OneEuroFilter {
   private filteredValue: number | null = null;
   private filteredDerivative = 0;
   private timestamp: number | null = null;
+
+  get value(): number | null {
+    return this.filteredValue;
+  }
 
   filter(value: number, timestamp: number): number {
     if (
@@ -128,4 +166,8 @@ function alpha(cutoff: number, dt: number): number {
 
 function lerp(from: number, to: number, amount: number): number {
   return from + (to - from) * amount;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }

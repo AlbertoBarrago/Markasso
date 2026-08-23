@@ -308,12 +308,11 @@ export class GestureCommandAdapter {
     const dx = world.x - this.lastWorldPoint.x;
     const dy = world.y - this.lastWorldPoint.y;
     const scene = this.history.present;
-    // Move every currently-selected element together (not just the one
-    // pinched), so dragging after a select-all moves the whole group.
-    for (const el of scene.elements) {
-      if (scene.selectedIds.has(el.id) && !el.locked) {
-        this.history.dispatch({ type: 'MOVE_ELEMENT', id: el.id, dx, dy });
-      }
+    const ids = scene.elements
+      .filter((element) => scene.selectedIds.has(element.id) && !element.locked)
+      .map((element) => element.id);
+    if (ids.length > 0) {
+      this.history.dispatch({ type: 'MOVE_ELEMENTS', ids, dx, dy });
     }
     this.lastWorldPoint = world;
   }

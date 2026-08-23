@@ -33,6 +33,36 @@ describe('GestureCommandAdapter', () => {
     expect(history.present.elements[0]).toMatchObject({ x: 10, y: 10 });
   });
 
+  it('keeps gesture drag deltas correct through pan and zoom', () => {
+    const scene = createScene();
+    const history = new History({
+      ...scene,
+      viewport: { offsetX: 40, offsetY: 20, zoom: 2 },
+      elements: [
+        {
+          id: 'rect',
+          type: 'rectangle',
+          x: 10,
+          y: 10,
+          width: 30,
+          height: 30,
+          strokeColor: '#fff',
+          fillColor: 'transparent',
+          strokeWidth: 2,
+          opacity: 1,
+          roughness: 0,
+        },
+      ],
+    });
+    const adapter = new GestureCommandAdapter(canvas(), history);
+
+    adapter.handle({ type: 'pinch-start', point: { x: 0.7, y: 0.4 } });
+    adapter.handle({ type: 'pinch-move', point: { x: 0.9, y: 0.6 } });
+    adapter.handle({ type: 'pinch-end', point: { x: 0.9, y: 0.6 } });
+
+    expect(history.present.elements[0]).toMatchObject({ x: 20, y: 20 });
+  });
+
   it('drags every selected element together when pinching an already-selected one', () => {
     const scene = createScene();
     const history = new History({

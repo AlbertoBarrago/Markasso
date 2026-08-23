@@ -35,7 +35,6 @@ export class GestureOverlay {
   private readonly feedback: HTMLCanvasElement;
   private readonly status: HTMLElement;
   private readonly diagnostics: HTMLElement | null;
-  private readonly cursorPredictor = new PointMotionPredictor();
   private latestFrame: GestureFrame | null = null;
   private latestDiagnostics: GestureDiagnostics | null = null;
   private animationFrame = 0;
@@ -47,7 +46,7 @@ export class GestureOverlay {
     | { type: 'selected-all'; until: number }
     | null = null;
 
-  constructor() {
+  constructor(private readonly cursorPredictor = new PointMotionPredictor()) {
     this.root = document.createElement('div');
     this.root.className = 'gesture-overlay';
     this.root.innerHTML = `<div class="gesture-status"><span></span><strong>${t('gestureLoading')}</strong></div>`;
@@ -81,14 +80,6 @@ export class GestureOverlay {
 
   render(frame: GestureFrame): void {
     this.latestFrame = frame;
-    if (frame.cursor && frame.landmarks) {
-      // Prediction starts when the sample reaches the renderer. Using the
-      // capture timestamp would include inference latency and jump straight
-      // to the maximum prediction distance on every worker response.
-      this.cursorPredictor.update(frame.cursor, performance.now());
-    } else {
-      this.cursorPredictor.reset();
-    }
   }
 
   setDiagnostics(diagnostics: GestureDiagnostics): void {

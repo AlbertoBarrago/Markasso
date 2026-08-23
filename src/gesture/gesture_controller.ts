@@ -5,8 +5,11 @@ import {
 } from './gesture_commands';
 import { GestureOverlay } from './gesture_overlay';
 import { GestureRecognizer } from './gesture_recognizer';
+import { PointMotionPredictor } from './motion_filter';
 import type {
   GestureDiagnostics,
+  GestureFrame,
+  GesturePoint,
   WorkerRequest,
   WorkerResponse,
 } from './types';
@@ -20,6 +23,7 @@ export class GestureController {
   private stream: MediaStream | null = null;
   private overlay: GestureOverlay | null = null;
   private animationFrame = 0;
+  private interactionAnimationFrame = 0;
   private videoFrameCallback = 0;
   private latestVideoFrameAt = 0;
   private submittedVideoFrameAt = 0;
@@ -29,6 +33,8 @@ export class GestureController {
   private metricsWindowStartedAt = 0;
   private inferenceFrames = 0;
   private lastVideoFrames = 0;
+  private latestFrame: GestureFrame | null = null;
+  private lastInteractionCursor: GesturePoint | null = null;
   private diagnostics: GestureDiagnostics = {
     cameraFps: 0,
     inferenceFps: 0,
@@ -36,6 +42,7 @@ export class GestureController {
     latencyMs: 0,
   };
   private readonly recognizer = new GestureRecognizer();
+  private readonly cursorPredictor = new PointMotionPredictor();
   private readonly commands: GestureCommandAdapter;
 
   constructor(
@@ -60,7 +67,7 @@ export class GestureController {
       return;
     }
     this.button.disabled = true;
-    this.overlay = new GestureOverlay();
+    this.overlay = new GestureOverlay(this.cursorPredictor);
     const lifecycle = ++this.lifecycle;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -106,11 +113,13 @@ export class GestureController {
   disable(): void {
     this.lifecycle++;
     cancelAnimationFrame(this.animationFrame);
+    cancelAnimationFrame(this.interactionAnimationFrame);
     if (this.videoFrameCallback && this.overlay) {
       this.overlay.video.cancelVideoFrameCallback(this.videoFrameCallback);
     }
     this.commands.dispose();
     this.recognizer.reset();
+    this.cursorPredictor.reset();
     if (this.worker) {
       this.post({ type: 'dispose' });
       this.worker.terminate();
@@ -123,9 +132,12 @@ export class GestureController {
     this.overlay?.dispose();
     this.overlay = null;
     this.framePending = false;
+    this.interactionAnimationFrame = 0;
     this.videoFrameCallback = 0;
     this.latestVideoFrameAt = 0;
     this.submittedVideoFrameAt = 0;
+    this.latestFrame = null;
+    this.lastInteractionCursor = null;
     this.button.disabled = false;
     this.button.classList.remove('active');
     this.button.setAttribute('aria-pressed', 'false');
@@ -140,6 +152,7 @@ export class GestureController {
       this.button.setAttribute('aria-pressed', 'true');
       this.overlay?.setStatus('Gesture Mode active');
       this.resetMetrics();
+      this.scheduleInteractionFrame();
       this.scheduleFrame();
       return;
     }
@@ -158,15 +171,73 @@ export class GestureController {
       event.data.timestamp,
       { width: canvasRect.width, height: canvasRect.height },
     );
+    this.updateMotion(frame, performance.now());
     this.commands.setHandScale(frame.palmScale);
     this.commands.updateHover(frame.state === 'ready' ? frame.cursor : null);
     frame.events.forEach((gestureEvent) => {
-      this.applyOutcome(this.commands.handle(gestureEvent));
+      this.handleEvent(gestureEvent);
     });
     this.overlay?.render(frame);
     this.overlay?.setDiagnostics(this.diagnostics);
     this.scheduleFrame();
   };
+
+  private updateMotion(frame: GestureFrame, receivedAt: number): void {
+    if (!frame.cursor || !frame.landmarks) {
+      this.cursorPredictor.reset();
+      this.lastInteractionCursor = null;
+    } else {
+      if (!this.latestFrame?.cursor || this.latestFrame.state !== frame.state) {
+        this.cursorPredictor.reset();
+      }
+      this.cursorPredictor.update(frame.cursor, receivedAt);
+    }
+    this.latestFrame = frame;
+  }
+
+  private handleEvent(event: GestureFrame['events'][number]): void {
+    if (event.type === 'pinch-move') return;
+    if (event.type === 'pinch-start') {
+      this.lastInteractionCursor = event.point;
+    } else if (event.type === 'pinch-end') {
+      this.lastInteractionCursor = null;
+    }
+    this.applyOutcome(this.commands.handle(event));
+  }
+
+  private scheduleInteractionFrame(): void {
+    this.interactionAnimationFrame = requestAnimationFrame((timestamp) => {
+      if (!this.worker || !this.overlay) return;
+      if (!document.hidden && this.latestFrame?.state === 'pinching') {
+        const rect = this.canvas.getBoundingClientRect();
+        const point = this.cursorPredictor.predict(
+          timestamp,
+          rect.width,
+          rect.height,
+        );
+        if (point) this.moveInteraction(point, rect.width, rect.height);
+      }
+      this.scheduleInteractionFrame();
+    });
+  }
+
+  private moveInteraction(
+    point: GesturePoint,
+    width: number,
+    height: number,
+  ): void {
+    if (
+      this.lastInteractionCursor &&
+      Math.hypot(
+        (point.x - this.lastInteractionCursor.x) * width,
+        (point.y - this.lastInteractionCursor.y) * height,
+      ) < 0.1
+    ) {
+      return;
+    }
+    this.commands.handle({ type: 'pinch-move', point });
+    this.lastInteractionCursor = point;
+  }
 
   private applyOutcome(outcome: GestureCommandOutcome | null): void {
     if (outcome?.type === 'created') {
