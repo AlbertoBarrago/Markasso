@@ -134,6 +134,19 @@ export class GestureOverlay {
         height,
         '#3a8bff',
       );
+    } else if (
+      frame.state === 'drawing' &&
+      frame.armProgress > 0 &&
+      displayCursor
+    ) {
+      this.drawArmProgress(
+        ctx,
+        displayCursor,
+        frame.armProgress,
+        width,
+        height,
+        '#c42020',
+      );
     }
     if (this.outcome?.type === 'created') {
       this.drawCommittedTrace(ctx, this.outcome.points, width, height, now);

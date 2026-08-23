@@ -84,6 +84,116 @@ describe('GestureRecognizer', () => {
     expect(elapsed).toBeLessThan(180 + frameDuration + 0.001);
   });
 
+  it.each([
+    1_000 / 30,
+    1_000 / 60,
+  ])('finishes a valid drawing after a stationary point hold at %d ms frames', (frameDuration) => {
+    const recognizer = beginValidDrawing();
+    const holdStartedAt = 650;
+    const lastMovementAt = 610;
+    let finishedAt: number | null = null;
+
+    for (
+      let timestamp = holdStartedAt;
+      timestamp <= holdStartedAt + 700;
+      timestamp += frameDuration
+    ) {
+      const frame = recognizer.update(hand('point', 0.1), timestamp, {
+        width: 1_000,
+        height: 1_000,
+      });
+      if (frame.events.some((event) => event.type === 'stroke-end')) {
+        finishedAt = timestamp;
+        break;
+      }
+    }
+
+    const elapsed = finishedAt! - lastMovementAt;
+    expect(elapsed).toBeGreaterThanOrEqual(550);
+    expect(elapsed).toBeLessThan(550 + frameDuration + 0.001);
+  });
+
+  it('resets stationary confirmation when drawing resumes', () => {
+    const recognizer = beginValidDrawing();
+    for (const timestamp of [650, 750, 850, 950]) {
+      recognizer.update(hand('point', 0.1), timestamp, {
+        width: 1_000,
+        height: 1_000,
+      });
+    }
+
+    const moving = recognizer.update(hand('point', 0.2), 1_000, {
+      width: 1_000,
+      height: 1_000,
+    });
+    expect(moving.state).toBe('drawing');
+    expect(moving.armProgress).toBe(0);
+    expect(moving.events.some((event) => event.type === 'stroke-end')).toBe(
+      false,
+    );
+  });
+
+  it('does not count tracking loss toward stationary confirmation', () => {
+    const recognizer = beginValidDrawing();
+    recognizer.update(hand('point', 0.1), 650, {
+      width: 1_000,
+      height: 1_000,
+    });
+    recognizer.update(hand('point', 0.1), 800, {
+      width: 1_000,
+      height: 1_000,
+    });
+    recognizer.update(null, 1_200);
+    recognizer.update(hand('point', 0.1), 1_216, {
+      width: 1_000,
+      height: 1_000,
+    });
+
+    const resumed = recognizer.update(hand('point', 0.1), 1_232, {
+      width: 1_000,
+      height: 1_000,
+    });
+    expect(resumed.state).toBe('drawing');
+    expect(resumed.armProgress).toBeLessThan(0.1);
+    expect(resumed.events.some((event) => event.type === 'stroke-end')).toBe(
+      false,
+    );
+  });
+
+  it('requires movement before rearming after stationary confirmation', () => {
+    const recognizer = beginValidDrawing();
+    let timestamp = 650;
+    let finished = recognizer.update(hand('point', 0.1), timestamp, {
+      width: 1_000,
+      height: 1_000,
+    });
+    while (!finished.events.some((event) => event.type === 'stroke-end')) {
+      timestamp += 50;
+      finished = recognizer.update(hand('point', 0.1), timestamp, {
+        width: 1_000,
+        height: 1_000,
+      });
+    }
+
+    const held = recognizer.update(hand('point', 0.1), timestamp + 16, {
+      width: 1_000,
+      height: 1_000,
+    });
+    expect(held.state).toBe('ready');
+    expect(held.events.some((event) => event.type === 'stroke-start')).toBe(
+      false,
+    );
+
+    const rearmed = recognizer.update(hand('point', 0.14), timestamp + 32, {
+      width: 1_000,
+      height: 1_000,
+    });
+    expect(rearmed.state).toBe('drawing');
+    expect(rearmed.events.some((event) => event.type === 'stroke-start')).toBe(
+      true,
+    );
+  });
+
   it('keeps drawing when a brief open-hand misclassification clears', () => {
     const recognizer = beginValidDrawing();
 

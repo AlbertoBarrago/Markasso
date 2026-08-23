@@ -27,9 +27,14 @@ const DRAWING_POSE_GRACE_MS = 500;
 const DRAWING_POSE_GRACE_RECENT_MS = 500;
 const DRAWING_TRACKING_GRACE_MS = 350;
 const DRAWING_RESUME_MAX_DISTANCE_PX = 96;
-// Ending a stroke is destructive from the user's perspective: once committed,
-// the trace can no longer be extended. Require a deliberate open hand for a
-// fixed duration so release timing stays consistent across camera frame rates.
+// Holding the pointing fingertip still is the primary, in-flow confirmation.
+// A small radius absorbs camera jitter without turning a deliberate pause at a
+// corner into an immediate finish.
+const DRAWING_STILL_HOLD_MS = 550;
+const DRAWING_STILL_RADIUS_PX = 10;
+const DRAWING_REARM_DISTANCE_PX = 24;
+const DRAWING_MIN_PATH_LENGTH_PX = 32;
+// Keep the open hand as a deliberate fallback for users who already know it.
 const DRAWING_RELEASE_HOLD_MS = 180;
 const POSE_CONFIRMATION_FRAMES: Record<HandPose, number> = {
   pinch: 2,
@@ -55,6 +60,10 @@ export class GestureRecognizer {
   private poseUncertainSince: number | null = null;
   private drawingReleaseStartedAt: number | null = null;
   private drawingSuspended = false;
+  private drawingStillOrigin: GesturePoint | null = null;
+  private drawingStillStartedAt: number | null = null;
+  private drawingRearmPoint: GesturePoint | null = null;
+  private drawingPathLengthPx = 0;
   private selectAllOrigin: GesturePoint | null = null;
   private selectAllStartedAt = 0;
   private openReadyAt = 0;
@@ -92,6 +101,8 @@ export class GestureRecognizer {
     const events: GestureEvent[] = [];
     let armProgress = 0;
 
+    if (pose !== 'point') this.drawingRearmPoint = null;
+
     if (rawPose === 'none' || rawPose === 'fist') {
       this.poseUncertainSince ??= timestamp;
     } else {
@@ -101,6 +112,9 @@ export class GestureRecognizer {
       this.drawingReleaseStartedAt ??= timestamp;
     } else {
       this.drawingReleaseStartedAt = null;
+    }
+    if (this.state === 'drawing' && rawPose !== 'point') {
+      this.resetDrawingStill();
     }
     // A raw misclassification for a single frame (e.g. the index finger's
     // angle to the camera shifting mid-curve) would otherwise stall an
@@ -130,6 +144,7 @@ export class GestureRecognizer {
         if (this.state === 'drawing' && rawPose === 'open') break;
         armProgress = this.handlePointing(
           drawingCursor,
+          timestamp,
           events,
           viewport.width,
           viewport.height,
@@ -235,6 +250,10 @@ export class GestureRecognizer {
     this.poseUncertainSince = null;
     this.drawingReleaseStartedAt = null;
     this.drawingSuspended = false;
+    this.drawingStillOrigin = null;
+    this.drawingStillStartedAt = null;
+    this.drawingRearmPoint = null;
+    this.drawingPathLengthPx = 0;
     this.selectAllOrigin = null;
     this.selectAllStartedAt = 0;
     this.openReadyAt = 0;
@@ -259,43 +278,107 @@ export class GestureRecognizer {
   }
 
   private handlePointing(
-    cursor: GesturePoint,
+    drawingCursor: GesturePoint,
+    timestamp: number,
     events: GestureEvent[],
     viewportWidth: number,
     viewportHeight: number,
   ): number {
+    if (this.drawingRearmPoint) {
+      if (
+        screenDistance(
+          this.drawingRearmPoint,
+          drawingCursor,
+          viewportWidth,
+          viewportHeight,
+        ) < DRAWING_REARM_DISTANCE_PX
+      ) {
+        return 0;
+      }
+      this.drawingRearmPoint = null;
+    }
     if (this.state === 'drawing') {
       if (
         this.drawingSuspended &&
         screenDistance(
           this.trace.at(-1)!,
-          cursor,
+          drawingCursor,
           viewportWidth,
           viewportHeight,
         ) > DRAWING_RESUME_MAX_DISTANCE_PX
       ) {
         this.cursorFilter.reset();
-        return 1;
+        return 0;
       }
       this.drawingSuspended = false;
-      if (
-        screenDistance(
-          this.trace.at(-1)!,
-          cursor,
-          viewportWidth,
-          viewportHeight,
-        ) >= MIN_TRACE_POINT_DISTANCE_PX
-      ) {
-        this.trace.push(cursor);
-        events.push({ type: 'stroke-move', point: cursor });
+      const sampleDistance = screenDistance(
+        this.trace.at(-1)!,
+        drawingCursor,
+        viewportWidth,
+        viewportHeight,
+      );
+      if (sampleDistance >= MIN_TRACE_POINT_DISTANCE_PX) {
+        this.trace.push(drawingCursor);
+        this.drawingPathLengthPx += sampleDistance;
+        events.push({ type: 'stroke-move', point: drawingCursor });
       }
-      return 1;
+      return this.handleDrawingStill(
+        drawingCursor,
+        timestamp,
+        events,
+        viewportWidth,
+        viewportHeight,
+      );
     }
     this.state = 'drawing';
     this.drawingSuspended = false;
-    this.trace = [cursor];
-    events.push({ type: 'stroke-start', point: cursor });
-    return 1;
+    this.drawingStillOrigin = drawingCursor;
+    this.drawingStillStartedAt = timestamp;
+    this.drawingPathLengthPx = 0;
+    this.trace = [drawingCursor];
+    events.push({ type: 'stroke-start', point: drawingCursor });
+    return 0;
+  }
+
+  private handleDrawingStill(
+    drawingCursor: GesturePoint,
+    timestamp: number,
+    events: GestureEvent[],
+    viewportWidth: number,
+    viewportHeight: number,
+  ): number {
+    if (
+      this.trace.length < MIN_TRACE_POINTS ||
+      this.drawingPathLengthPx < DRAWING_MIN_PATH_LENGTH_PX
+    ) {
+      this.drawingStillOrigin = drawingCursor;
+      this.drawingStillStartedAt = timestamp;
+      return 0;
+    }
+    if (
+      !this.drawingStillOrigin ||
+      this.drawingStillStartedAt === null ||
+      screenDistance(
+        this.drawingStillOrigin,
+        drawingCursor,
+        viewportWidth,
+        viewportHeight,
+      ) > DRAWING_STILL_RADIUS_PX
+    ) {
+      this.drawingStillOrigin = drawingCursor;
+      this.drawingStillStartedAt = timestamp;
+      return 0;
+    }
+    const progress = Math.min(
+      1,
+      (timestamp - this.drawingStillStartedAt) / DRAWING_STILL_HOLD_MS,
+    );
+    if (progress >= 1) {
+      this.finishTrace(events);
+      this.state = 'ready';
+      this.drawingRearmPoint = drawingCursor;
+    }
+    return progress;
   }
 
   private handleOpenHold(
@@ -327,6 +410,7 @@ export class GestureRecognizer {
 
   private handleTrackingLoss(timestamp: number): GestureFrame {
     this.drawingReleaseStartedAt = null;
+    this.resetDrawingStill();
     if (
       this.lastCursor &&
       this.lastLandmarks &&
@@ -343,6 +427,7 @@ export class GestureRecognizer {
       this.drawingSuspended = true;
     } else {
       this.state = 'absent';
+      this.drawingRearmPoint = null;
     }
     this.stablePose = 'none';
     this.candidatePose = 'none';
@@ -392,6 +477,13 @@ export class GestureRecognizer {
     this.trace = [];
     this.drawingReleaseStartedAt = null;
     this.drawingSuspended = false;
+    this.resetDrawingStill();
+    this.drawingPathLengthPx = 0;
+  }
+
+  private resetDrawingStill(): void {
+    this.drawingStillOrigin = null;
+    this.drawingStillStartedAt = null;
   }
 
   private frame(
