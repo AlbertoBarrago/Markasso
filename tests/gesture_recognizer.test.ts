@@ -141,12 +141,17 @@ describe('GestureRecognizer', () => {
     expect(recognizer.update(hand('point', 0.02), 736).state).toBe('drawing');
   });
 
-  it('cancels drawing when the pointing pose is lost for too long', () => {
+  it('keeps drawing pending when the pointing pose is lost for a long time', () => {
     const recognizer = beginDrawing();
     for (const timestamp of [470, 503, 536, 569, 602, 635]) {
       recognizer.update(hand('none'), timestamp);
     }
-    expect(recognizer.update(hand('none'), 1_771).state).toBe('absent');
+    const pending = recognizer.update(hand('none'), 1_771);
+
+    expect(pending.state).toBe('drawing');
+    expect(pending.events.some((event) => event.type === 'stroke-end')).toBe(
+      false,
+    );
   });
 
   it('keeps drawing through a temporary full tracking loss', () => {
@@ -155,12 +160,17 @@ describe('GestureRecognizer', () => {
     expect(recognizer.update(hand('point', 0.02), 716).state).toBe('drawing');
   });
 
-  it('cancels drawing after a prolonged full tracking loss', () => {
+  it('keeps drawing pending after a prolonged full tracking loss', () => {
     const recognizer = beginDrawing();
-    expect(recognizer.update(null, 1_451).state).toBe('absent');
+    const pending = recognizer.update(null, 1_451);
+
+    expect(pending.state).toBe('drawing');
+    expect(pending.events.some((event) => event.type === 'stroke-end')).toBe(
+      false,
+    );
   });
 
-  it('commits a valid partial stroke after a prolonged tracking loss', () => {
+  it('does not commit a valid partial stroke after prolonged tracking loss', () => {
     const recognizer = beginDrawing();
     for (let index = 1; index <= 10; index++) {
       recognizer.update(hand('point', index * 0.01), 450 + index * 34, {
@@ -171,13 +181,14 @@ describe('GestureRecognizer', () => {
 
     const frame = recognizer.update(null, 1_200);
 
-    expect(frame.state).toBe('absent');
+    expect(frame.state).toBe('drawing');
+    expect(frame.trace.length).toBeGreaterThanOrEqual(8);
     expect(frame.events.some((event) => event.type === 'stroke-end')).toBe(
-      true,
+      false,
     );
   });
 
-  it('ends the current action instead of bridging a stalled inference gap', () => {
+  it('suspends the current action instead of bridging a stalled inference gap', () => {
     const recognizer = beginDrawing();
     for (let index = 1; index <= 10; index++) {
       recognizer.update(hand('point', index * 0.01), 450 + index * 16, {
@@ -191,12 +202,39 @@ describe('GestureRecognizer', () => {
       height: 1_000,
     });
 
-    expect(recovered.state).toBe('absent');
-    expect(recovered.trace).toHaveLength(0);
+    const traceLength = recovered.trace.length;
+    expect(recovered.state).toBe('drawing');
+    expect(traceLength).toBeGreaterThanOrEqual(8);
     expect(recovered.events.some((event) => event.type === 'stroke-end')).toBe(
-      true,
+      false,
     );
-    expect(recognizer.update(hand('point', 0.5), 1_216).trace).toHaveLength(1);
+    expect(recognizer.update(hand('point', 0.5), 1_216).trace).toHaveLength(
+      traceLength,
+    );
+
+    const resumed = recognizer.update(hand('point', 0.11), 1_232, {
+      width: 1_000,
+      height: 1_000,
+    });
+    expect(resumed.trace.length).toBeGreaterThan(traceLength);
+  });
+
+  it('finishes a suspended long stroke only after a deliberate open hand', () => {
+    const recognizer = beginValidDrawing();
+    recognizer.update(null, 1_200);
+
+    for (const timestamp of [1_216, 1_248, 1_280, 1_312, 1_344, 1_376]) {
+      const frame = recognizer.update(hand('open', 0.11), timestamp);
+      expect(frame.events.some((event) => event.type === 'stroke-end')).toBe(
+        false,
+      );
+    }
+
+    expect(
+      recognizer
+        .update(hand('open', 0.11), 1_408)
+        .events.some((event) => event.type === 'stroke-end'),
+    ).toBe(true);
   });
 
   it('uses CSS pixels when deciding whether to record a trace point', () => {

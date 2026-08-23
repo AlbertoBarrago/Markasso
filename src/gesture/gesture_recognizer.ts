@@ -19,14 +19,14 @@ const SELECT_ALL_MOVEMENT_RADIUS = 0.045;
 const OPEN_SETTLE_MS = 700;
 const TRACKING_GRACE_MS = 200;
 // Losing the 'point' pose to 'none' mid-stroke is usually a tracking hiccup.
-// Keep a short grace period, then commit the valid partial trace rather than
-// freezing and bridging a large jump when tracking eventually recovers.
+// Keep the stroke pending instead of treating uncertain tracking as user intent.
 const DRAWING_POSE_GRACE_MS = 500;
 // A fist mid-stroke tolerates brief tracking noise before it cancels the
 // drawing outright — kept short so an intentional fist-to-delete right after
 // finishing a stroke doesn't have to wait out a long window.
 const DRAWING_POSE_GRACE_RECENT_MS = 500;
 const DRAWING_TRACKING_GRACE_MS = 350;
+const DRAWING_RESUME_MAX_DISTANCE_PX = 96;
 // Ending a stroke is destructive from the user's perspective: once committed,
 // the trace can no longer be extended. Require a deliberate open hand for a
 // fixed duration so release timing stays consistent across camera frame rates.
@@ -54,6 +54,7 @@ export class GestureRecognizer {
   private lastTrackedAt: number | null = null;
   private poseUncertainSince: number | null = null;
   private drawingReleaseStartedAt: number | null = null;
+  private drawingSuspended = false;
   private selectAllOrigin: GesturePoint | null = null;
   private selectAllStartedAt = 0;
   private openReadyAt = 0;
@@ -204,8 +205,8 @@ export class GestureRecognizer {
         } else if (this.state !== 'drawing') {
           this.state = 'absent';
         } else {
-          this.finishTrace(events);
-          this.state = 'absent';
+          this.drawingSuspended = true;
+          this.cursorFilter.reset();
         }
         break;
     }
@@ -232,6 +233,7 @@ export class GestureRecognizer {
     this.lastTrackedAt = null;
     this.poseUncertainSince = null;
     this.drawingReleaseStartedAt = null;
+    this.drawingSuspended = false;
     this.selectAllOrigin = null;
     this.selectAllStartedAt = 0;
     this.openReadyAt = 0;
@@ -263,6 +265,19 @@ export class GestureRecognizer {
   ): number {
     if (this.state === 'drawing') {
       if (
+        this.drawingSuspended &&
+        screenDistance(
+          this.trace.at(-1)!,
+          cursor,
+          viewportWidth,
+          viewportHeight,
+        ) > DRAWING_RESUME_MAX_DISTANCE_PX
+      ) {
+        this.cursorFilter.reset();
+        return 1;
+      }
+      this.drawingSuspended = false;
+      if (
         screenDistance(
           this.trace.at(-1)!,
           cursor,
@@ -276,6 +291,7 @@ export class GestureRecognizer {
       return 1;
     }
     this.state = 'drawing';
+    this.drawingSuspended = false;
     this.trace = [cursor];
     events.push({ type: 'stroke-start', point: cursor });
     return 1;
@@ -322,12 +338,14 @@ export class GestureRecognizer {
     if (this.state === 'pinching' && this.lastCursor) {
       events.push({ type: 'pinch-end', point: this.lastCursor });
     }
-    if (this.state === 'drawing') this.finishTrace(events);
-    this.state = 'absent';
+    if (this.state === 'drawing') {
+      this.drawingSuspended = true;
+    } else {
+      this.state = 'absent';
+    }
     this.stablePose = 'none';
     this.candidatePose = 'none';
     this.candidateFrames = 0;
-    if (this.trace.length > 0) this.cancelDrawing();
     this.cursorFilter.reset();
     this.palmFilter.reset();
     this.lastCursor = null;
@@ -372,6 +390,7 @@ export class GestureRecognizer {
   private cancelDrawing(): void {
     this.trace = [];
     this.drawingReleaseStartedAt = null;
+    this.drawingSuspended = false;
   }
 
   private frame(
