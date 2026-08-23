@@ -82,7 +82,8 @@ export class GestureRecognizer {
     this.lastTrackedAt = timestamp;
     this.lastLandmarks = landmarks.map(mirror);
     this.lastPalmScale = distance(landmarks[0]!, landmarks[9]!);
-    const cursor = this.cursorFilter.filter(mirror(landmarks[8]!), timestamp);
+    const drawingCursor = mirror(landmarks[8]!);
+    const cursor = this.cursorFilter.filter(drawingCursor, timestamp);
     this.lastCursor = cursor;
     const rawPalm = mirror(midpoint(landmarks[0]!, landmarks[9]!));
     const palm = this.palmFilter.filter(rawPalm, timestamp);
@@ -128,7 +129,7 @@ export class GestureRecognizer {
         // waiting for the stable pose to catch up with a raw open hand.
         if (this.state === 'drawing' && rawPose === 'open') break;
         armProgress = this.handlePointing(
-          cursor,
+          drawingCursor,
           events,
           viewport.width,
           viewport.height,

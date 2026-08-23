@@ -42,6 +42,23 @@ describe('GestureRecognizer', () => {
     expect(frame.events[0]?.type).toBe('stroke-start');
   });
 
+  it('records direct fingertip samples without cursor-filter lag', () => {
+    const recognizer = new GestureRecognizer();
+    recognizer.update(hand('point'), 0, { width: 1_000, height: 1_000 });
+
+    const frame = recognizer.update(hand('point', 0.2), 16, {
+      width: 1_000,
+      height: 1_000,
+    });
+
+    expect(frame.trace.at(-1)?.x).toBeCloseTo(0.4);
+    expect(frame.cursor!.x).toBeGreaterThan(frame.trace.at(-1)!.x);
+    expect(frame.events.at(-1)).toEqual({
+      type: 'stroke-move',
+      point: frame.trace.at(-1),
+    });
+  });
+
   it.each([
     1_000 / 30,
     1_000 / 60,
@@ -241,11 +258,11 @@ describe('GestureRecognizer', () => {
     const smallViewport = beginDrawing();
     const largeViewport = beginDrawing();
 
-    const smallFrame = smallViewport.update(hand('point', 0.01), 484, {
+    const smallFrame = smallViewport.update(hand('point', 0.003), 484, {
       width: 500,
       height: 500,
     });
-    const largeFrame = largeViewport.update(hand('point', 0.01), 484, {
+    const largeFrame = largeViewport.update(hand('point', 0.003), 484, {
       width: 1_000,
       height: 1_000,
     });

@@ -113,22 +113,22 @@ export class GestureOverlay {
     ctx.clearRect(0, 0, width, height);
     const predictedCursor =
       this.cursorPredictor.predict(now, width, height) ?? frame.cursor;
-    const displayTrace = [...frame.trace];
-    if (frame.state === 'drawing' && predictedCursor) {
-      displayTrace.push(predictedCursor);
-    }
-    if (displayTrace.length > 1) {
-      drawSmoothTrace(ctx, displayTrace, width, height);
+    const displayCursor =
+      frame.state === 'drawing'
+        ? (frame.trace.at(-1) ?? frame.cursor)
+        : predictedCursor;
+    if (frame.trace.length > 1) {
+      drawSmoothTrace(ctx, frame.trace, width, height);
       ctx.strokeStyle = 'rgba(196, 32, 32, .8)';
       ctx.lineWidth = 4;
       ctx.lineCap = 'round';
       ctx.stroke();
     }
     if (frame.landmarks) this.drawHand(ctx, frame.landmarks, width, height);
-    if (frame.state === 'selecting' && predictedCursor) {
+    if (frame.state === 'selecting' && displayCursor) {
       this.drawArmProgress(
         ctx,
-        predictedCursor,
+        displayCursor,
         frame.armProgress,
         width,
         height,
@@ -138,11 +138,11 @@ export class GestureOverlay {
     if (this.outcome?.type === 'created') {
       this.drawCommittedTrace(ctx, this.outcome.points, width, height, now);
     }
-    if (predictedCursor) {
+    if (displayCursor) {
       ctx.beginPath();
       ctx.arc(
-        predictedCursor.x * width,
-        predictedCursor.y * height,
+        displayCursor.x * width,
+        displayCursor.y * height,
         frame.state === 'pinching' ? 8 : 12,
         0,
         Math.PI * 2,
