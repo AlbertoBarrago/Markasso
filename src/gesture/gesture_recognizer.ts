@@ -29,6 +29,10 @@ const DRAWING_POSE_GRACE_MS = 500;
 // finishing a stroke doesn't have to wait out a long window.
 const DRAWING_POSE_GRACE_RECENT_MS = 500;
 const DRAWING_TRACKING_GRACE_MS = 350;
+// Ending a stroke is destructive from the user's perspective: once committed,
+// the trace can no longer be extended. Require a deliberate open hand for a
+// fixed duration so release timing stays consistent across camera frame rates.
+const DRAWING_RELEASE_HOLD_MS = 180;
 const POSE_CONFIRMATION_FRAMES: Record<HandPose, number> = {
   pinch: 2,
   open: 3,
@@ -51,6 +55,7 @@ export class GestureRecognizer {
   private lastPalmScale: number | null = null;
   private lastTrackedAt: number | null = null;
   private poseUncertainSince: number | null = null;
+  private drawingReleaseStartedAt: number | null = null;
   private selectAllOrigin: GesturePoint | null = null;
   private selectAllStartedAt = 0;
   private openReadyAt = 0;
@@ -94,6 +99,11 @@ export class GestureRecognizer {
     } else {
       this.poseUncertainSince = null;
     }
+    if (this.state === 'drawing' && rawPose === 'open') {
+      this.drawingReleaseStartedAt ??= timestamp;
+    } else {
+      this.drawingReleaseStartedAt = null;
+    }
     // A raw misclassification for a single frame (e.g. the index finger's
     // angle to the camera shifting mid-curve) would otherwise stall an
     // in-progress stroke every time it happens — trace this frame using the
@@ -117,6 +127,9 @@ export class GestureRecognizer {
         if (this.state === 'pinching') {
           events.push({ type: 'pinch-end', point: cursor });
         }
+        // Do not append release-pose fingertip movement to the trace while
+        // waiting for the stable pose to catch up with a raw open hand.
+        if (this.state === 'drawing' && rawPose === 'open') break;
         armProgress = this.handlePointing(
           cursor,
           events,
@@ -160,7 +173,15 @@ export class GestureRecognizer {
         if (this.state === 'pinching') {
           events.push({ type: 'pinch-end', point: cursor });
         }
-        if (this.state === 'drawing') this.finishTrace(events);
+        if (this.state === 'drawing') {
+          if (
+            timestamp - (this.drawingReleaseStartedAt ?? timestamp) <
+            DRAWING_RELEASE_HOLD_MS
+          ) {
+            break;
+          }
+          this.finishTrace(events);
+        }
         if (this.state !== 'ready' && this.state !== 'selecting') {
           // First frame landing on 'open' from any other state — settle at
           // 'ready' rather than starting a select-all hold immediately, so
@@ -214,6 +235,7 @@ export class GestureRecognizer {
     this.lastPalmScale = null;
     this.lastTrackedAt = null;
     this.poseUncertainSince = null;
+    this.drawingReleaseStartedAt = null;
     this.selectAllOrigin = null;
     this.selectAllStartedAt = 0;
     this.openReadyAt = 0;
@@ -293,6 +315,7 @@ export class GestureRecognizer {
   }
 
   private handleTrackingLoss(timestamp: number): GestureFrame {
+    this.drawingReleaseStartedAt = null;
     if (
       this.lastCursor &&
       this.lastLandmarks &&
@@ -363,6 +386,7 @@ export class GestureRecognizer {
 
   private cancelDrawing(): void {
     this.trace = [];
+    this.drawingReleaseStartedAt = null;
     this.lastRecognitionAt = Number.NEGATIVE_INFINITY;
     this.cachedRecognition = null;
   }

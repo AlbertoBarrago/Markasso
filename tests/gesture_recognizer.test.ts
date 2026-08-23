@@ -42,21 +42,42 @@ describe('GestureRecognizer', () => {
     expect(frame.events[0]?.type).toBe('stroke-start');
   });
 
-  it('finishes an air stroke only after a confirmed open hand', () => {
-    const recognizer = new GestureRecognizer();
-    recognizer.update(hand('point'), 0);
-    recognizer.update(hand('point'), 16);
-    recognizer.update(hand('point'), 250);
-    for (let index = 1; index < 12; index++) {
-      recognizer.update(hand('point', index * 0.01), 250 + index * 34);
+  it.each([
+    1_000 / 30,
+    1_000 / 60,
+  ])('uses a frame-rate-independent open-hand hold to finish at %d ms frames', (frameDuration) => {
+    const recognizer = beginValidDrawing();
+    const releaseStartedAt = 650;
+    let finishedAt: number | null = null;
+
+    for (
+      let timestamp = releaseStartedAt;
+      timestamp <= releaseStartedAt + 300;
+      timestamp += frameDuration
+    ) {
+      const frame = recognizer.update(hand('open', 0.11), timestamp);
+      if (frame.events.some((event) => event.type === 'stroke-end')) {
+        finishedAt = timestamp;
+        break;
+      }
     }
-    recognizer.update(hand('open', 0.11), 650);
-    recognizer.update(hand('open', 0.11), 666);
-    expect(
-      recognizer
-        .update(hand('open', 0.11), 682)
-        .events.some((event) => event.type === 'stroke-end'),
-    ).toBe(true);
+
+    const elapsed = finishedAt! - releaseStartedAt;
+    expect(elapsed).toBeGreaterThanOrEqual(180);
+    expect(elapsed).toBeLessThan(180 + frameDuration + 0.001);
+  });
+
+  it('keeps drawing when a brief open-hand misclassification clears', () => {
+    const recognizer = beginValidDrawing();
+
+    expect(recognizer.update(hand('open', 0.11), 650).state).toBe('drawing');
+    expect(recognizer.update(hand('open', 0.11), 666).state).toBe('drawing');
+    const resumed = recognizer.update(hand('point', 0.12), 682);
+
+    expect(resumed.state).toBe('drawing');
+    expect(resumed.events.some((event) => event.type === 'stroke-end')).toBe(
+      false,
+    );
   });
 
   it('bridges a brief tracking dropout and then resets', () => {
@@ -205,6 +226,17 @@ function beginDrawing(): GestureRecognizer {
   recognizer.update(hand('point'), 0);
   for (const timestamp of [16, 100, 200, 300, 400, 450]) {
     recognizer.update(hand('point'), timestamp);
+  }
+  return recognizer;
+}
+
+function beginValidDrawing(): GestureRecognizer {
+  const recognizer = beginDrawing();
+  for (let index = 1; index <= 10; index++) {
+    recognizer.update(hand('point', index * 0.01), 450 + index * 16, {
+      width: 1_000,
+      height: 1_000,
+    });
   }
   return recognizer;
 }
