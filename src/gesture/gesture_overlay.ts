@@ -1,6 +1,5 @@
 import { t } from '../i18n';
 import { PointMotionPredictor } from './motion_filter';
-import type { StrokeShape } from './stroke_classifier';
 import type { GestureDiagnostics, GestureFrame, GesturePoint } from './types';
 
 const MAX_FEEDBACK_DPR = 1.5;
@@ -40,8 +39,7 @@ export class GestureOverlay {
   private animationFrame = 0;
   private dpr = 1;
   private outcome:
-    | { type: 'created'; shape: StrokeShape; until: number }
-    | { type: 'rejected'; until: number }
+    | { type: 'created'; points: ReadonlyArray<GesturePoint>; until: number }
     | { type: 'deleted'; until: number }
     | { type: 'selected-all'; until: number }
     | null = null;
@@ -98,12 +96,11 @@ export class GestureOverlay {
       this.setStatus(labelForFrame(frame));
     }
     if (this.diagnostics) {
-      const prediction = frame.prediction ?? 'none';
       const metrics = this.latestDiagnostics;
       const metricLabel = metrics
         ? ` · cam ${metrics.cameraFps.toFixed(0)} · infer ${metrics.inferenceFps.toFixed(0)} fps/${metrics.inferenceDurationMs.toFixed(0)} ms · latency ${metrics.latencyMs.toFixed(0)} ms`
         : '';
-      const label = `${frame.state} · ${prediction} ${Math.round(frame.predictionConfidence * 100)}%${metricLabel}`;
+      const label = `${frame.state}${metricLabel}`;
       if (this.diagnostics.textContent !== label) {
         this.diagnostics.textContent = label;
       }
@@ -139,7 +136,7 @@ export class GestureOverlay {
       );
     }
     if (this.outcome?.type === 'created') {
-      this.drawCommittedShape(ctx, this.outcome.shape, width, height, now);
+      this.drawCommittedTrace(ctx, this.outcome.points, width, height, now);
     }
     if (predictedCursor) {
       ctx.beginPath();
@@ -165,16 +162,10 @@ export class GestureOverlay {
     this.setStatus(t('gestureDeleted'));
   }
 
-  showCreated(shape: StrokeShape): void {
-    this.outcome = { type: 'created', shape, until: performance.now() + 1100 };
+  showCreated(points: ReadonlyArray<GesturePoint>): void {
+    this.outcome = { type: 'created', points, until: performance.now() + 1100 };
     this.root.dataset.outcome = 'created';
-    this.setStatus(createdLabel(shape.type));
-  }
-
-  showRejected(): void {
-    this.outcome = { type: 'rejected', until: performance.now() + 1100 };
-    this.root.dataset.outcome = 'rejected';
-    this.setStatus(t('gestureNotRecognized'), 'error');
+    this.setStatus(t('gestureFreehandAdded'));
   }
 
   showSelectedAll(): void {
@@ -245,9 +236,9 @@ export class GestureOverlay {
     ctx.stroke();
   }
 
-  private drawCommittedShape(
+  private drawCommittedTrace(
     ctx: CanvasRenderingContext2D,
-    shape: StrokeShape,
+    points: ReadonlyArray<GesturePoint>,
     width: number,
     height: number,
     now: number,
@@ -256,35 +247,7 @@ export class GestureOverlay {
     ctx.save();
     ctx.strokeStyle = `rgba(68, 209, 122, ${remaining})`;
     ctx.lineWidth = 3 + remaining * 5;
-    ctx.beginPath();
-    if (shape.type === 'line') {
-      ctx.moveTo(shape.start.x * width, shape.start.y * height);
-      ctx.lineTo(shape.end.x * width, shape.end.y * height);
-    } else if (shape.type === 'rectangle') {
-      ctx.rect(
-        shape.x * width,
-        shape.y * height,
-        shape.width * width,
-        shape.height * height,
-      );
-    } else if (shape.type === 'ellipse') {
-      ctx.ellipse(
-        (shape.x + shape.width / 2) * width,
-        (shape.y + shape.height / 2) * height,
-        (shape.width * width) / 2,
-        (shape.height * height) / 2,
-        0,
-        0,
-        Math.PI * 2,
-      );
-    } else {
-      shape.points.forEach((point, index) => {
-        const x = point.x * width;
-        const y = point.y * height;
-        if (index === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-    }
+    drawSmoothTrace(ctx, points, width, height);
     ctx.stroke();
     ctx.restore();
   }
@@ -320,40 +283,10 @@ function labelForFrame(frame: GestureFrame): string {
     case 'pinching':
       return t('gesturePinch');
     case 'drawing':
-      return frame.prediction
-        ? `${shapeLabel(frame.prediction)} · ${t('gestureReleaseToAdd')}`
-        : t('gestureDrawing');
+      return t('gestureDrawing');
     case 'selecting':
       return `${t('gestureHoldToSelectAll')} ${Math.round(frame.armProgress * 100)}%`;
     case 'absent':
       return t('gestureShowHand');
-  }
-}
-
-function createdLabel(type: StrokeShape['type']): string {
-  switch (type) {
-    case 'rectangle':
-      return t('gestureRectangleAdded');
-    case 'ellipse':
-      return t('gestureEllipseAdded');
-    case 'line':
-      return t('gestureConnectorAdded');
-    case 'freehand':
-      return t('gestureFreehandAdded');
-  }
-}
-
-function shapeLabel(type: GestureFrame['prediction']): string {
-  switch (type) {
-    case 'rectangle':
-      return t('rectangle');
-    case 'ellipse':
-      return t('ellipse');
-    case 'line':
-      return t('line');
-    case 'freehand':
-      return t('pen');
-    case null:
-      return '';
   }
 }

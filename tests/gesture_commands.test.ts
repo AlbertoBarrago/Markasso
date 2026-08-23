@@ -232,20 +232,25 @@ describe('GestureCommandAdapter', () => {
     expect(line).toMatchObject({ x: 10, y: 10, x2: 30, y2: 10, cy: 30 });
   });
 
-  it('reports whether an air stroke was committed', () => {
+  it('always commits a valid air stroke as freehand', () => {
     const history = new History(createScene());
     const adapter = new GestureCommandAdapter(canvas(), history);
     const points = Array.from({ length: 12 }, (_, index) => ({
       x: 0.1 + index * 0.05,
       y: 0.2,
     }));
-    expect(adapter.handle({ type: 'stroke-end', points })?.type).toBe(
-      'created',
-    );
+    const outcome = adapter.handle({ type: 'stroke-end', points });
+    expect(outcome).toEqual({ type: 'created', points });
     expect(history.present.elements).toHaveLength(1);
+    expect(history.present.elements[0]).toMatchObject({
+      type: 'freehand',
+      x: 10,
+      y: 20,
+      points: points.map((point) => [point.x * 100, point.y * 100]),
+    });
     expect(
-      adapter.handle({ type: 'stroke-end', points: points.slice(0, 2) })?.type,
-    ).toBe('rejected');
+      adapter.handle({ type: 'stroke-end', points: points.slice(0, 1) }),
+    ).toBeNull();
   });
 });
 

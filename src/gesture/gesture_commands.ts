@@ -17,7 +17,6 @@ import {
 import { anchorX, anchorY, computeResize, hitTest } from '../tools/select_tool';
 import { gestureHover } from './gesture_hover';
 import { distance } from './landmark_geometry';
-import { classifyStroke, type StrokeShape } from './stroke_classifier';
 import type { GestureEvent, GesturePoint } from './types';
 
 // Hand tracking is far less precise than a mouse pointer, so gesture hit-testing
@@ -333,44 +332,27 @@ export class GestureCommandAdapter {
 
   private createStroke(
     points: ReadonlyArray<GesturePoint>,
-  ): GestureCommandOutcome {
-    const shape = classifyStroke(points);
-    if (!shape) return { type: 'rejected' };
+  ): GestureCommandOutcome | null {
+    if (points.length < 2) return null;
     const scene = this.history.present;
     const style = scene.appState;
-    let element: Element;
-    if (shape.type === 'line') {
-      const start = this.toWorld(shape.start);
-      const end = this.toWorld(shape.end);
-      element = {
-        ...baseElement('line', start.x, start.y, style),
-        x2: end.x,
-        y2: end.y,
-        fillColor: 'transparent',
-        arrowHead: 'end',
-      } satisfies LineElement;
-    } else if (shape.type === 'freehand') {
-      const worldPoints = shape.points.map((point) => this.toWorld(point));
-      const origin = worldPoints[0]!;
-      element = {
-        ...baseElement('freehand', origin.x, origin.y, style),
-        fillColor: 'transparent',
-        points: worldPoints.map((point) => [point.x, point.y] as const),
-      } satisfies FreehandElement;
-    } else {
-      const start = this.toWorld({ x: shape.x, y: shape.y });
-      const end = this.toWorld({
-        x: shape.x + shape.width,
-        y: shape.y + shape.height,
-      });
-      element = {
-        ...baseElement(shape.type, start.x, start.y, style),
-        width: end.x - start.x,
-        height: end.y - start.y,
-      } as Element;
-    }
+    const worldPoints = points.map((point) => this.toWorld(point));
+    const origin = worldPoints[0]!;
+    const element = {
+      id: crypto.randomUUID(),
+      type: 'freehand',
+      x: origin.x,
+      y: origin.y,
+      strokeColor: style.strokeColor,
+      fillColor: 'transparent',
+      strokeWidth: style.strokeWidth,
+      opacity: style.opacity,
+      roughness: style.roughness,
+      strokeStyle: style.strokeStyle,
+      points: worldPoints.map((point) => [point.x, point.y] as const),
+    } satisfies FreehandElement;
     this.history.dispatch({ type: 'CREATE_ELEMENT', element });
-    return { type: 'created', shape };
+    return { type: 'created', points };
   }
 
   private toWorld(point: GesturePoint): GesturePoint {
@@ -391,30 +373,9 @@ export class GestureCommandAdapter {
 }
 
 export type GestureCommandOutcome =
-  | { type: 'created'; shape: StrokeShape }
-  | { type: 'rejected' }
+  | { type: 'created'; points: ReadonlyArray<GesturePoint> }
   | { type: 'deleted' }
   | { type: 'selected-all' };
-
-function baseElement<T extends 'rectangle' | 'ellipse' | 'line' | 'freehand'>(
-  type: T,
-  x: number,
-  y: number,
-  style: History['present']['appState'],
-) {
-  return {
-    id: crypto.randomUUID(),
-    type,
-    x,
-    y,
-    strokeColor: style.strokeColor,
-    fillColor: style.fillColor,
-    strokeWidth: style.strokeWidth,
-    opacity: style.opacity,
-    roughness: style.roughness,
-    strokeStyle: style.strokeStyle,
-  };
-}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));

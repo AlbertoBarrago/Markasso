@@ -1,6 +1,5 @@
 import { classifyHandPose, distance, type HandPose } from './landmark_geometry';
 import { PointOneEuroFilter } from './motion_filter';
-import { recognizeStroke, type StrokeRecognition } from './stroke_classifier';
 import type {
   GestureEvent,
   GestureFrame,
@@ -11,7 +10,6 @@ import type {
 
 const MIN_TRACE_POINTS = 8;
 const MIN_TRACE_POINT_DISTANCE_PX = 2;
-const LIVE_RECOGNITION_INTERVAL_MS = 100;
 const SELECT_ALL_HOLD_MS = 600;
 const SELECT_ALL_MOVEMENT_RADIUS = 0.045;
 // The open hand also confirms/ends other gestures (pinch-end, stroke-end), so
@@ -59,8 +57,6 @@ export class GestureRecognizer {
   private selectAllOrigin: GesturePoint | null = null;
   private selectAllStartedAt = 0;
   private openReadyAt = 0;
-  private lastRecognitionAt = Number.NEGATIVE_INFINITY;
-  private cachedRecognition: StrokeRecognition | null = null;
   private readonly cursorFilter = new PointOneEuroFilter();
   // The fingertip landmark is noisier than the palm center for poses that
   // hold roughly still (e.g. an open hand held for select-all) — the palm
@@ -239,8 +235,6 @@ export class GestureRecognizer {
     this.selectAllOrigin = null;
     this.selectAllStartedAt = 0;
     this.openReadyAt = 0;
-    this.lastRecognitionAt = Number.NEGATIVE_INFINITY;
-    this.cachedRecognition = null;
     this.cursorFilter.reset();
     this.palmFilter.reset();
   }
@@ -344,7 +338,7 @@ export class GestureRecognizer {
     this.selectAllOrigin = null;
     this.selectAllStartedAt = 0;
     this.openReadyAt = 0;
-    return this.frame(timestamp, null, null, events, 0, null, 0);
+    return this.frame(timestamp, null, null, events, 0);
   }
 
   private trackingGracePeriod(): number {
@@ -359,21 +353,12 @@ export class GestureRecognizer {
     armProgress: number,
     timestamp: number,
   ): GestureFrame {
-    if (
-      this.trace.length >= MIN_TRACE_POINTS &&
-      timestamp - this.lastRecognitionAt >= LIVE_RECOGNITION_INTERVAL_MS
-    ) {
-      this.cachedRecognition = recognizeStroke(this.trace);
-      this.lastRecognitionAt = timestamp;
-    }
     return this.frame(
       timestamp,
       cursor,
       this.lastLandmarks,
       events,
       armProgress,
-      this.cachedRecognition?.shape.type ?? null,
-      this.cachedRecognition?.confidence ?? 0,
     );
   }
 
@@ -387,8 +372,6 @@ export class GestureRecognizer {
   private cancelDrawing(): void {
     this.trace = [];
     this.drawingReleaseStartedAt = null;
-    this.lastRecognitionAt = Number.NEGATIVE_INFINITY;
-    this.cachedRecognition = null;
   }
 
   private frame(
@@ -397,8 +380,6 @@ export class GestureRecognizer {
     landmarks: HandLandmarks | null,
     events: GestureEvent[],
     armProgress: number,
-    prediction: GestureFrame['prediction'],
-    predictionConfidence: number,
   ): GestureFrame {
     return {
       timestamp,
@@ -408,8 +389,6 @@ export class GestureRecognizer {
       palmScale: this.lastPalmScale,
       trace: [...this.trace],
       armProgress,
-      prediction,
-      predictionConfidence,
       events,
     };
   }

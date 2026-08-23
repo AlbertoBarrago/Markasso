@@ -243,9 +243,7 @@ export class GestureController {
 
   private applyOutcome(outcome: GestureCommandOutcome | null): void {
     if (outcome?.type === 'created') {
-      this.overlay?.showCreated(outcome.shape);
-    } else if (outcome?.type === 'rejected') {
-      this.overlay?.showRejected();
+      this.overlay?.showCreated(outcome.points);
     } else if (outcome?.type === 'deleted') {
       this.overlay?.showDeleted();
     } else if (outcome?.type === 'selected-all') {
