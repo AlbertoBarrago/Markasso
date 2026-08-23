@@ -206,7 +206,9 @@ export class GestureController {
   }
 
   private scheduleInteractionFrame(): void {
+    if (this.interactionAnimationFrame) return;
     this.interactionAnimationFrame = requestAnimationFrame((timestamp) => {
+      this.interactionAnimationFrame = 0;
       if (!this.worker || !this.overlay) return;
       if (!document.hidden && this.latestFrame?.state === 'pinching') {
         const rect = this.canvas.getBoundingClientRect();
