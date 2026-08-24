@@ -1,6 +1,5 @@
 import { classifyHandPose, distance, type HandPose } from './landmark_geometry';
 import { PointOneEuroFilter } from './motion_filter';
-import { recognizeStroke, type StrokeRecognition } from './stroke_classifier';
 import type {
   GestureEvent,
   GestureFrame,
@@ -11,7 +10,6 @@ import type {
 
 const MIN_TRACE_POINTS = 8;
 const MIN_TRACE_POINT_DISTANCE_PX = 2;
-const LIVE_RECOGNITION_INTERVAL_MS = 100;
 const SELECT_ALL_HOLD_MS = 600;
 const SELECT_ALL_MOVEMENT_RADIUS = 0.045;
 // The open hand also confirms/ends other gestures (pinch-end, stroke-end), so
@@ -21,14 +19,23 @@ const SELECT_ALL_MOVEMENT_RADIUS = 0.045;
 const OPEN_SETTLE_MS = 700;
 const TRACKING_GRACE_MS = 200;
 // Losing the 'point' pose to 'none' mid-stroke is usually a tracking hiccup.
-// Keep a short grace period, then commit the valid partial trace rather than
-// freezing and bridging a large jump when tracking eventually recovers.
+// Keep the stroke pending instead of treating uncertain tracking as user intent.
 const DRAWING_POSE_GRACE_MS = 500;
 // A fist mid-stroke tolerates brief tracking noise before it cancels the
 // drawing outright — kept short so an intentional fist-to-delete right after
 // finishing a stroke doesn't have to wait out a long window.
 const DRAWING_POSE_GRACE_RECENT_MS = 500;
 const DRAWING_TRACKING_GRACE_MS = 350;
+const DRAWING_RESUME_MAX_DISTANCE_PX = 96;
+// Holding the pointing fingertip still is the primary, in-flow confirmation.
+// A small radius absorbs camera jitter without turning a deliberate pause at a
+// corner into an immediate finish.
+const DRAWING_STILL_HOLD_MS = 550;
+const DRAWING_STILL_RADIUS_PX = 10;
+const DRAWING_REARM_DISTANCE_PX = 24;
+const DRAWING_MIN_PATH_LENGTH_PX = 32;
+// Keep the open hand as a deliberate fallback for users who already know it.
+const DRAWING_RELEASE_HOLD_MS = 180;
 const POSE_CONFIRMATION_FRAMES: Record<HandPose, number> = {
   pinch: 2,
   open: 3,
@@ -49,13 +56,17 @@ export class GestureRecognizer {
   private lastCursor: GesturePoint | null = null;
   private lastLandmarks: HandLandmarks | null = null;
   private lastPalmScale: number | null = null;
-  private lastTrackedAt = 0;
+  private lastTrackedAt: number | null = null;
   private poseUncertainSince: number | null = null;
+  private drawingReleaseStartedAt: number | null = null;
+  private drawingSuspended = false;
+  private drawingStillOrigin: GesturePoint | null = null;
+  private drawingStillStartedAt: number | null = null;
+  private drawingRearmPoint: GesturePoint | null = null;
+  private drawingPathLengthPx = 0;
   private selectAllOrigin: GesturePoint | null = null;
   private selectAllStartedAt = 0;
   private openReadyAt = 0;
-  private lastRecognitionAt = Number.NEGATIVE_INFINITY;
-  private cachedRecognition: StrokeRecognition | null = null;
   private readonly cursorFilter = new PointOneEuroFilter();
   // The fingertip landmark is noisier than the palm center for poses that
   // hold roughly still (e.g. an open hand held for select-all) — the palm
@@ -67,14 +78,21 @@ export class GestureRecognizer {
     timestamp = performance.now(),
     viewport = { width: 1_000, height: 1_000 },
   ): GestureFrame {
-    if (!landmarks || landmarks.length < 21) {
+    if (!isValidHand(landmarks)) {
+      return this.handleTrackingLoss(timestamp);
+    }
+    if (
+      this.lastTrackedAt !== null &&
+      timestamp - this.lastTrackedAt > this.trackingGracePeriod()
+    ) {
       return this.handleTrackingLoss(timestamp);
     }
 
     this.lastTrackedAt = timestamp;
     this.lastLandmarks = landmarks.map(mirror);
     this.lastPalmScale = distance(landmarks[0]!, landmarks[9]!);
-    const cursor = this.cursorFilter.filter(mirror(landmarks[8]!), timestamp);
+    const drawingCursor = mirror(landmarks[8]!);
+    const cursor = this.cursorFilter.filter(drawingCursor, timestamp);
     this.lastCursor = cursor;
     const rawPalm = mirror(midpoint(landmarks[0]!, landmarks[9]!));
     const palm = this.palmFilter.filter(rawPalm, timestamp);
@@ -83,10 +101,20 @@ export class GestureRecognizer {
     const events: GestureEvent[] = [];
     let armProgress = 0;
 
+    if (pose !== 'point') this.drawingRearmPoint = null;
+
     if (rawPose === 'none' || rawPose === 'fist') {
       this.poseUncertainSince ??= timestamp;
     } else {
       this.poseUncertainSince = null;
+    }
+    if (this.state === 'drawing' && rawPose === 'open') {
+      this.drawingReleaseStartedAt ??= timestamp;
+    } else {
+      this.drawingReleaseStartedAt = null;
+    }
+    if (this.state === 'drawing' && rawPose !== 'point') {
+      this.resetDrawingStill();
     }
     // A raw misclassification for a single frame (e.g. the index finger's
     // angle to the camera shifting mid-curve) would otherwise stall an
@@ -111,8 +139,12 @@ export class GestureRecognizer {
         if (this.state === 'pinching') {
           events.push({ type: 'pinch-end', point: cursor });
         }
+        // Do not append release-pose fingertip movement to the trace while
+        // waiting for the stable pose to catch up with a raw open hand.
+        if (this.state === 'drawing' && rawPose === 'open') break;
         armProgress = this.handlePointing(
-          cursor,
+          drawingCursor,
+          timestamp,
           events,
           viewport.width,
           viewport.height,
@@ -154,7 +186,15 @@ export class GestureRecognizer {
         if (this.state === 'pinching') {
           events.push({ type: 'pinch-end', point: cursor });
         }
-        if (this.state === 'drawing') this.finishTrace(events);
+        if (this.state === 'drawing') {
+          if (
+            timestamp - (this.drawingReleaseStartedAt ?? timestamp) <
+            DRAWING_RELEASE_HOLD_MS
+          ) {
+            break;
+          }
+          this.finishTrace(events);
+        }
         if (this.state !== 'ready' && this.state !== 'selecting') {
           // First frame landing on 'open' from any other state — settle at
           // 'ready' rather than starting a select-all hold immediately, so
@@ -181,8 +221,8 @@ export class GestureRecognizer {
         } else if (this.state !== 'drawing') {
           this.state = 'absent';
         } else {
-          this.finishTrace(events);
-          this.state = 'absent';
+          this.drawingSuspended = true;
+          this.cursorFilter.reset();
         }
         break;
     }
@@ -206,13 +246,17 @@ export class GestureRecognizer {
     this.lastCursor = null;
     this.lastLandmarks = null;
     this.lastPalmScale = null;
-    this.lastTrackedAt = 0;
+    this.lastTrackedAt = null;
     this.poseUncertainSince = null;
+    this.drawingReleaseStartedAt = null;
+    this.drawingSuspended = false;
+    this.drawingStillOrigin = null;
+    this.drawingStillStartedAt = null;
+    this.drawingRearmPoint = null;
+    this.drawingPathLengthPx = 0;
     this.selectAllOrigin = null;
     this.selectAllStartedAt = 0;
     this.openReadyAt = 0;
-    this.lastRecognitionAt = Number.NEGATIVE_INFINITY;
-    this.cachedRecognition = null;
     this.cursorFilter.reset();
     this.palmFilter.reset();
   }
@@ -234,29 +278,107 @@ export class GestureRecognizer {
   }
 
   private handlePointing(
-    cursor: GesturePoint,
+    drawingCursor: GesturePoint,
+    timestamp: number,
     events: GestureEvent[],
     viewportWidth: number,
     viewportHeight: number,
   ): number {
-    if (this.state === 'drawing') {
+    if (this.drawingRearmPoint) {
       if (
         screenDistance(
-          this.trace.at(-1)!,
-          cursor,
+          this.drawingRearmPoint,
+          drawingCursor,
           viewportWidth,
           viewportHeight,
-        ) >= MIN_TRACE_POINT_DISTANCE_PX
+        ) < DRAWING_REARM_DISTANCE_PX
       ) {
-        this.trace.push(cursor);
-        events.push({ type: 'stroke-move', point: cursor });
+        return 0;
       }
-      return 1;
+      this.drawingRearmPoint = null;
+    }
+    if (this.state === 'drawing') {
+      if (
+        this.drawingSuspended &&
+        screenDistance(
+          this.trace.at(-1)!,
+          drawingCursor,
+          viewportWidth,
+          viewportHeight,
+        ) > DRAWING_RESUME_MAX_DISTANCE_PX
+      ) {
+        this.cursorFilter.reset();
+        return 0;
+      }
+      this.drawingSuspended = false;
+      const sampleDistance = screenDistance(
+        this.trace.at(-1)!,
+        drawingCursor,
+        viewportWidth,
+        viewportHeight,
+      );
+      if (sampleDistance >= MIN_TRACE_POINT_DISTANCE_PX) {
+        this.trace.push(drawingCursor);
+        this.drawingPathLengthPx += sampleDistance;
+        events.push({ type: 'stroke-move', point: drawingCursor });
+      }
+      return this.handleDrawingStill(
+        drawingCursor,
+        timestamp,
+        events,
+        viewportWidth,
+        viewportHeight,
+      );
     }
     this.state = 'drawing';
-    this.trace = [cursor];
-    events.push({ type: 'stroke-start', point: cursor });
-    return 1;
+    this.drawingSuspended = false;
+    this.drawingStillOrigin = drawingCursor;
+    this.drawingStillStartedAt = timestamp;
+    this.drawingPathLengthPx = 0;
+    this.trace = [drawingCursor];
+    events.push({ type: 'stroke-start', point: drawingCursor });
+    return 0;
+  }
+
+  private handleDrawingStill(
+    drawingCursor: GesturePoint,
+    timestamp: number,
+    events: GestureEvent[],
+    viewportWidth: number,
+    viewportHeight: number,
+  ): number {
+    if (
+      this.trace.length < MIN_TRACE_POINTS ||
+      this.drawingPathLengthPx < DRAWING_MIN_PATH_LENGTH_PX
+    ) {
+      this.drawingStillOrigin = drawingCursor;
+      this.drawingStillStartedAt = timestamp;
+      return 0;
+    }
+    if (
+      !this.drawingStillOrigin ||
+      this.drawingStillStartedAt === null ||
+      screenDistance(
+        this.drawingStillOrigin,
+        drawingCursor,
+        viewportWidth,
+        viewportHeight,
+      ) > DRAWING_STILL_RADIUS_PX
+    ) {
+      this.drawingStillOrigin = drawingCursor;
+      this.drawingStillStartedAt = timestamp;
+      return 0;
+    }
+    const progress = Math.min(
+      1,
+      (timestamp - this.drawingStillStartedAt) / DRAWING_STILL_HOLD_MS,
+    );
+    if (progress >= 1) {
+      this.finishTrace(events);
+      this.state = 'ready';
+      this.drawingRearmPoint = drawingCursor;
+    }
+    return progress;
   }
 
   private handleOpenHold(
@@ -287,12 +409,13 @@ export class GestureRecognizer {
   }
 
   private handleTrackingLoss(timestamp: number): GestureFrame {
-    const gracePeriod =
-      this.state === 'drawing' ? DRAWING_TRACKING_GRACE_MS : TRACKING_GRACE_MS;
+    this.drawingReleaseStartedAt = null;
+    this.resetDrawingStill();
     if (
       this.lastCursor &&
       this.lastLandmarks &&
-      timestamp - this.lastTrackedAt <= gracePeriod
+      this.lastTrackedAt !== null &&
+      timestamp - this.lastTrackedAt <= this.trackingGracePeriod()
     ) {
       return this.currentFrame(this.lastCursor, [], 0, timestamp);
     }
@@ -300,22 +423,32 @@ export class GestureRecognizer {
     if (this.state === 'pinching' && this.lastCursor) {
       events.push({ type: 'pinch-end', point: this.lastCursor });
     }
-    if (this.state === 'drawing') this.finishTrace(events);
-    this.state = 'absent';
+    if (this.state === 'drawing') {
+      this.drawingSuspended = true;
+    } else {
+      this.state = 'absent';
+      this.drawingRearmPoint = null;
+    }
     this.stablePose = 'none';
     this.candidatePose = 'none';
     this.candidateFrames = 0;
-    if (this.trace.length > 0) this.cancelDrawing();
     this.cursorFilter.reset();
     this.palmFilter.reset();
     this.lastCursor = null;
     this.lastLandmarks = null;
     this.lastPalmScale = null;
+    this.lastTrackedAt = null;
     this.poseUncertainSince = null;
     this.selectAllOrigin = null;
     this.selectAllStartedAt = 0;
     this.openReadyAt = 0;
-    return this.frame(timestamp, null, null, events, 0, null, 0);
+    return this.frame(timestamp, null, null, events, 0);
+  }
+
+  private trackingGracePeriod(): number {
+    return this.state === 'drawing'
+      ? DRAWING_TRACKING_GRACE_MS
+      : TRACKING_GRACE_MS;
   }
 
   private currentFrame(
@@ -324,21 +457,12 @@ export class GestureRecognizer {
     armProgress: number,
     timestamp: number,
   ): GestureFrame {
-    if (
-      this.trace.length >= MIN_TRACE_POINTS &&
-      timestamp - this.lastRecognitionAt >= LIVE_RECOGNITION_INTERVAL_MS
-    ) {
-      this.cachedRecognition = recognizeStroke(this.trace);
-      this.lastRecognitionAt = timestamp;
-    }
     return this.frame(
       timestamp,
       cursor,
       this.lastLandmarks,
       events,
       armProgress,
-      this.cachedRecognition?.shape.type ?? null,
-      this.cachedRecognition?.confidence ?? 0,
     );
   }
 
@@ -351,8 +475,15 @@ export class GestureRecognizer {
 
   private cancelDrawing(): void {
     this.trace = [];
-    this.lastRecognitionAt = Number.NEGATIVE_INFINITY;
-    this.cachedRecognition = null;
+    this.drawingReleaseStartedAt = null;
+    this.drawingSuspended = false;
+    this.resetDrawingStill();
+    this.drawingPathLengthPx = 0;
+  }
+
+  private resetDrawingStill(): void {
+    this.drawingStillOrigin = null;
+    this.drawingStillStartedAt = null;
   }
 
   private frame(
@@ -361,8 +492,6 @@ export class GestureRecognizer {
     landmarks: HandLandmarks | null,
     events: GestureEvent[],
     armProgress: number,
-    prediction: GestureFrame['prediction'],
-    predictionConfidence: number,
   ): GestureFrame {
     return {
       timestamp,
@@ -372,8 +501,6 @@ export class GestureRecognizer {
       palmScale: this.lastPalmScale,
       trace: [...this.trace],
       armProgress,
-      prediction,
-      predictionConfidence,
       events,
     };
   }
@@ -401,4 +528,19 @@ function mirror(point: GesturePoint): GesturePoint {
 
 function midpoint(a: GesturePoint, b: GesturePoint): GesturePoint {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+function isValidHand(
+  landmarks: HandLandmarks | null,
+): landmarks is HandLandmarks {
+  return (
+    landmarks !== null &&
+    landmarks.length >= 21 &&
+    landmarks.every(
+      (point) =>
+        Number.isFinite(point.x) &&
+        Number.isFinite(point.y) &&
+        (point.z === undefined || Number.isFinite(point.z)),
+    )
+  );
 }

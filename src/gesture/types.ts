@@ -13,8 +13,6 @@ export type GestureState =
   | 'drawing'
   | 'selecting';
 
-export type GestureShapeType = 'line' | 'rectangle' | 'ellipse' | 'freehand';
-
 export type GestureEvent =
   | { type: 'pinch-start'; point: GesturePoint }
   | { type: 'pinch-move'; point: GesturePoint }
@@ -35,8 +33,6 @@ export interface GestureFrame {
   readonly palmScale: number | null;
   readonly trace: ReadonlyArray<GesturePoint>;
   readonly armProgress: number;
-  readonly prediction: GestureShapeType | null;
-  readonly predictionConfidence: number;
   readonly events: ReadonlyArray<GestureEvent>;
 }
 
