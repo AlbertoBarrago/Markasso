@@ -246,11 +246,35 @@ describe('GestureCommandAdapter', () => {
       type: 'freehand',
       x: 10,
       y: 20,
-      points: points.map((point) => [point.x * 100, point.y * 100]),
+      points: [
+        [10, 20],
+        [65, 20],
+      ],
     });
     expect(
       adapter.handle({ type: 'stroke-end', points: points.slice(0, 1) }),
     ).toBeNull();
+  });
+
+  it('creates a smoothed freehand element for an ambiguous air stroke', () => {
+    const history = new History(createScene());
+    const adapter = new GestureCommandAdapter(canvas(), history);
+    const points = Array.from({ length: 24 }, (_, index) => ({
+      x: 0.2 + index * 0.02,
+      y: 0.5 + Math.sin(index * 1.7) * 0.15,
+    }));
+
+    expect(adapter.handle({ type: 'stroke-end', points })?.type).toBe(
+      'created',
+    );
+    expect(history.present.elements[0]).toMatchObject({
+      type: 'freehand',
+      fillColor: 'transparent',
+    });
+    const element = history.present.elements[0];
+    expect(
+      element?.type === 'freehand' && element.points.length,
+    ).toBeGreaterThan(2);
   });
 });
 

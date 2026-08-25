@@ -14,6 +14,7 @@ import {
   hitTestHandle,
   ROTATION_HANDLE_R,
 } from '../rendering/draw_selection';
+import { finishFreehandStroke } from '../tools/freehand_stroke';
 import { anchorX, anchorY, computeResize, hitTest } from '../tools/select_tool';
 import { gestureHover } from './gesture_hover';
 import { distance } from './landmark_geometry';
@@ -337,19 +338,22 @@ export class GestureCommandAdapter {
     const scene = this.history.present;
     const style = scene.appState;
     const worldPoints = points.map((point) => this.toWorld(point));
-    const origin = worldPoints[0]!;
+    const finished = finishFreehandStroke(
+      worldPoints.map((point) => [point.x, point.y] as const),
+    );
+    const origin = finished.points[0]!;
     const element = {
       id: crypto.randomUUID(),
       type: 'freehand',
-      x: origin.x,
-      y: origin.y,
+      x: origin[0],
+      y: origin[1],
       strokeColor: style.strokeColor,
       fillColor: 'transparent',
       strokeWidth: style.strokeWidth,
       opacity: style.opacity,
       roughness: style.roughness,
       strokeStyle: style.strokeStyle,
-      points: worldPoints.map((point) => [point.x, point.y] as const),
+      points: finished.points,
     } satisfies FreehandElement;
     this.history.dispatch({ type: 'CREATE_ELEMENT', element });
     return { type: 'created', points };
