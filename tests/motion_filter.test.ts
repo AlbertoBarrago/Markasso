@@ -2,7 +2,61 @@ import { describe, expect, it } from 'vitest';
 import {
   PointMotionPredictor,
   PointOneEuroFilter,
+  TraceSmoothingFilter,
 } from '../src/gesture/motion_filter';
+
+describe('TraceSmoothingFilter', () => {
+  it('averages the last three samples', () => {
+    const filter = new TraceSmoothingFilter();
+    filter.filter({ x: 0.1, y: 0.1 });
+    filter.filter({ x: 0.2, y: 0.2 });
+    const output = filter.filter({ x: 0.3, y: 0.3 });
+
+    expect(output.x).toBeCloseTo(0.2);
+    expect(output.y).toBeCloseTo(0.2);
+  });
+
+  it('slides the window instead of growing unbounded', () => {
+    const filter = new TraceSmoothingFilter();
+    filter.filter({ x: 0, y: 0 });
+    filter.filter({ x: 0, y: 0 });
+    filter.filter({ x: 0, y: 0 });
+    const output = filter.filter({ x: 0.3, y: 0.3 });
+
+    expect(output.x).toBeCloseTo(0.1);
+    expect(output.y).toBeCloseTo(0.1);
+  });
+
+  it('preserves z from the latest sample only', () => {
+    const filter = new TraceSmoothingFilter();
+    filter.filter({ x: 0, y: 0, z: 1 });
+    const output = filter.filter({ x: 0.2, y: 0.2, z: 5 });
+
+    expect(output.z).toBe(5);
+  });
+
+  it('omits z when the latest sample has none', () => {
+    const filter = new TraceSmoothingFilter();
+    filter.filter({ x: 0, y: 0, z: 1 });
+    const output = filter.filter({ x: 0.2, y: 0.2 });
+
+    expect(output.z).toBeUndefined();
+  });
+
+  it('returns the raw point on the first sample', () => {
+    const filter = new TraceSmoothingFilter();
+    expect(filter.filter({ x: 0.42, y: 0.73 })).toEqual({ x: 0.42, y: 0.73 });
+  });
+
+  it('discards history on reset', () => {
+    const filter = new TraceSmoothingFilter();
+    filter.filter({ x: 0.9, y: 0.9 });
+    filter.filter({ x: 0.9, y: 0.9 });
+    filter.reset();
+
+    expect(filter.filter({ x: 0.1, y: 0.1 })).toEqual({ x: 0.1, y: 0.1 });
+  });
+});
 
 describe('PointOneEuroFilter', () => {
   it('reduces stationary cursor jitter', () => {

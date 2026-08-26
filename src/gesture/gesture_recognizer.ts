@@ -140,9 +140,15 @@ export class GestureRecognizer {
         if (this.state === 'pinching') {
           events.push({ type: 'pinch-end', point: cursor });
         }
-        // Do not append release-pose fingertip movement to the trace while
-        // waiting for the stable pose to catch up with a raw open hand.
-        if (this.state === 'drawing' && rawPose === 'open') break;
+        // Do not append release-pose/fist fingertip movement to the trace
+        // while waiting for the stable pose to catch up with a raw open
+        // hand or fist — a curled-in fingertip position would otherwise
+        // blend into the smoothing window and nudge the resumed trace.
+        if (
+          this.state === 'drawing' &&
+          (rawPose === 'open' || rawPose === 'fist')
+        )
+          break;
         armProgress = this.handlePointing(
           drawingCursor,
           timestamp,

@@ -409,6 +409,21 @@ describe('GestureRecognizer', () => {
     expect(recognizer.update(hand('none'), 112).state).toBe('ready');
   });
 
+  it('does not blend a raw fist misclassification into the trace while drawing', () => {
+    const recognizer = beginDrawing();
+    recognizer.update(hand('point', 0.2), 466);
+    const beforeBlip = recognizer.update(hand('point', 0.2), 482).trace.at(-1);
+
+    // A single raw 'fist' frame within the tolerance window while the
+    // stable pose is still 'point' must not feed the closed-fist fingertip
+    // position into the trace-smoothing average.
+    const blip = recognizer.update(hand('none'), 498);
+    expect(blip.trace.at(-1)).toEqual(beforeBlip);
+
+    const resumed = recognizer.update(hand('point', 0.2), 514).trace.at(-1)!;
+    expect(resumed.x).toBeCloseTo(beforeBlip!.x, 0);
+  });
+
   it('cancels an in-progress pinch when the hand closes into a fist', () => {
     const recognizer = new GestureRecognizer();
     recognizer.update(hand('pinch'), 0);
