@@ -1,5 +1,5 @@
 import { classifyHandPose, distance, type HandPose } from './landmark_geometry';
-import { PointOneEuroFilter } from './motion_filter';
+import { PointOneEuroFilter, TraceSmoothingFilter } from './motion_filter';
 import type {
   GestureEvent,
   GestureFrame,
@@ -72,6 +72,7 @@ export class GestureRecognizer {
   // hold roughly still (e.g. an open hand held for select-all) — the palm
   // stays put more reliably, so hold-based gestures track it instead.
   private readonly palmFilter = new PointOneEuroFilter();
+  private readonly traceSmoothing = new TraceSmoothingFilter();
 
   update(
     landmarks: HandLandmarks | null,
@@ -259,6 +260,7 @@ export class GestureRecognizer {
     this.openReadyAt = 0;
     this.cursorFilter.reset();
     this.palmFilter.reset();
+    this.traceSmoothing.reset();
   }
 
   private stabilizePose(rawPose: HandPose): HandPose {
@@ -278,12 +280,23 @@ export class GestureRecognizer {
   }
 
   private handlePointing(
-    drawingCursor: GesturePoint,
+    rawDrawingCursor: GesturePoint,
     timestamp: number,
     events: GestureEvent[],
     viewportWidth: number,
     viewportHeight: number,
   ): number {
+    if (this.drawingSuspended) {
+      // Resuming after a suspension gap means the averaging window still
+      // holds pre-gap samples — drop them so the resumed point isn't blended
+      // toward a stale position it never actually passed through.
+      this.traceSmoothing.reset();
+    }
+    // Fed into the trace/stillness logic below instead of the raw landmark —
+    // a light 2-3 sample average that tempers per-frame jitter without the
+    // perceptible lag the heavier OneEuroFilter caused here previously (see
+    // "fix: remove gesture drawing lag").
+    const drawingCursor = this.traceSmoothing.filter(rawDrawingCursor);
     if (this.drawingRearmPoint) {
       if (
         screenDistance(
@@ -479,6 +492,7 @@ export class GestureRecognizer {
     this.drawingSuspended = false;
     this.resetDrawingStill();
     this.drawingPathLengthPx = 0;
+    this.traceSmoothing.reset();
   }
 
   private resetDrawingStill(): void {

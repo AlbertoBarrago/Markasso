@@ -16,7 +16,14 @@ const POINT_OTHER_EXTENSION_SCORE = 0.77;
 const POINT_DOMINANCE = 0.12;
 const PINCH_ENTER_RATIO = 0.32;
 const PINCH_EXIT_RATIO = 0.46;
-const FIST_MAX_EXTENSION = 0.3;
+// Hysteresis mirrors the pinch thresholds above: requiring all 4 fingers to
+// stay under a single tight cutoff made raw pose flicker between 'fist' and
+// 'none' under camera jitter, so the 3-consecutive-frame stabilizer in
+// GestureRecognizer rarely reached its target and delete never fired. A
+// looser bar to enter 'fist' plus a stricter one to leave it (once already
+// fisted) keeps the pose settled long enough to confirm.
+const FIST_ENTER_MAX_EXTENSION = 0.38;
+const FIST_EXIT_MAX_EXTENSION = 0.3;
 
 export function classifyHandPose(
   hand: HandLandmarks,
@@ -50,7 +57,11 @@ export function classifyHandPose(
   ) {
     return 'point';
   }
-  if (extensionScores.every((score) => score <= FIST_MAX_EXTENSION)) {
+  const fistThreshold =
+    previousPose === 'fist'
+      ? FIST_EXIT_MAX_EXTENSION
+      : FIST_ENTER_MAX_EXTENSION;
+  if (extensionScores.every((score) => score <= fistThreshold)) {
     return 'fist';
   }
   return 'none';

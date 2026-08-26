@@ -113,12 +113,18 @@ export class GestureOverlay {
     ctx.clearRect(0, 0, width, height);
     const predictedCursor =
       this.cursorPredictor.predict(now, width, height) ?? frame.cursor;
-    const displayCursor =
-      frame.state === 'drawing'
-        ? (frame.trace.at(-1) ?? frame.cursor)
-        : predictedCursor;
-    if (frame.trace.length > 1) {
-      drawSmoothTrace(ctx, frame.trace, width, height);
+    // Predict during 'drawing' too, not just 'pinching' — inference frames
+    // can land below 60fps, and without prediction the trace tip only moves
+    // once per inference frame, reading as a stutter instead of a smooth line.
+    const displayCursor = predictedCursor ?? frame.trace.at(-1) ?? frame.cursor;
+    // Append the predicted point as a live tip so the drawn line itself
+    // advances smoothly between inference frames, not just the cursor dot.
+    const renderedTrace =
+      frame.state === 'drawing' && predictedCursor
+        ? [...frame.trace, predictedCursor]
+        : frame.trace;
+    if (renderedTrace.length > 1) {
+      drawSmoothTrace(ctx, renderedTrace, width, height);
       ctx.strokeStyle = 'rgba(196, 32, 32, .8)';
       ctx.lineWidth = 4;
       ctx.lineCap = 'round';

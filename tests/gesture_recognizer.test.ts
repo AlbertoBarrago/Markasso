@@ -42,7 +42,7 @@ describe('GestureRecognizer', () => {
     expect(frame.events[0]?.type).toBe('stroke-start');
   });
 
-  it('records direct fingertip samples without cursor-filter lag', () => {
+  it('records lightly-averaged fingertip samples, still less laggy than the cursor filter', () => {
     const recognizer = new GestureRecognizer();
     recognizer.update(hand('point'), 0, { width: 1_000, height: 1_000 });
 
@@ -51,7 +51,10 @@ describe('GestureRecognizer', () => {
       height: 1_000,
     });
 
-    expect(frame.trace.at(-1)?.x).toBeCloseTo(0.4);
+    // A 2-sample average of 0.6 and 0.4 (the raw fingertip positions before
+    // and after the jump) — much closer to the true 0.4 than the heavier
+    // cursor filter below, which still lags near 0.574 after one step.
+    expect(frame.trace.at(-1)?.x).toBeCloseTo(0.5);
     expect(frame.cursor!.x).toBeGreaterThan(frame.trace.at(-1)!.x);
     expect(frame.events.at(-1)).toEqual({
       type: 'stroke-move',
@@ -110,7 +113,11 @@ describe('GestureRecognizer', () => {
 
     const elapsed = finishedAt! - lastMovementAt;
     expect(elapsed).toBeGreaterThanOrEqual(550);
-    expect(elapsed).toBeLessThan(550 + frameDuration + 0.001);
+    // The trace's 3-sample moving average still carries momentum from the
+    // movement just before the hold, so the stillness origin keeps resetting
+    // for a couple of extra frames until the window "catches up" — allow
+    // that settling margin on top of the usual one-frame tolerance.
+    expect(elapsed).toBeLessThan(550 + frameDuration * 4 + 0.001);
   });
 
   it('resets stationary confirmation when drawing resumes', () => {
@@ -184,7 +191,14 @@ describe('GestureRecognizer', () => {
       false,
     );
 
-    const rearmed = recognizer.update(hand('point', 0.14), timestamp + 32, {
+    // A single-frame jump gets damped by the trace's moving average, same as
+    // any real fingertip motion — sustain the move over a couple of frames,
+    // like an actual hand pulling away, so it clears the rearm distance.
+    recognizer.update(hand('point', 0.14), timestamp + 32, {
+      width: 1_000,
+      height: 1_000,
+    });
+    const rearmed = recognizer.update(hand('point', 0.14), timestamp + 48, {
       width: 1_000,
       height: 1_000,
     });
@@ -368,11 +382,14 @@ describe('GestureRecognizer', () => {
     const smallViewport = beginDrawing();
     const largeViewport = beginDrawing();
 
-    const smallFrame = smallViewport.update(hand('point', 0.003), 484, {
+    // The trace's moving average halves a single fresh sample's contribution
+    // (the window still holds the drawing's start point), so the offset here
+    // is picked to still clear the large viewport's 2px threshold once halved.
+    const smallFrame = smallViewport.update(hand('point', 0.006), 484, {
       width: 500,
       height: 500,
     });
-    const largeFrame = largeViewport.update(hand('point', 0.003), 484, {
+    const largeFrame = largeViewport.update(hand('point', 0.006), 484, {
       width: 1_000,
       height: 1_000,
     });

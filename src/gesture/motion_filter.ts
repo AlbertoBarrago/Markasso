@@ -36,6 +36,32 @@ export class PointOneEuroFilter {
   }
 }
 
+const DRAWING_TRACE_WINDOW = 3;
+
+/**
+ * Small fixed-window moving average for the live freehand trace. Much
+ * lighter than PointOneEuroFilter's cutoff-based smoothing (which was
+ * deliberately dropped from drawing — see "fix: remove gesture drawing lag")
+ * — it only tempers single-frame landmark jitter over 2-3 samples, so it
+ * doesn't reintroduce perceptible lag while still straightening the stroke.
+ */
+export class TraceSmoothingFilter {
+  private readonly samples: GesturePoint[] = [];
+
+  filter(point: GesturePoint): GesturePoint {
+    this.samples.push(point);
+    if (this.samples.length > DRAWING_TRACE_WINDOW) this.samples.shift();
+    const n = this.samples.length;
+    const x = this.samples.reduce((sum, sample) => sum + sample.x, 0) / n;
+    const y = this.samples.reduce((sum, sample) => sum + sample.y, 0) / n;
+    return { x, y, ...(point.z !== undefined && { z: point.z }) };
+  }
+
+  reset(): void {
+    this.samples.length = 0;
+  }
+}
+
 const DEFAULT_PREDICTION_HORIZON_MS = 40;
 const DEFAULT_MAX_PREDICTION_PX = 40;
 const PREDICTION_STALE_AFTER_MS = 80;
