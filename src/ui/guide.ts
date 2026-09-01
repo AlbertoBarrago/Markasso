@@ -48,12 +48,47 @@ export function initGuide(appEl: HTMLElement): GuideHandle {
       el.id = `guide-${el.id}`;
     });
 
+    const navEl = modalEl.querySelector<HTMLElement>('.guide-nav')!;
+    const contentEl = modalEl.querySelector<HTMLElement>('.guide-content')!;
+
+    // Scroll-spy: highlight whichever section's heading is currently at the
+    // top of the visible content, so the sidebar tracks reading position.
+    const navLinks = new Map<string, HTMLAnchorElement>();
+    navEl
+      .querySelectorAll<HTMLAnchorElement>('a[data-guide-nav]')
+      .forEach((a) => {
+        navLinks.set(a.dataset.guideNav!, a);
+      });
+    let activeLink: HTMLAnchorElement | null = null;
+    const sectionObserver = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((entry) => entry.isIntersecting);
+        if (visible.length === 0) return;
+        const topmost = visible.reduce((a, b) =>
+          a.boundingClientRect.top <= b.boundingClientRect.top ? a : b,
+        );
+        const link =
+          navLinks.get(topmost.target.id.replace(/^guide-/, '')) ?? null;
+        if (link === activeLink) return;
+        activeLink?.classList.remove('active');
+        activeLink = link;
+        activeLink?.classList.add('active');
+      },
+      { root: contentEl, rootMargin: '0px 0px -70% 0px', threshold: 0 },
+    );
+    contentEl
+      .querySelectorAll<HTMLHeadingElement>('h2[id]')
+      .forEach((heading) => {
+        sectionObserver.observe(heading);
+      });
+
     const close = (): void => {
       if (!modalEl) return;
       const el = modalEl;
       el.classList.add('guide-out');
       el.addEventListener('animationend', () => el.remove(), { once: true });
       modalEl = null;
+      sectionObserver.disconnect();
       document.removeEventListener('keydown', onKey);
     };
 
@@ -72,8 +107,6 @@ export function initGuide(appEl: HTMLElement): GuideHandle {
     });
     document.addEventListener('keydown', onKey);
 
-    const navEl = modalEl.querySelector<HTMLElement>('.guide-nav')!;
-    const contentEl = modalEl.querySelector<HTMLElement>('.guide-content')!;
     navEl.addEventListener('click', (e) => {
       const link = (e.target as HTMLElement).closest<HTMLAnchorElement>(
         'a[data-guide-nav]',
