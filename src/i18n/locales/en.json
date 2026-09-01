@@ -83,6 +83,7 @@
   "shareLink": "Share",
   "shareLinkCopied": "Link copied!",
   "shareGoLive": "Share live session",
+  "liveName": "Your name",
   "shareLiveCopied": "Live link copied!",
   "livePeers": "Live · {{count}}",
   "shareCopyLink": "Copy link",

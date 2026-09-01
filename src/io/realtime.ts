@@ -54,6 +54,24 @@ interface PresenceMsg {
 type ServerMsg = InitMsg | ApplyMsg | PresenceMsg | CursorMsg;
 
 const LIVE_PARAM = 'live';
+const NAME_KEY = 'markasso-live-name';
+
+export function getStoredName(): string {
+  try {
+    const name = localStorage.getItem(NAME_KEY);
+    return name?.trim() ? name.trim() : '';
+  } catch {
+    return '';
+  }
+}
+
+export function setStoredName(name: string): void {
+  try {
+    localStorage.setItem(NAME_KEY, name.trim());
+  } catch {
+    /* ignore quota/private mode */
+  }
+}
 
 export function getLiveRoomId(): string | null {
   const param = new URLSearchParams(location.search).get(LIVE_PARAM);
@@ -106,7 +124,7 @@ export function joinLiveSession(
   const seedElements = opts.seedElements ?? [];
   const self: PeerInfo = {
     id: '',
-    name: opts.name ?? randomName(),
+    name: opts.name ?? (getStoredName() || randomName()),
     color: opts.color ?? randomColor(),
   };
   let ready = false;

@@ -33,6 +33,10 @@ interface PeerInfo {
 const MAX_LOG_LENGTH = 5000;
 const LOG_KEY = 'commands';
 const ROOM_ID_RE = /^[a-zA-Z0-9_-]{3,64}$/;
+const MAX_PEERS = 20;
+const CMD_WINDOW_MS = 5000;
+const MAX_CMD_PER_WINDOW = 200;
+const MAX_MSG_BYTES = 512 * 1024;
 
 /** A command as serialized over the wire. Kept structural so the Worker does
  *  not need to type-check browser-dependent element/app_state modules. */
@@ -52,6 +56,8 @@ export class SessionRoom {
   private readonly commands: WireCommand[] = [];
   private readonly sockets = new Map<WebSocket, string>(); // ws -> peerId
   private readonly peers = new Map<string, Omit<PeerInfo, 'id'>>();
+  private readonly cmdCounts = new Map<string, number>();
+  private cmdWindowStart = Date.now();
   private loaded = false;
   private persistTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -76,6 +82,13 @@ export class SessionRoom {
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
     server.accept();
 
+    // Reject peers beyond the room's capacity.
+    if (this.sockets.size >= MAX_PEERS) {
+      server.send(JSON.stringify({ type: 'error', error: 'room full' }));
+      server.close(1013, 'Room full');
+      return new Response(null, { status: 101, webSocket: client });
+    }
+
     const peerId = crypto.randomUUID();
     this.sockets.set(server, peerId);
     this.peers.set(peerId, { name: 'Guest', color: '#a78bfa' });
@@ -91,6 +104,7 @@ export class SessionRoom {
     this.broadcast({ type: 'presence', peers: this.peerList() });
 
     server.addEventListener('message', (event) => {
+      if (String(event.data).length > MAX_MSG_BYTES) return;
       let msg: unknown;
       try {
         msg = JSON.parse(String(event.data));
@@ -116,6 +130,7 @@ export class SessionRoom {
     if (m.type === 'command' && m.command) {
       const command = m.command as WireCommand | { type: 'UNDO' | 'REDO' };
       if (!isSessionCommand(command)) return;
+      if (!this.allowCommand(peerId)) return;
       this.broadcast(
         { type: 'apply', command, from: peerId },
         /* except */ peerId,
@@ -169,7 +184,20 @@ export class SessionRoom {
   private dropPeer(socket: WebSocket, peerId: string): void {
     this.sockets.delete(socket);
     this.peers.delete(peerId);
+    this.cmdCounts.delete(peerId);
     this.broadcast({ type: 'presence', peers: this.peerList() });
+  }
+
+  private allowCommand(peerId: string): boolean {
+    const now = Date.now();
+    if (now - this.cmdWindowStart >= CMD_WINDOW_MS) {
+      this.cmdWindowStart = now;
+      this.cmdCounts.clear();
+    }
+    const count = (this.cmdCounts.get(peerId) ?? 0) + 1;
+    if (count > MAX_CMD_PER_WINDOW) return false;
+    this.cmdCounts.set(peerId, count);
+    return true;
   }
 
   private peerList(): PeerInfo[] {

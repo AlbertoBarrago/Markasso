@@ -5,7 +5,12 @@ import { t } from '../i18n';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { importMermaidText } from '../io/mermaid';
 import { PRESETS } from '../io/presets';
-import { buildLiveRoomUrl, joinLiveSession } from '../io/realtime';
+import {
+  buildLiveRoomUrl,
+  getStoredName,
+  joinLiveSession,
+  setStoredName,
+} from '../io/realtime';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 
@@ -584,6 +589,23 @@ export function initToolbar(container: HTMLElement, history: History): void {
   );
 
   // ── Live session (real-time collaboration) ──
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.maxLength = 24;
+  nameInput.placeholder = t('liveName');
+  nameInput.setAttribute('aria-label', t('liveName'));
+  nameInput.value = getStoredName();
+  nameInput.style.cssText = [
+    'background:rgba(255,255,255,0.06)',
+    'border:1px solid rgba(255,255,255,0.15)',
+    'border-radius:6px',
+    'color:#e7e7f2',
+    'padding:6px 8px',
+    'font-size:13px',
+    'font-family:inherit',
+    'outline:none',
+  ].join(';');
+  nameInput.addEventListener('input', () => setStoredName(nameInput.value));
   const divider = document.createElement('div');
   divider.style.cssText =
     'height:1px;background:rgba(255,255,255,0.1);margin:3px 4px;';
@@ -593,9 +615,11 @@ export function initToolbar(container: HTMLElement, history: History): void {
     const url = buildLiveRoomUrl(roomId);
     const ok = copyToClipboard(url);
     showShareToast(ok, url, t('shareLiveCopied'));
+    const name = nameInput.value.trim() || 'You';
+    setStoredName(name);
     joinLiveSession(history, {
       roomId,
-      name: 'You',
+      name,
       seedElements: history.present.elements,
       onPeers: (peers) => {
         livePeers = peers.length;
@@ -636,6 +660,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
     );
   });
   sharePanel.append(
+    nameInput,
     shareGoLiveItem,
     divider,
     shareCopyLinkItem,
