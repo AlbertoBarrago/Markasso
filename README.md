@@ -138,6 +138,18 @@ Curves are made by dragging the midpoint handle of a line after placement — th
 | **Keyboard navigation** | Full Tab-based keyboard navigation through all panels |
 | **Version display** | Current version shown inline in the menu |
 
+### Realtime Collaboration
+
+| Feature | Description |
+|---|---|
+| **Live sessions** | "Share live session" creates a `?live=roomId` link; anyone who opens it joins the same infinite canvas and edits in real time over WebSocket |
+| **Instant sync** | Commands are relayed through a Cloudflare Durable Object in server order, so every peer converges to the same scene (LWW on concurrent same-element edits) |
+| **Seeding** | Sharing a session publishes your current board into the room, so invitees arrive with it already populated |
+| **Remote cursors** | Other participants' cursors + name tags render live on the canvas; your own name is remembered after the first set |
+| **Shared undo** | `Ctrl+Z`/`Ctrl+Y` propagate to all collaborators in global order (each peer keeps its own viewport/selection/tool) |
+| **Per-peer views** | Pan, zoom, selection and tool choice stay local — everyone pans and selects independently |
+| **Room safety** | Max 20 peers/room, per-peer command rate limit, and a max message-size guard to protect the room |
+
 ### Persistence & Export
 
 | Feature | Description |
@@ -289,6 +301,25 @@ render(ctx, scene, canvas)        ← called every requestAnimationFrame
 - **Ephemeral commands** (pan, zoom, set-viewport, select, tool change) are excluded from the undo stack.
 - **`APPLY_STYLE`** is the single undoable command that updates both `appState` defaults and all currently selected elements in one atomic operation.
 
+### Realtime Layer
+
+On top of the local store, Markasso adds live collaboration via a Cloudflare Worker **Durable Object** (`SessionRoom` in `src/worker.ts`).
+
+```
+Client A ──┐
+Client B ──┼── WebSocket /session/ws?room=<id> ──▶ SessionRoom DO
+Client C ──┘                                           │ serializes commands
+                                                       │ appends to room log (DO storage)
+                                                       ▼
+                                  broadcasts apply to all peers in server order
+```
+
+- The DO is the **single serialization point**: it appends each persistent command to the room's log and relays it to peers in arrival order, so replaying the deterministic `reducer` in the same order converges every client.
+- **Ephemeral** view commands (pan/zoom/select/tool) and **cursors** are relayed live but never logged.
+- **Seeding** publishes the creator's elements as `CREATE` commands into a fresh room (echo-suppressed by the server).
+- Undo/redo are shared (model B); `History.applyRemote` applies network commands without touching the local undo stack or echoing them back.
+- `realtime.ts` wires `History.onCommand` → WebSocket; `presence.ts` + `canvas_view.ts` render remote cursors. Limits: 20 peers/room, per-peer command rate limit, max message size.
+
 ---
 
 ## Project Structure
@@ -305,12 +336,15 @@ src/
 │   └── commands.ts         # Full Command discriminated union
 ├── engine/
 │   ├── reducer.ts          # Pure (Scene, Command) → Scene
-│   └── history.ts          # Undo/redo stack + pub/sub
+│   ├── history.ts          # Undo/redo stack + pub/sub
+│   └── ephemeral.ts        # Ephemeral-command classifier (shared client + Worker)
 ├── io/
 │   ├── markasso.ts         # .markasso save / load (exportMarkasso, importMarkasso)
 │   ├── mermaid.ts          # Mermaid parser + layout engine → Markasso elements
 │   ├── session.ts          # localStorage auto-save / restore + quota warning toast
-│   └── share.ts            # URL-hash scene encoding / decoding for share links
+│   ├── share.ts            # URL-hash scene encoding / decoding for share links
+│   ├── realtime.ts         # Live-session WebSocket client (join, broadcast, seeding, remote undo)
+│   └── presence.ts         # Remote cursor store + throttled local cursor sender
 ├── rendering/
 │   ├── renderer.ts         # rAF render loop entry point
 │   ├── draw_element.ts     # Per-type draw dispatch (with rotation + shape labels)
@@ -360,6 +394,7 @@ src/
 | Build | Vite | Zero-config, instant HMR, single-file output |
 | Rendering | Canvas 2D API | Direct pixel control without virtual DOM overhead |
 | Testing | Vitest | Runs in Node — no browser needed for reducer/viewport math |
+| Realtime | Cloudflare Workers + Durable Objects | Free WebSocket hosting; one DO per room serializes commands; no extra npm deps |
 | Dependencies | None | `crypto.randomUUID()`, `requestAnimationFrame`, `ResizeObserver` — all native |
 
 ---

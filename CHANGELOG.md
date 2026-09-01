@@ -4,6 +4,21 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.8.0] — 2026-09-01
+
+### Added
+- **Real-time collaboration** — share a live editing session via a `?live=roomId` link; multiple people draw on the same infinite canvas over WebSocket, powered by a Cloudflare Durable Object. Each room gets its own `SessionRoom` DO that serializes commands into the room's log (persisted in DO storage) and relays them to peers in server order.
+- **Seeding** — "Share live session" publishes your current board into a new room, so invitees open it already populated.
+- **Remote cursors + presence** — other participants' cursors and name tags are rendered on the canvas (screen-space, drawn in the rAF loop); name is set once and remembered in `localStorage`.
+- **Convergent undo/redo** — `UNDO` / `REDO` are shared session commands relayed in global order; ephemeral view commands (pan/zoom/selection/tool) stay local per peer.
+- **Room limits** — max 20 peers per room, a per-peer command rate limit, and a max message size guard on the Worker.
+
+### Changed
+- **Undo model** moved from per-client (A) to shared/convergent (B): undo now propagates across collaborators in server order.
+- `History` gained `applyRemote`, `resetForLiveReplay`, and `setOnCommand`; ephemeral-command classification moved to a shared `engine/ephemeral.ts` usable both client- and server-side.
+
+---
+
 ## [1.7.4] — 2026-09-01
 
 ### Fixed
