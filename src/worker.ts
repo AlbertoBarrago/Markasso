@@ -1,3 +1,4 @@
+import { isSessionCommand } from './engine/ephemeral';
 import { validateElements } from './io/element_validation';
 import {
   buildIssueBody,
@@ -19,6 +20,158 @@ const REPORT_QUOTA_WINDOW_SECONDS = 600;
 function generateId(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(ID_LENGTH));
   return Array.from(bytes, (byte) => ID_CHARS[byte % ID_CHARS.length]).join('');
+}
+
+// ── Realtime sessions (Durable Object) ───────────────────────────────────────
+
+interface PeerInfo {
+  id: string;
+  name: string;
+  color: string;
+}
+
+const MAX_LOG_LENGTH = 5000;
+const LOG_KEY = 'commands';
+const ROOM_ID_RE = /^[a-zA-Z0-9_-]{3,64}$/;
+
+/** A command as serialized over the wire. Kept structural so the Worker does
+ *  not need to type-check browser-dependent element/app_state modules. */
+type WireCommand = { type: string; [k: string]: unknown };
+
+///**
+/**
+ * One live editing room. A single serialization point: it appends commands to
+ * the room's log and broadcasts each to the other connected peers. Peers
+ * converge by replaying the same deterministic reducer in server order.
+ *
+ * No server-side reducer: the log is relayed as-is and applied identically on
+ * every client (LWW for concurrent edits to the same element).
+ */
+export class SessionRoom {
+  private readonly state: DurableObjectState;
+  private readonly commands: WireCommand[] = [];
+  private readonly sockets = new Map<WebSocket, string>(); // ws -> peerId
+  private readonly peers = new Map<string, Omit<PeerInfo, 'id'>>();
+  private loaded = false;
+  private persistTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(state: DurableObjectState, _env: Env) {
+    this.state = state;
+  }
+
+  private async initialize(): Promise<void> {
+    if (this.loaded) return;
+    this.loaded = true;
+    const stored = await this.state.storage.get<WireCommand[]>(LOG_KEY);
+    if (Array.isArray(stored)) this.commands.push(...stored);
+  }
+
+  async fetch(request: Request): Promise<Response> {
+    await this.initialize();
+    if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') {
+      return new Response('Expected a WebSocket upgrade', { status: 426 });
+    }
+
+    const pair = new WebSocketPair();
+    const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
+    server.accept();
+
+    const peerId = crypto.randomUUID();
+    this.sockets.set(server, peerId);
+    this.peers.set(peerId, { name: 'Guest', color: '#a78bfa' });
+
+    server.send(
+      JSON.stringify({
+        type: 'init',
+        self: peerId,
+        commands: this.commands,
+        peers: this.peerList(),
+      }),
+    );
+    this.broadcast({ type: 'presence', peers: this.peerList() });
+
+    server.addEventListener('message', (event) => {
+      let msg: unknown;
+      try {
+        msg = JSON.parse(String(event.data));
+      } catch {
+        return;
+      }
+      this.handleMessage(peerId, msg);
+    });
+    server.addEventListener('close', () => {
+      this.dropPeer(server, peerId);
+    });
+    server.addEventListener('error', () => {
+      this.dropPeer(server, peerId);
+    });
+
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  private handleMessage(peerId: string, msg: unknown): void {
+    if (!msg || typeof msg !== 'object') return;
+    const m = msg as Record<string, unknown>;
+
+    if (m.type === 'command' && m.command) {
+      const command = m.command as WireCommand | { type: 'UNDO' | 'REDO' };
+      if (!isSessionCommand(command)) return;
+      if (this.commands.length >= MAX_LOG_LENGTH) this.commands.shift();
+      this.commands.push(command);
+      this.schedulePersist();
+      this.broadcast(
+        { type: 'apply', command, from: peerId },
+        /* except */ peerId,
+      );
+      return;
+    }
+
+    if (m.type === 'presence') {
+      const peer = this.peers.get(peerId);
+      if (!peer) return;
+      if (
+        typeof m.name === 'string' &&
+        m.name.length > 0 &&
+        m.name.length <= 24
+      ) {
+        peer.name = m.name;
+      }
+      if (typeof m.color === 'string' && /^#[0-9a-f]{6}$/i.test(m.color)) {
+        peer.color = m.color;
+      }
+      this.broadcast({ type: 'presence', peers: this.peerList() });
+    }
+  }
+
+  private dropPeer(socket: WebSocket, peerId: string): void {
+    this.sockets.delete(socket);
+    this.peers.delete(peerId);
+    this.broadcast({ type: 'presence', peers: this.peerList() });
+  }
+
+  private peerList(): PeerInfo[] {
+    return [...this.peers.entries()].map(([id, p]) => ({ id, ...p }));
+  }
+
+  private broadcast(msg: unknown, exceptPeerId?: string): void {
+    const data = JSON.stringify(msg);
+    for (const [socket, peerId] of this.sockets) {
+      if (peerId === exceptPeerId) continue;
+      try {
+        socket.send(data);
+      } catch {
+        // socket may be closing
+      }
+    }
+  }
+
+  private schedulePersist(): void {
+    if (this.persistTimer) return;
+    this.persistTimer = setTimeout(async () => {
+      this.persistTimer = null;
+      await this.state.storage.put(LOG_KEY, this.commands.slice());
+    }, 800);
+  }
 }
 
 function isAllowedOrigin(request: Request, url: URL): boolean {
@@ -242,6 +395,15 @@ const worker = {
       headers.set('Content-Type', 'application/json');
       headers.set('Cache-Control', 'private, max-age=60');
       return new Response(data, { headers });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/session/ws') {
+      const room = url.searchParams.get('room');
+      if (!room || !ROOM_ID_RE.test(room)) {
+        return jsonResponse(request, url, { error: 'Invalid room' }, 400);
+      }
+      const id = env.SESSION_ROOMS.idFromName(room);
+      return env.SESSION_ROOMS.get(id).fetch(request);
     }
 
     return env.ASSETS.fetch(request);

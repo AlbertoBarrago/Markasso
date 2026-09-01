@@ -1,26 +1,9 @@
 import type { Command } from '../commands/commands';
 import { createScene, type Scene } from '../core/scene';
+import { isEphemeralCommand } from './ephemeral';
 import { reducer } from './reducer';
 
 type Listener = (scene: Scene) => void;
-
-// Pure view changes — do not push to undo/redo stack
-const EPHEMERAL_COMMANDS = new Set<Command['type']>([
-  'PAN_VIEWPORT',
-  'ZOOM_VIEWPORT',
-  'SET_VIEWPORT',
-  'SELECT_ELEMENTS',
-  'CLEAR_SELECTION',
-  'SET_TOOL',
-  'SET_STROKE_COLOR', // appState default only, no element changes
-  'SET_FILL_COLOR',
-  'SET_STROKE_WIDTH',
-  'TOGGLE_GRID',
-  'SET_GRID_TYPE', // view setting only
-  'SET_TOOL_LOCK',
-  'CLEAR_JUST_CREATED_TEXT',
-  'SET_JUST_CREATED_TEXT',
-]);
 
 export class History {
   private past: Scene[] = [];
@@ -78,11 +61,44 @@ export class History {
     this.notify();
   }
 
+  /** Set/replace the outbound hook used to forward local commands (e.g. to a
+   *  realtime session). Undo/redo notifications and ephemeral filtering are left
+   *  to the consumer. */
+  setOnCommand(
+    cb?: (command: Command | { type: 'UNDO' | 'REDO' }) => void,
+  ): void {
+    this.onCommand = cb;
+  }
+
+  /** Apply a command received from the network. Runs the same deterministic
+   *  reducer for convergence but does NOT touch the undo/redo stack (other
+   *  people's actions must not pollute your undo history) and does NOT
+   *  re-broadcast it via onCommand (avoids echo loops). */
+  applyRemote(command: Command): void {
+    const next = reducer(this._present, command);
+    if (next === this._present) return;
+    this._present = next;
+    this.notify();
+  }
+
+  /** Reset the scene to a fresh board, then replay a list of commands (used when
+   *  joining a live room: the room's log is authoritative). Does not touch undo. */
+  resetForLiveReplay(commands: readonly Command[], keepViewport = true): void {
+    const viewport = this._present.viewport;
+    this.past = [];
+    this.future = [];
+    this._dragging = false;
+    this.dragHasUndoableChanges = false;
+    this._present = createScene();
+    if (keepViewport) this._present = { ...this._present, viewport };
+    for (const command of commands) this.applyRemote(command);
+  }
+
   dispatch(command: Command): void {
     const next = reducer(this._present, command);
     if (next === this._present) return;
 
-    const isEphemeral = EPHEMERAL_COMMANDS.has(command.type);
+    const isEphemeral = isEphemeralCommand(command.type);
     if (this._dragging && !isEphemeral) {
       this.dragHasUndoableChanges = true;
     } else if (!this._dragging && !isEphemeral) {

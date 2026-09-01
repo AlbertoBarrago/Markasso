@@ -3,6 +3,7 @@ import { createScene } from './src/core/scene';
 import { fitToElements } from './src/core/viewport';
 import { History } from './src/engine/history';
 import { initSession, loadSession } from './src/io/session';
+import { getLiveRoomId, joinLiveSession } from './src/io/realtime';
 import { decodeScene, isShareHash } from './src/io/share';
 import { initCanvasView } from './src/ui/canvas_view';
 import { initCommandPalette } from './src/ui/command_palette';
@@ -121,6 +122,11 @@ async function bootstrap(): Promise<void> {
   initHintBar(appEl, hist);
   initSession(hist);
   if (!session && !sharedElements) initWelcome(appEl, hist);
+
+  // Join a live session if the URL points to one (…?live=roomId)
+  if (getLiveRoomId()) {
+    joinLiveSession(hist);
+  }
 }
 
 bootstrap();

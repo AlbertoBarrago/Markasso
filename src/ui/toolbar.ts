@@ -5,6 +5,7 @@ import { t } from '../i18n';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { importMermaidText } from '../io/mermaid';
 import { PRESETS } from '../io/presets';
+import { buildLiveRoomUrl, joinLiveSession } from '../io/realtime';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 
@@ -581,14 +582,34 @@ export function initToolbar(container: HTMLElement, history: History): void {
       showShareToast(ok, url);
     },
   );
-  const shareBlueskyItem = menuItem(t('shareBluesky'), IC_BLUESKY, async () => {
-    const url = await buildShareUrl(history.present.elements);
-    window.open(
-      `https://bsky.app/intent/compose?text=${encodeURIComponent(`Check out my Markasso drawing: ${url}`)}`,
-      '_blank',
-      'noopener',
-    );
+
+  // ── Live session (real-time collaboration) ──
+  const divider = document.createElement('div');
+  divider.style.cssText =
+    'height:1px;background:rgba(255,255,255,0.1);margin:3px 4px;';
+  let livePeers = 0;
+  const shareGoLiveItem = menuItem(t('shareGoLive'), IC_SHARE, () => {
+    const roomId = generateRoomId();
+    const url = buildLiveRoomUrl(roomId);
+    const ok = copyToClipboard(url);
+    showShareToast(ok, url, t('shareLiveCopied'));
+    joinLiveSession(history, {
+      roomId,
+      name: 'You',
+      onPeers: (peers) => {
+        livePeers = peers.length;
+        shareBtn.title =
+          livePeers > 0
+            ? t('livePeers').replace('{{count}}', String(livePeers))
+            : t('shareLink');
+      },
+      onStatus: (connected) => {
+        shareGoLiveItem.style.opacity = connected ? '0.6' : '1';
+        if (!connected) shareBtn.title = t('shareLink');
+      },
+    });
   });
+
   const shareXItem = menuItem(t('shareX'), IC_X, async () => {
     const url = await buildShareUrl(history.present.elements);
     window.open(
@@ -605,7 +626,17 @@ export function initToolbar(container: HTMLElement, history: History): void {
       'noopener',
     );
   });
+  const shareBlueskyItem = menuItem(t('shareBluesky'), IC_BLUESKY, async () => {
+    const url = await buildShareUrl(history.present.elements);
+    window.open(
+      `https://bsky.app/intent/compose?text=${encodeURIComponent(`Check out my Markasso drawing: ${url}`)}`,
+      '_blank',
+      'noopener',
+    );
+  });
   sharePanel.append(
+    shareGoLiveItem,
+    divider,
     shareCopyLinkItem,
     shareXItem,
     shareRedditItem,
@@ -903,6 +934,13 @@ function mkBtn(icon: string, title: string): HTMLButtonElement {
   b.title = title;
   b.innerHTML = icon;
   return b;
+}
+
+function generateRoomId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  const chars =
+    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  return Array.from(bytes, (byte) => chars[byte % chars.length] ?? '').join('');
 }
 
 function menuItem(

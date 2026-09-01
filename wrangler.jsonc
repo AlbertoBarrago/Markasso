@@ -7,6 +7,20 @@
     "binding": "ASSETS",
     "not_found_handling": "single-page-application"
   },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "SESSION_ROOMS",
+        "class_name": "SessionRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["SessionRoom"]
+    }
+  ],
   "kv_namespaces": [
     {
       "binding": "SHARE_LINKS",
