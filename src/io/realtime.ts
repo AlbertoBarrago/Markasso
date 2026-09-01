@@ -116,16 +116,17 @@ function randomName(): string {
  * `history.applyRemote` (no undo pollution, no echo). Undo/redo are per-client
  * (model A) and never shared.
  */
+const RECONNECT_BASE_MS = 1000;
+const RECONNECT_MAX_MS = 10000;
+
 export function joinLiveSession(
   history: History,
   opts: LiveOptions = {},
 ): void {
-  const roomId = opts.roomId ?? getLiveRoomId();
-  if (!roomId) return;
+  const requestedRoomId = opts.roomId ?? getLiveRoomId();
+  if (!requestedRoomId) return;
+  const roomId: string = requestedRoomId;
 
-  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const url = `${proto}//${location.host}/session/ws?room=${encodeURIComponent(roomId)}`;
-  const ws = new WebSocket(url);
   const peers = new Map<string, PeerInfo>();
   const isSeeder = opts.seedElements !== undefined;
   const seedElements = opts.seedElements ?? [];
@@ -134,92 +135,27 @@ export function joinLiveSession(
     name: opts.name ?? (getStoredName() || randomName()),
     color: opts.color ?? randomColor(),
   };
+  let ws: WebSocket | null = null;
   let ready = false;
   let applyingRemote = false;
+  let reconnectAttempt = 0;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function send(msg: unknown): void {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+  }
 
   // When connected, our own pointer moves broadcast through this sender.
+  // Registered once: it survives reconnects since `send` always targets the
+  // current socket and is a no-op while disconnected.
   setLocalCursorSender((cursor) => {
     send({ type: 'cursor', ...cursor, name: self.name, color: self.color });
   });
-
-  function send(msg: unknown): void {
-    if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
-  }
 
   history.setOnCommand((command) => {
     if (!ready || applyingRemote || !isSessionCommand(command)) return;
     send({ type: 'command', command });
   });
-
-  ws.onopen = () => {
-    opts.onStatus?.(true);
-    send({ type: 'presence', name: self.name, color: self.color });
-  };
-
-  ws.onmessage = (event: MessageEvent) => {
-    let msg: ServerMsg;
-    try {
-      msg = JSON.parse(String(event.data)) as ServerMsg;
-    } catch {
-      return;
-    }
-    if (msg.type === 'init') {
-      ready = true;
-      self.id = msg.self;
-
-      if (msg.commands.length > 0) {
-        // Room already has content: it is authoritative — adopt it.
-        history.resetForLiveReplay(msg.commands);
-      } else if (!isSeeder || seedElements.length === 0) {
-        // Fresh/empty room and we have nothing to seed: start clean.
-        history.resetForLiveReplay([]);
-      }
-
-      // Seeding: a brand-new room created from local content. Publish the
-      // current elements so later joiners see them. Echo is suppressed by the
-      // server, so the creator keeps the view they already had.
-      if (isSeeder && msg.commands.length === 0) {
-        for (const element of seedElements) {
-          send({
-            type: 'command',
-            command: {
-              type: 'CREATE_ELEMENT',
-              element,
-              select: false,
-            },
-          });
-        }
-      }
-
-      applyPeers(msg.peers);
-    } else if (msg.type === 'apply') {
-      applyRemoteOrUndo(msg.command);
-    } else if (msg.type === 'cursor') {
-      upsertRemoteCursor(msg.from, {
-        x: msg.x,
-        y: msg.y,
-        color: msg.color,
-        name: msg.name,
-      });
-    } else if (msg.type === 'presence') {
-      applyPeers(msg.peers);
-      syncRemotePeers(msg.peers);
-    }
-  };
-
-  ws.onclose = () => {
-    ready = false;
-    setLocalCursorSender(null);
-    clearCursors();
-    opts.onStatus?.(false);
-  };
-  ws.onerror = () => {
-    try {
-      ws.close();
-    } catch {
-      /* noop */
-    }
-  };
 
   function applyPeers(list: PeerInfo[]): void {
     peers.clear();
@@ -247,4 +183,100 @@ export function joinLiveSession(
     }
     history.applyRemote(command);
   }
+
+  function scheduleReconnect(): void {
+    if (reconnectTimer) return;
+    const delay = Math.min(
+      RECONNECT_BASE_MS * 2 ** reconnectAttempt,
+      RECONNECT_MAX_MS,
+    );
+    reconnectAttempt++;
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      connect();
+    }, delay);
+  }
+
+  function connect(): void {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const url = `${proto}//${location.host}/session/ws?room=${encodeURIComponent(roomId)}`;
+    const socket = new WebSocket(url);
+    ws = socket;
+
+    socket.onopen = () => {
+      reconnectAttempt = 0;
+      opts.onStatus?.(true);
+      send({ type: 'presence', name: self.name, color: self.color });
+    };
+
+    socket.onmessage = (event: MessageEvent) => {
+      let msg: ServerMsg;
+      try {
+        msg = JSON.parse(String(event.data)) as ServerMsg;
+      } catch {
+        return;
+      }
+      if (msg.type === 'init') {
+        ready = true;
+        self.id = msg.self;
+
+        if (msg.commands.length > 0) {
+          // Room already has content: it is authoritative — adopt it. On a
+          // reconnect this also re-syncs anything missed while offline, at
+          // the cost of any local edit made purely during the outage (never
+          // reached the room log, so it isn't replayed).
+          history.resetForLiveReplay(msg.commands);
+        } else if (!isSeeder || seedElements.length === 0) {
+          // Fresh/empty room and we have nothing to seed: start clean.
+          history.resetForLiveReplay([]);
+        }
+
+        // Seeding: a brand-new room created from local content. Publish the
+        // current elements so later joiners see them. Echo is suppressed by the
+        // server, so the creator keeps the view they already had.
+        if (isSeeder && msg.commands.length === 0) {
+          for (const element of seedElements) {
+            send({
+              type: 'command',
+              command: {
+                type: 'CREATE_ELEMENT',
+                element,
+                select: false,
+              },
+            });
+          }
+        }
+
+        applyPeers(msg.peers);
+      } else if (msg.type === 'apply') {
+        applyRemoteOrUndo(msg.command);
+      } else if (msg.type === 'cursor') {
+        upsertRemoteCursor(msg.from, {
+          x: msg.x,
+          y: msg.y,
+          color: msg.color,
+          name: msg.name,
+        });
+      } else if (msg.type === 'presence') {
+        applyPeers(msg.peers);
+        syncRemotePeers(msg.peers);
+      }
+    };
+
+    socket.onclose = () => {
+      ready = false;
+      clearCursors();
+      opts.onStatus?.(false);
+      scheduleReconnect();
+    };
+    socket.onerror = () => {
+      try {
+        socket.close();
+      } catch {
+        /* noop */
+      }
+    };
+  }
+
+  connect();
 }

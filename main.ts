@@ -16,6 +16,7 @@ import { initMinimap } from './src/ui/minimap';
 import { initMobileActionBar } from './src/ui/mobile_action_bar';
 import { initReportForm } from './src/ui/report_form';
 import { applySettings, initSettings, loadSettings } from './src/ui/settings';
+import { showLiveStatusToast } from './src/ui/share_actions';
 import { initShortcuts } from './src/ui/shortcuts';
 import { initShortcutsHelp } from './src/ui/shortcuts_help';
 import { initStarCta } from './src/ui/star_cta';
@@ -125,7 +126,7 @@ async function bootstrap(): Promise<void> {
 
   // Join a live session if the URL points to one (…?live=roomId)
   if (getLiveRoomId()) {
-    joinLiveSession(hist);
+    joinLiveSession(hist, { onStatus: showLiveStatusToast });
   }
 }
 

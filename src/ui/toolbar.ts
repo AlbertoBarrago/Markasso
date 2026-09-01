@@ -14,7 +14,11 @@ import {
 } from '../io/realtime';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
-import { copyToClipboard, showShareToast } from './share_actions';
+import {
+  copyToClipboard,
+  showLiveStatusToast,
+  showShareToast,
+} from './share_actions';
 
 // ── SVG icons ──────────────────────────────────────────────────────────────────
 const IC = {
@@ -588,6 +592,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
       onStatus: (connected) => {
         shareGoLiveItem.style.opacity = connected ? '0.6' : '1';
         if (!connected) shareBtn.title = t('shareLink');
+        showLiveStatusToast(connected);
       },
     });
   });

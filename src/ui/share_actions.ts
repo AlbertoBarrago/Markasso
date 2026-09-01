@@ -51,3 +51,32 @@ export function showShareToast(
     if (e.target === toast) toast.remove();
   });
 }
+
+/** Track whether the last known state was "disconnected" so a genuine
+ *  reconnect (not the initial connect) shows a confirmation toast. */
+let wasDisconnected = false;
+
+/** Show a toast when a live session drops or comes back, so a silent
+ *  WebSocket failure (common on mobile: backgrounding, network switches)
+ *  is never invisible to the user. */
+export function showLiveStatusToast(connected: boolean): void {
+  document.getElementById('live-status-toast')?.remove();
+
+  if (!connected) {
+    wasDisconnected = true;
+    const toast = document.createElement('div');
+    toast.id = 'live-status-toast';
+    toast.className = 'share-toast share-toast--warn';
+    toast.textContent = t('liveDisconnected');
+    document.body.appendChild(toast);
+    return;
+  }
+
+  if (!wasDisconnected) return;
+  wasDisconnected = false;
+  const toast = document.createElement('div');
+  toast.className = 'share-toast share-toast--ok';
+  toast.textContent = t('liveReconnected');
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}

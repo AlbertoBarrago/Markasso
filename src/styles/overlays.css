@@ -1055,10 +1055,22 @@
   cursor: text;
 }
 
+.share-toast--warn {
+  background: rgba(26, 26, 40, 0.97);
+  border: 1px solid rgba(230, 170, 80, 0.35);
+  color: #f0c674;
+}
+
 [data-theme="light"] .share-toast--ok {
   background: #ffffff;
   border-color: rgba(30, 160, 80, 0.3);
   color: #1a7a3a;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+[data-theme="light"] .share-toast--warn {
+  background: #ffffff;
+  border-color: rgba(200, 140, 20, 0.3);
+  color: #8a5a00;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
 [data-theme="light"] .share-toast--fallback {

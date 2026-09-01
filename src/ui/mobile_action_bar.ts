@@ -16,7 +16,11 @@ import {
   saveCustomColor,
   updateCustomColorButton,
 } from './color_picker';
-import { copyToClipboard, showShareToast } from './share_actions';
+import {
+  copyToClipboard,
+  showLiveStatusToast,
+  showShareToast,
+} from './share_actions';
 
 const STROKE_PRESETS = [
   '#000000',
@@ -143,6 +147,7 @@ export function initMobileActionBar(
       onStatus: (connected) => {
         shareGoLiveBtn.style.opacity = connected ? '0.6' : '1';
         if (!connected) shareBtn.title = t('shareLink');
+        showLiveStatusToast(connected);
       },
     });
   });

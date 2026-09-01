@@ -81,6 +81,8 @@
   "liveName": "Il tuo nome",
   "shareLiveCopied": "Link live copiato!",
   "livePeers": "Live · {{count}}",
+  "liveDisconnected": "Sessione live disconnessa — riconnessione…",
+  "liveReconnected": "Sessione live riconnessa",
   "shareCopyLink": "Copia link",
   "shareBluesky": "Condividi su Bluesky",
   "shareX": "Condividi su X",
