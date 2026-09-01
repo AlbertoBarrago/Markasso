@@ -4,6 +4,16 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.7.2] — 2026-09-01
+
+### Fixed
+- **Guide panel overflow** — long sections could render past the panel's rounded bottom edge instead of scrolling inside it.
+
+### Added
+- **Guide navigation** — a sidebar lists every section with a search filter, and the active section is highlighted automatically as you scroll.
+
+---
+
 ## [1.7.1] — 2026-09-01
 
 ### Changed
