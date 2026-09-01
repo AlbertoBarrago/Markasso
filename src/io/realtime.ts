@@ -1,4 +1,5 @@
 import type { Command } from '../commands/commands';
+import type { Element } from '../elements/element';
 import { isSessionCommand } from '../engine/ephemeral';
 import type { History } from '../engine/history';
 
@@ -12,6 +13,8 @@ export interface LiveOptions {
   roomId?: string;
   name?: string;
   color?: string;
+  /** Current content to seed into a fresh room (only used when creating). */
+  seedElements?: readonly Element[];
   onPeers?: (peers: PeerInfo[]) => void;
   onStatus?: (connected: boolean) => void;
 }
@@ -82,6 +85,8 @@ export function joinLiveSession(
   const url = `${proto}//${location.host}/session/ws?room=${encodeURIComponent(roomId)}`;
   const ws = new WebSocket(url);
   const peers = new Map<string, PeerInfo>();
+  const isSeeder = opts.seedElements !== undefined;
+  const seedElements = opts.seedElements ?? [];
   const self: PeerInfo = {
     id: '',
     name: opts.name ?? randomName(),
@@ -113,7 +118,31 @@ export function joinLiveSession(
     if (msg.type === 'init') {
       ready = true;
       self.id = msg.self;
-      history.resetForLiveReplay(msg.commands);
+
+      if (msg.commands.length > 0) {
+        // Room already has content: it is authoritative — adopt it.
+        history.resetForLiveReplay(msg.commands);
+      } else if (!isSeeder || seedElements.length === 0) {
+        // Fresh/empty room and we have nothing to seed: start clean.
+        history.resetForLiveReplay([]);
+      }
+
+      // Seeding: a brand-new room created from local content. Publish the
+      // current elements so later joiners see them. Echo is suppressed by the
+      // server, so the creator keeps the view they already had.
+      if (isSeeder && msg.commands.length === 0) {
+        for (const element of seedElements) {
+          send({
+            type: 'command',
+            command: {
+              type: 'CREATE_ELEMENT',
+              element,
+              select: false,
+            },
+          });
+        }
+      }
+
       applyPeers(msg.peers);
     } else if (msg.type === 'apply') {
       history.applyRemote(msg.command);

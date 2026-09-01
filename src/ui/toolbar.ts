@@ -596,6 +596,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
     joinLiveSession(history, {
       roomId,
       name: 'You',
+      seedElements: history.present.elements,
       onPeers: (peers) => {
         livePeers = peers.length;
         shareBtn.title =
