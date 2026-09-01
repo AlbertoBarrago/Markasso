@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.7.1] — 2026-09-01
+
+### Changed
+- **Guide** — the "Guide" menu item now opens an in-app panel rendering the user manual, instead of linking out to the file on GitHub.
+
+---
+
 ## [1.7.0] — 2026-09-01
 
 ### Added
