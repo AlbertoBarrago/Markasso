@@ -4,6 +4,18 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.8.1] — 2026-09-01
+
+### Fixed
+- **Live sessions on mobile / Firefox** — clipboard copy for share/live links now reflects the real result of `navigator.clipboard.writeText` instead of always trusting the legacy `execCommand('copy')` fallback, which could silently report success on Firefox mobile without actually copying anything.
+- **Mobile share entry point** — the bottom action bar had no way to copy a share link or start a live session; added a share button with a "Go live" / "Copy link" bottom sheet.
+- **Mobile bottom-sheet CSS specificity** — the style and share bottom sheets never appeared on touch because an ID selector's `display:none` always beat the class-based rule meant to show them.
+- **Remote cursor on touch** — drawing with touch never broadcast the local cursor (only `mousemove` did), so a mobile participant's pointer was invisible to other peers even though their drawings synced.
+- **Live session resilience** — `joinLiveSession` now reconnects with capped exponential backoff on drop, and every entry point (toolbar, mobile bar, shared-link join) shows a toast on disconnect/reconnect instead of silently losing sync.
+- **Settings menu on short mobile screens** — the hamburger menu had no height cap or scroll, so entries past the visible area were unreachable; it's now capped to the available space and scrolls.
+
+---
+
 ## [1.8.0] — 2026-09-01
 
 ### Added
