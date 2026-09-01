@@ -1,10 +1,20 @@
 import { validateElements } from './io/element_validation';
+import {
+  buildIssueBody,
+  buildIssueTitle,
+  validateReport,
+} from './io/report_validation';
 
 const ID_LENGTH = 8;
 const ID_CHARS =
   'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const TTL_SECONDS = 60 * 60 * 24 * 90;
 const MAX_REQUEST_BYTES = 1_000_000;
+
+// The REPORT_RATE_LIMITER binding only bounds bursts (its `period` is capped
+// at 60s by the Workers runtime); this is the actual per-IP quota window.
+const REPORT_QUOTA_LIMIT = 3;
+const REPORT_QUOTA_WINDOW_SECONDS = 600;
 
 function generateId(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(ID_LENGTH));
@@ -92,7 +102,9 @@ const worker = {
   async fetch(request, env): Promise<Response> {
     const url = new URL(request.url);
     const isApiRoute =
-      url.pathname === '/api/share' || url.pathname.startsWith('/api/share/');
+      url.pathname === '/api/share' ||
+      url.pathname.startsWith('/api/share/') ||
+      url.pathname === '/api/report';
 
     if (isApiRoute && !isAllowedOrigin(request, url)) {
       return jsonResponse(request, url, { error: 'Origin not allowed' }, 403);
@@ -136,6 +148,85 @@ const worker = {
         expirationTtl: TTL_SECONDS,
       });
       return jsonResponse(request, url, { id, url: `${url.origin}/#s=${id}` });
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/report') {
+      const clientAddress =
+        request.headers.get('CF-Connecting-IP') ?? 'unknown';
+
+      const burst = await env.REPORT_RATE_LIMITER.limit({
+        key: `report:${clientAddress}`,
+      });
+      if (!burst.success) {
+        const response = jsonResponse(
+          request,
+          url,
+          { error: 'Too many requests' },
+          429,
+        );
+        response.headers.set('Retry-After', '60');
+        return response;
+      }
+
+      const quotaKey = `report-quota:${clientAddress}`;
+      const quotaUsed = Number((await env.SHARE_LINKS.get(quotaKey)) ?? '0');
+      if (quotaUsed >= REPORT_QUOTA_LIMIT) {
+        const response = jsonResponse(
+          request,
+          url,
+          { error: 'Too many requests' },
+          429,
+        );
+        response.headers.set(
+          'Retry-After',
+          String(REPORT_QUOTA_WINDOW_SECONDS),
+        );
+        return response;
+      }
+
+      const body = await readJsonBody(request);
+      if (!body.ok) {
+        return jsonResponse(request, url, { error: body.error }, body.status);
+      }
+      const report = validateReport(body.value);
+      if (!report) {
+        return jsonResponse(request, url, { error: 'Invalid report' }, 400);
+      }
+
+      const githubResponse = await fetch(
+        `https://api.github.com/repos/${env.REPORT_REPO}/issues`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+            Accept: 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+            'Content-Type': 'application/json',
+            'User-Agent': 'markasso-report-form',
+          },
+          body: JSON.stringify({
+            title: buildIssueTitle(report),
+            body: buildIssueBody(report),
+            labels: ['user-report'],
+          }),
+        },
+      );
+
+      if (!githubResponse.ok) {
+        return jsonResponse(
+          request,
+          url,
+          { error: 'Failed to submit report' },
+          502,
+        );
+      }
+
+      await env.SHARE_LINKS.put(quotaKey, String(quotaUsed + 1), {
+        expirationTtl: REPORT_QUOTA_WINDOW_SECONDS,
+      });
+
+      const issue = (await githubResponse.json()) as { html_url: string };
+      return jsonResponse(request, url, { url: issue.html_url }, 201);
     }
 
     if (request.method === 'GET' && url.pathname.startsWith('/api/share/')) {

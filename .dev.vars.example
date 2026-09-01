@@ -1,0 +1,3 @@
+# Copy to .dev.vars (gitignored) and fill in a real token to test /api/report locally.
+# Fine-grained PAT scoped to this repo only, with "Issues: Read and write" permission.
+GITHUB_TOKEN=

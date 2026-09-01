@@ -17,10 +17,20 @@ const validScene = [
   },
 ];
 
-function createEnv(options: { rateLimitSuccess?: boolean } = {}): Env {
+function createEnv(
+  options: {
+    rateLimitSuccess?: boolean;
+    reportRateLimitSuccess?: boolean;
+    quotaUsed?: number;
+  } = {},
+): Env {
   return {
     SHARE_LINKS: {
-      get: vi.fn(),
+      get: vi
+        .fn()
+        .mockResolvedValue(
+          options.quotaUsed === undefined ? null : String(options.quotaUsed),
+        ),
       put: vi.fn(),
     },
     SHARE_RATE_LIMITER: {
@@ -28,9 +38,16 @@ function createEnv(options: { rateLimitSuccess?: boolean } = {}): Env {
         .fn()
         .mockResolvedValue({ success: options.rateLimitSuccess ?? true }),
     },
+    REPORT_RATE_LIMITER: {
+      limit: vi.fn().mockResolvedValue({
+        success: options.reportRateLimitSuccess ?? true,
+      }),
+    },
     ASSETS: {
       fetch: vi.fn().mockResolvedValue(new Response('asset')),
     },
+    REPORT_REPO: 'AlbertoBarrago/Markasso',
+    GITHUB_TOKEN: 'test-token',
   } as unknown as Env;
 }
 
@@ -43,6 +60,20 @@ function post(body: string, headers: HeadersInit = {}): WorkerRequest {
     body,
   }) as WorkerRequest;
 }
+
+function postReport(body: string, headers: HeadersInit = {}): WorkerRequest {
+  return new Request('https://markasso.example/api/report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body,
+  }) as WorkerRequest;
+}
+
+const validReport = {
+  title: 'Freehand strokes flicker on release',
+  description: 'The stroke sometimes fails to finish when opening the hand.',
+  category: 'bug',
+};
 
 describe('share worker', () => {
   it('validates and stores a scene', async () => {
@@ -91,5 +122,100 @@ describe('share worker', () => {
     );
     expect(limited.status).toBe(429);
     expect(limited.headers.get('Retry-After')).toBe('60');
+  });
+});
+
+describe('report worker', () => {
+  it('creates a GitHub issue and records the quota usage', async () => {
+    const env = createEnv();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ html_url: 'https://github.com/x/y/issues/1' }),
+        {
+          status: 201,
+        },
+      ),
+    );
+
+    const response = await worker.fetch(
+      postReport(JSON.stringify(validReport)),
+      env,
+    );
+
+    expect(response.status).toBe(201);
+    const payload = (await response.json()) as { url: string };
+    expect(payload.url).toBe('https://github.com/x/y/issues/1');
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://api.github.com/repos/AlbertoBarrago/Markasso/issues',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(env.SHARE_LINKS.put).toHaveBeenCalledWith(
+      expect.stringMatching(/^report-quota:/),
+      '1',
+      expect.objectContaining({ expirationTtl: 600 }),
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('rejects cross-origin writes before rate limiting', async () => {
+    const env = createEnv();
+    const response = await worker.fetch(
+      postReport(JSON.stringify(validReport), {
+        Origin: 'https://evil.example',
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(403);
+    expect(env.REPORT_RATE_LIMITER.limit).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid report payload', async () => {
+    const env = createEnv();
+    const response = await worker.fetch(
+      postReport(
+        JSON.stringify({ title: 'x', description: 'x', category: 'bug' }),
+      ),
+      env,
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it('rejects bursts beyond the rate limiter', async () => {
+    const env = createEnv({ reportRateLimitSuccess: false });
+    const response = await worker.fetch(
+      postReport(JSON.stringify(validReport)),
+      env,
+    );
+    expect(response.status).toBe(429);
+    expect(response.headers.get('Retry-After')).toBe('60');
+  });
+
+  it('rejects requests once the 10-minute quota is exhausted', async () => {
+    const env = createEnv({ quotaUsed: 3 });
+    const response = await worker.fetch(
+      postReport(JSON.stringify(validReport)),
+      env,
+    );
+    expect(response.status).toBe(429);
+    expect(response.headers.get('Retry-After')).toBe('600');
+  });
+
+  it('returns a gateway error when GitHub rejects the issue', async () => {
+    const env = createEnv();
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('nope', { status: 401 }));
+
+    const response = await worker.fetch(
+      postReport(JSON.stringify(validReport)),
+      env,
+    );
+    expect(response.status).toBe(502);
+    expect(env.SHARE_LINKS.put).not.toHaveBeenCalled();
+
+    fetchSpy.mockRestore();
   });
 });

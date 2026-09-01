@@ -14,7 +14,6 @@ const IC = {
   lockOpen: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 3.75l-3.33 3.33-3.33 1.25-1.25 1.25 5.83 5.83 1.25-1.25 1.25-3.33 3.33-3.33z"/><line x1="7.5" y1="12.5" x2="3.75" y2="16.25"/><line x1="12.08" y1="3.33" x2="16.67" y2="7.92"/></svg>`,
   elemLocked: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="9" width="10" height="8" rx="1.5"/><path d="M7 9V6a3 3 0 0 1 6 0v3"/></svg>`,
   hand: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 13v-7.5a1.5 1.5 0 0 1 3 0v6.5"/><path d="M11 5.5v-2a1.5 1.5 0 1 1 3 0v8.5"/><path d="M14 5.5a1.5 1.5 0 0 1 3 0v6.5"/><path d="M17 7.5a1.5 1.5 0 0 1 3 0v8.5a6 6 0 0 1 -6 6h-2h.208a6 6 0 0 1 -5.012 -2.7a69.74 69.74 0 0 1 -.196 -.3c-.312 -.479 -1.407 -2.388 -3.286 -5.728a1.5 1.5 0 0 1 .536 -2.022a1.867 1.867 0 0 1 2.28 .28l1.47 1.47"/></svg>`,
-  gesture: `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 13V7.5a1.4 1.4 0 0 1 2.8 0V12m0-5.5V5a1.4 1.4 0 0 1 2.8 0v7m0-5.5a1.4 1.4 0 0 1 2.8 0V12m0-3.5a1.4 1.4 0 0 1 2.8 0V15a5.5 5.5 0 0 1-5.5 5.5h-1.1a5.5 5.5 0 0 1-4.7-2.65L5 14.1a1.4 1.4 0 0 1 2.3-1.6l.2.5"/><path d="M19 2v3M17.5 3.5h3"/></svg>`,
   select: `<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M5.5 3v12.8l2.9-2.9 2.4 5.4 2.1-.95-2.4-5.4 3.8.001z"/></svg>`,
   rectangle: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="14" height="10" rx="1.5"/></svg>`,
   ellipse: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="10" cy="10" rx="7.5" ry="5.5"/></svg>`,
@@ -94,10 +93,7 @@ const TOOLS: ToolDef[] = [
   { tool: 'eraser', icon: IC.eraser, label: t('eraser'), key: '0', num: '0' },
 ];
 
-export function initToolbar(
-  container: HTMLElement,
-  history: History,
-): { gestureButton: HTMLButtonElement | null } {
+export function initToolbar(container: HTMLElement, history: History): void {
   container.innerHTML = '';
 
   // ── Center-top: tool buttons pill ─────────────────────────────────────────
@@ -745,15 +741,6 @@ export function initToolbar(
   });
   presetsIsland.append(presetsTrigger, presetsPanel);
 
-  let gestureButton: HTMLButtonElement | null = null;
-  if (!window.matchMedia('(pointer: coarse)').matches) {
-    const gestureIsland = div('tb-island');
-    gestureButton = mkBtn(IC.gesture, t('gestureMode'));
-    gestureButton.setAttribute('aria-pressed', 'false');
-    gestureButton.classList.add('tb-gesture-btn');
-    gestureIsland.appendChild(gestureButton);
-    topRight.appendChild(gestureIsland);
-  }
   topRight.append(importIsland, presetsIsland, exportIsland, shareIsland);
 
   // Top-left: settings button injected by settings.ts
@@ -901,7 +888,6 @@ export function initToolbar(
 
   history.subscribe(sync);
   sync();
-  return { gestureButton };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

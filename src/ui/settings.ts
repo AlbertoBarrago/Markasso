@@ -114,6 +114,11 @@ const ICONS = {
   prefs: svg(p('M3 5h14M3 10h14M3 15h14M7 3v4M13 8v4M10 13v4')),
   chevron: svg(p('M8 5l5 5-5 5')),
   guide: svg(p('M10 2a8 8 0 100 16A8 8 0 0010 2zM10 7v4M10 13h.01')),
+  report: svg(
+    p(
+      'M10 3v3M6 4l1.5 2M14 4l-1.5 2M4 12a6 6 0 0112 0M5 9h10M4 12v2a1 1 0 001 1h10a1 1 0 001-1v-2M8 17h4',
+    ),
+  ),
   about: svg(
     p(
       'M3 4a1 1 0 011-1h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1zM10 9v5M10 6.5h.01',
@@ -146,6 +151,7 @@ export function initSettings(
   appEl: HTMLElement,
   toolbarEl: HTMLElement,
   history: History,
+  openReportForm: () => void,
 ): void {
   let current = loadSettings();
   applySettings(appEl, current);
@@ -209,6 +215,9 @@ export function initSettings(
 
       <button class="menu-item" id="menu-guide">
         ${ICONS.guide}<span class="menu-item-label">${t('guide')}</span>
+      </button>
+      <button class="menu-item" id="menu-report">
+        ${ICONS.report}<span class="menu-item-label">${t('reportProblem')}</span>
       </button>
 
       <div class="menu-divider"></div>
@@ -390,6 +399,12 @@ export function initSettings(
         'https://github.com/AlbertoBarrago/Markasso/blob/main/MANUAL.md',
         '_blank',
       );
+      close();
+    });
+  panel
+    .querySelector<HTMLButtonElement>('#menu-report')!
+    .addEventListener('click', () => {
+      openReportForm();
       close();
     });
   panel

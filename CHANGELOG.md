@@ -4,6 +4,16 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.7.0] — 2026-09-01
+
+### Added
+- **Report a problem** — a form in the menu lets you send a bug/visual/performance report straight to a public GitHub issue on this repository, no login required.
+
+### Removed
+- **Gesture Mode** — the optional webcam hand-tracking feature (selecting, dragging, drawing and deleting shapes via hand poses) has been removed. Despite repeated tuning, the underlying MediaPipe hand-tracking model's own periodic re-detection cycle produced visible cursor/anchor jumps that could not be reliably corrected from application code without breaking legitimate fast-stroke tracking.
+
+---
+
 ## [1.6.2] — 2026-08-19
 
 ### Fixed

@@ -12,13 +12,13 @@ import { initHintBar } from './src/ui/hint_bar';
 import { initImageImport } from './src/ui/image_import';
 import { initMinimap } from './src/ui/minimap';
 import { initMobileActionBar } from './src/ui/mobile_action_bar';
+import { initReportForm } from './src/ui/report_form';
 import { applySettings, initSettings, loadSettings } from './src/ui/settings';
 import { initShortcuts } from './src/ui/shortcuts';
 import { initShortcutsHelp } from './src/ui/shortcuts_help';
 import { initStarCta } from './src/ui/star_cta';
 import { initToolbar } from './src/ui/toolbar';
 import { initWelcome } from './src/ui/welcome';
-import { initWhatsNew } from './src/ui/whats_new';
 
 function printConsoleGreeting(): void {
   const reset = 'color: inherit; font-size: 13px;';
@@ -95,35 +95,9 @@ async function bootstrap(): Promise<void> {
   // Restore persisted UI settings before first paint
   applySettings(appEl, loadSettings());
 
-  const { gestureButton } = initToolbar(toolbar, hist);
-  let gestureController:
-    | import('./src/gesture/gesture_controller').GestureController
-    | null = null;
-  if (gestureButton) {
-    gestureButton.addEventListener('click', async () => {
-      if (!gestureController) {
-        gestureButton.disabled = true;
-        try {
-          const { GestureController } = await import(
-            './src/gesture/gesture_controller'
-          );
-          gestureController = new GestureController(
-            canvas,
-            hist,
-            gestureButton,
-          );
-        } catch {
-          gestureButton.disabled = false;
-          return;
-        }
-      }
-      gestureController.toggle();
-    });
-  }
-  window.addEventListener('pagehide', () => gestureController?.disable(), {
-    once: true,
-  });
-  initSettings(appEl, toolbar, hist);
+  initToolbar(toolbar, hist);
+  const reportForm = initReportForm(appEl);
+  initSettings(appEl, toolbar, hist, () => reportForm.open());
   initStarCta(appEl, toolbar);
   const { selectTool } = initCanvasView(canvas, hist);
   initContextPanel(workspace, hist, (source) =>
@@ -138,8 +112,7 @@ async function bootstrap(): Promise<void> {
   initShortcutsHelp(appEl);
   initHintBar(appEl, hist);
   initSession(hist);
-  const showedWhatsNew = initWhatsNew(appEl);
-  if (!showedWhatsNew && !session && !sharedElements) initWelcome(appEl, hist);
+  if (!session && !sharedElements) initWelcome(appEl, hist);
 }
 
 bootstrap();

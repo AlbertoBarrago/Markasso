@@ -82,7 +82,6 @@ Curves are made by dragging the midpoint handle of a line after placement — th
 | Feature | Description |
 |---|---|
 | **Infinite canvas** | Pan with middle-click or `Alt+drag`; zoom with `Ctrl+scroll` |
-| **Gesture Mode** | Optional webcam hand tracking for selecting, dragging and creating shapes during presentations |
 | **Millimeter grid** | Dot · Line · Graph-paper modes (real mm at 96 DPI) |
 | **Navigation recovery** | `F` fits all content into view · `Shift+0` resets to origin |
 | **Dark / Light theme** | Switchable themes with system preference support |
