@@ -1690,6 +1690,75 @@
   border-top: 1px solid var(--island-border);
   margin: 20px 0;
 }
+
+/* Mobile: the guide goes full-screen and the vertical sidebar collapses into
+   a horizontally scrollable row of section chips above the content. */
+@media (pointer: coarse), (max-width: 600px) {
+  .guide-card {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    border: none;
+    border-radius: 0;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .guide-header {
+    padding: 10px 12px;
+  }
+
+  .guide-title {
+    display: none;
+  }
+
+  .guide-search {
+    min-height: 44px;
+    font-size: 16px; /* prevents iOS zoom-on-focus */
+  }
+
+  .guide-body {
+    flex-direction: column;
+  }
+
+  .guide-nav {
+    width: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 12px;
+    border-right: none;
+    border-bottom: 1px solid var(--island-border);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .guide-nav ul {
+    flex-direction: row;
+    gap: 6px;
+    width: max-content;
+  }
+
+  .guide-nav a {
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: var(--bg-hover);
+    white-space: nowrap;
+    font-size: 13px;
+  }
+
+  .guide-content {
+    padding: 16px;
+  }
+
+  /* Wide content must scroll inside its own box instead of the page. */
+  .guide-content table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .guide-content pre {
+    overflow-x: auto;
+  }
+}
 .guide-content table {
   width: 100%;
   border-collapse: collapse;

@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.7.3] — 2026-09-01
+
+### Fixed
+- **Guide on mobile** — the guide panel is now usable on phones and touch devices: it goes full-screen, the sidebar becomes a horizontally scrollable row of section chips, the search field meets tap-target size and no longer triggers iOS zoom on focus, and tables and code blocks scroll inside their own box instead of overflowing.
+
+---
+
 ## [1.7.2] — 2026-09-01
 
 ### Fixed
