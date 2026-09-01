@@ -496,6 +496,7 @@ export function initCanvasView(
         prevInertiaY = t.clientY;
         lastTouchMoveTime = now;
         const [wx, wy] = getWorldCoordsFromTouch(t);
+        sendLocalCursor(wx, wy);
         getActiveTool().onMouseMove(
           syntheticMouse('mousemove', t.clientX, t.clientY),
           wx,
