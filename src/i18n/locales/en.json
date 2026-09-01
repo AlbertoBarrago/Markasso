@@ -168,5 +168,6 @@
   "reportSubmitError": "Couldn't send the report. Please try again later.",
   "reportSuccessTitle": "Report sent!",
   "reportSuccessDesc": "Thanks, we opened a public issue on GitHub:",
-  "reportClose": "Close"
+  "reportClose": "Close",
+  "guideSearchPlaceholder": "Search the guide…"
 }

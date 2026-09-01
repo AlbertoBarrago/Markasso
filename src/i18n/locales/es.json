@@ -168,5 +168,6 @@
   "reportSubmitError": "No se pudo enviar el informe. Inténtalo más tarde.",
   "reportSuccessTitle": "¡Informe enviado!",
   "reportSuccessDesc": "Gracias, hemos abierto una incidencia pública en GitHub:",
-  "reportClose": "Cerrar"
+  "reportClose": "Cerrar",
+  "guideSearchPlaceholder": "Buscar en la guía…"
 }

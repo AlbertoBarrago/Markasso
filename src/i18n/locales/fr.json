@@ -168,5 +168,6 @@
   "reportSubmitError": "Échec de l'envoi. Réessayez plus tard.",
   "reportSuccessTitle": "Signalement envoyé !",
   "reportSuccessDesc": "Merci, nous avons ouvert une issue publique sur GitHub :",
-  "reportClose": "Fermer"
+  "reportClose": "Fermer",
+  "guideSearchPlaceholder": "Rechercher dans le guide…"
 }

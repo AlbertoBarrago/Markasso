@@ -22,6 +22,13 @@ function renderInline(text: string): string {
     );
 }
 
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 function tableCells(line: string): string[] {
   return line
     .trim()
@@ -44,14 +51,26 @@ function renderTable(rows: readonly string[]): string {
   return `<table>${thead}${tbody}</table>`;
 }
 
+export interface MarkdownSection {
+  readonly id: string;
+  readonly title: string;
+}
+
+export interface RenderedMarkdown {
+  readonly html: string;
+  readonly sections: readonly MarkdownSection[];
+}
+
 /** Renders the body of the document, skipping any leading raw-HTML preamble. */
-export function renderMarkdown(markdown: string): string {
-  const firstHeading = markdown.indexOf('\n## ');
-  const body =
-    firstHeading === -1 ? markdown : markdown.slice(firstHeading + 1);
-  const lines = body.split('\n');
+export function renderMarkdown(markdown: string): RenderedMarkdown {
+  const bodyStart = markdown.startsWith('## ')
+    ? 0
+    : markdown.indexOf('\n## ') + 1 || 0;
+  const lines = markdown.slice(bodyStart).split('\n');
 
   const html: string[] = [];
+  const sections: MarkdownSection[] = [];
+  const seenIds = new Set<string>();
   let paragraph: string[] = [];
   let listItems: string[] = [];
   let listTag: 'ul' | 'ol' | null = null;
@@ -92,7 +111,12 @@ export function renderMarkdown(markdown: string): string {
     if (line.startsWith('## ')) {
       flushParagraph();
       flushList();
-      html.push(`<h2>${renderInline(line.slice(3))}</h2>`);
+      const title = line.slice(3).trim();
+      let id = slugify(title);
+      while (seenIds.has(id)) id = `${id}-2`;
+      seenIds.add(id);
+      sections.push({ id, title });
+      html.push(`<h2 id="${id}">${renderInline(title)}</h2>`);
       i++;
       continue;
     }
@@ -144,5 +168,5 @@ export function renderMarkdown(markdown: string): string {
   flushParagraph();
   flushList();
 
-  return html.join('\n');
+  return { html: html.join('\n'), sections };
 }

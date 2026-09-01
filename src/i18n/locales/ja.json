@@ -168,5 +168,6 @@
   "reportSubmitError": "送信に失敗しました。しばらくしてから再度お試しください。",
   "reportSuccessTitle": "送信しました！",
   "reportSuccessDesc": "ありがとうございます。GitHub に公開 issue を作成しました：",
-  "reportClose": "閉じる"
+  "reportClose": "閉じる",
+  "guideSearchPlaceholder": "ガイドを検索…"
 }

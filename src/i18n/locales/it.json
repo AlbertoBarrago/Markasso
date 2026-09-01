@@ -168,5 +168,6 @@
   "reportSubmitError": "Invio non riuscito. Riprova più tardi.",
   "reportSuccessTitle": "Segnalazione inviata!",
   "reportSuccessDesc": "Grazie, abbiamo aperto una issue pubblica su GitHub:",
-  "reportClose": "Chiudi"
+  "reportClose": "Chiudi",
+  "guideSearchPlaceholder": "Cerca nella guida…"
 }

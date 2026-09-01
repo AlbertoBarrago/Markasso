@@ -168,5 +168,6 @@
   "reportSubmitError": "Senden fehlgeschlagen. Bitte später erneut versuchen.",
   "reportSuccessTitle": "Meldung gesendet!",
   "reportSuccessDesc": "Danke, wir haben ein öffentliches Issue auf GitHub erstellt:",
-  "reportClose": "Schließen"
+  "reportClose": "Schließen",
+  "guideSearchPlaceholder": "Anleitung durchsuchen…"
 }

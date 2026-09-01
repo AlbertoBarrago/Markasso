@@ -168,5 +168,6 @@
   "reportSubmitError": "Falha ao enviar. Tente novamente mais tarde.",
   "reportSuccessTitle": "Relatório enviado!",
   "reportSuccessDesc": "Obrigado, abrimos uma issue pública no GitHub:",
-  "reportClose": "Fechar"
+  "reportClose": "Fechar",
+  "guideSearchPlaceholder": "Pesquisar no guia…"
 }
