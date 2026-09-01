@@ -126,6 +126,25 @@ export class SessionRoom {
       return;
     }
 
+    if (m.type === 'cursor') {
+      const x = Number(m.x);
+      const y = Number(m.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+      const peer = this.peers.get(peerId);
+      this.broadcast(
+        {
+          type: 'cursor',
+          from: peerId,
+          x,
+          y,
+          name: peer?.name ?? 'Guest',
+          color: peer?.color ?? '#a78bfa',
+        },
+        /* except */ peerId,
+      );
+      return;
+    }
+
     if (m.type === 'presence') {
       const peer = this.peers.get(peerId);
       if (!peer) return;

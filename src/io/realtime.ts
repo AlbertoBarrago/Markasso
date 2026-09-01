@@ -2,6 +2,12 @@ import type { Command } from '../commands/commands';
 import type { Element } from '../elements/element';
 import { isSessionCommand } from '../engine/ephemeral';
 import type { History } from '../engine/history';
+import {
+  clearCursors,
+  setLocalCursorSender,
+  syncRemotePeers,
+  upsertRemoteCursor,
+} from './presence';
 
 export interface PeerInfo {
   id: string;
@@ -30,11 +36,19 @@ interface ApplyMsg {
   command: Command;
   from: string;
 }
+interface CursorMsg {
+  type: 'cursor';
+  from: string;
+  x: number;
+  y: number;
+  color: string;
+  name: string;
+}
 interface PresenceMsg {
   type: 'presence';
   peers: PeerInfo[];
 }
-type ServerMsg = InitMsg | ApplyMsg | PresenceMsg;
+type ServerMsg = InitMsg | ApplyMsg | PresenceMsg | CursorMsg;
 
 const LIVE_PARAM = 'live';
 
@@ -94,6 +108,11 @@ export function joinLiveSession(
   };
   let ready = false;
 
+  // When connected, our own pointer moves broadcast through this sender.
+  setLocalCursorSender((cursor) => {
+    send({ type: 'cursor', ...cursor, name: self.name, color: self.color });
+  });
+
   function send(msg: unknown): void {
     if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
   }
@@ -146,13 +165,23 @@ export function joinLiveSession(
       applyPeers(msg.peers);
     } else if (msg.type === 'apply') {
       history.applyRemote(msg.command);
+    } else if (msg.type === 'cursor') {
+      upsertRemoteCursor(msg.from, {
+        x: msg.x,
+        y: msg.y,
+        color: msg.color,
+        name: msg.name,
+      });
     } else if (msg.type === 'presence') {
       applyPeers(msg.peers);
+      syncRemotePeers(msg.peers);
     }
   };
 
   ws.onclose = () => {
     ready = false;
+    setLocalCursorSender(null);
+    clearCursors();
     opts.onStatus?.(false);
   };
   ws.onerror = () => {

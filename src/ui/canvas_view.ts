@@ -10,6 +10,11 @@ import type {
 } from '../elements/element';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
+import {
+  getRemoteCursors,
+  sendLocalCursor,
+  subscribeCursors,
+} from '../io/presence';
 import { contrastColor, drawElement } from '../rendering/draw_element';
 import {
   drawAlignGuides,
@@ -147,6 +152,7 @@ export function initCanvasView(
       return;
     }
     const [wx, wy] = getWorldCoords(e);
+    sendLocalCursor(wx, wy);
     getActiveTool().onMouseMove(e, wx, wy, toolCtx);
     const cursor = getActiveTool().getCursor(wx, wy, toolCtx);
     canvas.style.cursor = cursor;
@@ -701,6 +707,7 @@ export function initCanvasView(
     if (needsRender) {
       needsRender = false;
       renderFrame();
+      drawRemoteCursors();
     }
     requestAnimationFrame(loop);
   }
@@ -889,7 +896,47 @@ export function initCanvasView(
     }
   }
 
+  /** Draw other peers' cursors + name tags on top of the frame (screen px). */
+  function drawRemoteCursors(): void {
+    const cursors = getRemoteCursors();
+    if (cursors.length === 0) return;
+    const scene = history.present;
+    const dpr = window.devicePixelRatio;
+    ctx2d.save();
+    ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx2d.lineCap = 'round';
+    ctx2d.lineJoin = 'round';
+    for (const c of cursors) {
+      const [sx, sy] = worldToScreen(scene.viewport, c.x, c.y);
+      const s = 13;
+      ctx2d.beginPath();
+      ctx2d.moveTo(sx, sy);
+      ctx2d.lineTo(sx + s, sy);
+      ctx2d.lineTo(sx + s * 0.35, sy + s * 0.55);
+      ctx2d.closePath();
+      ctx2d.fillStyle = c.color;
+      ctx2d.fill();
+      ctx2d.strokeStyle = 'rgba(0,0,0,0.6)';
+      ctx2d.lineWidth = 1;
+      ctx2d.stroke();
+      const label = c.name;
+      ctx2d.font = '500 11px "Roboto Mono", monospace';
+      const labelW = ctx2d.measureText(label).width;
+      const pad = 4;
+      ctx2d.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx2d.fillRect(sx + s * 0.2, sy + s * 0.1, labelW + pad * 2, 16);
+      ctx2d.fillStyle = '#fff';
+      ctx2d.fillText(label, sx + s * 0.2 + pad, sy + s * 0.1 + 12);
+    }
+    ctx2d.restore();
+  }
+
   requestAnimationFrame(loop);
+
+  // Re-render when remote cursors move (or appear/disappear).
+  subscribeCursors(() => {
+    needsRender = true;
+  });
 
   // Wire sticky tool to open text editor immediately after placing
   stickyTool.onPlaced = (el, ctx) => {
