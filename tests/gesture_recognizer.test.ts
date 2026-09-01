@@ -62,26 +62,24 @@ describe('GestureRecognizer', () => {
   it.each([
     1_000 / 30,
     1_000 / 60,
-  ])('uses a frame-rate-independent open-hand hold to finish at %d ms frames', (frameDuration) => {
+  ])('finishes as soon as the open-hand pose is confirmed at %d ms frames', (frameDuration) => {
     const recognizer = beginValidDrawing();
-    const releaseStartedAt = 650;
-    let finishedAt: number | null = null;
+    let timestamp = 650;
+    let finishedOnFrame: number | null = null;
 
-    for (
-      let timestamp = releaseStartedAt;
-      timestamp <= releaseStartedAt + 300;
-      timestamp += frameDuration
-    ) {
+    for (let frameIndex = 1; frameIndex <= 5; frameIndex++) {
       const frame = recognizer.update(hand('open', 0.11), timestamp);
       if (frame.events.some((event) => event.type === 'stroke-end')) {
-        finishedAt = timestamp;
+        finishedOnFrame = frameIndex;
         break;
       }
+      timestamp += frameDuration;
     }
 
-    const elapsed = finishedAt! - releaseStartedAt;
-    expect(elapsed).toBeGreaterThanOrEqual(180);
-    expect(elapsed).toBeLessThan(180 + frameDuration + 0.001);
+    // Confirmation is frame-count based (POSE_CONFIRMATION_FRAMES.open), not
+    // a separate time-based hold, so it fires on the same frame regardless
+    // of frame duration.
+    expect(finishedOnFrame).toBe(3);
   });
 
   it.each([
@@ -160,7 +158,7 @@ describe('GestureRecognizer', () => {
     );
   });
 
-  it('requires movement before rearming after stationary confirmation', () => {
+  it('rearms immediately after stationary confirmation without requiring movement', () => {
     const recognizer = beginValidDrawing();
     let timestamp = 650;
     let finished = recognizer.update(hand('point', 0.1), timestamp, {
@@ -175,16 +173,7 @@ describe('GestureRecognizer', () => {
       });
     }
 
-    const held = recognizer.update(hand('point', 0.1), timestamp + 16, {
-      width: 1_000,
-      height: 1_000,
-    });
-    expect(held.state).toBe('ready');
-    expect(held.events.some((event) => event.type === 'stroke-start')).toBe(
-      false,
-    );
-
-    const rearmed = recognizer.update(hand('point', 0.14), timestamp + 32, {
+    const rearmed = recognizer.update(hand('point', 0.1), timestamp + 16, {
       width: 1_000,
       height: 1_000,
     });
@@ -207,24 +196,19 @@ describe('GestureRecognizer', () => {
     );
   });
 
-  it('restarts the release hold after a brief tracking dropout', () => {
+  it('resumes open-hand pose confirmation after a brief tracking dropout', () => {
     const recognizer = beginValidDrawing();
     recognizer.update(hand('open', 0.11), 650);
     recognizer.update(hand('open', 0.11), 666);
-    recognizer.update(hand('open', 0.11), 682);
 
-    expect(recognizer.update(null, 700).state).toBe('drawing');
-    for (const timestamp of [716, 748, 780, 812, 844, 876]) {
-      const frame = recognizer.update(hand('open', 0.11), timestamp);
-      expect(frame.events.some((event) => event.type === 'stroke-end')).toBe(
-        false,
-      );
-    }
-    expect(
-      recognizer
-        .update(hand('open', 0.11), 908)
-        .events.some((event) => event.type === 'stroke-end'),
-    ).toBe(true);
+    // A dropout short enough to bridge (within DRAWING_TRACKING_GRACE_MS)
+    // leaves the in-progress pose confirmation count intact.
+    expect(recognizer.update(null, 682).state).toBe('drawing');
+
+    const frame = recognizer.update(hand('open', 0.11), 698);
+    expect(frame.events.some((event) => event.type === 'stroke-end')).toBe(
+      true,
+    );
   });
 
   it('bridges a brief tracking dropout and then resets', () => {
@@ -346,22 +330,23 @@ describe('GestureRecognizer', () => {
     expect(resumed.trace.length).toBeGreaterThan(traceLength);
   });
 
-  it('finishes a suspended long stroke only after a deliberate open hand', () => {
+  it('finishes a suspended stroke as soon as the open-hand pose reconfirms', () => {
     const recognizer = beginValidDrawing();
+    // A dropout longer than DRAWING_TRACKING_GRACE_MS is a full tracking
+    // loss: pose confirmation restarts from zero on recovery.
     recognizer.update(null, 1_200);
 
-    for (const timestamp of [1_216, 1_248, 1_280, 1_312, 1_344, 1_376]) {
+    const timestamps = [1_216, 1_248, 1_280];
+    let finishedAt: number | null = null;
+    for (const timestamp of timestamps) {
       const frame = recognizer.update(hand('open', 0.11), timestamp);
-      expect(frame.events.some((event) => event.type === 'stroke-end')).toBe(
-        false,
-      );
+      if (frame.events.some((event) => event.type === 'stroke-end')) {
+        finishedAt = timestamp;
+        break;
+      }
     }
 
-    expect(
-      recognizer
-        .update(hand('open', 0.11), 1_408)
-        .events.some((event) => event.type === 'stroke-end'),
-    ).toBe(true);
+    expect(finishedAt).toBe(1_280);
   });
 
   it('uses CSS pixels when deciding whether to record a trace point', () => {

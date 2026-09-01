@@ -32,10 +32,11 @@ const DRAWING_RESUME_MAX_DISTANCE_PX = 96;
 // corner into an immediate finish.
 const DRAWING_STILL_HOLD_MS = 550;
 const DRAWING_STILL_RADIUS_PX = 10;
-const DRAWING_REARM_DISTANCE_PX = 24;
+// Beyond the radius but within this band, drift the hold origin toward the
+// cursor instead of resetting the timer outright — absorbs jitter that
+// briefly exceeds the radius without making the hold feel like it never ends.
+const DRAWING_STILL_DRIFT_RADIUS_PX = DRAWING_STILL_RADIUS_PX * 1.5;
 const DRAWING_MIN_PATH_LENGTH_PX = 32;
-// Keep the open hand as a deliberate fallback for users who already know it.
-const DRAWING_RELEASE_HOLD_MS = 180;
 const POSE_CONFIRMATION_FRAMES: Record<HandPose, number> = {
   pinch: 2,
   open: 3,
@@ -58,11 +59,9 @@ export class GestureRecognizer {
   private lastPalmScale: number | null = null;
   private lastTrackedAt: number | null = null;
   private poseUncertainSince: number | null = null;
-  private drawingReleaseStartedAt: number | null = null;
   private drawingSuspended = false;
   private drawingStillOrigin: GesturePoint | null = null;
   private drawingStillStartedAt: number | null = null;
-  private drawingRearmPoint: GesturePoint | null = null;
   private drawingPathLengthPx = 0;
   private selectAllOrigin: GesturePoint | null = null;
   private selectAllStartedAt = 0;
@@ -101,17 +100,10 @@ export class GestureRecognizer {
     const events: GestureEvent[] = [];
     let armProgress = 0;
 
-    if (pose !== 'point') this.drawingRearmPoint = null;
-
     if (rawPose === 'none' || rawPose === 'fist') {
       this.poseUncertainSince ??= timestamp;
     } else {
       this.poseUncertainSince = null;
-    }
-    if (this.state === 'drawing' && rawPose === 'open') {
-      this.drawingReleaseStartedAt ??= timestamp;
-    } else {
-      this.drawingReleaseStartedAt = null;
     }
     if (this.state === 'drawing' && rawPose !== 'point') {
       this.resetDrawingStill();
@@ -187,12 +179,10 @@ export class GestureRecognizer {
           events.push({ type: 'pinch-end', point: cursor });
         }
         if (this.state === 'drawing') {
-          if (
-            timestamp - (this.drawingReleaseStartedAt ?? timestamp) <
-            DRAWING_RELEASE_HOLD_MS
-          ) {
-            break;
-          }
+          // The pose stabilizer already debounced the transition into 'open'
+          // (POSE_CONFIRMATION_FRAMES.open consecutive frames), so an
+          // additional hold timer here would only add a second, competing
+          // clock racing the still-hold finish.
           this.finishTrace(events);
         }
         if (this.state !== 'ready' && this.state !== 'selecting') {
@@ -248,11 +238,9 @@ export class GestureRecognizer {
     this.lastPalmScale = null;
     this.lastTrackedAt = null;
     this.poseUncertainSince = null;
-    this.drawingReleaseStartedAt = null;
     this.drawingSuspended = false;
     this.drawingStillOrigin = null;
     this.drawingStillStartedAt = null;
-    this.drawingRearmPoint = null;
     this.drawingPathLengthPx = 0;
     this.selectAllOrigin = null;
     this.selectAllStartedAt = 0;
@@ -284,19 +272,6 @@ export class GestureRecognizer {
     viewportWidth: number,
     viewportHeight: number,
   ): number {
-    if (this.drawingRearmPoint) {
-      if (
-        screenDistance(
-          this.drawingRearmPoint,
-          drawingCursor,
-          viewportWidth,
-          viewportHeight,
-        ) < DRAWING_REARM_DISTANCE_PX
-      ) {
-        return 0;
-      }
-      this.drawingRearmPoint = null;
-    }
     if (this.state === 'drawing') {
       if (
         this.drawingSuspended &&
@@ -355,19 +330,28 @@ export class GestureRecognizer {
       this.drawingStillStartedAt = timestamp;
       return 0;
     }
-    if (
-      !this.drawingStillOrigin ||
-      this.drawingStillStartedAt === null ||
-      screenDistance(
-        this.drawingStillOrigin,
-        drawingCursor,
-        viewportWidth,
-        viewportHeight,
-      ) > DRAWING_STILL_RADIUS_PX
-    ) {
+    if (!this.drawingStillOrigin || this.drawingStillStartedAt === null) {
       this.drawingStillOrigin = drawingCursor;
       this.drawingStillStartedAt = timestamp;
       return 0;
+    }
+    const driftDistance = screenDistance(
+      this.drawingStillOrigin,
+      drawingCursor,
+      viewportWidth,
+      viewportHeight,
+    );
+    if (driftDistance > DRAWING_STILL_DRIFT_RADIUS_PX) {
+      this.drawingStillOrigin = drawingCursor;
+      this.drawingStillStartedAt = timestamp;
+      return 0;
+    }
+    if (driftDistance > DRAWING_STILL_RADIUS_PX) {
+      this.drawingStillOrigin = lerpPoint(
+        this.drawingStillOrigin,
+        drawingCursor,
+        0.5,
+      );
     }
     const progress = Math.min(
       1,
@@ -376,7 +360,6 @@ export class GestureRecognizer {
     if (progress >= 1) {
       this.finishTrace(events);
       this.state = 'ready';
-      this.drawingRearmPoint = drawingCursor;
     }
     return progress;
   }
@@ -409,7 +392,6 @@ export class GestureRecognizer {
   }
 
   private handleTrackingLoss(timestamp: number): GestureFrame {
-    this.drawingReleaseStartedAt = null;
     this.resetDrawingStill();
     if (
       this.lastCursor &&
@@ -427,7 +409,6 @@ export class GestureRecognizer {
       this.drawingSuspended = true;
     } else {
       this.state = 'absent';
-      this.drawingRearmPoint = null;
     }
     this.stablePose = 'none';
     this.candidatePose = 'none';
@@ -475,7 +456,6 @@ export class GestureRecognizer {
 
   private cancelDrawing(): void {
     this.trace = [];
-    this.drawingReleaseStartedAt = null;
     this.drawingSuspended = false;
     this.resetDrawingStill();
     this.drawingPathLengthPx = 0;
@@ -528,6 +508,10 @@ function mirror(point: GesturePoint): GesturePoint {
 
 function midpoint(a: GesturePoint, b: GesturePoint): GesturePoint {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+function lerpPoint(a: GesturePoint, b: GesturePoint, t: number): GesturePoint {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
 }
 
 function isValidHand(
