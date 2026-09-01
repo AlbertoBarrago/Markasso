@@ -1,6 +1,11 @@
-import manualMarkdown from '../../MANUAL.md?raw';
-import { t } from '../i18n';
+import manualMarkdownIt from '../../MANUAL.it.md?raw';
+import manualMarkdownEn from '../../MANUAL.md?raw';
+import { getLocale, t } from '../i18n';
 import { renderMarkdown } from './markdown';
+
+const MANUALS: Partial<Record<ReturnType<typeof getLocale>, string>> = {
+  it: manualMarkdownIt,
+};
 
 export interface GuideHandle {
   open(): void;
@@ -12,7 +17,7 @@ export function initGuide(appEl: HTMLElement): GuideHandle {
 
   function open(): void {
     if (modalEl) return;
-    rendered ??= renderMarkdown(manualMarkdown);
+    rendered ??= renderMarkdown(MANUALS[getLocale()] ?? manualMarkdownEn);
 
     const navItems = rendered.sections
       .map(

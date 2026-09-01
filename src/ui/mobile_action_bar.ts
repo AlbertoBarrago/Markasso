@@ -122,9 +122,8 @@ export function initMobileActionBar(
     setStoredName(shareNameInput.value),
   );
 
-  const shareGoLiveBtn = shareSheet.querySelector<HTMLButtonElement>(
-    '#mss-share-golive',
-  )!;
+  const shareGoLiveBtn =
+    shareSheet.querySelector<HTMLButtonElement>('#mss-share-golive')!;
   shareGoLiveBtn.addEventListener('click', async () => {
     const roomId = generateRoomId();
     const url = buildLiveRoomUrl(roomId);

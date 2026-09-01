@@ -924,7 +924,6 @@ function mkBtn(icon: string, title: string): HTMLButtonElement {
   return b;
 }
 
-
 function menuItem(
   label: string,
   iconSvg: string,
