@@ -13,6 +13,7 @@ import {
 } from '../io/realtime';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
+import { copyToClipboard, showShareToast } from './share_actions';
 
 // ── SVG icons ──────────────────────────────────────────────────────────────────
 const IC = {
@@ -533,57 +534,12 @@ export function initToolbar(container: HTMLElement, history: History): void {
     'backdrop-filter:blur(16px)',
   ].join(';');
 
-  /** Copy text to clipboard reliably: modern API first, textarea fallback second. */
-  function copyToClipboard(text: string): boolean {
-    if (navigator.clipboard && document.hasFocus()) {
-      navigator.clipboard.writeText(text).catch(() => {
-        /* handled below */
-      });
-    }
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
-      document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand('copy');
-      document.body.removeChild(ta);
-      return ok;
-    } catch {
-      return false;
-    }
-  }
-
-  /** Show a small toast below the button. */
-  function showShareToast(success: boolean, url: string, okMsg?: string): void {
-    const existing = document.getElementById('share-toast');
-    if (existing) existing.remove();
-    const toast = document.createElement('div');
-    toast.id = 'share-toast';
-    if (success) {
-      toast.className = 'share-toast share-toast--ok';
-      toast.textContent = okMsg ?? t('shareLinkCopied');
-    } else {
-      toast.className = 'share-toast share-toast--fallback';
-      toast.innerHTML = `<span>${t('shareLink')}</span><input class="share-toast-input" readonly value="${url.replace(/"/g, '&quot;')}" />`;
-      requestAnimationFrame(() => {
-        const inp = toast.querySelector<HTMLInputElement>('.share-toast-input');
-        inp?.select();
-      });
-    }
-    document.body.appendChild(toast);
-    if (success) setTimeout(() => toast.remove(), 3000);
-    toast.addEventListener('click', (e) => {
-      if (e.target === toast) toast.remove();
-    });
-  }
-
   const shareCopyLinkItem = menuItem(
     t('shareCopyLink'),
     IC_LINK_SM,
     async () => {
       const url = await buildShareUrl(history.present.elements);
-      const ok = copyToClipboard(url);
+      const ok = await copyToClipboard(url);
       showShareToast(ok, url);
     },
   );
@@ -610,10 +566,10 @@ export function initToolbar(container: HTMLElement, history: History): void {
   divider.style.cssText =
     'height:1px;background:rgba(255,255,255,0.1);margin:3px 4px;';
   let livePeers = 0;
-  const shareGoLiveItem = menuItem(t('shareGoLive'), IC_SHARE, () => {
+  const shareGoLiveItem = menuItem(t('shareGoLive'), IC_SHARE, async () => {
     const roomId = generateRoomId();
     const url = buildLiveRoomUrl(roomId);
-    const ok = copyToClipboard(url);
+    const ok = await copyToClipboard(url);
     showShareToast(ok, url, t('shareLiveCopied'));
     const name = nameInput.value.trim() || 'You';
     setStoredName(name);
