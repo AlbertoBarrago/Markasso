@@ -306,8 +306,13 @@ export function initSettings(
   }
   function positionPanel(): void {
     const r = menuBtn.getBoundingClientRect();
-    panel.style.top = `${r.bottom + 10}px`;
+    const top = r.bottom + 10;
+    panel.style.top = `${top}px`;
     panel.style.left = `${r.left}px`;
+    // Cap the panel so it never extends past the viewport bottom — without
+    // this, entries beyond the visible area were unreachable on short mobile
+    // screens (the panel had no scroll or height limit of its own).
+    panel.style.maxHeight = `${Math.max(160, window.innerHeight - top - 12)}px`;
   }
   function syncPanel(): void {
     const gridVis = panel.querySelector<HTMLInputElement>('#sp-grid-visible')!;

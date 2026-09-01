@@ -15,7 +15,10 @@
   transition:
     opacity 0.15s,
     transform 0.15s;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .settings-panel.open {
   opacity: 1;
