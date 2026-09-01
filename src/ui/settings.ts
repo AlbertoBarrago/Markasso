@@ -152,6 +152,7 @@ export function initSettings(
   toolbarEl: HTMLElement,
   history: History,
   openReportForm: () => void,
+  openGuide: () => void,
 ): void {
   let current = loadSettings();
   applySettings(appEl, current);
@@ -395,10 +396,7 @@ export function initSettings(
   panel
     .querySelector<HTMLButtonElement>('#menu-guide')!
     .addEventListener('click', () => {
-      window.open(
-        'https://github.com/AlbertoBarrago/Markasso/blob/main/MANUAL.md',
-        '_blank',
-      );
+      openGuide();
       close();
     });
   panel

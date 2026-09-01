@@ -8,6 +8,7 @@ import { initCanvasView } from './src/ui/canvas_view';
 import { initCommandPalette } from './src/ui/command_palette';
 import { initContextPanel } from './src/ui/context_panel';
 import { initElementSearch } from './src/ui/element_search';
+import { initGuide } from './src/ui/guide';
 import { initHintBar } from './src/ui/hint_bar';
 import { initImageImport } from './src/ui/image_import';
 import { initMinimap } from './src/ui/minimap';
@@ -97,7 +98,14 @@ async function bootstrap(): Promise<void> {
 
   initToolbar(toolbar, hist);
   const reportForm = initReportForm(appEl);
-  initSettings(appEl, toolbar, hist, () => reportForm.open());
+  const guide = initGuide(appEl);
+  initSettings(
+    appEl,
+    toolbar,
+    hist,
+    () => reportForm.open(),
+    () => guide.open(),
+  );
   initStarCta(appEl, toolbar);
   const { selectTool } = initCanvasView(canvas, hist);
   initContextPanel(workspace, hist, (source) =>
