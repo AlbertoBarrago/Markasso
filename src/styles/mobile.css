@@ -251,8 +251,7 @@
 }
 
 /* ── Mobile bottom sheet (shared by style panel + share panel) ───────────── */
-#mobile-style-sheet,
-#mobile-share-sheet {
+.mobile-sheet {
   display: none;
 }
 
