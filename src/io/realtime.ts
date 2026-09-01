@@ -1,4 +1,7 @@
 import type { Command } from '../commands/commands';
+
+type UndoOp = { type: 'UNDO' | 'REDO' };
+
 import type { Element } from '../elements/element';
 import { isSessionCommand } from '../engine/ephemeral';
 import type { History } from '../engine/history';
@@ -33,7 +36,7 @@ interface InitMsg {
 }
 interface ApplyMsg {
   type: 'apply';
-  command: Command;
+  command: Command | UndoOp;
   from: string;
 }
 interface CursorMsg {
@@ -107,6 +110,7 @@ export function joinLiveSession(
     color: opts.color ?? randomColor(),
   };
   let ready = false;
+  let applyingRemote = false;
 
   // When connected, our own pointer moves broadcast through this sender.
   setLocalCursorSender((cursor) => {
@@ -118,7 +122,7 @@ export function joinLiveSession(
   }
 
   history.setOnCommand((command) => {
-    if (!ready || !isSessionCommand(command)) return;
+    if (!ready || applyingRemote || !isSessionCommand(command)) return;
     send({ type: 'command', command });
   });
 
@@ -164,7 +168,7 @@ export function joinLiveSession(
 
       applyPeers(msg.peers);
     } else if (msg.type === 'apply') {
-      history.applyRemote(msg.command);
+      applyRemoteOrUndo(msg.command);
     } else if (msg.type === 'cursor') {
       upsertRemoteCursor(msg.from, {
         x: msg.x,
@@ -198,5 +202,24 @@ export function joinLiveSession(
       if (peer.id !== self.id) peers.set(peer.id, peer);
     }
     opts.onPeers?.([...peers.values()]);
+  }
+
+  function isUndoOp(c: Command | UndoOp): c is UndoOp {
+    return c.type === 'UNDO' || c.type === 'REDO';
+  }
+
+  function applyRemoteOrUndo(command: Command | UndoOp): void {
+    if (isUndoOp(command)) {
+      // Apply remote undo/redo, but never re-broadcast it back (echo guard).
+      applyingRemote = true;
+      try {
+        if (command.type === 'UNDO') history.undo();
+        else history.redo();
+      } finally {
+        applyingRemote = false;
+      }
+      return;
+    }
+    history.applyRemote(command);
   }
 }

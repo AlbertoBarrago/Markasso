@@ -33,9 +33,9 @@ describe('isSessionCommand', () => {
     expect(isSessionCommand({ type: 'SET_TOOL' })).toBe(false);
   });
 
-  it('filters UNDO/REDO (per-client undo, model A)', () => {
-    expect(isSessionCommand({ type: 'UNDO' })).toBe(false);
-    expect(isSessionCommand({ type: 'REDO' })).toBe(false);
+  it('shares UNDO/REDO (convergent undo, model B)', () => {
+    expect(isSessionCommand({ type: 'UNDO' })).toBe(true);
+    expect(isSessionCommand({ type: 'REDO' })).toBe(true);
   });
 });
 

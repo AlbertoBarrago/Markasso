@@ -29,15 +29,11 @@ export function isEphemeralCommand(type: string): boolean {
 
 /**
  * Whether a command should be relayed to the realtime session. Ephemeral
- * commands change view only; UNDO/REDO are intentionally NOT shared (per-client
- * undo model, option A).
+ * commands change view only (viewport, selection, tool, colors) and are never
+ * shared. UNDO/REDO ARE shared in model B so the server relays them in global
+ * order for convergent undo.
  */
 export function isSessionCommand(command: { type?: string }): boolean {
   const type = command?.type;
-  return (
-    type !== undefined &&
-    type !== 'UNDO' &&
-    type !== 'REDO' &&
-    !isEphemeralCommand(type)
-  );
+  return type !== undefined && !isEphemeralCommand(type);
 }
