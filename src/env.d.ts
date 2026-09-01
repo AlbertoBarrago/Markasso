@@ -3,5 +3,4 @@
 // the generated worker-configuration.d.ts, which gets overwritten on every run.
 interface Env {
   readonly GITHUB_TOKEN: string;
-  readonly SESSION_ROOMS: DurableObjectNamespace<import('./worker').SessionRoom>;
 }
