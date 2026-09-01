@@ -7,6 +7,7 @@ import { importMermaidText } from '../io/mermaid';
 import { PRESETS } from '../io/presets';
 import {
   buildLiveRoomUrl,
+  generateRoomId,
   getStoredName,
   joinLiveSession,
   setStoredName,
@@ -918,12 +919,6 @@ function mkBtn(icon: string, title: string): HTMLButtonElement {
   return b;
 }
 
-function generateRoomId(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(8));
-  const chars =
-    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  return Array.from(bytes, (byte) => chars[byte % chars.length] ?? '').join('');
-}
 
 function menuItem(
   label: string,

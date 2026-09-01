@@ -84,6 +84,13 @@ export function buildLiveRoomUrl(roomId: string): string {
   return url.href;
 }
 
+export function generateRoomId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  const chars =
+    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  return Array.from(bytes, (byte) => chars[byte % chars.length] ?? '').join('');
+}
+
 const PALETTE = [
   '#a78bfa',
   '#f472b6',

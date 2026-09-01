@@ -75,6 +75,7 @@
 [data-theme="light"] #context-panel,
 [data-theme="light"] #mobile-actions,
 [data-theme="light"] #mobile-style-sheet,
+[data-theme="light"] #mobile-share-sheet,
 [data-theme="light"] .wl-card,
 [data-theme="light"] .about-modal-box {
   background: #ffffff !important;

@@ -250,13 +250,14 @@
   }
 }
 
-/* ── Mobile style bottom sheet ───────────────────────────────────────────── */
-#mobile-style-sheet {
+/* ── Mobile bottom sheet (shared by style panel + share panel) ───────────── */
+#mobile-style-sheet,
+#mobile-share-sheet {
   display: none;
 }
 
 @media (pointer: coarse) {
-  #mobile-style-sheet {
+  .mobile-sheet {
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -282,12 +283,12 @@
       opacity 0.18s,
       transform 0.18s;
   }
-  #mobile-style-sheet.open {
+  .mobile-sheet.open {
     opacity: 1;
     pointer-events: all;
     transform: translateY(0);
   }
-  #mobile-style-sheet::-webkit-scrollbar {
+  .mobile-sheet::-webkit-scrollbar {
     display: none;
   }
 
@@ -300,4 +301,35 @@
     margin-bottom: 4px;
     flex-shrink: 0;
   }
+}
+
+/* ── Mobile share sheet content ───────────────────────────────────────────── */
+.mss-share-input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+
+.mss-share-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--island-border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.mss-share-btn:active {
+  background: var(--accent-light);
+  color: var(--accent);
 }
