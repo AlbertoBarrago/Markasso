@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.7.4] — 2026-09-01
+
+### Fixed
+- **Guide not scrollable on iOS** — the content panel grew beyond the card instead of scrolling (missing `min-height` in the mobile column layout); also re-enabled panning inside the modal and kept safe-area padding from overflowing the card.
+
+---
+
 ## [1.7.3] — 2026-09-01
 
 ### Fixed

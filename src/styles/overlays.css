@@ -1627,6 +1627,9 @@
 .guide-content {
   flex: 1;
   min-width: 0;
+  /* Prevents the flex item from growing to its content height (mobile column
+     layout) instead of scrolling inside the card. */
+  min-height: 0;
   overflow-y: auto;
   padding: 20px 28px;
   color: var(--text);
@@ -1695,6 +1698,7 @@
    a horizontally scrollable row of section chips above the content. */
 @media (pointer: coarse), (max-width: 600px) {
   .guide-card {
+    box-sizing: border-box;
     width: 100%;
     height: 100%;
     max-width: none;
@@ -1728,6 +1732,9 @@
     padding: 8px 12px;
     border-right: none;
     border-bottom: 1px solid var(--island-border);
+    /* Explicit pan permission: iOS intersects touch-action up the ancestor
+       chain, so panning must be re-enabled inside the modal. */
+    touch-action: pan-x;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -1747,6 +1754,8 @@
 
   .guide-content {
     padding: 16px;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Wide content must scroll inside its own box instead of the page. */
