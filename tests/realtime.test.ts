@@ -68,13 +68,64 @@ describe('History.applyRemote', () => {
     h.dispatch({ type: 'CREATE_ELEMENT', element: rect('b') });
     h.dispatch({ type: 'SELECT_ELEMENTS', ids: ['a', 'b'] });
 
-    h.dispatch({ type: 'APPLY_STYLE', strokeColor: '#00ff00' });
+    h.dispatch({ type: 'APPLY_STYLE', strokeWidth: 8 });
 
     const sent = onCommand.mock.calls.at(-1)?.[0] as
       | { type: string; ids?: string[] }
       | undefined;
     expect(sent?.type).toBe('APPLY_STYLE');
     expect(sent?.ids).toEqual(['a', 'b']);
+  });
+
+  it('does not change a peer default stroke width when a remote style is applied', () => {
+    // User A changes the stroke width of their own element.
+    const onCommand = vi.fn();
+    const a = new History(createScene(), onCommand);
+    a.dispatch({ type: 'CREATE_ELEMENT', element: rect('a1') });
+    a.dispatch({ type: 'SELECT_ELEMENTS', ids: ['a1'] });
+    a.dispatch({ type: 'APPLY_STYLE', strokeWidth: 8 });
+    const sent = onCommand.mock.calls.at(-1)?.[0] as
+      | { type: string; ids?: string[]; strokeWidth?: number }
+      | undefined;
+
+    // User B has their own element selected and a different default width.
+    const b = new History(createScene());
+    b.dispatch({ type: 'CREATE_ELEMENT', element: rect('b1') });
+    b.dispatch({ type: 'SELECT_ELEMENTS', ids: ['b1'] });
+    b.dispatch({ type: 'SET_STROKE_WIDTH', width: 3 });
+
+    // B receives A's broadcast command.
+    b.applyRemote(sent as never);
+
+    // B's own element is untouched (different id)...
+    expect(b.present.elements[0]?.strokeWidth).toBe(1);
+    // ...and B's default stroke width is untouched (per-user).
+    expect(b.present.appState.strokeWidth).toBe(3);
+  });
+
+  it('does not let a remote CREATE_ELEMENT hijack the receiver lastCreatedId fallback', () => {
+    // User A draws a freehand stroke without selecting it (select: false),
+    // as the freehand tool does mid-drawing/on commit.
+    const onCommand = vi.fn();
+    const a = new History(createScene(), onCommand);
+    a.dispatch({
+      type: 'CREATE_ELEMENT',
+      element: rect('a-stroke'),
+      select: false,
+    });
+    const sent = onCommand.mock.calls.at(-1)?.[0] as Command;
+
+    // User B receives A's stroke over the wire but never selects it.
+    const b = new History(createScene());
+    b.applyRemote(sent);
+    expect(b.present.appState.lastCreatedId).toBeNull();
+
+    // B now changes stroke width with nothing selected (e.g. adjusting their
+    // own pending freehand default before drawing).
+    b.dispatch({ type: 'APPLY_STYLE', strokeWidth: 6 });
+
+    // A's element must be untouched: B's style change had no target of its own.
+    expect(b.present.elements[0]?.strokeWidth).toBe(1);
   });
 
   it('does not touch the undo/redo stack of the reader', () => {

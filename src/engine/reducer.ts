@@ -63,10 +63,17 @@ export function reducer(
         elements: [...scene.elements, command.element],
         selectedIds:
           command.select === false ? new Set() : new Set([command.element.id]),
-        appState: {
-          ...scene.appState,
-          lastCreatedId: command.select === false ? command.element.id : null,
-        },
+        // `lastCreatedId` drives the APPLY_STYLE fallback target (see
+        // withApplyStyleTargets in history.ts) and is per-user: a peer's
+        // freshly drawn element must never become "the element I'll restyle
+        // next" on someone else's client, or a remote CREATE_ELEMENT would
+        // silently hijack the receiver's next style change.
+        appState: isRemote
+          ? scene.appState
+          : {
+              ...scene.appState,
+              lastCreatedId: command.select === false ? command.element.id : null,
+            },
       };
 
     case 'CREATE_ELEMENTS':
