@@ -730,8 +730,8 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const peopleIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/><circle cx="17" cy="9.5" r="2.5"/><path d="M16 15.2c2 .3 3.7 1.5 4.5 3.6"/></svg>`;
   const peopleIsland = div('tb-island');
   peopleIsland.style.position = 'relative';
+  peopleIsland.style.display = 'none';
   const peopleTrigger = mkBtn(peopleIcon, t('people'));
-  peopleTrigger.style.display = 'none';
   const peoplePanel = document.createElement('div');
   peoplePanel.setAttribute('role', 'menu');
   peoplePanel.style.cssText = [
@@ -754,12 +754,13 @@ export function initToolbar(container: HTMLElement, history: History): void {
   ].join(';');
   initPeopleList(peoplePanel);
   // Show the people button only while a live session is connected AND there is
-  // at least one other participant — otherwise it's just an empty dot.
+  // at least one other participant — otherwise it's just an empty dot. Hide the
+  // whole island so no empty box lingers in the toolbar.
   onLivePeers((others) => {
-    peopleTrigger.style.display = others.length > 0 ? '' : 'none';
+    peopleIsland.style.display = others.length > 0 ? '' : 'none';
   });
   onLiveHide(() => {
-    peopleTrigger.style.display = 'none';
+    peopleIsland.style.display = 'none';
   });
   let peoplePanelOpen = false;
   peopleTrigger.addEventListener('click', (e) => {
