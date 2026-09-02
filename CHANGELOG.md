@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.10.4] — 2026-09-02
+
+### Fixed
+- **No empty people button when alone** — the "people" button now appears only while a live session is connected **and** at least one other participant is present. Previously it showed as an empty dot for the host with nobody else in the room.
+
+---
+
 ## [1.10.3] — 2026-09-02
 
 ### Fixed

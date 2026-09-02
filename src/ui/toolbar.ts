@@ -10,6 +10,7 @@ import {
   generateRoomId,
   getStoredName,
   joinLiveSession,
+  onLivePeers,
   setLiveName,
   setStoredName,
 } from '../io/realtime';
@@ -752,8 +753,10 @@ export function initToolbar(container: HTMLElement, history: History): void {
     'backdrop-filter:blur(16px)',
   ].join(';');
   initPeopleList(peoplePanel);
-  onLiveReveal(() => {
-    peopleTrigger.style.display = '';
+  // Show the people button only while a live session is connected AND there is
+  // at least one other participant — otherwise it's just an empty dot.
+  onLivePeers((others) => {
+    peopleTrigger.style.display = others.length > 0 ? '' : 'none';
   });
   onLiveHide(() => {
     peopleTrigger.style.display = 'none';
