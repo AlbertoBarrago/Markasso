@@ -3,6 +3,25 @@ import { createScene, type Scene } from '../core/scene';
 import { isEphemeralCommand } from './ephemeral';
 import { reducer } from './reducer';
 
+/**
+ * For APPLY_STYLE commands without explicit `ids`, resolve the target elements
+ * from the current selection (or the last-created element when nothing is
+ * selected) and bake them into the command. This keeps the command
+ * deterministic across a shared session.
+ */
+function withApplyStyleTargets(scene: Scene, command: Command): Command {
+  if (command.type !== 'APPLY_STYLE' || command.ids !== undefined) {
+    return command;
+  }
+  const ids =
+    scene.selectedIds.size > 0
+      ? [...scene.selectedIds]
+      : scene.appState.lastCreatedId
+        ? [scene.appState.lastCreatedId]
+        : [];
+  return { ...command, ids };
+}
+
 type Listener = (scene: Scene) => void;
 
 export class History {
@@ -98,10 +117,14 @@ export class History {
   }
 
   dispatch(command: Command): void {
-    const next = reducer(this._present, command);
+    // APPLY_STYLE targets the local selection; bake those ids into the command
+    // so a shared session applies the style to the SAME elements on every
+    // client (never to each peer's own selection).
+    const resolved = withApplyStyleTargets(this._present, command);
+    const next = reducer(this._present, resolved);
     if (next === this._present) return;
 
-    const isEphemeral = isEphemeralCommand(command.type);
+    const isEphemeral = isEphemeralCommand(resolved.type);
     if (this._dragging && !isEphemeral) {
       this.dragHasUndoableChanges = true;
     } else if (!this._dragging && !isEphemeral) {
@@ -110,7 +133,7 @@ export class History {
     }
 
     this._present = next;
-    this.onCommand?.(command);
+    this.onCommand?.(resolved);
     this.notify();
   }
 

@@ -575,8 +575,11 @@ export function reducer(
       if (strokeStyle !== undefined) statePatch.strokeStyle = strokeStyle;
       if (textAlign !== undefined) statePatch.textAlign = textAlign;
 
+      const targetIds = command.ids ?? [...scene.selectedIds];
       const fallbackId =
-        scene.selectedIds.size === 0 ? scene.appState.lastCreatedId : null;
+        command.ids === undefined && scene.selectedIds.size === 0
+          ? scene.appState.lastCreatedId
+          : null;
       return {
         ...scene,
         // The default style is per-user: only the local client updates its own
@@ -586,7 +589,7 @@ export function reducer(
           ? scene.appState
           : { ...scene.appState, ...statePatch },
         elements: scene.elements.map((el) =>
-          scene.selectedIds.has(el.id) || el.id === fallbackId
+          targetIds.includes(el.id) || el.id === fallbackId
             ? ({ ...el, ...patch } as Element)
             : el,
         ),

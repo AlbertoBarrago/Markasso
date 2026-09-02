@@ -65,9 +65,13 @@ export type Command =
       type: 'ALIGN_ELEMENTS';
       moves: Array<{ id: string; x: number; y: number }>;
     }
-  /** Applies style to ALL selected elements AND updates appState defaults. Undoable. */
+  /** Applies style to the given elements (or the local selection when `ids` is
+   *  omitted) AND updates appState defaults. Undoable. `ids` is required for
+   *  shared sessions so the command is deterministic on every client. */
   | {
       type: 'APPLY_STYLE';
+      /** Target element ids. Omit to use the local selection (single-player). */
+      ids?: string[];
       strokeColor?: string;
       fillColor?: string;
       labelColor?: string;

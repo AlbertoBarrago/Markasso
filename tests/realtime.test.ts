@@ -61,6 +61,22 @@ describe('History.applyRemote', () => {
     expect(h.present.appState.strokeColor).toBe('#111111');
   });
 
+  it('bakes the target element ids into a broadcast APPLY_STYLE', () => {
+    const onCommand = vi.fn();
+    const h = new History(createScene(), onCommand);
+    h.dispatch({ type: 'CREATE_ELEMENT', element: rect('a') });
+    h.dispatch({ type: 'CREATE_ELEMENT', element: rect('b') });
+    h.dispatch({ type: 'SELECT_ELEMENTS', ids: ['a', 'b'] });
+
+    h.dispatch({ type: 'APPLY_STYLE', strokeColor: '#00ff00' });
+
+    const sent = onCommand.mock.calls.at(-1)?.[0] as
+      | { type: string; ids?: string[] }
+      | undefined;
+    expect(sent?.type).toBe('APPLY_STYLE');
+    expect(sent?.ids).toEqual(['a', 'b']);
+  });
+
   it('does not touch the undo/redo stack of the reader', () => {
     const h = new History(createScene());
     h.applyRemote({ type: 'CREATE_ELEMENT', element: rect('remote') });
