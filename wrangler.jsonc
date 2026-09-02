@@ -49,5 +49,8 @@
   ],
   "vars": {
     "REPORT_REPO": "AlbertoBarrago/Markasso"
+  },
+  "triggers": {
+    "crons": ["0 12 * * *"]
   }
 }

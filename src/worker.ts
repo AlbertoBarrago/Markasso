@@ -1,4 +1,5 @@
 import { isSessionCommand } from './engine/ephemeral';
+import { randomAnimalName } from './io/animal_names';
 import { validateElements } from './io/element_validation';
 import {
   buildIssueBody,
@@ -32,11 +33,32 @@ interface PeerInfo {
 
 const MAX_LOG_LENGTH = 5000;
 const LOG_KEY = 'commands';
+const LAST_ACTIVITY_KEY = 'lastActivity';
 const ROOM_ID_RE = /^[a-zA-Z0-9_-]{3,64}$/;
+const CLIENT_ID_RE = /^[a-zA-Z0-9_-]{8,64}$/;
 const MAX_PEERS = 20;
 const CMD_WINDOW_MS = 5000;
 const MAX_CMD_PER_WINDOW = 200;
 const MAX_MSG_BYTES = 512 * 1024;
+/** A room is "inactive" when it has no connected peers and no activity for this long. */
+const INACTIVE_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+/** KV prefix used to enumerate live rooms for the daily cleanup cron. */
+const ROOM_INDEX_PREFIX = 'room:';
+const ROOM_INDEX_TTL = 90 * 24 * 60 * 60; // 90 days
+
+/**
+ * Pure inactivity check, extracted so the cleanup policy is unit-testable.
+ * A room is only reclaimed when nobody is connected AND it has been idle
+ * longer than the threshold.
+ */
+export function isRoomInactive(
+  now: number,
+  lastActivity: number,
+  connectedPeers: number,
+  thresholdMs: number,
+): boolean {
+  return connectedPeers === 0 && now - lastActivity > thresholdMs;
+}
 
 /** A command as serialized over the wire. Kept structural so the Worker does
  *  not need to type-check browser-dependent element/app_state modules. */
@@ -53,16 +75,19 @@ type WireCommand = { type: string; [k: string]: unknown };
  */
 export class SessionRoom {
   private readonly state: DurableObjectState;
+  private readonly env: Env;
   private readonly commands: WireCommand[] = [];
-  private readonly sockets = new Map<WebSocket, string>(); // ws -> peerId
-  private readonly peers = new Map<string, Omit<PeerInfo, 'id'>>();
+  private readonly sockets = new Map<WebSocket, string>(); // ws -> clientId
+  private readonly peers = new Map<string, Omit<PeerInfo, 'id'>>(); // clientId -> props
   private readonly cmdCounts = new Map<string, number>();
   private cmdWindowStart = Date.now();
   private loaded = false;
   private persistTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastActivity = Date.now();
 
-  constructor(state: DurableObjectState, _env: Env) {
+  constructor(state: DurableObjectState, env: Env) {
     this.state = state;
+    this.env = env;
   }
 
   private async initialize(): Promise<void> {
@@ -70,10 +95,49 @@ export class SessionRoom {
     this.loaded = true;
     const stored = await this.state.storage.get<WireCommand[]>(LOG_KEY);
     if (Array.isArray(stored)) this.commands.push(...stored);
+    const last = await this.state.storage.get<number>(LAST_ACTIVITY_KEY);
+    if (typeof last === 'number') this.lastActivity = last;
+  }
+
+  /** The room name (the value passed to `idFromName`) — used for KV indexing. */
+  private roomId(): string {
+    return this.state.id.name ?? '';
+  }
+
+  private touch(): void {
+    this.lastActivity = Date.now();
+  }
+
+  /**
+   * Resolve the persistent per-user identity. The client sends a stable
+   * `clientId` (a random secret kept in localStorage) so a peer keeps their
+   * name/color across reconnects and can only ever modify their own
+   * properties. Clients that don't send one get a throwaway server id.
+   */
+  private resolveClientId(raw: string | null): string {
+    return raw && CLIENT_ID_RE.test(raw) ? raw : crypto.randomUUID();
+  }
+
+  /** Record this room in the KV index so the daily cron can find it. */
+  private async indexRoom(): Promise<void> {
+    try {
+      await this.env.SHARE_LINKS.put(ROOM_INDEX_PREFIX + this.roomId(), '1', {
+        expirationTtl: ROOM_INDEX_TTL,
+      });
+    } catch {
+      // A KV write failure must never break the live session.
+    }
   }
 
   async fetch(request: Request): Promise<Response> {
     await this.initialize();
+    const url = new URL(request.url);
+
+    // Internal endpoint used by the daily cleanup cron.
+    if (request.method === 'POST' && url.pathname === '/cleanup') {
+      return this.cleanup();
+    }
+
     if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') {
       return new Response('Expected a WebSocket upgrade', { status: 426 });
     }
@@ -89,14 +153,33 @@ export class SessionRoom {
       return new Response(null, { status: 101, webSocket: client });
     }
 
-    const peerId = crypto.randomUUID();
-    this.sockets.set(server, peerId);
-    this.peers.set(peerId, { name: 'Guest', color: '#a78bfa' });
+    const clientId = this.resolveClientId(url.searchParams.get('clientId'));
+
+    // A reconnect with the same clientId replaces any stale live socket so a
+    // peer never ends up with two identities in the same room.
+    for (const [sock, id] of this.sockets) {
+      if (id === clientId) {
+        try {
+          sock.close(1000, 'replaced');
+        } catch {
+          /* already closing */
+        }
+        this.sockets.delete(sock);
+      }
+    }
+
+    this.sockets.set(server, clientId);
+    if (!this.peers.has(clientId)) {
+      this.peers.set(clientId, { name: randomAnimalName(), color: '#a78bfa' });
+    }
+    this.touch();
+    await this.indexRoom();
+    await this.state.storage.put(LAST_ACTIVITY_KEY, this.lastActivity);
 
     server.send(
       JSON.stringify({
         type: 'init',
-        self: peerId,
+        self: clientId,
         commands: this.commands,
         peers: this.peerList(),
       }),
@@ -111,29 +194,30 @@ export class SessionRoom {
       } catch {
         return;
       }
-      this.handleMessage(peerId, msg);
+      this.handleMessage(clientId, msg);
     });
     server.addEventListener('close', () => {
-      this.dropPeer(server, peerId);
+      this.dropPeer(server, clientId);
     });
     server.addEventListener('error', () => {
-      this.dropPeer(server, peerId);
+      this.dropPeer(server, clientId);
     });
 
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  private handleMessage(peerId: string, msg: unknown): void {
+  private handleMessage(clientId: string, msg: unknown): void {
     if (!msg || typeof msg !== 'object') return;
     const m = msg as Record<string, unknown>;
 
     if (m.type === 'command' && m.command) {
       const command = m.command as WireCommand | { type: 'UNDO' | 'REDO' };
       if (!isSessionCommand(command)) return;
-      if (!this.allowCommand(peerId)) return;
+      if (!this.allowCommand(clientId)) return;
+      this.touch();
       this.broadcast(
-        { type: 'apply', command, from: peerId },
-        /* except */ peerId,
+        { type: 'apply', command, from: clientId },
+        /* except */ clientId,
       );
       // UNDO/REDO are order-sensitive and not replayed by late joiners, so
       // they are relayed live but never persisted to the room log.
@@ -149,23 +233,26 @@ export class SessionRoom {
       const x = Number(m.x);
       const y = Number(m.y);
       if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-      const peer = this.peers.get(peerId);
+      const peer = this.peers.get(clientId);
       this.broadcast(
         {
           type: 'cursor',
-          from: peerId,
+          from: clientId,
           x,
           y,
-          name: peer?.name ?? 'Guest',
+          name: peer?.name ?? randomAnimalName(),
           color: peer?.color ?? '#a78bfa',
         },
-        /* except */ peerId,
+        /* except */ clientId,
       );
       return;
     }
 
     if (m.type === 'presence') {
-      const peer = this.peers.get(peerId);
+      // Security: a peer may only ever update their OWN name/color. The
+      // entry is keyed by the connection's clientId, so a message can never
+      // touch another peer's properties.
+      const peer = this.peers.get(clientId);
       if (!peer) return;
       if (
         typeof m.name === 'string' &&
@@ -177,14 +264,16 @@ export class SessionRoom {
       if (typeof m.color === 'string' && /^#[0-9a-f]{6}$/i.test(m.color)) {
         peer.color = m.color;
       }
+      this.touch();
       this.broadcast({ type: 'presence', peers: this.peerList() });
     }
   }
 
-  private dropPeer(socket: WebSocket, peerId: string): void {
+  private dropPeer(socket: WebSocket, clientId: string): void {
     this.sockets.delete(socket);
-    this.peers.delete(peerId);
-    this.cmdCounts.delete(peerId);
+    this.cmdCounts.delete(clientId);
+    // Keep the peer's name/color in `peers` so a reconnect with the same
+    // clientId restores them; only the live list is broadcast.
     this.broadcast({ type: 'presence', peers: this.peerList() });
   }
 
@@ -201,7 +290,10 @@ export class SessionRoom {
   }
 
   private peerList(): PeerInfo[] {
-    return [...this.peers.entries()].map(([id, p]) => ({ id, ...p }));
+    const connected = new Set(this.sockets.values());
+    return [...this.peers.entries()]
+      .filter(([id]) => connected.has(id))
+      .map(([id, p]) => ({ id, ...p }));
   }
 
   private broadcast(msg: unknown, exceptPeerId?: string): void {
@@ -220,8 +312,36 @@ export class SessionRoom {
     if (this.persistTimer) return;
     this.persistTimer = setTimeout(async () => {
       this.persistTimer = null;
-      await this.state.storage.put(LOG_KEY, this.commands.slice());
+      await this.state.storage.put({
+        [LOG_KEY]: this.commands.slice(),
+        [LAST_ACTIVITY_KEY]: this.lastActivity,
+      });
     }, 800);
+  }
+
+  /**
+   * Called by the daily cron. Reclaims the room when it is inactive (no
+   * connected peers and idle past the threshold), wiping its persisted log.
+   */
+  private async cleanup(): Promise<Response> {
+    await this.initialize();
+    const inactive = isRoomInactive(
+      Date.now(),
+      this.lastActivity,
+      this.sockets.size,
+      INACTIVE_THRESHOLD_MS,
+    );
+    if (!inactive) return Response.json({ deleted: false });
+
+    await this.state.storage.deleteAll();
+    this.commands.length = 0;
+    this.peers.clear();
+    try {
+      await this.env.SHARE_LINKS.delete(ROOM_INDEX_PREFIX + this.roomId());
+    } catch {
+      /* best-effort */
+    }
+    return Response.json({ deleted: true });
   }
 }
 
@@ -458,6 +578,47 @@ const worker = {
     }
 
     return env.ASSETS.fetch(request);
+  },
+
+  /**
+   * Daily cleanup of inactive live sessions (cron: `0 12 * * *`). Enumerates
+   * every room tracked in the KV index and asks each Durable Object to reclaim
+   * itself if it has been idle with no connected peers past the threshold.
+   */
+  async scheduled(_controller, env, _ctx): Promise<void> {
+    const rooms: string[] = [];
+    let cursor: string | null = null;
+    do {
+      const list: Awaited<ReturnType<typeof env.SHARE_LINKS.list>> =
+        await env.SHARE_LINKS.list({
+          prefix: ROOM_INDEX_PREFIX,
+          cursor,
+        });
+      for (const key of list.keys) {
+        rooms.push(key.name.slice(ROOM_INDEX_PREFIX.length));
+      }
+      cursor = list.list_complete ? null : list.cursor;
+    } while (cursor);
+
+    let checked = 0;
+    let deleted = 0;
+    for (const room of rooms) {
+      if (!ROOM_ID_RE.test(room)) continue;
+      try {
+        const id = env.SESSION_ROOMS.idFromName(room);
+        const res = await env.SESSION_ROOMS.get(id).fetch(
+          new Request('https://internal/cleanup', { method: 'POST' }),
+        );
+        const body = (await res.json()) as { deleted: boolean };
+        checked++;
+        if (body.deleted) deleted++;
+      } catch {
+        // A room that fails to respond is left for the next run.
+      }
+    }
+    console.log(
+      `[cron] session cleanup: ${checked} checked, ${deleted} deleted`,
+    );
   },
 } satisfies ExportedHandler<Env>;
 

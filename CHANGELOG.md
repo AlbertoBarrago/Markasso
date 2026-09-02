@@ -4,6 +4,19 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.9.0] — 2026-09-02
+
+### Added
+- **Per-user identity in live sessions** — each client now sends a stable `clientId` (a random secret kept in `localStorage`) on connect. The server keys peers by it, so a peer keeps their name/color across reconnects and can only ever modify their own properties; a reconnect with the same `clientId` replaces any stale socket instead of creating a duplicate identity.
+- **Daily cleanup of inactive sessions** — a cron trigger (`0 12 * * *`) enumerates every room tracked in the KV index and asks each `SessionRoom` Durable Object to reclaim itself when it has no connected peers and has been idle for 7 days, wiping its persisted command log.
+- **Editable name chip in live sessions** — a small "your name" chip appears in the toolbar (and mobile action bar) while a live session is active; clicking it lets any participant — creator or link-joiner — set or change their own name at any time, broadcast to peers and remembered locally.
+- **Animal guest names** — peers without a chosen name now get a fun two-word animal name (e.g. "Sunny Otter") instead of "Guest42".
+
+### Security
+- **Server-side enforcement of per-user properties** — the presence handler is keyed by the connection's `clientId`, so a peer can never update another peer's name/color. Per-user drawing settings (stroke color, fill, width, tool) remain ephemeral and are never shared, while the shared scene stays fully collaborative.
+
+---
+
 ## [1.8.1] — 2026-09-01
 
 ### Fixed

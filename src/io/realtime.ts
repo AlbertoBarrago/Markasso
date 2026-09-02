@@ -1,5 +1,7 @@
 import type { Command } from '../commands/commands';
 
+import { randomAnimalName } from './animal_names';
+
 type UndoOp = { type: 'UNDO' | 'REDO' };
 
 import type { Element } from '../elements/element';
@@ -26,6 +28,8 @@ export interface LiveOptions {
   seedElements?: readonly Element[];
   onPeers?: (peers: PeerInfo[]) => void;
   onStatus?: (connected: boolean) => void;
+  /** Fired once when the live session is first established. */
+  onLive?: () => void;
 }
 
 interface InitMsg {
@@ -55,6 +59,28 @@ type ServerMsg = InitMsg | ApplyMsg | PresenceMsg | CursorMsg;
 
 const LIVE_PARAM = 'live';
 const NAME_KEY = 'markasso-live-name';
+const CLIENT_ID_KEY = 'markasso-live-client-id';
+const CLIENT_ID_RE = /^[a-zA-Z0-9_-]{8,64}$/;
+
+/**
+ * A stable, per-user identity persisted in localStorage. It is sent to the
+ * server on every connect so a peer keeps their name/color across reconnects
+ * and the server can enforce that a peer only ever modifies its own
+ * properties. It is effectively a secret: only someone who knows it can
+ * impersonate that peer.
+ */
+export function getClientId(): string {
+  try {
+    let id = localStorage.getItem(CLIENT_ID_KEY);
+    if (!id || !CLIENT_ID_RE.test(id)) {
+      id = crypto.randomUUID();
+      localStorage.setItem(CLIENT_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
 
 export function getStoredName(): string {
   try {
@@ -107,7 +133,27 @@ function randomColor(): string {
 }
 
 function randomName(): string {
-  return `Guest${Math.floor(10 + Math.random() * 90)}`;
+  return randomAnimalName();
+}
+
+/** The active live session (if any), so the UI can update the peer's name. */
+let activeSession: {
+  self: PeerInfo;
+  send: (msg: unknown) => void;
+} | null = null;
+
+/**
+ * Update the current live session's display name and broadcast it to peers.
+ * Persists the name locally and is a no-op when not in a live session.
+ */
+export function setLiveName(name: string): void {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  setStoredName(trimmed);
+  const session = activeSession;
+  if (!session) return;
+  session.self.name = trimmed;
+  session.send({ type: 'presence', name: trimmed, color: session.self.color });
 }
 
 /**
@@ -140,10 +186,13 @@ export function joinLiveSession(
   let applyingRemote = false;
   let reconnectAttempt = 0;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let liveNotified = false;
 
   function send(msg: unknown): void {
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
   }
+
+  activeSession = { self, send };
 
   // When connected, our own pointer moves broadcast through this sender.
   // Registered once: it survives reconnects since `send` always targets the
@@ -199,13 +248,17 @@ export function joinLiveSession(
 
   function connect(): void {
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = `${proto}//${location.host}/session/ws?room=${encodeURIComponent(roomId)}`;
+    const url = `${proto}//${location.host}/session/ws?room=${encodeURIComponent(roomId)}&clientId=${encodeURIComponent(getClientId())}`;
     const socket = new WebSocket(url);
     ws = socket;
 
     socket.onopen = () => {
       reconnectAttempt = 0;
       opts.onStatus?.(true);
+      if (!liveNotified) {
+        liveNotified = true;
+        opts.onLive?.();
+      }
       send({ type: 'presence', name: self.name, color: self.color });
     };
 

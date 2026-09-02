@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import worker from '../src/worker';
+import worker, { isRoomInactive } from '../src/worker';
 
 const validScene = [
   {
@@ -217,5 +217,63 @@ describe('report worker', () => {
     expect(env.SHARE_LINKS.put).not.toHaveBeenCalled();
 
     fetchSpy.mockRestore();
+  });
+});
+
+describe('isRoomInactive', () => {
+  const THRESHOLD = 7 * 24 * 60 * 60 * 1000;
+
+  it('reclaims a room with no peers idle past the threshold', () => {
+    expect(isRoomInactive(1_000_000_000, 0, 0, THRESHOLD)).toBe(true);
+  });
+
+  it('keeps a room that still has connected peers', () => {
+    expect(isRoomInactive(1_000_000_000, 0, 1, THRESHOLD)).toBe(false);
+  });
+
+  it('keeps an empty room that was active recently', () => {
+    expect(
+      isRoomInactive(1_000_000_000, 1_000_000_000 - 1000, 0, THRESHOLD),
+    ).toBe(false);
+  });
+
+  it('keeps a room idle exactly at the threshold', () => {
+    expect(isRoomInactive(THRESHOLD, 0, 0, THRESHOLD)).toBe(false);
+  });
+});
+
+describe('scheduled cleanup', () => {
+  it('enumerates indexed rooms and asks each to clean up', async () => {
+    const cleanup = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ deleted: true })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ deleted: false })));
+    const env = {
+      SHARE_LINKS: {
+        list: vi.fn().mockResolvedValue({
+          keys: [{ name: 'room:abc123' }, { name: 'room:xyz789' }],
+          list_complete: true,
+          cursor: undefined,
+        }),
+        delete: vi.fn(),
+      },
+      SESSION_ROOMS: {
+        idFromName: vi.fn((name: string) => ({ name })),
+        get: vi.fn(() => ({ fetch: cleanup })),
+      },
+    } as unknown as Env;
+
+    await worker.scheduled(
+      { cron: '0 12 * * *' } as unknown as ScheduledController,
+      env,
+      {} as unknown as ExecutionContext,
+    );
+
+    expect(env.SHARE_LINKS.list).toHaveBeenCalledWith(
+      expect.objectContaining({ prefix: 'room:' }),
+    );
+    expect(cleanup).toHaveBeenCalledTimes(2);
+    expect(env.SESSION_ROOMS.idFromName).toHaveBeenCalledWith('abc123');
+    expect(env.SESSION_ROOMS.idFromName).toHaveBeenCalledWith('xyz789');
   });
 });

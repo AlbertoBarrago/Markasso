@@ -67,6 +67,29 @@
   margin: 0 2px;
   flex-shrink: 0;
 }
+.mobile-name-chip {
+  display: flex;
+  align-items: center;
+  max-width: 96px;
+  height: 30px;
+  padding: 0 10px;
+  margin-right: 2px;
+  border: 1px solid var(--island-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.mobile-name-chip:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
 .mobile-action-btn.active {
   background: var(--accent-light);
   color: var(--accent);

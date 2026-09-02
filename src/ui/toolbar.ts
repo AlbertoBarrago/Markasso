@@ -10,10 +10,12 @@ import {
   generateRoomId,
   getStoredName,
   joinLiveSession,
+  setLiveName,
   setStoredName,
 } from '../io/realtime';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
+import { registerLiveNameChip } from './live_name';
 import {
   copyToClipboard,
   showLiveStatusToast,
@@ -520,6 +522,51 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const shareBtn = mkBtn(IC_SHARE, t('shareLink'));
   shareBtn.setAttribute('aria-expanded', 'false');
 
+  // Editable "your name" chip, shown while a live session is active so any
+  // participant (creator or link-joiner) can set/change their own name.
+  const nameChip = document.createElement('button');
+  nameChip.type = 'button';
+  nameChip.className = 'tb-name-chip';
+  nameChip.style.display = 'none';
+  nameChip.title = t('liveName');
+  nameChip.setAttribute('aria-label', t('liveName'));
+  const showNameChip = (): void => {
+    nameChip.style.display = '';
+    nameChip.textContent = getStoredName() || 'You';
+  };
+  registerLiveNameChip(showNameChip);
+  nameChip.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 24;
+    input.value = getStoredName();
+    input.setAttribute('aria-label', t('liveName'));
+    input.style.cssText = [
+      'background:rgba(255,255,255,0.06)',
+      'border:1px solid rgba(255,255,255,0.2)',
+      'border-radius:6px',
+      'color:#e7e7f2',
+      'padding:4px 8px',
+      'font-size:12px',
+      'font-family:inherit',
+      'outline:none',
+      'width:110px',
+    ].join(';');
+    nameChip.replaceWith(input);
+    input.focus();
+    input.select();
+    const commit = (): void => {
+      const val = input.value.trim();
+      if (val) setLiveName(val);
+      showNameChip();
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') commit();
+      else if (e.key === 'Escape') showNameChip();
+    });
+    input.addEventListener('blur', commit);
+  });
+
   const sharePanel = document.createElement('div');
   sharePanel.setAttribute('role', 'menu');
   sharePanel.style.cssText = [
@@ -582,6 +629,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
       roomId,
       name,
       seedElements: history.present.elements,
+      onLive: showNameChip,
       onPeers: (peers) => {
         livePeers = peers.length;
         shareBtn.title =
@@ -660,7 +708,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
       shareBtn.setAttribute('aria-expanded', 'false');
     }
   });
-  shareIsland.append(shareBtn, sharePanel);
+  shareIsland.append(nameChip, shareBtn, sharePanel);
 
   // Presets dropdown
   const presetsIsland = div('tb-island');

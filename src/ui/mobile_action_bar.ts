@@ -6,6 +6,7 @@ import {
   generateRoomId,
   getStoredName,
   joinLiveSession,
+  setLiveName,
   setStoredName,
 } from '../io/realtime';
 import { buildShareUrl } from '../io/share';
@@ -16,6 +17,7 @@ import {
   saveCustomColor,
   updateCustomColorButton,
 } from './color_picker';
+import { registerLiveNameChip } from './live_name';
 import {
   copyToClipboard,
   showLiveStatusToast,
@@ -137,6 +139,7 @@ export function initMobileActionBar(
       roomId,
       name,
       seedElements: history.present.elements,
+      onLive: showNameChip,
       onPeers: (peers) => {
         shareBtn.title =
           peers.length > 0
@@ -371,7 +374,51 @@ export function initMobileActionBar(
   const deleteBtn = mkBtn(IC_DELETE, t('delete'));
   deleteBtn.classList.add('mobile-action-danger');
 
-  bar.append(undoBtn, redoBtn, shareBtn, sep, propsBtn, deleteBtn);
+  // Editable "your name" chip, shown while a live session is active so any
+  // participant (creator or link-joiner) can set/change their own name.
+  const nameChip = document.createElement('button');
+  nameChip.type = 'button';
+  nameChip.className = 'mobile-name-chip';
+  nameChip.style.display = 'none';
+  nameChip.setAttribute('aria-label', t('liveName'));
+  const showNameChip = (): void => {
+    nameChip.style.display = '';
+    nameChip.textContent = getStoredName() || 'You';
+  };
+  registerLiveNameChip(showNameChip);
+  nameChip.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 24;
+    input.value = getStoredName();
+    input.setAttribute('aria-label', t('liveName'));
+    input.style.cssText = [
+      'background:rgba(255,255,255,0.06)',
+      'border:1px solid rgba(255,255,255,0.2)',
+      'border-radius:6px',
+      'color:#e7e7f2',
+      'padding:4px 8px',
+      'font-size:12px',
+      'font-family:inherit',
+      'outline:none',
+      'width:90px',
+    ].join(';');
+    nameChip.replaceWith(input);
+    input.focus();
+    input.select();
+    const commit = (): void => {
+      const val = input.value.trim();
+      if (val) setLiveName(val);
+      showNameChip();
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') commit();
+      else if (e.key === 'Escape') showNameChip();
+    });
+    input.addEventListener('blur', commit);
+  });
+
+  bar.append(nameChip, undoBtn, redoBtn, shareBtn, sep, propsBtn, deleteBtn);
 
   undoBtn.addEventListener('click', () => history.undo());
   redoBtn.addEventListener('click', () => history.redo());
