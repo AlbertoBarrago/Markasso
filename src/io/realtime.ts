@@ -28,8 +28,6 @@ export interface LiveOptions {
   seedElements?: readonly Element[];
   onPeers?: (peers: PeerInfo[]) => void;
   onStatus?: (connected: boolean) => void;
-  /** Fired once when the live session is first established. */
-  onLive?: () => void;
 }
 
 interface InitMsg {
@@ -201,7 +199,6 @@ export function joinLiveSession(
   let applyingRemote = false;
   let reconnectAttempt = 0;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  let liveNotified = false;
 
   function send(msg: unknown): void {
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
@@ -276,10 +273,6 @@ export function joinLiveSession(
     socket.onopen = () => {
       reconnectAttempt = 0;
       opts.onStatus?.(true);
-      if (!liveNotified) {
-        liveNotified = true;
-        opts.onLive?.();
-      }
       send({ type: 'presence', name: self.name, color: self.color });
     };
 

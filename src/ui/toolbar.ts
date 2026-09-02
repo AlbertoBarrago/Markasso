@@ -15,7 +15,7 @@ import {
 } from '../io/realtime';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
-import { onLiveReveal, revealLiveUI } from './live_name';
+import { onLiveHide, onLiveReveal, setLiveUI } from './live_name';
 import { initPeopleList } from './people_list';
 import {
   copyToClipboard,
@@ -535,7 +535,11 @@ export function initToolbar(container: HTMLElement, history: History): void {
     nameChip.style.display = '';
     nameChip.textContent = getStoredName() || 'You';
   };
+  const hideNameChip = (): void => {
+    nameChip.style.display = 'none';
+  };
   onLiveReveal(showNameChip);
+  onLiveHide(hideNameChip);
   nameChip.addEventListener('click', () => {
     const input = document.createElement('input');
     input.type = 'text';
@@ -630,7 +634,6 @@ export function initToolbar(container: HTMLElement, history: History): void {
       roomId,
       name,
       seedElements: history.present.elements,
-      onLive: revealLiveUI,
       onPeers: (peers) => {
         livePeers = peers.length;
         shareBtn.title =
@@ -639,6 +642,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
             : t('shareLink');
       },
       onStatus: (connected) => {
+        setLiveUI(connected);
         shareGoLiveItem.style.opacity = connected ? '0.6' : '1';
         if (!connected) shareBtn.title = t('shareLink');
         showLiveStatusToast(connected);
@@ -740,6 +744,9 @@ export function initToolbar(container: HTMLElement, history: History): void {
   initPeopleList(peoplePanel);
   onLiveReveal(() => {
     peopleTrigger.style.display = '';
+  });
+  onLiveHide(() => {
+    peopleTrigger.style.display = 'none';
   });
   let peoplePanelOpen = false;
   peopleTrigger.addEventListener('click', (e) => {

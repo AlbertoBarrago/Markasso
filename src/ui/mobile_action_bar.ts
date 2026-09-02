@@ -17,7 +17,7 @@ import {
   saveCustomColor,
   updateCustomColorButton,
 } from './color_picker';
-import { onLiveReveal, revealLiveUI } from './live_name';
+import { onLiveHide, onLiveReveal, setLiveUI } from './live_name';
 import { initPeopleList } from './people_list';
 import {
   copyToClipboard,
@@ -142,7 +142,6 @@ export function initMobileActionBar(
       roomId,
       name,
       seedElements: history.present.elements,
-      onLive: revealLiveUI,
       onPeers: (peers) => {
         shareBtn.title =
           peers.length > 0
@@ -150,6 +149,7 @@ export function initMobileActionBar(
             : t('shareLink');
       },
       onStatus: (connected) => {
+        setLiveUI(connected);
         shareGoLiveBtn.style.opacity = connected ? '0.6' : '1';
         if (!connected) shareBtn.title = t('shareLink');
         showLiveStatusToast(connected);
@@ -388,7 +388,11 @@ export function initMobileActionBar(
     nameChip.style.display = '';
     nameChip.textContent = getStoredName() || 'You';
   };
+  const hideNameChip = (): void => {
+    nameChip.style.display = 'none';
+  };
   onLiveReveal(showNameChip);
+  onLiveHide(hideNameChip);
   nameChip.addEventListener('click', () => {
     const input = document.createElement('input');
     input.type = 'text';

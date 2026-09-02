@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.10.1] — 2026-09-02
+
+### Fixed
+- **No empty people button without a live session** — the "people" button (and name chip) are now shown only while a live session is actually connected, and hidden again on disconnect, instead of being revealed on page load for link-joiners. No more stray dot between Share and Export when there is no live session.
+
+---
+
 ## [1.10.0] — 2026-09-02
 
 ### Added

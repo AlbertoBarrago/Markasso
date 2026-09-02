@@ -12,7 +12,7 @@ import { initElementSearch } from './src/ui/element_search';
 import { initGuide } from './src/ui/guide';
 import { initHintBar } from './src/ui/hint_bar';
 import { initImageImport } from './src/ui/image_import';
-import { revealLiveUI } from './src/ui/live_name';
+import { setLiveUI } from './src/ui/live_name';
 import { initMinimap } from './src/ui/minimap';
 import { initMobileActionBar } from './src/ui/mobile_action_bar';
 import { initReportForm } from './src/ui/report_form';
@@ -127,8 +127,12 @@ async function bootstrap(): Promise<void> {
 
   // Join a live session if the URL points to one (…?live=roomId)
   if (getLiveRoomId()) {
-    revealLiveUI();
-    joinLiveSession(hist, { onStatus: showLiveStatusToast });
+    joinLiveSession(hist, {
+      onStatus: (connected) => {
+        setLiveUI(connected);
+        showLiveStatusToast(connected);
+      },
+    });
   }
 }
 
