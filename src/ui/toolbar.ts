@@ -560,14 +560,24 @@ export function initToolbar(container: HTMLElement, history: History): void {
     nameChip.replaceWith(input);
     input.focus();
     input.select();
+    let done = false;
+    const restore = (): void => {
+      input.replaceWith(nameChip);
+      showNameChip();
+    };
     const commit = (): void => {
+      if (done) return;
+      done = true;
       const val = input.value.trim();
       if (val) setLiveName(val);
-      showNameChip();
+      restore();
     };
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') commit();
-      else if (e.key === 'Escape') showNameChip();
+      else if (e.key === 'Escape') {
+        done = true;
+        restore();
+      }
     });
     input.addEventListener('blur', commit);
   });

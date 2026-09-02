@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.10.2] — 2026-09-02
+
+### Fixed
+- **Name input closes on confirm** — editing your name in the toolbar/mobile chip now closes the input on Enter (confirm) or Esc (cancel). Previously the chip was detached from the DOM when the input replaced it, so the input stayed open after confirming.
+
+---
+
 ## [1.10.1] — 2026-09-02
 
 ### Fixed
