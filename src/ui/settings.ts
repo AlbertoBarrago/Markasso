@@ -65,6 +65,9 @@ export function saveSettings(s: UISettings): void {
 
 export function applySettings(appEl: HTMLElement, s: UISettings): void {
   document.documentElement.style.setProperty('--canvas-bg', s.bgColor);
+  // The renderer caches the canvas background; invalidate it so a background
+  // color change is reflected on the next frame.
+  invalidateThemeCache();
   appEl.classList.toggle('minimap-hidden', !s.showMinimap);
 }
 

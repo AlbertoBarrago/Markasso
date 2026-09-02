@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.10.3] — 2026-09-02
+
+### Fixed
+- **Canvas background color now updates** — changing the board background color in Settings didn't repaint the canvas because the renderer caches the background and `applySettings` never invalidated that cache (a regression from the theme-cache perf work). It now invalidates the cache, so the new color appears immediately.
+
+---
+
 ## [1.10.2] — 2026-09-02
 
 ### Fixed
