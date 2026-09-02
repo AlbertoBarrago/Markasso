@@ -84,6 +84,7 @@
   "shareLinkCopied": "Link copied!",
   "shareGoLive": "Share live session",
   "liveName": "Your name",
+  "people": "People",
   "shareLiveCopied": "Live link copied!",
   "livePeers": "Live · {{count}}",
   "liveDisconnected": "Live session disconnected — reconnecting…",

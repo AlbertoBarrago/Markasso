@@ -169,5 +169,6 @@
   "reportSuccessTitle": "送信しました！",
   "reportSuccessDesc": "ありがとうございます。GitHub に公開 issue を作成しました：",
   "reportClose": "閉じる",
-  "guideSearchPlaceholder": "ガイドを検索…"
+  "guideSearchPlaceholder": "ガイドを検索…",
+  "people": "メンバー"
 }

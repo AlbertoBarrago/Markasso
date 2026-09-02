@@ -140,7 +140,21 @@ function randomName(): string {
 let activeSession: {
   self: PeerInfo;
   send: (msg: unknown) => void;
+  emitPeers: () => void;
 } | null = null;
+
+/** Subscribers (the people list UIs) notified whenever presence changes. */
+const peerListeners = new Set<(others: PeerInfo[], self: PeerInfo) => void>();
+
+/** Subscribe to live-presence changes. Returns an unsubscribe function. */
+export function onLivePeers(
+  cb: (others: PeerInfo[], self: PeerInfo) => void,
+): () => void {
+  peerListeners.add(cb);
+  return () => {
+    peerListeners.delete(cb);
+  };
+}
 
 /**
  * Update the current live session's display name and broadcast it to peers.
@@ -154,6 +168,7 @@ export function setLiveName(name: string): void {
   if (!session) return;
   session.self.name = trimmed;
   session.send({ type: 'presence', name: trimmed, color: session.self.color });
+  session.emitPeers();
 }
 
 /**
@@ -192,7 +207,13 @@ export function joinLiveSession(
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
   }
 
-  activeSession = { self, send };
+  const emitPeers = (): void => {
+    const others = [...peers.values()];
+    opts.onPeers?.(others);
+    for (const cb of peerListeners) cb(others, self);
+  };
+
+  activeSession = { self, send, emitPeers };
 
   // When connected, our own pointer moves broadcast through this sender.
   // Registered once: it survives reconnects since `send` always targets the
@@ -211,7 +232,7 @@ export function joinLiveSession(
     for (const peer of list) {
       if (peer.id !== self.id) peers.set(peer.id, peer);
     }
-    opts.onPeers?.([...peers.values()]);
+    emitPeers();
   }
 
   function isUndoOp(c: Command | UndoOp): c is UndoOp {

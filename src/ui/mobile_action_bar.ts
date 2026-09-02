@@ -17,7 +17,8 @@ import {
   saveCustomColor,
   updateCustomColorButton,
 } from './color_picker';
-import { registerLiveNameChip } from './live_name';
+import { onLiveReveal, revealLiveUI } from './live_name';
+import { initPeopleList } from './people_list';
 import {
   copyToClipboard,
   showLiveStatusToast,
@@ -116,7 +117,9 @@ export function initMobileActionBar(
     <input type="text" class="mss-share-input" id="mss-share-name" maxlength="24" placeholder="${t('liveName')}" aria-label="${t('liveName')}" value="${getStoredName().replace(/"/g, '&quot;')}" />
     <button class="mss-share-btn" id="mss-share-golive">${IC_SHARE}<span>${t('shareGoLive')}</span></button>
     <button class="mss-share-btn" id="mss-share-copylink">${IC_LINK}<span>${t('shareCopyLink')}</span></button>
+    <div class="pp-mobile" id="mss-people"></div>
   `;
+  initPeopleList(shareSheet.querySelector<HTMLElement>('#mss-people')!);
 
   const shareNameInput =
     shareSheet.querySelector<HTMLInputElement>('#mss-share-name')!;
@@ -139,7 +142,7 @@ export function initMobileActionBar(
       roomId,
       name,
       seedElements: history.present.elements,
-      onLive: showNameChip,
+      onLive: revealLiveUI,
       onPeers: (peers) => {
         shareBtn.title =
           peers.length > 0
@@ -385,7 +388,7 @@ export function initMobileActionBar(
     nameChip.style.display = '';
     nameChip.textContent = getStoredName() || 'You';
   };
-  registerLiveNameChip(showNameChip);
+  onLiveReveal(showNameChip);
   nameChip.addEventListener('click', () => {
     const input = document.createElement('input');
     input.type = 'text';

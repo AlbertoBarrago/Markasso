@@ -15,7 +15,8 @@ import {
 } from '../io/realtime';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
-import { registerLiveNameChip } from './live_name';
+import { onLiveReveal, revealLiveUI } from './live_name';
+import { initPeopleList } from './people_list';
 import {
   copyToClipboard,
   showLiveStatusToast,
@@ -534,7 +535,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
     nameChip.style.display = '';
     nameChip.textContent = getStoredName() || 'You';
   };
-  registerLiveNameChip(showNameChip);
+  onLiveReveal(showNameChip);
   nameChip.addEventListener('click', () => {
     const input = document.createElement('input');
     input.type = 'text';
@@ -629,7 +630,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
       roomId,
       name,
       seedElements: history.present.elements,
-      onLive: showNameChip,
+      onLive: revealLiveUI,
       onPeers: (peers) => {
         livePeers = peers.length;
         shareBtn.title =
@@ -709,6 +710,50 @@ export function initToolbar(container: HTMLElement, history: History): void {
     }
   });
   shareIsland.append(nameChip, shareBtn, sharePanel);
+
+  // ── Live participants (people list) ────────────────────────────────────────
+  const peopleIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/><circle cx="17" cy="9.5" r="2.5"/><path d="M16 15.2c2 .3 3.7 1.5 4.5 3.6"/></svg>`;
+  const peopleIsland = div('tb-island');
+  peopleIsland.style.position = 'relative';
+  const peopleTrigger = mkBtn(peopleIcon, t('people'));
+  peopleTrigger.style.display = 'none';
+  const peoplePanel = document.createElement('div');
+  peoplePanel.setAttribute('role', 'menu');
+  peoplePanel.style.cssText = [
+    'position:absolute',
+    'right:0',
+    'top:calc(100% + 6px)',
+    'background:rgba(26,26,40,0.98)',
+    'border:1px solid rgba(255,255,255,0.1)',
+    'border-radius:10px',
+    'padding:8px',
+    'display:none',
+    'flex-direction:column',
+    'gap:4px',
+    'min-width:200px',
+    'max-height:320px',
+    'overflow-y:auto',
+    'box-shadow:0 4px 24px rgba(0,0,0,0.6)',
+    'z-index:1000',
+    'backdrop-filter:blur(16px)',
+  ].join(';');
+  initPeopleList(peoplePanel);
+  onLiveReveal(() => {
+    peopleTrigger.style.display = '';
+  });
+  let peoplePanelOpen = false;
+  peopleTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    peoplePanelOpen = !peoplePanelOpen;
+    peoplePanel.style.display = peoplePanelOpen ? 'flex' : 'none';
+  });
+  document.addEventListener('click', () => {
+    if (peoplePanelOpen) {
+      peoplePanelOpen = false;
+      peoplePanel.style.display = 'none';
+    }
+  });
+  peopleIsland.append(peopleTrigger, peoplePanel);
 
   // Presets dropdown
   const presetsIsland = div('tb-island');
@@ -808,7 +853,13 @@ export function initToolbar(container: HTMLElement, history: History): void {
   });
   presetsIsland.append(presetsTrigger, presetsPanel);
 
-  topRight.append(importIsland, presetsIsland, exportIsland, shareIsland);
+  topRight.append(
+    importIsland,
+    presetsIsland,
+    exportIsland,
+    peopleIsland,
+    shareIsland,
+  );
 
   // Top-left: settings button injected by settings.ts
   const topLeft = div('tb-island-topleft');

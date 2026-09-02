@@ -169,5 +169,6 @@
   "reportSuccessTitle": "¡Informe enviado!",
   "reportSuccessDesc": "Gracias, hemos abierto una incidencia pública en GitHub:",
   "reportClose": "Cerrar",
-  "guideSearchPlaceholder": "Buscar en la guía…"
+  "guideSearchPlaceholder": "Buscar en la guía…",
+  "people": "Personas"
 }

@@ -169,5 +169,6 @@
   "reportSuccessTitle": "Signalement envoyé !",
   "reportSuccessDesc": "Merci, nous avons ouvert une issue publique sur GitHub :",
   "reportClose": "Fermer",
-  "guideSearchPlaceholder": "Rechercher dans le guide…"
+  "guideSearchPlaceholder": "Rechercher dans le guide…",
+  "people": "Personnes"
 }

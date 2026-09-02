@@ -4,6 +4,16 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.10.0] — 2026-09-02
+
+### Added
+- **Connected people list** — a new "people" button (toolbar) and a section in the mobile share sheet list everyone online during a live session, each with a color dot; your own row is editable inline to rename yourself.
+
+### Fixed
+- **Name chip visible to everyone** — the editable name chip previously only appeared for the host: the single-slot reveal registry meant the mobile bar's hidden element overwrote the desktop toolbar's, so link-joiners on desktop saw nothing. The registry now supports multiple callbacks, and both the chip and the people button are revealed for any participant (creator or link-joiner).
+
+---
+
 ## [1.9.0] — 2026-09-02
 
 ### Added

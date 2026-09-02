@@ -236,6 +236,72 @@ body {
   color: var(--text);
 }
 
+/* ── Live participants list ──────────────────────────────────────────────── */
+.pp-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 2px 4px 6px;
+  border-bottom: 1px solid var(--island-border);
+  margin-bottom: 4px;
+}
+.pp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: default;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+.pp-row:hover {
+  background: var(--bg-hover);
+}
+.pp-self {
+  cursor: pointer;
+  color: var(--accent);
+}
+.pp-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.pp-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pp-you {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.pp-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 5px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+.pp-mobile {
+  border-top: 1px solid var(--island-border);
+  margin-top: 6px;
+  padding-top: 6px;
+}
+
 .tb-tool-mode-label {
   height: 28px;
   padding: 0 8px;

@@ -169,5 +169,6 @@
   "reportSuccessTitle": "报告已发送！",
   "reportSuccessDesc": "感谢反馈，我们已在 GitHub 上创建了一个公开 issue：",
   "reportClose": "关闭",
-  "guideSearchPlaceholder": "搜索指南…"
+  "guideSearchPlaceholder": "搜索指南…",
+  "people": "成员"
 }
