@@ -75,7 +75,10 @@ export class History {
    *  people's actions must not pollute your undo history) and does NOT
    *  re-broadcast it via onCommand (avoids echo loops). */
   applyRemote(command: Command): void {
-    const next = reducer(this._present, command);
+    // `isRemote` keeps per-user appState defaults (colors, stroke width, font)
+    // local: remote clients apply the element changes but never inherit the
+    // sender's default style.
+    const next = reducer(this._present, command, true);
     if (next === this._present) return;
     this._present = next;
     this.notify();

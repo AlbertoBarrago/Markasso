@@ -51,7 +51,11 @@ function translateElement(
   return { ...element, x, y };
 }
 
-export function reducer(scene: Scene, command: Command): Scene {
+export function reducer(
+  scene: Scene,
+  command: Command,
+  isRemote = false,
+): Scene {
   switch (command.type) {
     case 'CREATE_ELEMENT':
       return {
@@ -342,7 +346,12 @@ export function reducer(scene: Scene, command: Command): Scene {
     case 'SET_FONT_FAMILY':
       return {
         ...scene,
-        appState: { ...scene.appState, fontFamily: command.family },
+        // The default font is per-user: only the local client updates its own
+        // appState; remote clients apply the element change but keep their own
+        // default.
+        appState: isRemote
+          ? scene.appState
+          : { ...scene.appState, fontFamily: command.family },
         elements: scene.elements.map((el) =>
           scene.selectedIds.has(el.id) && el.type === 'text'
             ? { ...el, fontFamily: command.family }
@@ -353,7 +362,9 @@ export function reducer(scene: Scene, command: Command): Scene {
     case 'SET_FONT_SIZE':
       return {
         ...scene,
-        appState: { ...scene.appState, fontSize: command.size },
+        appState: isRemote
+          ? scene.appState
+          : { ...scene.appState, fontSize: command.size },
         elements: scene.elements.map((el) =>
           scene.selectedIds.has(el.id) && el.type === 'text'
             ? {
@@ -568,7 +579,12 @@ export function reducer(scene: Scene, command: Command): Scene {
         scene.selectedIds.size === 0 ? scene.appState.lastCreatedId : null;
       return {
         ...scene,
-        appState: { ...scene.appState, ...statePatch },
+        // The default style is per-user: only the local client updates its own
+        // appState; remote clients apply the element change but keep their own
+        // defaults.
+        appState: isRemote
+          ? scene.appState
+          : { ...scene.appState, ...statePatch },
         elements: scene.elements.map((el) =>
           scene.selectedIds.has(el.id) || el.id === fallbackId
             ? ({ ...el, ...patch } as Element)

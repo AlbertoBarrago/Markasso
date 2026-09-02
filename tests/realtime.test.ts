@@ -46,6 +46,21 @@ describe('History.applyRemote', () => {
     expect(h.present.elements).toHaveLength(1);
   });
 
+  it('keeps per-user appState defaults when a remote style is applied', () => {
+    const h = new History(createScene());
+    h.dispatch({ type: 'CREATE_ELEMENT', element: rect('mine') });
+    h.dispatch({ type: 'SELECT_ELEMENTS', ids: ['mine'] });
+    h.dispatch({ type: 'SET_STROKE_COLOR', color: '#111111' });
+
+    // A remote peer changes the selected element's color.
+    h.applyRemote({ type: 'APPLY_STYLE', strokeColor: '#ff0000' });
+
+    // The element color is shared...
+    expect(h.present.elements[0]?.strokeColor).toBe('#ff0000');
+    // ...but the local default color is untouched (per-user).
+    expect(h.present.appState.strokeColor).toBe('#111111');
+  });
+
   it('does not touch the undo/redo stack of the reader', () => {
     const h = new History(createScene());
     h.applyRemote({ type: 'CREATE_ELEMENT', element: rect('remote') });
