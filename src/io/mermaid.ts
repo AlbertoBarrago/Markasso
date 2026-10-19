@@ -3,100 +3,107 @@ import type {
   ArrowElement,
   Element,
   EllipseElement,
+  ImageElement,
   LineElement,
   RectangleElement,
   RhombusElement,
+  TextElement,
 } from '../elements/element';
 import type { History } from '../engine/history';
+import { getCachedImage } from '../rendering/image_cache';
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+/*
+ * Mermaid import is delegated to `@excalidraw/mermaid-to-excalidraw`, which
+ * drives the official `mermaid` package for parsing and layout and returns
+ * positioned "element skeletons". We tried a hand-rolled parser + layout
+ * engine first; matching Mermaid's grammar and dagre layout is a project of
+ * its own, so this module only maps skeletons onto native Markasso elements.
+ *
+ * The library (and mermaid with it, ~1-2 MB) is loaded lazily on the first
+ * import so it never weighs on the initial bundle.
+ */
 
-type NodeShape = 'rectangle' | 'ellipse' | 'rhombus';
-type Direction = 'TD' | 'LR' | 'RL' | 'BT';
+// ── Skeleton types ─────────────────────────────────────────────────────────────
 
-interface MermaidNode {
-  id: string;
-  label: string;
-  shape: NodeShape;
+/*
+ * Local mirror of the subset of Excalidraw's `ExcalidrawElementSkeleton` the
+ * converter emits. The library's own typings point at `@excalidraw/excalidraw`,
+ * which is not installed (and resolves to `any`), so we declare what we read.
+ */
+
+interface SkeletonLabel {
+  readonly text?: string | null;
+  readonly fontSize?: number;
+  readonly verticalAlign?: string;
 }
 
-interface MermaidEdge {
-  from: string;
-  to: string;
-  edgeKind: 'arrow' | 'line';
-  dashed: boolean;
-  label: string;
+interface SkeletonBase {
+  readonly id?: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width?: number;
+  readonly height?: number;
+  readonly strokeStyle?: string | null;
 }
 
-export interface ParsedDiagram {
-  direction: Direction;
-  nodes: Map<string, MermaidNode>;
-  edges: MermaidEdge[];
+interface SkeletonContainer extends SkeletonBase {
+  readonly type: 'rectangle' | 'ellipse' | 'diamond';
+  readonly label?: SkeletonLabel;
+  readonly roundness?: { readonly type: number } | null;
 }
 
-// ── gitGraph types ─────────────────────────────────────────────────────────────
-
-interface GitCommit {
-  id: string;
-  branch: string;
-  type?: 'HIGHLIGHT' | 'REVERSE';
+interface SkeletonLinear extends SkeletonBase {
+  readonly type: 'arrow' | 'line';
+  readonly points?: ReadonlyArray<readonly [number, number]>;
+  readonly label?: SkeletonLabel;
+  /** `undefined` on an arrow means Excalidraw's default end arrowhead; `null` means none. */
+  readonly startArrowhead?: string | null;
+  readonly endArrowhead?: string | null;
+  readonly start?: { readonly id?: string };
+  readonly end?: { readonly id?: string };
 }
 
-interface GitMerge {
-  fromBranch: string;
-  intoBranch: string;
-  afterCommitIndex: number;
+interface SkeletonText extends SkeletonBase {
+  readonly type: 'text';
+  readonly text: string;
+  readonly fontSize?: number;
 }
 
-export interface ParsedGitGraph {
-  branches: string[];
-  commits: GitCommit[];
-  merges: GitMerge[];
+interface SkeletonImage extends SkeletonBase {
+  readonly type: 'image';
+  readonly fileId: string;
 }
 
-// ── Sequence diagram types ─────────────────────────────────────────────────────
-
-interface SequenceParticipant {
-  id: string;
-  label: string;
+interface SkeletonFrame extends SkeletonBase {
+  readonly type: 'frame';
+  readonly name?: string | null;
 }
 
-interface SequenceMessage {
-  from: string;
-  to: string;
-  dashed: boolean;
-  label: string;
-}
+export type MermaidSkeleton =
+  | SkeletonContainer
+  | SkeletonLinear
+  | SkeletonText
+  | SkeletonImage
+  | SkeletonFrame;
 
-export interface ParsedSequenceDiagram {
-  participants: SequenceParticipant[];
-  messages: SequenceMessage[];
-}
+/** Binary files referenced by image skeletons (the SVG fallback), keyed by fileId. */
+export type MermaidFiles = Readonly<
+  Record<string, { readonly dataURL: string } | undefined>
+>;
 
-// ── gitGraph layout constants ─────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────────
 
-const GIT_COMMIT_W = 90;
-const GIT_COMMIT_H = 36;
-const GIT_COL_STEP = 130;
-const GIT_BRANCH_STEP = 90;
-
-// ── Layout constants ───────────────────────────────────────────────────────────
-
-const NODE_W = 140;
-const NODE_H = 60;
-const RHOMBUS_W = 160;
-const RHOMBUS_H = 80;
-const H_GAP = 60;
-const V_GAP = 80;
-
-// Sequence diagram layout constants
-const SEQ_PART_W = 140;
-const SEQ_PART_H = 50;
-const SEQ_PART_SPACING = 240; // center-to-center horizontal distance
-const SEQ_MSG_FIRST_Y = SEQ_PART_H + 50;
-const SEQ_MSG_SPACING = 60;
-
-// ── Color palette ──────────────────────────────────────────────────────────────
+/** Font size handed to mermaid; node sizes in its layout are derived from it. */
+const FONT_SIZE = 16;
+const FONT_FAMILY = 'Arial, sans-serif';
+const STROKE_WIDTH = 1.5;
+const LINE_HEIGHT = 1.25;
+/** Rough average glyph width relative to font size, for text without measured bounds. */
+const GLYPH_WIDTH_RATIO = 0.6;
+/** Minimum deviation (px) from the chord before an edge is rendered as a curve. */
+const CURVE_MIN_DEVIATION = 8;
+/** Max distance (px) between a connector endpoint and its bound node's box. */
+const BINDING_TOLERANCE = 6;
 
 // Reuse colors already present in the app's POPUP_COLORS palette for consistency
 const MERMAID_COLORS = {
@@ -112,14 +119,10 @@ const MERMAID_COLORS = {
   },
 } as const;
 
-// Cycles per participant in sequence diagrams (same palette as POPUP_COLORS)
-const SEQ_COLORS = ['#4d96ff', '#6bcb77', '#c77dff', '#ffd43b', '#ff6b6b'];
-
-function withAlpha(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
+export interface MermaidTheme {
+  readonly isDark: boolean;
+  /** Color for text and connectors. */
+  readonly strokeColor: string;
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
@@ -129,74 +132,82 @@ export function importMermaid(file: File, history: History): void {
   reader.onload = (ev) => {
     const raw = ev.target?.result as string;
     if (!raw) return;
-    importMermaidText(raw, history);
+    void importMermaidText(raw, history);
   };
   reader.readAsText(file);
 }
 
-export function importMermaidText(text: string, history: History): void {
+/**
+ * Parses Mermaid source with the real Mermaid engine and inserts the result as
+ * a single group of native elements. Diagram types the converter cannot map
+ * to shapes (gantt, pie, gitGraph, ...) arrive as one SVG image element.
+ *
+ * Resolves `true` when something was inserted; failures are reported to the
+ * user via `alert` and resolve `false`.
+ */
+export async function importMermaidText(
+  text: string,
+  history: History,
+): Promise<boolean> {
+  const isDark =
+    document.documentElement.getAttribute('data-theme') !== 'light';
+  const theme: MermaidTheme = {
+    isDark,
+    strokeColor: isDark ? '#e2e2ef' : '#000000',
+  };
+
+  let result: { elements: unknown; files?: unknown };
   try {
-    const resolvedTheme = document.documentElement.getAttribute('data-theme');
-    const strokeColor = resolvedTheme === 'light' ? '#000000' : '#e2e2ef';
-
-    const isDark = resolvedTheme !== 'light';
-
-    // Try flowchart / graph
-    const flowchart = parseDiagram(text);
-    if (flowchart) {
-      if (flowchart.nodes.size === 0) {
-        alert('No nodes found in the Mermaid diagram.');
-        return;
-      }
-      const elements = buildElements(flowchart, strokeColor, isDark);
-      if (elements.length === 0) {
-        alert('No elements could be created from this diagram.');
-        return;
-      }
-      dispatchElements(elements, history);
-      return;
-    }
-
-    // Try sequenceDiagram
-    const sequence = parseSequenceDiagram(text);
-    if (sequence) {
-      if (sequence.participants.length === 0) {
-        alert('No participants found in the sequence diagram.');
-        return;
-      }
-      const elements = buildSequenceElements(sequence, strokeColor, isDark);
-      if (elements.length === 0) {
-        alert('No elements could be created from this diagram.');
-        return;
-      }
-      dispatchElements(elements, history);
-      return;
-    }
-
-    // Try gitGraph
-    const gitGraph = parseGitGraph(text);
-    if (gitGraph) {
-      if (gitGraph.commits.length === 0) {
-        alert('No commits found in the git graph.');
-        return;
-      }
-      const elements = buildGitGraphElements(gitGraph, strokeColor, isDark);
-      if (elements.length === 0) {
-        alert('No elements could be created from this diagram.');
-        return;
-      }
-      dispatchElements(elements, history);
-      return;
-    }
-
-    alert(
-      'This does not appear to be a supported Mermaid diagram.\n' +
-        'Supported types: flowchart / graph, sequenceDiagram, gitGraph.',
+    const { parseMermaidToExcalidraw } = await import(
+      '@excalidraw/mermaid-to-excalidraw'
     );
+    // The library spreads this into `mermaid.initialize`, so `theme` reaches
+    // mermaid even though the library's narrower config type omits it.
+    const config: Parameters<typeof parseMermaidToExcalidraw>[1] & {
+      theme: string;
+    } = {
+      theme: isDark ? 'dark' : 'default',
+      themeVariables: { fontSize: `${FONT_SIZE}px` },
+    };
+    result = await parseMermaidToExcalidraw(text, config);
   } catch (err) {
     console.error('[Markasso] Mermaid import error:', err);
-    alert('Failed to parse the Mermaid diagram.');
+    const reason = err instanceof Error ? `\n\n${err.message}` : '';
+    alert(`Failed to parse the Mermaid diagram.${reason}`);
+    return false;
   }
+
+  const elements = skeletonsToElements(
+    result.elements as ReadonlyArray<MermaidSkeleton>,
+    (result.files ?? {}) as MermaidFiles,
+    theme,
+  );
+  if (elements.length === 0) {
+    alert('No elements could be created from this diagram.');
+    return false;
+  }
+  await preloadImages(elements);
+  dispatchElements(elements, history);
+  return true;
+}
+
+/**
+ * The renderer does not repaint when an image finishes loading, so the SVG
+ * fallback is decoded into the shared cache before it is dispatched;
+ * otherwise it would show the loading placeholder until the next repaint.
+ */
+async function preloadImages(elements: ReadonlyArray<Element>): Promise<void> {
+  await Promise.all(
+    elements.map(async (el) => {
+      if (el.type !== 'image') return;
+      try {
+        await getCachedImage(el.src)?.decode();
+      } catch (err) {
+        // The renderer shows its own error placeholder for broken sources
+        console.warn('[Markasso] Mermaid SVG fallback failed to decode:', err);
+      }
+    }),
+  );
 }
 
 function dispatchElements(elements: Element[], history: History): void {
@@ -217,795 +228,410 @@ function dispatchElements(elements: Element[], history: History): void {
   });
 }
 
-// ── Parser ─────────────────────────────────────────────────────────────────────
+// ── Skeleton → Element mapping ─────────────────────────────────────────────────
 
-/** Exported for testing. Parses a Mermaid flowchart text into nodes and edges. */
-export function parseDiagram(text: string): ParsedDiagram | null {
-  const lines = text.split('\n').map((l) => l.trim());
-
-  let direction: Direction = 'TD';
-  let headerIdx = -1;
-
-  // Find header line (first non-blank, non-comment)
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line || line.startsWith('%%')) continue;
-
-    const m = line.match(/^(?:graph|flowchart)\s+(TD|TB|LR|RL|BT)\b/i);
-    if (m) {
-      const dir = (m[1] ?? '').toUpperCase();
-      direction = (dir === 'TB' ? 'TD' : dir) as Direction;
-      headerIdx = i;
-      break;
-    }
-    return null; // first content line is not a supported header
-  }
-
-  if (headerIdx === -1) return null;
-
-  const nodes = new Map<string, MermaidNode>();
-  const edges: MermaidEdge[] = [];
-
-  for (let i = headerIdx + 1; i < lines.length; i++) {
-    let line = lines[i] ?? '';
-
-    // Strip inline comments
-    line = line.replace(/%%.*$/, '').trim();
-    if (!line) continue;
-
-    // Skip structural / style keywords
-    if (/^(?:subgraph|end|style|classDef|class|linkStyle)\b/.test(line))
-      continue;
-
-    // Normalize labeled edges: "-- label -->" → "-->|label|"
-    line = line.replace(/--\s+([^-]+?)\s+-->/g, '-->|$1|');
-    line = line.replace(/--\s+([^-]+?)\s+---/g, '---|$1|');
-    line = line.replace(/==\s+([^=]+?)\s+==>/g, '==>|$1|');
-
-    // Split by edge operators; two capturing groups → (edgeOp, label)
-    // Yields: [node0, edgeOp1, label1, node1, edgeOp2, label2, node2, ...]
-    const parts = line.split(/(==>|-.->|-\.-|-->|---)(?:\|([^|]*)\|)?/);
-
-    if (parts.length === 1) {
-      // No edge on this line — standalone node declaration
-      const info = parseNodeToken((parts[0] ?? '').trim());
-      if (info) ensureNode(info, nodes);
-      continue;
-    }
-
-    // Walk the alternating (node, edgeOp, label) triplets
-    // Index 0 = first node; then every 3 indices: +1=edgeOp, +2=label, +3=next node
-    let prevId: string | null = null;
-
-    for (let idx = 0; idx < parts.length; idx += 3) {
-      const token = (parts[idx] ?? '').trim();
-      if (!token) continue;
-
-      const info = parseNodeToken(token);
-      if (!info) continue;
-
-      ensureNode(info, nodes);
-
-      if (prevId !== null) {
-        // Edge info sits at the two slots just before the current node index
-        const edgeOp = (parts[idx - 2] ?? '').trim();
-        const edgeLabel = (parts[idx - 1] ?? '').trim();
-        if (edgeOp) {
-          edges.push(buildEdge(prevId, info.id, edgeOp, edgeLabel));
-        }
-      }
-
-      prevId = info.id;
-    }
-  }
-
-  return { direction, nodes, edges };
-}
-
-// ── Node token parsing ─────────────────────────────────────────────────────────
-
-function parseNodeToken(token: string): MermaidNode | null {
-  const t = token.trim();
-  if (!t) return null;
-
-  // Circle: id((label))
-  let m = t.match(/^([A-Za-z0-9_]+)\(\(([^)]*)\)\)$/);
-  if (m) return { id: m[1]!, label: cleanLabel(m[2] ?? ''), shape: 'ellipse' };
-
-  // Rectangle: id[label]
-  m = t.match(/^([A-Za-z0-9_]+)\[([^\]]*)\]$/);
-  if (m)
-    return { id: m[1]!, label: cleanLabel(m[2] ?? ''), shape: 'rectangle' };
-
-  // Diamond: id{label}
-  m = t.match(/^([A-Za-z0-9_]+)\{([^}]*)\}$/);
-  if (m) return { id: m[1]!, label: cleanLabel(m[2] ?? ''), shape: 'rhombus' };
-
-  // Rounded / stadium: id(label)
-  m = t.match(/^([A-Za-z0-9_]+)\(([^)]*)\)$/);
-  if (m) return { id: m[1]!, label: cleanLabel(m[2] ?? ''), shape: 'ellipse' };
-
-  // Asymmetric: id>label]
-  m = t.match(/^([A-Za-z0-9_]+)>([^\]]*)\]$/);
-  if (m)
-    return { id: m[1]!, label: cleanLabel(m[2] ?? ''), shape: 'rectangle' };
-
-  // Bare id (no shape notation)
-  m = t.match(/^[A-Za-z0-9_]+$/);
-  if (m) return { id: t, label: t, shape: 'rectangle' };
-
-  return null;
-}
-
-function cleanLabel(s: string): string {
-  return s.replace(/^["']|["']$/g, '').trim();
-}
-
-function ensureNode(info: MermaidNode, nodes: Map<string, MermaidNode>): void {
-  const existing = nodes.get(info.id);
-  if (!existing) {
-    nodes.set(info.id, info);
-    return;
-  }
-  // Prefer the definition that carries explicit shape / label over a bare id
-  if (existing.label === existing.id && info.label !== info.id) {
-    nodes.set(info.id, info);
-  }
-}
-
-function buildEdge(
-  from: string,
-  to: string,
-  edgeOp: string,
-  label: string,
-): MermaidEdge {
-  const dashed = edgeOp === '-.->'; // -.-  is undirected dashed; -.-> is directed dashed
-  const edgeKind: 'arrow' | 'line' =
-    edgeOp === '---' || edgeOp === '-.-' ? 'line' : 'arrow';
-  return { from, to, edgeKind, dashed, label };
-}
-
-// ── Layout ─────────────────────────────────────────────────────────────────────
-
-function computeLayout(
-  nodes: Map<string, MermaidNode>,
-  edges: MermaidEdge[],
-  direction: Direction,
-): Map<string, { x: number; y: number }> {
-  const nodeIds = [...nodes.keys()];
-
-  // Build adjacency list and in-degree map
-  const inDegree = new Map<string, number>(nodeIds.map((id) => [id, 0]));
-  const adj = new Map<string, string[]>(nodeIds.map((id) => [id, []]));
-
-  for (const edge of edges) {
-    if (!adj.has(edge.from)) adj.set(edge.from, []);
-    if (!inDegree.has(edge.to)) inDegree.set(edge.to, 0);
-    adj.get(edge.from)!.push(edge.to);
-    inDegree.set(edge.to, (inDegree.get(edge.to) ?? 0) + 1);
-  }
-
-  // BFS from root nodes (in-degree 0) to assign depth levels
-  const levelMap = new Map<string, number>();
-  const roots = nodeIds.filter((id) => (inDegree.get(id) ?? 0) === 0);
-  const startNodes = roots.length > 0 ? roots : nodeIds.slice(0, 1); // fallback for pure cycles
-
-  const queue: string[] = [...startNodes];
-  for (const r of startNodes) levelMap.set(r, 0);
-
-  // Cap depth at nodeIds.length to guarantee termination on cyclic diagrams.
-  // A DAG with n nodes has longest path ≤ n-1, so the cap never affects valid DAGs.
-  const depthCap = nodeIds.length;
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    const currentLevel = levelMap.get(current)!;
-    if (currentLevel >= depthCap) continue; // cycle guard
-    for (const neighbor of adj.get(current) ?? []) {
-      if ((levelMap.get(neighbor) ?? -1) < currentLevel + 1) {
-        levelMap.set(neighbor, currentLevel + 1);
-        queue.push(neighbor);
-      }
-    }
-  }
-
-  // Assign any nodes not reachable from roots
-  for (const id of nodeIds) {
-    if (!levelMap.has(id)) levelMap.set(id, 0);
-  }
-
-  // Group nodes by level
-  const levels = new Map<number, string[]>();
-  for (const [id, level] of levelMap) {
-    if (!levels.has(level)) levels.set(level, []);
-    levels.get(level)!.push(id);
-  }
-
-  const maxLevel = Math.max(...levels.keys(), 0);
-  const isHorizontal = direction === 'LR' || direction === 'RL';
-
-  // Cross-axis span using the widest level for centering
-  const maxNodesInLevel = Math.max(
-    ...[...levels.values()].map((l) => l.length),
-  );
-  const crossUnit = isHorizontal ? NODE_H + H_GAP : NODE_W + H_GAP;
-  const maxCrossSpan = (maxNodesInLevel - 1) * crossUnit;
-
-  const positions = new Map<string, { x: number; y: number }>();
-
-  for (const [level, levelNodes] of levels) {
-    const count = levelNodes.length;
-    const crossSpan = (count - 1) * crossUnit;
-    const crossStart = (maxCrossSpan - crossSpan) / 2;
-
-    const mainStep = isHorizontal ? NODE_W + V_GAP : NODE_H + V_GAP;
-    const mainAxis = isHorizontal
-      ? (direction === 'RL' ? maxLevel - level : level) * mainStep
-      : (direction === 'BT' ? maxLevel - level : level) * mainStep;
-
-    levelNodes.forEach((id, i) => {
-      const crossAxis = crossStart + i * crossUnit;
-      positions.set(
-        id,
-        isHorizontal
-          ? { x: mainAxis, y: crossAxis }
-          : { x: crossAxis, y: mainAxis },
-      );
-    });
-  }
-
-  return positions;
-}
-
-// ── Element builder ────────────────────────────────────────────────────────────
-
-/** Exported for testing. Converts a parsed diagram to Markasso elements. */
-export function buildElements(
-  diagram: ParsedDiagram,
-  strokeColor: string,
-  isDark = true,
+/**
+ * Exported for testing. Maps converter skeletons onto Markasso elements.
+ *
+ * Source colors are deliberately dropped in favor of the Markasso palette:
+ * the converter hardcodes light-theme defaults (e.g. black labels) that would
+ * be unreadable on the dark canvas. Skeleton ids (Mermaid node ids such as
+ * `A`) are replaced with UUIDs so repeated imports never collide; connector
+ * bindings are remapped accordingly. Shapes come first so connectors and
+ * free text render on top.
+ */
+export function skeletonsToElements(
+  skeletons: ReadonlyArray<MermaidSkeleton>,
+  files: MermaidFiles,
+  theme: MermaidTheme,
 ): Element[] {
-  const { nodes, edges, direction } = diagram;
-  const positions = computeLayout(nodes, edges, direction);
-  const palette = isDark ? MERMAID_COLORS.dark : MERMAID_COLORS.light;
-
-  // Map mermaid node id → Markasso element id
   const idMap = new Map<string, string>();
-  const shapeElements: Element[] = [];
-
-  for (const [nodeId, node] of nodes) {
-    const pos = positions.get(nodeId) ?? { x: 0, y: 0 };
-    const elemId = crypto.randomUUID();
-    idMap.set(nodeId, elemId);
-
-    const baseStyle = {
-      strokeWidth: 1.5,
-      opacity: 1,
-      roughness: 0,
-    };
-
-    if (node.shape === 'ellipse') {
-      const c = palette.ellipse;
-      const el: EllipseElement = {
-        ...baseStyle,
-        id: elemId,
-        type: 'ellipse',
-        x: pos.x,
-        y: pos.y,
-        width: NODE_W,
-        height: NODE_H,
-        strokeColor: c.stroke,
-        fillColor: c.fill,
-        ...(node.label ? { label: node.label, labelFontSize: 14 } : {}),
-      };
-      shapeElements.push(el);
-    } else if (node.shape === 'rhombus') {
-      const c = palette.rhombus;
-      const el: RhombusElement = {
-        ...baseStyle,
-        id: elemId,
-        type: 'rhombus',
-        x: pos.x,
-        y: pos.y,
-        width: RHOMBUS_W,
-        height: RHOMBUS_H,
-        strokeColor: c.stroke,
-        fillColor: c.fill,
-        ...(node.label ? { label: node.label, labelFontSize: 14 } : {}),
-      };
-      shapeElements.push(el);
-    } else {
-      const c = palette.rectangle;
-      const el: RectangleElement = {
-        ...baseStyle,
-        id: elemId,
-        type: 'rectangle',
-        x: pos.x,
-        y: pos.y,
-        width: NODE_W,
-        height: NODE_H,
-        strokeColor: c.stroke,
-        fillColor: c.fill,
-        ...(node.label ? { label: node.label, labelFontSize: 14 } : {}),
-      };
-      shapeElements.push(el);
-    }
-  }
-
-  const connectorElements: Element[] = [];
-
-  for (const edge of edges) {
-    const fromElemId = idMap.get(edge.from);
-    const toElemId = idMap.get(edge.to);
-    if (!fromElemId || !toElemId) continue;
-
-    const fromPos = positions.get(edge.from);
-    const toPos = positions.get(edge.to);
-    if (!fromPos || !toPos) continue;
-
-    const fromNode = nodes.get(edge.from)!;
-    const toNode = nodes.get(edge.to)!;
-
-    const fW = fromNode.shape === 'rhombus' ? RHOMBUS_W : NODE_W;
-    const fH = fromNode.shape === 'rhombus' ? RHOMBUS_H : NODE_H;
-    const tW = toNode.shape === 'rhombus' ? RHOMBUS_W : NODE_W;
-    const tH = toNode.shape === 'rhombus' ? RHOMBUS_H : NODE_H;
-
-    // Connect center-to-center; startElementId/endElementId let the renderer snap to borders
-    const x1 = fromPos.x + fW / 2;
-    const y1 = fromPos.y + fH / 2;
-    const x2 = toPos.x + tW / 2;
-    const y2 = toPos.y + tH / 2;
-
-    const connectorBase = {
-      id: crypto.randomUUID(),
-      x: x1,
-      y: y1,
-      x2,
-      y2,
-      strokeColor,
-      fillColor: 'transparent' as const,
-      strokeWidth: 1.5,
-      opacity: 1,
-      roughness: 0,
-      startElementId: fromElemId,
-      endElementId: toElemId,
-      ...(edge.dashed ? { strokeStyle: 'dashed' as const } : {}),
-    };
-
-    if (edge.edgeKind === 'arrow') {
-      const el: ArrowElement = {
-        ...connectorBase,
-        type: 'arrow',
-        ...(edge.label ? { label: edge.label, labelFontSize: 12 } : {}),
-      };
-      connectorElements.push(el);
-    } else {
-      const el: LineElement = {
-        ...connectorBase,
-        type: 'line',
-      };
-      connectorElements.push(el);
-    }
-  }
-
-  // Shapes first, connectors on top
-  return [...shapeElements, ...connectorElements];
-}
-
-// ── Sequence diagram parser ────────────────────────────────────────────────────
-
-/** Exported for testing. Parses a Mermaid sequenceDiagram text. */
-export function parseSequenceDiagram(
-  text: string,
-): ParsedSequenceDiagram | null {
-  const lines = text.split('\n').map((l) => l.trim());
-
-  // Find header
-  let headerIdx = -1;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i] ?? '';
-    if (!line || line.startsWith('%%')) continue;
-    if (/^sequenceDiagram\b/i.test(line)) {
-      headerIdx = i;
-      break;
-    }
-    return null;
-  }
-  if (headerIdx === -1) return null;
-
-  const participantOrder: string[] = [];
-  const participantMap = new Map<string, SequenceParticipant>();
-  const messages: SequenceMessage[] = [];
-
-  // Message arrow pattern: From ->> To: label  (handles ->>, -->>, ->, -->, -x, --x)
-  const msgRe =
-    /^([A-Za-z0-9_]+)\s*(->>|-->>|->|-->|-x|--x)\s*([A-Za-z0-9_]+)\s*:\s*(.*)$/;
-  // Participant declaration: participant Id as Label  OR  participant Id  OR  actor Id
-  const partRe = /^(?:participant|actor)\s+([A-Za-z0-9_]+)(?:\s+as\s+(.+))?$/i;
-
-  for (let i = headerIdx + 1; i < lines.length; i++) {
-    const line = (lines[i] ?? '').replace(/%%.*$/, '').trim();
-    if (!line) continue;
-
-    // Skip block keywords
-    if (
-      /^(?:loop|alt|else|opt|par|and|critical|break|end|rect|Note)\b/i.test(
-        line,
-      )
-    )
-      continue;
-
-    const partMatch = line.match(partRe);
-    if (partMatch) {
-      const id = partMatch[1]!;
-      const label = (partMatch[2] ?? id).trim();
-      if (!participantMap.has(id)) {
-        participantMap.set(id, { id, label });
-        participantOrder.push(id);
-      }
-      continue;
-    }
-
-    const msgMatch = line.match(msgRe);
-    if (msgMatch) {
-      const from = msgMatch[1]!;
-      const arrow = msgMatch[2]!;
-      const to = msgMatch[3]!;
-      const label = (msgMatch[4] ?? '').trim();
-      const dashed = arrow.startsWith('--');
-
-      // Auto-register participants seen in messages (preserving encounter order)
-      for (const id of [from, to]) {
-        if (!participantMap.has(id)) {
-          participantMap.set(id, { id, label: id });
-          participantOrder.push(id);
-        }
-      }
-
-      messages.push({ from, to, dashed, label });
-    }
-  }
-
-  const participants = participantOrder.map((id) => participantMap.get(id)!);
-  return { participants, messages };
-}
-
-// ── Sequence diagram builder ───────────────────────────────────────────────────
-
-/** Exported for testing. Converts a parsed sequence diagram to Markasso elements. */
-export function buildSequenceElements(
-  diagram: ParsedSequenceDiagram,
-  strokeColor: string,
-  _isDark = true,
-): Element[] {
-  const { participants, messages } = diagram;
-  const elements: Element[] = [];
-
-  // Map participant id → column index and color
-  const colIndex = new Map<string, number>(
-    participants.map((p, i) => [p.id, i]),
-  );
-  const centerX = (id: string) =>
-    (colIndex.get(id) ?? 0) * SEQ_PART_SPACING + SEQ_PART_W / 2;
-  const participantColor = (id: string) =>
-    SEQ_COLORS[(colIndex.get(id) ?? 0) % SEQ_COLORS.length]!;
-
-  const totalHeight = SEQ_MSG_FIRST_Y + messages.length * SEQ_MSG_SPACING + 40;
-
-  const baseStyle = {
-    strokeWidth: 1.5,
-    opacity: 1,
-    roughness: 0,
+  const newId = (sourceId?: string): string => {
+    const id = crypto.randomUUID();
+    if (sourceId) idMap.set(sourceId, id);
+    return id;
   };
 
-  // Participant boxes — each gets a unique color from the palette
-  for (const p of participants) {
-    const cx = centerX(p.id);
-    const color = participantColor(p.id);
-    const el: RectangleElement = {
-      ...baseStyle,
-      id: crypto.randomUUID(),
-      type: 'rectangle',
-      x: cx - SEQ_PART_W / 2,
-      y: 0,
-      width: SEQ_PART_W,
-      height: SEQ_PART_H,
-      strokeColor: color,
-      fillColor: withAlpha(color, 0.15),
-      ...(p.label ? { label: p.label, labelFontSize: 13 } : {}),
-    };
-    elements.push(el);
-  }
+  const shapes: Element[] = [];
+  const overlays: Element[] = [];
 
-  // Lifelines — same color as participant but subtle
-  for (const p of participants) {
-    const cx = centerX(p.id);
-    const color = participantColor(p.id);
-    const el: LineElement = {
-      ...baseStyle,
-      id: crypto.randomUUID(),
-      type: 'line',
-      x: cx,
-      y: SEQ_PART_H,
-      x2: cx,
-      y2: totalHeight,
-      strokeColor: withAlpha(color, 0.4),
-      fillColor: 'transparent',
-      strokeStyle: 'dashed',
-      strokeWidth: 1,
-    };
-    elements.push(el);
-  }
-
-  // Message arrows
-  messages.forEach((msg, i) => {
-    const y = SEQ_MSG_FIRST_Y + i * SEQ_MSG_SPACING;
-    const x1 = centerX(msg.from);
-    const x2 = centerX(msg.to);
-    const isSelf = msg.from === msg.to;
-
-    if (isSelf) {
-      // Self-message: two short arrows forming a bracket shape
-      const offset = SEQ_PART_SPACING * 0.3;
-      const leg1: LineElement = {
-        ...baseStyle,
-        id: crypto.randomUUID(),
-        type: 'line',
-        x: x1,
-        y,
-        x2: x1 + offset,
-        y2: y,
-        strokeColor,
-        fillColor: 'transparent' as const,
-        ...(msg.dashed ? { strokeStyle: 'dashed' as const } : {}),
-      };
-      const leg2: ArrowElement = {
-        ...baseStyle,
-        id: crypto.randomUUID(),
-        type: 'arrow',
-        x: x1 + offset,
-        y,
-        x2: x1 + offset,
-        y2: y + SEQ_MSG_SPACING * 0.6,
-        strokeColor,
-        fillColor: 'transparent' as const,
-        ...(msg.dashed ? { strokeStyle: 'dashed' as const } : {}),
-        ...(msg.label ? { label: msg.label, labelFontSize: 12 } : {}),
-      };
-      elements.push(leg1, leg2);
-    } else {
-      const el: ArrowElement = {
-        ...baseStyle,
-        id: crypto.randomUUID(),
-        type: 'arrow',
-        x: x1,
-        y,
-        x2,
-        y2: y,
-        strokeColor,
-        fillColor: 'transparent' as const,
-        ...(msg.dashed ? { strokeStyle: 'dashed' as const } : {}),
-        ...(msg.label ? { label: msg.label, labelFontSize: 12 } : {}),
-      };
-      elements.push(el);
+  // Pass 1: everything that can be a binding target, so pass 2 can resolve ids
+  for (const sk of skeletons) {
+    switch (sk.type) {
+      case 'rectangle':
+      case 'ellipse':
+      case 'diamond': {
+        const { shape, title } = mapContainer(sk, newId(sk.id), theme);
+        shapes.push(shape);
+        if (title) overlays.push(title);
+        break;
+      }
+      case 'frame': {
+        const { shape, title } = mapFrame(sk, newId(sk.id), theme);
+        shapes.push(shape);
+        if (title) overlays.push(title);
+        break;
+      }
+      case 'image': {
+        const image = mapImage(sk, files, newId(sk.id));
+        if (image) shapes.push(image);
+        break;
+      }
+      case 'text':
+        overlays.push(
+          makeText(sk.text, sk.x, sk.y, sk.fontSize ?? FONT_SIZE, theme, sk),
+        );
+        break;
+      case 'arrow':
+      case 'line':
+        break;
     }
-  });
+  }
 
-  return elements;
+  // Pass 2: connectors
+  const boxes = new Map<string, Box>();
+  for (const [sourceId, id] of idMap) {
+    const el = shapes.find((e) => e.id === id);
+    if (el && 'width' in el) {
+      boxes.set(sourceId, { id, x: el.x, y: el.y, w: el.width, h: el.height });
+    }
+  }
+  const connectors: Element[] = [];
+  for (const sk of skeletons) {
+    if (sk.type === 'arrow' || sk.type === 'line') {
+      const connector = mapLinear(sk, boxes, theme);
+      if (connector) connectors.push(connector);
+    }
+  }
+
+  return [...shapes, ...connectors, ...overlays];
 }
 
-// ── gitGraph parser ────────────────────────────────────────────────────────────
+function hasSize(sk: SkeletonBase): sk is SkeletonBase & {
+  width: number;
+  height: number;
+} {
+  return (
+    typeof sk.width === 'number' &&
+    typeof sk.height === 'number' &&
+    sk.width > 0 &&
+    sk.height > 0
+  );
+}
 
-/** Exported for testing. Parses a Mermaid gitGraph text. */
-export function parseGitGraph(text: string): ParsedGitGraph | null {
-  const lines = text.split('\n').map((l) => l.trim());
+function dashStyle(
+  sk: SkeletonBase,
+): { strokeStyle: 'dashed' | 'dotted' } | Record<string, never> {
+  return sk.strokeStyle === 'dashed' || sk.strokeStyle === 'dotted'
+    ? { strokeStyle: sk.strokeStyle }
+    : {};
+}
 
-  let headerIdx = -1;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i] ?? '';
-    if (!line || line.startsWith('%%')) continue;
-    if (/^gitGraph\b/i.test(line)) {
-      headerIdx = i;
+const BASE_STYLE = {
+  strokeWidth: STROKE_WIDTH,
+  opacity: 1,
+  roughness: 0,
+} as const;
+
+/**
+ * Containers labelled with `verticalAlign: 'top'` are flowchart subgraphs:
+ * Markasso centers shape labels, which would land on top of the child nodes,
+ * so the title becomes a separate text element pinned to the top edge and the
+ * container itself stays unfilled.
+ */
+function mapContainer(
+  sk: SkeletonContainer,
+  id: string,
+  theme: MermaidTheme,
+): { shape: Element; title: TextElement | null } {
+  const width = sk.width ?? 0;
+  const height = sk.height ?? 0;
+  const labelText = sk.label?.text?.trim() ?? '';
+  const labelFontSize = sk.label?.fontSize ?? FONT_SIZE;
+  const isGroup = sk.label?.verticalAlign === 'top';
+  const palette = theme.isDark ? MERMAID_COLORS.dark : MERMAID_COLORS.light;
+
+  const label =
+    labelText && !isGroup
+      ? { label: labelText, labelFontSize, labelColor: theme.strokeColor }
+      : {};
+  const title =
+    labelText && isGroup
+      ? makeText(labelText, sk.x + 8, sk.y + 6, labelFontSize, theme)
+      : null;
+
+  const common = {
+    ...BASE_STYLE,
+    ...dashStyle(sk),
+    id,
+    x: sk.x,
+    y: sk.y,
+    width,
+    height,
+    ...label,
+  };
+
+  switch (sk.type) {
+    case 'ellipse': {
+      const c = palette.ellipse;
+      const shape: EllipseElement = {
+        ...common,
+        type: 'ellipse',
+        strokeColor: c.stroke,
+        fillColor: c.fill,
+      };
+      return { shape, title };
+    }
+    case 'diamond': {
+      const c = palette.rhombus;
+      const shape: RhombusElement = {
+        ...common,
+        type: 'rhombus',
+        strokeColor: c.stroke,
+        fillColor: c.fill,
+      };
+      return { shape, title };
+    }
+    case 'rectangle': {
+      const c = palette.rectangle;
+      const shape: RectangleElement = {
+        ...common,
+        type: 'rectangle',
+        strokeColor: c.stroke,
+        fillColor: isGroup ? 'transparent' : c.fill,
+        ...(sk.roundness ? { cornerRadius: Math.min(16, height / 2) } : {}),
+      };
+      return { shape, title };
+    }
+  }
+}
+
+/** Class diagram namespaces arrive as frames: a dashed outline plus its name. */
+function mapFrame(
+  sk: SkeletonFrame,
+  id: string,
+  theme: MermaidTheme,
+): { shape: RectangleElement; title: TextElement | null } {
+  const palette = theme.isDark ? MERMAID_COLORS.dark : MERMAID_COLORS.light;
+  const name = sk.name?.trim() ?? '';
+  return {
+    shape: {
+      ...BASE_STYLE,
+      id,
+      type: 'rectangle',
+      x: sk.x,
+      y: sk.y,
+      width: sk.width ?? 0,
+      height: sk.height ?? 0,
+      strokeColor: palette.rectangle.stroke,
+      fillColor: 'transparent',
+      strokeStyle: 'dashed',
+    },
+    title: name ? makeText(name, sk.x + 8, sk.y + 6, FONT_SIZE, theme) : null,
+  };
+}
+
+function mapImage(
+  sk: SkeletonImage,
+  files: MermaidFiles,
+  id: string,
+): ImageElement | null {
+  const file = files[sk.fileId];
+  if (!file || !hasSize(sk)) return null;
+  return {
+    ...BASE_STYLE,
+    id,
+    type: 'image',
+    x: sk.x,
+    y: sk.y,
+    width: sk.width,
+    height: sk.height,
+    naturalWidth: sk.width,
+    naturalHeight: sk.height,
+    src: file.dataURL,
+    strokeColor: 'transparent',
+    fillColor: 'transparent',
+  };
+}
+
+function makeText(
+  content: string,
+  x: number,
+  y: number,
+  fontSize: number,
+  theme: MermaidTheme,
+  measured?: SkeletonBase,
+): TextElement {
+  const lines = content.split('\n');
+  const longest = Math.max(...lines.map((l) => l.length));
+  const size =
+    measured && hasSize(measured)
+      ? { width: measured.width, height: measured.height }
+      : {
+          width: Math.ceil(longest * fontSize * GLYPH_WIDTH_RATIO),
+          height: Math.ceil(lines.length * fontSize * LINE_HEIGHT),
+        };
+  return {
+    ...BASE_STYLE,
+    id: crypto.randomUUID(),
+    type: 'text',
+    x,
+    y,
+    ...size,
+    content,
+    fontSize,
+    fontFamily: FONT_FAMILY,
+    strokeColor: theme.strokeColor,
+    fillColor: 'transparent',
+  };
+}
+
+interface Box {
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+}
+
+/**
+ * Resolves a skeleton binding to the remapped element id, but only when the
+ * endpoint actually touches that node. Sequence messages are bound to the
+ * actor box at the top while starting mid-lifeline: Excalidraw leaves such
+ * arrows in place, whereas Markasso snaps bound endpoints onto the node's
+ * border, which would collapse every message onto the actor header.
+ */
+function bindingFor(
+  sourceId: string | undefined,
+  px: number,
+  py: number,
+  boxes: ReadonlyMap<string, Box>,
+): string | undefined {
+  const box = sourceId ? boxes.get(sourceId) : undefined;
+  if (!box) return undefined;
+  const dx = Math.max(box.x - px, 0, px - (box.x + box.w));
+  const dy = Math.max(box.y - py, 0, py - (box.y + box.h));
+  return Math.hypot(dx, dy) <= BINDING_TOLERANCE ? box.id : undefined;
+}
+
+/**
+ * Markasso connectors are straight or a single quadratic curve, while Mermaid
+ * routes edges as polylines. Straight-ish paths keep a straight connector;
+ * bent ones become a quadratic bezier passing through the path's midpoint
+ * (control = 2·mid − chordMid, since B(0.5) = (P0 + 2C + P2) / 4).
+ * Endpoints sit on node borders, which `resolveArrowEndpoints` preserves for
+ * bound connectors, so the routing survives until a node is moved.
+ */
+function mapLinear(
+  sk: SkeletonLinear,
+  boxes: ReadonlyMap<string, Box>,
+  theme: MermaidTheme,
+): ArrowElement | LineElement | null {
+  const pts = (
+    sk.points && sk.points.length >= 2 ? sk.points : [[0, 0] as const]
+  ).map(([px, py]) => [sk.x + px, sk.y + py] as const);
+  if (pts.length < 2) {
+    if (!hasSize(sk)) return null;
+    pts.push([sk.x + sk.width, sk.y + sk.height]);
+  }
+  const [x1, y1] = pts[0]!;
+  const [x2, y2] = pts[pts.length - 1]!;
+  const control = curveControlPoint(pts);
+
+  const startId = bindingFor(sk.start?.id, x1, y1, boxes);
+  const endId = bindingFor(sk.end?.id, x2, y2, boxes);
+  const labelText = sk.label?.text?.trim() ?? '';
+
+  const common = {
+    ...BASE_STYLE,
+    ...dashStyle(sk),
+    id: crypto.randomUUID(),
+    x: x1,
+    y: y1,
+    x2,
+    y2,
+    strokeColor: theme.strokeColor,
+    fillColor: 'transparent',
+    ...(startId ? { startElementId: startId } : {}),
+    ...(endId ? { endElementId: endId } : {}),
+    ...(labelText
+      ? {
+          label: labelText,
+          labelFontSize: Math.min(sk.label?.fontSize ?? FONT_SIZE, 14),
+          labelColor: theme.strokeColor,
+        }
+      : {}),
+  };
+
+  const isArrow = sk.type === 'arrow';
+  const headEnd = isArrow && sk.endArrowhead !== null;
+  const headStart =
+    isArrow && sk.startArrowhead !== null && sk.startArrowhead !== undefined;
+
+  if (headEnd && !headStart && !control) {
+    return { ...common, type: 'arrow' };
+  }
+  const arrowHead =
+    headStart && headEnd
+      ? 'both'
+      : headStart
+        ? 'start'
+        : headEnd
+          ? 'end'
+          : undefined;
+  return {
+    ...common,
+    type: 'line',
+    ...(arrowHead ? { arrowHead } : {}),
+    ...(control ? { cx: control[0], cy: control[1] } : {}),
+  };
+}
+
+/**
+ * Exported for testing. Returns the quadratic control point approximating a
+ * polyline, or `null` when the path is close enough to its chord.
+ */
+export function curveControlPoint(
+  pts: ReadonlyArray<readonly [number, number]>,
+): readonly [number, number] | null {
+  if (pts.length < 3) return null;
+  const first = pts[0]!;
+  const last = pts[pts.length - 1]!;
+
+  const segLengths: number[] = [];
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const len = Math.hypot(
+      pts[i]![0] - pts[i - 1]![0],
+      pts[i]![1] - pts[i - 1]![1],
+    );
+    segLengths.push(len);
+    total += len;
+  }
+  if (total === 0) return null;
+
+  // Point at half the arc length
+  let remaining = total / 2;
+  let mid: readonly [number, number] = first;
+  for (let i = 0; i < segLengths.length; i++) {
+    const len = segLengths[i]!;
+    if (remaining <= len) {
+      const a = pts[i]!;
+      const b = pts[i + 1]!;
+      const t = len === 0 ? 0 : remaining / len;
+      mid = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
       break;
     }
-    return null;
-  }
-  if (headerIdx === -1) return null;
-
-  const DEFAULT_BRANCH = 'main';
-  const branches: string[] = [DEFAULT_BRANCH];
-  const commits: GitCommit[] = [];
-  const merges: GitMerge[] = [];
-  let currentBranch = DEFAULT_BRANCH;
-  let autoId = 0;
-
-  for (let i = headerIdx + 1; i < lines.length; i++) {
-    const line = (lines[i] ?? '').replace(/%%.*$/, '').trim();
-    if (!line) continue;
-
-    // commit [id: "..."] [type: HIGHLIGHT|REVERSE]
-    if (/^commit\b/.test(line)) {
-      const idMatch = line.match(/\bid:\s*["']([^"']+)["']/);
-      const typeMatch = line.match(/\btype:\s*(HIGHLIGHT|REVERSE)\b/);
-      const id = idMatch ? idMatch[1]! : `commit-${autoId++}`;
-      const type = typeMatch
-        ? (typeMatch[1] as 'HIGHLIGHT' | 'REVERSE')
-        : undefined;
-      commits.push({ id, branch: currentBranch, ...(type ? { type } : {}) });
-      continue;
-    }
-
-    // branch <name>
-    const branchMatch = line.match(/^branch\s+(\S+)/);
-    if (branchMatch) {
-      const name = branchMatch[1]!;
-      if (!branches.includes(name)) branches.push(name);
-      currentBranch = name;
-      continue;
-    }
-
-    // checkout <name>
-    const checkoutMatch = line.match(/^checkout\s+(\S+)/);
-    if (checkoutMatch) {
-      const name = checkoutMatch[1]!;
-      if (!branches.includes(name)) branches.push(name);
-      currentBranch = name;
-      continue;
-    }
-
-    // merge <branch>
-    const mergeMatch = line.match(/^merge\s+(\S+)/);
-    if (mergeMatch) {
-      const fromBranch = mergeMatch[1]!;
-      merges.push({
-        fromBranch,
-        intoBranch: currentBranch,
-        afterCommitIndex: commits.length,
-      });
-      // A merge produces a commit on the current branch
-      commits.push({ id: `merge-${autoId++}`, branch: currentBranch });
-    }
+    remaining -= len;
   }
 
-  return { branches, commits, merges };
-}
+  const chordMid = [
+    (first[0] + last[0]) / 2,
+    (first[1] + last[1]) / 2,
+  ] as const;
+  const chordLen = Math.hypot(last[0] - first[0], last[1] - first[1]);
+  const deviation = Math.hypot(mid[0] - chordMid[0], mid[1] - chordMid[1]);
+  if (deviation < Math.max(CURVE_MIN_DEVIATION, chordLen * 0.05)) return null;
 
-// ── gitGraph element builder ───────────────────────────────────────────────────
-
-/** Exported for testing. Converts a parsed gitGraph to Markasso elements. */
-export function buildGitGraphElements(
-  diagram: ParsedGitGraph,
-  strokeColor: string,
-  _isDark = true,
-): Element[] {
-  const { branches, commits, merges } = diagram;
-  const shapeElements: Element[] = [];
-  const connectorElements: Element[] = [];
-
-  const baseStyle = { strokeWidth: 1.5, opacity: 1, roughness: 0 };
-
-  // Map commit index → element id (for connecting lines and merge arrows)
-  const commitElemIds: string[] = [];
-  // Per-branch: column of the last commit (for line connections)
-  const lastCommitByBranch = new Map<string, { col: number; elemId: string }>();
-  // Per-branch: last element id on that branch before a merge
-  const lastElemIdByBranch = new Map<string, string>();
-
-  // Track which merge targets which commit elem id (for arrows)
-  const mergeArrows: Array<{ fromElemId: string; toElemId: string }> = [];
-
-  // Snapshot last elemId per branch before each merge (at afterCommitIndex)
-  const mergeSnapshots = new Map<number, Map<string, string>>();
-  for (const m of merges) {
-    if (!mergeSnapshots.has(m.afterCommitIndex)) {
-      mergeSnapshots.set(m.afterCommitIndex, new Map());
-    }
-  }
-
-  commits.forEach((commit, col) => {
-    const branchRow = branches.indexOf(commit.branch);
-    const color = SEQ_COLORS[branchRow % SEQ_COLORS.length]!;
-
-    const x = col * GIT_COL_STEP;
-    const y = branchRow * GIT_BRANCH_STEP;
-    const elemId = crypto.randomUUID();
-    commitElemIds.push(elemId);
-
-    const isHighlight = commit.type === 'HIGHLIGHT';
-    const fillAlpha = isHighlight ? 0.35 : 0.18;
-
-    const el: RectangleElement = {
-      ...baseStyle,
-      id: elemId,
-      type: 'rectangle',
-      x,
-      y,
-      width: GIT_COMMIT_W,
-      height: GIT_COMMIT_H,
-      strokeColor: color,
-      fillColor: withAlpha(color, fillAlpha),
-      label: commit.id.slice(0, 7),
-      labelFontSize: 11,
-    };
-    shapeElements.push(el);
-
-    // Connect to previous commit on same branch
-    const prev = lastCommitByBranch.get(commit.branch);
-    if (prev) {
-      const line: LineElement = {
-        ...baseStyle,
-        id: crypto.randomUUID(),
-        type: 'line',
-        x: prev.col * GIT_COL_STEP + GIT_COMMIT_W,
-        y: branchRow * GIT_BRANCH_STEP + GIT_COMMIT_H / 2,
-        x2: x,
-        y2: y + GIT_COMMIT_H / 2,
-        strokeColor: color,
-        fillColor: 'transparent',
-        startElementId: prev.elemId,
-        endElementId: elemId,
-      };
-      connectorElements.push(line);
-    }
-
-    lastCommitByBranch.set(commit.branch, { col, elemId });
-    lastElemIdByBranch.set(commit.branch, elemId);
-
-    // Record snapshots for any merges at this index
-    const snap = mergeSnapshots.get(col + 1);
-    if (snap !== undefined) {
-      for (const [branch, id] of lastElemIdByBranch) {
-        snap.set(branch, id);
-      }
-    }
-  });
-
-  // Build merge arrows
-  for (const m of merges) {
-    const snap = mergeSnapshots.get(m.afterCommitIndex);
-    const fromElemId = snap?.get(m.fromBranch);
-    const toElemId = commitElemIds[m.afterCommitIndex];
-    if (fromElemId && toElemId) {
-      mergeArrows.push({ fromElemId, toElemId });
-    }
-  }
-
-  for (const { fromElemId, toElemId } of mergeArrows) {
-    const arrow: ArrowElement = {
-      ...baseStyle,
-      id: crypto.randomUUID(),
-      type: 'arrow',
-      x: 0,
-      y: 0,
-      x2: 0,
-      y2: 0,
-      strokeColor,
-      fillColor: 'transparent',
-      startElementId: fromElemId,
-      endElementId: toElemId,
-      strokeStyle: 'dashed',
-    };
-    connectorElements.push(arrow);
-  }
-
-  // Branch labels — one small rectangle per branch at x=-10
-  for (const [i, branch] of branches.entries()) {
-    const color = SEQ_COLORS[i % SEQ_COLORS.length]!;
-    const label: RectangleElement = {
-      ...baseStyle,
-      id: crypto.randomUUID(),
-      type: 'rectangle',
-      x: -GIT_COMMIT_W - 20,
-      y: i * GIT_BRANCH_STEP,
-      width: GIT_COMMIT_W,
-      height: GIT_COMMIT_H,
-      strokeColor: color,
-      fillColor: withAlpha(color, 0.1),
-      label: branch,
-      labelFontSize: 12,
-    };
-    shapeElements.unshift(label);
-  }
-
-  return [...shapeElements, ...connectorElements];
+  return [2 * mid[0] - chordMid[0], 2 * mid[1] - chordMid[1]];
 }

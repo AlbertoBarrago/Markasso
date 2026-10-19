@@ -1,0 +1,6 @@
+# @excalidraw/mermaid-to-excalidraw 2.2.2 looks up subgraph and class nodes by
+# bare SVG id, but newer mermaid releases (verified on 11.17.2) prefix every id
+# with the render id, so the converter falls back to a flat image. 11.13.0 was
+# current when the converter shipped. Drop this pin once it handles the prefix.
+overrides:
+  mermaid: 11.13.0

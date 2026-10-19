@@ -1,6 +1,6 @@
 # Contributing to Markasso
 
-Markasso is a zero-dependency browser-based whiteboard app built with TypeScript and Canvas 2D.
+Markasso is a browser-based whiteboard app with a zero-dependency core, built with TypeScript and Canvas 2D.
 
 ## Setup
 
@@ -66,7 +66,8 @@ When adding a new element type or command, add corresponding tests.
 
 ## Guidelines
 
-- Keep Markasso zero-dependency — do not add runtime npm packages
+- Keep the core (`core/`, `elements/`, `commands/`, `engine/`, `rendering/`, `tools/`) zero-dependency: no runtime npm packages there
+- A runtime dependency is acceptable only for an isolated feature that would otherwise mean re-implementing a mature project (e.g. Mermaid import via `@excalidraw/mermaid-to-excalidraw`). It must be loaded with a dynamic `import()` so it never lands in the entry chunk, and it needs an explicit rationale
 - New element types go in `elements/`, new commands in `commands/`; update the discriminated unions and the reducer's `switch`
 - Do not touch the undo stack for ephemeral operations
 - All coordinate math must work correctly across different `devicePixelRatio` values
