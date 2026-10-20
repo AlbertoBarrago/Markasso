@@ -3,6 +3,13 @@ import type { History } from '../engine/history';
 import { importMarkasso } from '../io/markasso';
 import { importMermaid, importMermaidText } from '../io/mermaid';
 
+/**
+ * Pasted text is treated as Mermaid only when it opens with a diagram keyword
+ * (or a `%%{init}` directive), so ordinary text pastes are untouched.
+ */
+const MERMAID_HEADER =
+  /^(?:%%\{|(?:graph|flowchart)\s|(?:sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|gantt|pie|gitGraph|mindmap|timeline|journey|quadrantChart|requirementDiagram|C4Context|C4Container|C4Component|C4Dynamic|C4Deployment|kanban|xychart-beta|sankey-beta|block-beta|packet-beta|architecture-beta)\b)/;
+
 export function initImageImport(
   workspace: HTMLElement,
   history: History,
@@ -70,12 +77,8 @@ export function initImageImport(
       if (item.type === 'text/plain') {
         item.getAsString((text) => {
           const trimmed = text.trimStart();
-          if (
-            /^(?:graph\s|flowchart\s|sequenceDiagram\b|gitGraph\b)/i.test(
-              trimmed,
-            )
-          ) {
-            importMermaidText(trimmed, history);
+          if (MERMAID_HEADER.test(trimmed)) {
+            void importMermaidText(trimmed, history);
           }
         });
         return;

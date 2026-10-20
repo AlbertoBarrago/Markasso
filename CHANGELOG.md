@@ -4,6 +4,24 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.11.0] - 2026-10-19
+
+### Changed
+- **Mermaid import runs on the real Mermaid engine.** The hand-rolled parser and layout engine are gone, replaced by [`@excalidraw/mermaid-to-excalidraw`](https://github.com/excalidraw/mermaid-to-excalidraw) on top of the official `mermaid` package. Some features are worth adopting rather than reinventing: this one had already cost someone else far more hours than it would ever be worth re-spending here.
+  - Flowcharts (including subgraphs and all node shapes), sequence, class, state and ER diagrams are converted to native, editable Markasso shapes with Mermaid's own layout.
+  - Every other Mermaid diagram type (gantt, pie, gitGraph, mindmap, timeline, ...) is inserted as an SVG image instead of being rejected. gitGraph, previously converted to native shapes, now arrives as an image.
+  - The Mermaid engine is lazy-loaded on the first import, so the initial bundle is unchanged.
+  - The insert dialog stays open on a syntax error (showing Mermaid's error message) so the source can be fixed in place.
+  - Pasting Mermaid text is recognized for all diagram types, not just `graph` / `flowchart` / `sequenceDiagram` / `gitGraph`.
+- **First runtime dependency.** The core stays dependency-free; isolated, lazy-loaded features may now use a dependency when it saves re-solving a solved problem.
+
+### Fixed
+- **Live sessions keep each user's default style** and apply `APPLY_STYLE` deterministically across peers.
+- **A remote `CREATE_ELEMENT` no longer hijacks a peer's `lastCreatedId` fallback.**
+- **The people island is hidden entirely** when no other participants are present.
+
+---
+
 ## [1.10.4] — 2026-09-02
 
 ### Fixed

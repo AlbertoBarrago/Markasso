@@ -4,7 +4,7 @@
 
 <h1>MARKASSO</h1>
 
-<p>is a zero-latency, framework-agnostic whiteboard engine. Built with vanilla TypeScript and the Canvas 2D API, it delivers a high-performance drawing experience with zero dependencies and a keyboard-first workflow. It’s the "Vesper" of whiteboards: dark, fast, and focused.</p>
+<p>is a zero-latency, framework-agnostic whiteboard engine. Built with vanilla TypeScript and the Canvas 2D API, it delivers a high-performance drawing experience with a zero-dependency core and a keyboard-first workflow. It’s the "Vesper" of whiteboards: dark, fast, and focused.</p>
 
 <a href="https://markasso.it">
   <img src="https://img.shields.io/badge/▶_Try_it_live-Markasso-c42020?style=for-the-badge" alt="Live Demo" />
@@ -17,7 +17,7 @@
 ![Vitest](https://img.shields.io/badge/Tested-Vitest-6e9f18?logo=vitest&logoColor=white)
 ![Coverage](https://img.shields.io/badge/coverage-69%25-yellow)
 ![Status](https://img.shields.io/badge/status-stable-blue)
-![Zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
+![Zero-dependency core](https://img.shields.io/badge/core%20dependencies-0-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 <br/>
@@ -51,6 +51,14 @@ While Excalidraw excels at freehand sketching and Draw.io offers comprehensive d
 Markasso started as a game. I wanted to stay sharp with LLMs, actually use them, not just read about them. So I picked a project small enough to finish and complex enough to be honest: a whiteboard from scratch, vanilla TypeScript, zero dependencies.
 
 It didn't stay small.
+
+### Don't reinvent every wheel
+
+The core (scene, reducer, renderer, tools) stays dependency-free, and that is not going to change. But some features are a whole discipline of their own. Mermaid import is the case in point: we wrote our own parser and layout engine, and it worked, sort of. Then every real-world diagram found a new way to break it.
+
+So we stopped. Mermaid import now runs on [`@excalidraw/mermaid-to-excalidraw`](https://github.com/excalidraw/mermaid-to-excalidraw), built on the official `mermaid` engine by people who have already spent far more hours (and far more swearing) on it than we ever will. It is loaded lazily on first use, so the initial bundle stays exactly as light as before.
+
+The rule going forward: zero dependencies in the core; a dependency is fine for an isolated, lazy-loaded feature when building it ourselves would mean re-solving someone else's solved problem, worse.
 
 Colleagues started using it. Then people I work with remotely. Then people I've never met. What was a personal experiment to keep up with the tools of the moment became something a real team depends on to sketch ideas, run retrospectives, and think out loud together.
 
@@ -157,7 +165,7 @@ Curves are made by dragging the midpoint handle of a line after placement — th
 | **Session persistence** | Auto-saved to `localStorage` — your work survives page refreshes |
 | **`.markasso` format** | Save and reload your full scene as a `.markasso` file (JSON) — images included |
 | **Image import** | Drag-and-drop, file picker, or `Ctrl+V` paste; `.markasso` files can also be dropped directly |
-| **Mermaid import** | Import `.mmd` / `.mermaid` files via drag-and-drop or the toolbar button; paste Mermaid text from the clipboard — `graph`, `flowchart`, and `sequenceDiagram` are converted to native elements |
+| **Mermaid import** | Import `.mmd` / `.mermaid` files via drag-and-drop or the toolbar button, or paste Mermaid text from the clipboard. Flowcharts (with subgraphs), sequence, class, state and ER diagrams become native, editable elements; every other Mermaid type (gantt, pie, gitGraph, mindmap, ...) is inserted as an SVG image |
 | **Export PNG / SVG / HTML** | Download as 2× PNG, clean SVG, or standalone HTML — all respect the current canvas background color |
 | **Share link** | One-click URL encoding of the full scene — no server, no account |
 
@@ -171,7 +179,7 @@ Curves are made by dragging the midpoint handle of a line after placement — th
 
 | Feature | Description |
 |---|---|
-| **Zero dependencies** | Browser Canvas 2D API only — no React, no framework, no bundled megabytes |
+| **Zero-dependency core** | Browser Canvas 2D API only: no React, no framework, no bundled megabytes. The only runtime dependency (Mermaid) is lazy-loaded on first use |
 
 ---
 
@@ -340,7 +348,7 @@ src/
 │   └── ephemeral.ts        # Ephemeral-command classifier (shared client + Worker)
 ├── io/
 │   ├── markasso.ts         # .markasso save / load (exportMarkasso, importMarkasso)
-│   ├── mermaid.ts          # Mermaid parser + layout engine → Markasso elements
+│   ├── mermaid.ts          # Mermaid import: mermaid-to-excalidraw skeletons → Markasso elements
 │   ├── session.ts          # localStorage auto-save / restore + quota warning toast
 │   ├── share.ts            # URL-hash scene encoding / decoding for share links
 │   ├── realtime.ts         # Live-session WebSocket client (join, broadcast, seeding, remote undo)
@@ -395,7 +403,7 @@ src/
 | Rendering | Canvas 2D API | Direct pixel control without virtual DOM overhead |
 | Testing | Vitest | Runs in Node — no browser needed for reducer/viewport math |
 | Realtime | Cloudflare Workers + Durable Objects | Free WebSocket hosting; one DO per room serializes commands; no extra npm deps |
-| Dependencies | None | `crypto.randomUUID()`, `requestAnimationFrame`, `ResizeObserver` — all native |
+| Dependencies | Core: none; Mermaid import: `@excalidraw/mermaid-to-excalidraw` | Core relies on native `crypto.randomUUID()`, `requestAnimationFrame`, `ResizeObserver`; Mermaid is a lazy-loaded chunk, so it costs nothing until used |
 
 ---
 

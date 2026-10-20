@@ -372,7 +372,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   mermaidTextarea.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
-      doInsert();
+      void doInsert();
     }
     if (e.key === 'Escape') hideMermaidDialog();
   });
@@ -406,7 +406,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
     'cursor:pointer',
   ].join(';');
   mermaidInsertBtn.textContent = t('mermaidInsert');
-  mermaidInsertBtn.addEventListener('click', doInsert);
+  mermaidInsertBtn.addEventListener('click', () => void doInsert());
 
   mermaidActions.append(mermaidCancelBtn, mermaidInsertBtn);
   mermaidBox.append(mermaidHeader, mermaidTextarea, mermaidActions);
@@ -426,11 +426,22 @@ export function initToolbar(container: HTMLElement, history: History): void {
     mermaidDialog.style.display = 'none';
   }
 
-  function doInsert(): void {
+  /**
+   * The first import lazy-loads the Mermaid engine, so the dialog stays open
+   * (button disabled) until it resolves. On a parse error it stays open too,
+   * letting the user fix the source instead of retyping it.
+   */
+  async function doInsert(): Promise<void> {
     const code = mermaidTextarea.value.trim();
-    if (!code) return;
-    hideMermaidDialog();
-    importMermaidText(code, history);
+    if (!code || mermaidInsertBtn.disabled) return;
+    mermaidInsertBtn.disabled = true;
+    mermaidInsertBtn.textContent = `${t('mermaidInsert')}…`;
+    try {
+      if (await importMermaidText(code, history)) hideMermaidDialog();
+    } finally {
+      mermaidInsertBtn.disabled = false;
+      mermaidInsertBtn.textContent = t('mermaidInsert');
+    }
   }
 
   const mermaidTrigger = mkBtn(IC.mermaid, t('importMermaid'));
