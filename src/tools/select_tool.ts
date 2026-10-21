@@ -1,10 +1,16 @@
 import { worldToScreen } from '../core/viewport';
 import { cloneElementsWithOffset } from '../elements/clone';
-import type { Element } from '../elements/element';
-import { distToQuadraticCurve } from '../rendering/connector_geometry';
-import type { HandlePosition } from '../rendering/draw_selection';
+import type { ConnectorAnchor, Element } from '../elements/element';
 import {
-  findNearestElementSnapTarget,
+  distToQuadraticCurve,
+  distToRoute,
+} from '../rendering/connector_geometry';
+import type {
+  ElementSnapTarget,
+  HandlePosition,
+} from '../rendering/draw_selection';
+import {
+  findConnectorSnapTarget,
   getElementBounds,
   getElementCenter,
   getRotationHandleScreen,
@@ -13,7 +19,9 @@ import {
   hitTestHandle,
   ROTATION_HANDLE_R,
   resolveArrowEndpoints,
+  resolveConnectorRoute,
 } from '../rendering/draw_selection';
+import { PORT_SNAP_RADIUS_PX } from './line_tool';
 import type { Tool, ToolContext } from './tool';
 
 type DragMode =
@@ -100,16 +108,14 @@ export class SelectTool implements Tool {
   // Endpoint drag state
   private endpointSide: 'start' | 'end' | null = null;
   private endpointElId: string | null = null;
-  private endpointSnapTarget: {
-    worldX: number;
-    worldY: number;
-    elementId: string;
-  } | null = null;
+  private endpointSnapTarget: ElementSnapTarget | null = null;
 
   /** Exposed for canvas_view to draw a snap indicator */
   endpointSnapIndicator: { worldX: number; worldY: number } | null = null;
   /** Exposed for canvas_view to draw a hover highlight on the snap target element */
   endpointSnapElementId: string | null = null;
+  /** Exposed for canvas_view to highlight the port the end would pin to */
+  endpointSnapAnchor: ConnectorAnchor | null = null;
 
   // Shift+drag clone state
   private shiftClonePending = false;
@@ -222,7 +228,7 @@ export class SelectTool implements Tool {
     // 1b. Check line midpoint control-point handle (single line selected)
     if (selectedEls.length === 1) {
       const el = selectedEls[0]!;
-      if (el.type === 'line') {
+      if (el.type === 'line' && el.routing !== 'elbow') {
         const cpX = el.cx ?? (el.x + el.x2) / 2;
         const cpY = el.cy ?? (el.y + el.y2) / 2;
         const [scx, scy] = worldToScreen(scene.viewport, cpX, cpY);
@@ -418,12 +424,13 @@ export class SelectTool implements Tool {
         (el.type === 'line' || el.type === 'arrow') &&
         this.endpointSide
       ) {
-        const snapRadius = SNAP_RADIUS_PX / scene.viewport.zoom;
-        const snapTarget = findNearestElementSnapTarget(
+        const { zoom } = scene.viewport;
+        const snapTarget = findConnectorSnapTarget(
           scene.elements,
           worldX,
           worldY,
-          snapRadius,
+          SNAP_RADIUS_PX / zoom,
+          PORT_SNAP_RADIUS_PX / zoom,
           el.id,
         );
         this.endpointSnapTarget = snapTarget;
@@ -431,16 +438,20 @@ export class SelectTool implements Tool {
           ? { worldX: snapTarget.worldX, worldY: snapTarget.worldY }
           : null;
         this.endpointSnapElementId = snapTarget?.elementId ?? null;
+        this.endpointSnapAnchor = snapTarget?.anchor ?? null;
 
         const resolvedX = snapTarget ? snapTarget.worldX : worldX;
         const resolvedY = snapTarget ? snapTarget.worldY : worldY;
 
+        // The old anchor is dropped while dragging, otherwise the pinned end
+        // would stay on its previous port instead of following the pointer.
         if (this.endpointSide === 'start') {
           ctx.history.dispatch({
             type: 'RESIZE_ELEMENT',
             id: el.id,
             x: resolvedX,
             y: resolvedY,
+            startAnchor: null,
           });
         } else {
           ctx.history.dispatch({
@@ -448,6 +459,7 @@ export class SelectTool implements Tool {
             id: el.id,
             x2: resolvedX,
             y2: resolvedY,
+            endAnchor: null,
           });
         }
       }
@@ -721,12 +733,14 @@ export class SelectTool implements Tool {
           type: 'RESIZE_ELEMENT',
           id: this.endpointElId,
           startElementId: snap ? snap.elementId : null,
+          startAnchor: snap?.anchor ?? null,
         });
       } else {
         ctx.history.dispatch({
           type: 'RESIZE_ELEMENT',
           id: this.endpointElId,
           endElementId: snap ? snap.elementId : null,
+          endAnchor: snap?.anchor ?? null,
         });
       }
     }
@@ -753,6 +767,7 @@ export class SelectTool implements Tool {
     this.endpointSnapTarget = null;
     this.endpointSnapIndicator = null;
     this.endpointSnapElementId = null;
+    this.endpointSnapAnchor = null;
     this.alignGuides = [];
     this.dragMode = 'none';
     this.resizeHandle = null;
@@ -786,6 +801,7 @@ export class SelectTool implements Tool {
     this.endpointSnapTarget = null;
     this.endpointSnapIndicator = null;
     this.endpointSnapElementId = null;
+    this.endpointSnapAnchor = null;
     this.alignGuides = [];
   }
 
@@ -849,7 +865,7 @@ export class SelectTool implements Tool {
       // Check line midpoint control-point handle
       if (selectedEls.length === 1) {
         const el = selectedEls[0]!;
-        if (el.type === 'line') {
+        if (el.type === 'line' && el.routing !== 'elbow') {
           const cpX = el.cx ?? (el.x + el.x2) / 2;
           const cpY = el.cy ?? (el.y + el.y2) / 2;
           const [scx, scy] = worldToScreen(scene.viewport, cpX, cpY);
@@ -990,6 +1006,7 @@ function scaleElement(
     case 'rectangle':
     case 'ellipse':
     case 'rhombus':
+    case 'shape':
       return { x: newX, y: newY, width: newW, height: newH };
     case 'text':
       return { x: newX, y: newY, width: newW, height: newH };
@@ -1107,8 +1124,18 @@ function hitTestElement(
     ly = cy + dx * sin + dy * cos;
   }
 
+  if ((el.type === 'line' || el.type === 'arrow') && el.routing === 'elbow') {
+    return (
+      distToRoute(lx, ly, resolveConnectorRoute(el, allElements)) <
+      el.strokeWidth / 2 + LINE_PAD
+    );
+  }
+
   switch (el.type) {
+    // Shapes hit-test on their box: thin symbols (document wave, cylinder
+    // caps) stay easy to grab, as in other diagram editors.
     case 'rectangle':
+    case 'shape':
     case 'text':
     case 'image': {
       const x = el.width < 0 ? el.x + el.width : el.x;

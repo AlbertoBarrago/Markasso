@@ -1,6 +1,7 @@
 import type { Scene } from '../core/scene';
 import type {
   ArrowElement,
+  ArrowHeadStyle,
   Element,
   EllipseElement,
   FreehandElement,
@@ -8,11 +9,20 @@ import type {
   LineElement,
   RectangleElement,
   RhombusElement,
+  ShapeElement,
   TextElement,
 } from '../elements/element';
-import { getArrowHeadVector } from './connector_geometry';
+import { SHAPE_DEFINITIONS, shapeCommandsToPathData } from '../elements/shapes';
+import {
+  type ArrowHeadShape,
+  getArrowHeadShape,
+  getArrowHeadVector,
+  getRoutePointAt,
+  type RoutePoint,
+} from './connector_geometry';
 import { drawElement } from './draw_element';
-import { getElementBounds } from './draw_selection';
+import { getElementBounds, resolveConnectorRoute } from './draw_selection';
+import { getShapeTextBox } from './shape_geometry';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -127,7 +137,7 @@ export function exportSVG(scene: Scene, withBackground = true): void {
   }
 
   for (const el of elements) {
-    parts.push(elementToSVG(el, ox, oy));
+    parts.push(elementToSVG(el, ox, oy, elements));
   }
 
   parts.push('</svg>');
@@ -156,6 +166,7 @@ function computeBounds(elements: ReadonlyArray<Element>): {
       case 'rectangle':
       case 'ellipse':
       case 'rhombus':
+      case 'shape':
       case 'text': {
         const x = el.width < 0 ? el.x + el.width : el.x;
         const y = el.height < 0 ? el.y + el.height : el.y;
@@ -166,6 +177,14 @@ function computeBounds(elements: ReadonlyArray<Element>): {
         break;
       }
       case 'line':
+        if (el.routing === 'elbow') {
+          const b = getElementBounds(el, elements);
+          minX = Math.min(minX, b.x);
+          minY = Math.min(minY, b.y);
+          maxX = Math.max(maxX, b.x + b.w);
+          maxY = Math.max(maxY, b.y + b.h);
+          break;
+        }
         minX = Math.min(
           minX,
           el.x,
@@ -192,6 +211,14 @@ function computeBounds(elements: ReadonlyArray<Element>): {
         );
         break;
       case 'arrow':
+        if (el.routing === 'elbow') {
+          const b = getElementBounds(el, elements);
+          minX = Math.min(minX, b.x);
+          minY = Math.min(minY, b.y);
+          maxX = Math.max(maxX, b.x + b.w);
+          maxY = Math.max(maxY, b.y + b.h);
+          break;
+        }
         minX = Math.min(minX, el.x, el.x2);
         minY = Math.min(minY, el.y, el.y2);
         maxX = Math.max(maxX, el.x, el.x2);
@@ -229,7 +256,15 @@ function computeBounds(elements: ReadonlyArray<Element>): {
 
 // ── Element → SVG ──────────────────────────────────────────────────────────────
 
-function elementToSVG(el: Element, ox: number, oy: number): string {
+function elementToSVG(
+  el: Element,
+  ox: number,
+  oy: number,
+  allElements: ReadonlyArray<Element>,
+): string {
+  if ((el.type === 'line' || el.type === 'arrow') && el.routing === 'elbow') {
+    return elbowToSVG(el, resolveConnectorRoute(el, allElements), ox, oy);
+  }
   switch (el.type) {
     case 'rectangle':
       return rectToSVG(el, ox, oy);
@@ -237,6 +272,8 @@ function elementToSVG(el: Element, ox: number, oy: number): string {
       return ellipseToSVG(el, ox, oy);
     case 'rhombus':
       return rhombusToSVG(el, ox, oy);
+    case 'shape':
+      return shapeToSVG(el, ox, oy);
     case 'line':
       return lineToSVG(el, ox, oy);
     case 'arrow':
@@ -377,22 +414,126 @@ function rhombusToSVG(el: RhombusElement, ox: number, oy: number): string {
   return `<polygon points="${pts}" ${shapeProps(el)}${rotateAttr(el, ox, oy)}/>`;
 }
 
-function lineArrowHeadSVG(
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-  sw: number,
-  sp: string,
+function shapeToSVG(el: ShapeElement, ox: number, oy: number): string {
+  const x = (el.width < 0 ? el.x + el.width : el.x) + ox;
+  const y = (el.height < 0 ? el.y + el.height : el.y) + oy;
+  const w = Math.abs(el.width);
+  const h = Math.abs(el.height);
+  const def = SHAPE_DEFINITIONS[el.kind];
+  const parts = [
+    `<path d="${shapeCommandsToPathData(def.outline(w, h), x, y)}" ${shapeProps(el)}/>`,
+  ];
+  const details = def.details?.(w, h);
+  if (details) {
+    parts.push(
+      `<path d="${shapeCommandsToPathData(details, x, y)}" ${shapeProps({ ...el, fillColor: 'transparent' })}/>`,
+    );
+  }
+  if (el.label) {
+    const box = getShapeTextBox(el.kind, w, h);
+    parts.push(
+      shapeLabelToSVG(
+        x + box.x + box.w / 2,
+        y + box.y + box.h / 2,
+        el.label,
+        el.labelFontSize ?? 16,
+        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.labelColor ?? el.strokeColor,
+        el.opacity,
+      ),
+    );
+  }
+  // Group so rotation applies to outline, details and label together.
+  return `<g${rotateAttr(el, ox, oy)}>${parts.join('')}</g>`;
+}
+
+interface SVGHead {
+  readonly style: ArrowHeadStyle;
+  readonly fromX: number;
+  readonly fromY: number;
+  readonly tipX: number;
+  readonly tipY: number;
+}
+
+/** Heads of a connector, in export coordinates (already offset). */
+function connectorHeadsForSVG(
+  el: LineElement | ArrowElement,
+  vectorFor: (placement: 'start' | 'end') => {
+    fromX: number;
+    fromY: number;
+    tipX: number;
+    tipY: number;
+  },
+): SVGHead[] {
+  const hasEnd =
+    el.type === 'arrow' || el.arrowHead === 'end' || el.arrowHead === 'both';
+  const hasStart =
+    el.type === 'line' && (el.arrowHead === 'start' || el.arrowHead === 'both');
+  const heads: SVGHead[] = [];
+  if (hasEnd) {
+    heads.push({ style: el.endHeadStyle ?? 'open', ...vectorFor('end') });
+  }
+  if (hasStart) {
+    heads.push({ style: el.startHeadStyle ?? 'open', ...vectorFor('start') });
+  }
+  return heads;
+}
+
+function headShapeToSVG(shape: ArrowHeadShape, attrs: string): string {
+  if (shape.kind === 'circle') {
+    return `<circle cx="${round(shape.cx)}" cy="${round(shape.cy)}" r="${round(shape.r)}" ${attrs}/>`;
+  }
+  const points = shape.points
+    .map(([x, y]) => `${round(x)},${round(y)}`)
+    .join(' ');
+  return shape.kind === 'polygon'
+    ? `<polygon points="${points}" ${attrs}/>`
+    : `<polyline points="${points}" ${attrs}/>`;
+}
+
+/**
+ * Wraps a connector shaft and appends its heads. Closed heads cut the shaft
+ * out of their area with a mask (the SVG counterpart of the canvas clip),
+ * so hollow heads stay hollow on any background.
+ */
+function connectorToSVG(
+  el: LineElement | ArrowElement,
+  shaft: string,
+  heads: ReadonlyArray<SVGHead>,
   rot: string,
 ): string {
-  const angle = Math.atan2(y2 - y1, x2 - x1);
-  const headLen = Math.max(12, sw * 4);
-  const ax1 = x2 - headLen * Math.cos(angle - Math.PI / 6);
-  const ay1 = y2 - headLen * Math.sin(angle - Math.PI / 6);
-  const ax2 = x2 - headLen * Math.cos(angle + Math.PI / 6);
-  const ay2 = y2 - headLen * Math.sin(angle + Math.PI / 6);
-  return `<polyline points="${round(ax1)},${round(ay1)} ${round(x2)},${round(y2)} ${round(ax2)},${round(ay2)}" ${sp}${rot}/>`;
+  const color = escapeXml(el.strokeColor);
+  const base = `stroke="${color}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" opacity="${el.opacity}"`;
+  const shapes = heads.map((h) => ({
+    h,
+    shape: getArrowHeadShape(
+      h.style,
+      h.fromX,
+      h.fromY,
+      h.tipX,
+      h.tipY,
+      el.strokeWidth,
+    ),
+  }));
+  const closed = shapes.filter(({ h }) => h.style !== 'open');
+  const parts: string[] = [];
+  if (closed.length > 0) {
+    const id = `mh-${el.id.replace(/[^\w-]/g, '')}`;
+    const cutouts = closed
+      .map(({ shape }) => headShapeToSVG(shape, 'fill="black"'))
+      .join('');
+    parts.push(
+      `<mask id="${id}" maskUnits="userSpaceOnUse" x="-1000000" y="-1000000" width="2000000" height="2000000"><rect x="-1000000" y="-1000000" width="2000000" height="2000000" fill="white"/>${cutouts}</mask>`,
+      `<g mask="url(#${id})">${shaft}</g>`,
+    );
+  } else {
+    parts.push(shaft);
+  }
+  for (const { shape } of shapes) {
+    const fill = shape.kind === 'polygon' && shape.filled ? color : 'none';
+    parts.push(headShapeToSVG(shape, `${base} fill="${fill}"${rot}`));
+  }
+  return parts.join('\n');
 }
 
 function lineToSVG(el: LineElement, ox: number, oy: number): string {
@@ -402,42 +543,65 @@ function lineToSVG(el: LineElement, ox: number, oy: number): string {
     y2 = el.y2 + oy;
   const sp = `stroke="${escapeXml(el.strokeColor)}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"${strokeDashAttr(el)}`;
   const rot = rotateAttr(el, ox, oy);
-  const parts: string[] = [];
-  if (el.cx !== undefined && el.cy !== undefined) {
+  const shaft =
+    el.cx !== undefined && el.cy !== undefined
+      ? `<path d="M ${round(x1)} ${round(y1)} Q ${round(el.cx + ox)} ${round(el.cy + oy)} ${round(x2)} ${round(y2)}" ${sp}${rot}/>`
+      : `<line x1="${round(x1)}" y1="${round(y1)}" x2="${round(x2)}" y2="${round(y2)}" ${sp}${rot}/>`;
+  const heads = connectorHeadsForSVG(el, (placement) => {
+    const v = getArrowHeadVector(el, el, placement);
+    return {
+      fromX: v.fromX + ox,
+      fromY: v.fromY + oy,
+      tipX: v.tipX + ox,
+      tipY: v.tipY + oy,
+    };
+  });
+  return connectorToSVG(el, shaft, heads, rot);
+}
+
+/** Orthogonal connector: one polyline plus heads on the end segments. */
+function elbowToSVG(
+  el: LineElement | ArrowElement,
+  route: ReadonlyArray<RoutePoint>,
+  ox: number,
+  oy: number,
+): string {
+  if (route.length < 2) return '';
+  const sp = `stroke="${escapeXml(el.strokeColor)}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"${strokeDashAttr(el)}`;
+  const points = route
+    .map(([x, y]) => `${round(x + ox)},${round(y + oy)}`)
+    .join(' ');
+  const n = route.length;
+  const heads = connectorHeadsForSVG(el, (placement) => {
+    const [fx, fy] = placement === 'end' ? route[n - 2]! : route[1]!;
+    const [tx, ty] = placement === 'end' ? route[n - 1]! : route[0]!;
+    return { fromX: fx + ox, fromY: fy + oy, tipX: tx + ox, tipY: ty + oy };
+  });
+  const parts = [
+    connectorToSVG(el, `<polyline points="${points}" ${sp}/>`, heads, ''),
+  ];
+  if (el.label) {
+    const [mx, my] = getRoutePointAt(route, 0.5);
+    // Mask the polyline under the label, mirroring the canvas gap. Text width
+    // is estimated since there is no measuring context in SVG export.
+    const fontSize = el.labelFontSize ?? 12;
+    const lines = el.label.split('\n');
+    const pad = fontSize * 0.4;
+    const w =
+      Math.max(...lines.map((l) => l.length)) * fontSize * 0.6 + pad * 2;
+    const h = lines.length * fontSize * 1.2 + pad * 2;
     parts.push(
-      `<path d="M ${round(x1)} ${round(y1)} Q ${round(el.cx + ox)} ${round(el.cy + oy)} ${round(x2)} ${round(y2)}" ${sp}${rot}/>`,
+      `<rect x="${round(mx + ox - w / 2)}" y="${round(my + oy - h / 2)}" width="${round(w)}" height="${round(h)}" fill="${escapeXml(getCanvasBg())}"/>`,
     );
-  } else {
     parts.push(
-      `<line x1="${round(x1)}" y1="${round(y1)}" x2="${round(x2)}" y2="${round(y2)}" ${sp}${rot}/>`,
-    );
-  }
-  const arrowHead = el.arrowHead;
-  if (arrowHead === 'end' || arrowHead === 'both') {
-    const head = getArrowHeadVector(el, el, 'end');
-    parts.push(
-      lineArrowHeadSVG(
-        head.fromX + ox,
-        head.fromY + oy,
-        head.tipX + ox,
-        head.tipY + oy,
-        el.strokeWidth,
-        sp,
-        rot,
-      ),
-    );
-  }
-  if (arrowHead === 'start' || arrowHead === 'both') {
-    const head = getArrowHeadVector(el, el, 'start');
-    parts.push(
-      lineArrowHeadSVG(
-        head.fromX + ox,
-        head.fromY + oy,
-        head.tipX + ox,
-        head.tipY + oy,
-        el.strokeWidth,
-        sp,
-        rot,
+      shapeLabelToSVG(
+        mx + ox,
+        my + oy,
+        el.label,
+        fontSize,
+        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.labelColor ?? el.strokeColor,
+        el.opacity,
       ),
     );
   }
@@ -449,18 +613,16 @@ function arrowToSVG(el: ArrowElement, ox: number, oy: number): string {
     y1 = el.y + oy;
   const x2 = el.x2 + ox,
     y2 = el.y2 + oy;
-  const angle = Math.atan2(y2 - y1, x2 - x1);
-  const headLen = Math.max(12, el.strokeWidth * 4);
-  const ax1 = x2 - headLen * Math.cos(angle - Math.PI / 6);
-  const ay1 = y2 - headLen * Math.sin(angle - Math.PI / 6);
-  const ax2 = x2 - headLen * Math.cos(angle + Math.PI / 6);
-  const ay2 = y2 - headLen * Math.sin(angle + Math.PI / 6);
   const sp = `stroke="${escapeXml(el.strokeColor)}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"`;
   const rot = rotateAttr(el, ox, oy);
-  return [
-    `<line x1="${round(x1)}" y1="${round(y1)}" x2="${round(x2)}" y2="${round(y2)}" ${sp}${rot}/>`,
-    `<polyline points="${round(ax1)},${round(ay1)} ${round(x2)},${round(y2)} ${round(ax2)},${round(ay2)}" ${sp}${rot}/>`,
-  ].join('\n');
+  const shaft = `<line x1="${round(x1)}" y1="${round(y1)}" x2="${round(x2)}" y2="${round(y2)}" ${sp}${rot}/>`;
+  const heads = connectorHeadsForSVG(el, () => ({
+    fromX: x1,
+    fromY: y1,
+    tipX: x2,
+    tipY: y2,
+  }));
+  return connectorToSVG(el, shaft, heads, rot);
 }
 
 function freehandToSVG(el: FreehandElement, ox: number, oy: number): string {
@@ -551,7 +713,7 @@ function shapeLabelToSVG(
         `<tspan x="${round(cx)}" y="${round(startY + i * lineHeight + lineHeight / 2)}">${escapeXml(line)}</tspan>`,
     )
     .join('');
-  return `<text font-family="${escapeXml(fontFamily)}" font-size="${fontSize}" fill="${escapeXml(color)}" opacity="${opacity}" text-anchor="middle">${tspans}</text>`;
+  return `<text font-family="${escapeXml(fontFamily)}" font-size="${fontSize}" fill="${escapeXml(color)}" opacity="${opacity}" text-anchor="middle" dominant-baseline="central">${tspans}</text>`;
 }
 
 function imageToSVG(el: ImageElement, ox: number, oy: number): string {

@@ -88,6 +88,8 @@ export function cloneElementsWithOffset(
       const {
         startElementId: _startElementId,
         endElementId: _endElementId,
+        startAnchor: _startAnchor,
+        endAnchor: _endAnchor,
         ...withoutConnections
       } = connector;
       const startElementId = element.startElementId
@@ -100,8 +102,13 @@ export function cloneElementsWithOffset(
       return {
         ...withoutConnections,
         ...(groupId && { groupId }),
+        // Anchors only make sense while the end stays connected.
         ...(startElementId && { startElementId }),
+        ...(startElementId &&
+          element.startAnchor && { startAnchor: element.startAnchor }),
         ...(endElementId && { endElementId }),
+        ...(endElementId &&
+          element.endAnchor && { endAnchor: element.endAnchor }),
       };
     }
 

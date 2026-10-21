@@ -4,6 +4,24 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Flowchart shapes.** A new shape tool (`S`, or the split button next to the ellipse) draws eight standard flowchart symbols: start/end, data (I/O), document, database, predefined process, preparation, manual input and delay.
+  - Pick the symbol from the toolbar flyout, the command palette, or the context panel, which also switches the symbol of selected shapes in place (undoable).
+  - Shapes support labels, fill, stroke styles, hand-drawn roughness, rotation, PNG/SVG export and live sessions.
+  - Connectors snap to the real outline of each symbol (the slanted side of a data block, the wavy edge of a document, the cylinder caps of a database).
+  - Every symbol is defined once as a parametric outline; bounds, snapping, rendering, export and toolbar icons are all derived from it.
+- **Connection ports.** While drawing or dragging a connector end, shapes show four ports (top, right, bottom, left). Dropping the end on a port pins it there: it stays on that point when the shape is moved, resized or rotated. Dropping anywhere else on the border keeps the floating behavior, where the end slides along the border to face the other side.
+- **Elbow connectors.** Lines and arrows can be routed orthogonally (context panel, "Routing"). The route is recomputed from the two ends: attached ends leave their shape with a short stub, floating ends move to the mid-side port facing the other end, and labels sit at the middle of the route. Elbow connectors export to SVG with their full route.
+- **Arrowhead styles.** Each end of a line or arrow can use an open head, a hollow or filled triangle, a hollow or filled diamond, or a circle (context panel, "Start head" / "End head"), covering UML inheritance, aggregation and composition. Closed heads cut the line out of their area, so hollow heads stay hollow on any background, including transparent PNG and SVG exports.
+
+### Fixed
+- **SVG export centers shape labels vertically**, matching the canvas.
+- **Hover highlight follows connected lines.** Hovering a line or arrow bound to shapes highlighted its stored endpoints instead of the drawn ones; it now traces the actual path, including elbow routes.
+
+---
+
 ## [1.11.0] - 2026-10-19
 
 ### Changed

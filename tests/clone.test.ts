@@ -93,4 +93,39 @@ describe('cloneElementsWithOffset', () => {
       cloneElementsWithOffset([element], 0, 0, () => 'copy')[0],
     ).not.toHaveProperty('groupId');
   });
+
+  it('keeps anchors only on ends that stay connected', () => {
+    let n = 0;
+    const elements: Element[] = [
+      {
+        ...base,
+        id: 'rect',
+        type: 'rectangle',
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+      },
+      {
+        ...base,
+        id: 'line',
+        type: 'line',
+        x: 10,
+        y: 5,
+        x2: 50,
+        y2: 5,
+        startElementId: 'rect',
+        startAnchor: { x: 1, y: 0.5 },
+        endElementId: 'outside',
+        endAnchor: { x: 0, y: 0.5 },
+      },
+    ];
+    const cloned = cloneElementsWithOffset(elements, 0, 0, () => `c${n++}`);
+    expect(cloned[1]).toMatchObject({
+      startElementId: 'c0',
+      startAnchor: { x: 1, y: 0.5 },
+    });
+    expect(cloned[1]).not.toHaveProperty('endElementId');
+    expect(cloned[1]).not.toHaveProperty('endAnchor');
+  });
 });

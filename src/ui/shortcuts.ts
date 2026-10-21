@@ -31,6 +31,7 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     ['n', () => history.dispatch({ type: 'SET_TOOL', tool: 'sticky' })],
     ['d', () => history.dispatch({ type: 'SET_TOOL', tool: 'rombo' })],
     ['3', () => history.dispatch({ type: 'SET_TOOL', tool: 'rombo' })],
+    ['s', () => history.dispatch({ type: 'SET_TOOL', tool: 'shape' })],
     ['0', () => history.dispatch({ type: 'SET_TOOL', tool: 'eraser' })],
     ['g', () => history.dispatch({ type: 'TOGGLE_GRID' })],
   ]);

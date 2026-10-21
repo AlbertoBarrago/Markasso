@@ -72,7 +72,8 @@ export function reducer(
           ? scene.appState
           : {
               ...scene.appState,
-              lastCreatedId: command.select === false ? command.element.id : null,
+              lastCreatedId:
+                command.select === false ? command.element.id : null,
             },
       };
 
@@ -127,6 +128,7 @@ export function reducer(
             el.type === 'rectangle' ||
             el.type === 'ellipse' ||
             el.type === 'rhombus' ||
+            el.type === 'shape' ||
             el.type === 'text' ||
             el.type === 'image'
           ) {
@@ -150,42 +152,26 @@ export function reducer(
             return { ...el, ...patch } as Element;
           }
           if (el.type === 'line' || el.type === 'arrow') {
-            const { startElementId, endElementId } = command;
             // Build patch carefully to avoid exactOptionalPropertyTypes issues
-            const patch: Record<string, unknown> = {};
+            const patch: Record<string, unknown> = { ...el };
             if (x !== undefined) patch.x = x;
             if (y !== undefined) patch.y = y;
             if (x2 !== undefined) patch.x2 = x2;
             if (y2 !== undefined) patch.y2 = y2;
             if (cx !== undefined) patch.cx = cx;
             if (cy !== undefined) patch.cy = cy;
-            if (startElementId !== undefined) {
-              if (startElementId === null) {
-                delete (patch as { startElementId?: string }).startElementId;
-              } else {
-                patch.startElementId = startElementId;
-              }
+            // Connection fields: undefined = keep, null = remove the property.
+            for (const key of [
+              'startElementId',
+              'endElementId',
+              'startAnchor',
+              'endAnchor',
+            ] as const) {
+              const value = command[key];
+              if (value === null) delete patch[key];
+              else if (value !== undefined) patch[key] = value;
             }
-            if (endElementId !== undefined) {
-              if (endElementId === null) {
-                delete (patch as { endElementId?: string }).endElementId;
-              } else {
-                patch.endElementId = endElementId;
-              }
-            }
-            // When disconnecting (null), explicitly remove optional properties.
-            let base = { ...el, ...patch } as Element;
-            if (startElementId === null) {
-              const { startElementId: _s, ...rest } = base as typeof el;
-              void _s;
-              base = rest as Element;
-            }
-            if (endElementId === null) {
-              const { endElementId: _e, ...rest } = base as typeof el;
-              void _e;
-              base = rest as Element;
-            }
-            return base;
+            return patch as unknown as Element;
           }
           if (el.type === 'freehand' || el.type === 'polygon') {
             return {
@@ -238,6 +224,7 @@ export function reducer(
           (el.type === 'rectangle' ||
             el.type === 'ellipse' ||
             el.type === 'rhombus' ||
+            el.type === 'shape' ||
             el.type === 'arrow' ||
             el.type === 'line')
             ? {
@@ -301,6 +288,9 @@ export function reducer(
         activeTool: command.tool,
         lastCreatedId: null,
         ...(leavingText && { fontSize: 20 }),
+        ...(command.shapeKind !== undefined && {
+          shapeKind: command.shapeKind,
+        }),
       };
 
       // When switching to a drawing tool while an element is selected,
@@ -549,6 +539,10 @@ export function reducer(
         underline,
         strikethrough,
         arrowHead,
+        shapeKind,
+        routing,
+        startHeadStyle,
+        endHeadStyle,
       } = command;
       const patch: Record<string, unknown> = {};
       if (strokeColor !== undefined) patch.strokeColor = strokeColor;
@@ -581,6 +575,8 @@ export function reducer(
       if (roughness !== undefined) statePatch.roughness = roughness;
       if (strokeStyle !== undefined) statePatch.strokeStyle = strokeStyle;
       if (textAlign !== undefined) statePatch.textAlign = textAlign;
+      if (shapeKind !== undefined) statePatch.shapeKind = shapeKind;
+      if (routing !== undefined) statePatch.lineRouting = routing;
 
       const targetIds = command.ids ?? [...scene.selectedIds];
       const fallbackId =
@@ -595,11 +591,24 @@ export function reducer(
         appState: isRemote
           ? scene.appState
           : { ...scene.appState, ...statePatch },
-        elements: scene.elements.map((el) =>
-          targetIds.includes(el.id) || el.id === fallbackId
-            ? ({ ...el, ...patch } as Element)
-            : el,
-        ),
+        elements: scene.elements.map((el) => {
+          if (!targetIds.includes(el.id) && el.id !== fallbackId) return el;
+          const next = { ...el, ...patch } as Element;
+          // `kind`, `routing` and head styles only exist on shapes and
+          // connectors: never leak them onto other types.
+          if (shapeKind !== undefined && next.type === 'shape') {
+            return { ...next, kind: shapeKind };
+          }
+          if (next.type === 'line' || next.type === 'arrow') {
+            return {
+              ...next,
+              ...(routing !== undefined && { routing }),
+              ...(startHeadStyle !== undefined && { startHeadStyle }),
+              ...(endHeadStyle !== undefined && { endHeadStyle }),
+            };
+          }
+          return next;
+        }),
       };
     }
 

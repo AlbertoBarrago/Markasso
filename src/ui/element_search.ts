@@ -2,6 +2,7 @@ import type { Element } from '../elements/element';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { getElementBounds } from '../rendering/draw_selection';
+import { SHAPE_KIND_LABEL_KEYS, shapeKindIcon } from './shape_icons';
 
 const TYPE_ICONS: Record<string, string> = {
   rectangle: `<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="14" height="10" rx="1.5"/></svg>`,
@@ -14,20 +15,24 @@ const TYPE_ICONS: Record<string, string> = {
   image: `<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="16" height="14" rx="2"/><circle cx="7" cy="8" r="1.5"/><path d="M2 14l4-4 3 3 3-3 4 4"/></svg>`,
 };
 
+/** Localized type name; flowchart shapes use their kind ("Database"…). */
+function getTypeName(el: Element): string {
+  if (el.type === 'shape') return t(SHAPE_KIND_LABEL_KEYS[el.kind]);
+  return t(el.type) || el.type;
+}
+
 function getElementLabel(el: Element): string {
   if (el.type === 'text') return el.content.slice(0, 60) || `(${t('text')})`;
   if (el.type === 'image') return `image`;
   const label = 'label' in el && el.label ? el.label : '';
-  const typeName = t(el.type === 'rhombus' ? 'rhombus' : el.type) || el.type;
+  const typeName = getTypeName(el);
   return label ? `${typeName}: ${label}` : typeName;
 }
 
 function matchesQuery(el: Element, q: string): boolean {
   if (!q) return true;
   const lower = q.toLowerCase();
-  const typeName = (
-    t(el.type === 'rhombus' ? 'rhombus' : el.type) || el.type
-  ).toLowerCase();
+  const typeName = getTypeName(el).toLowerCase();
   if (typeName.includes(lower)) return true;
   if (el.type === 'text' && el.content.toLowerCase().includes(lower))
     return true;
@@ -102,7 +107,10 @@ export function initElementSearch(
       const isSelected = scene.selectedIds.has(el.id);
       if (isSelected) li.classList.add('selected');
 
-      const icon = TYPE_ICONS[el.type] ?? '';
+      const icon =
+        el.type === 'shape'
+          ? shapeKindIcon(el.kind, 13)
+          : (TYPE_ICONS[el.type] ?? '');
       const fillColor =
         el.fillColor !== 'transparent' ? el.fillColor : el.strokeColor;
       const iconEl = document.createElement('span');

@@ -12,6 +12,7 @@ const HINT_KEYS: Partial<Record<ActiveTool, string>> = {
   ellipse: 'hintEllipse',
   line: 'hintLine',
   rombo: 'hintRombo',
+  shape: 'hintShape',
   freehand: 'hintFreehand',
   text: 'hintText',
   sticky: 'hintSticky',

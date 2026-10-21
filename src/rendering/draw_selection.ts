@@ -1,7 +1,22 @@
 import type { Viewport } from '../core/viewport';
 import { worldToScreen } from '../core/viewport';
-import type { Element } from '../elements/element';
-import { getQuadraticBounds } from './connector_geometry';
+import type {
+  ArrowElement,
+  ConnectorAnchor,
+  Element,
+  LineElement,
+} from '../elements/element';
+import {
+  computeElbowRoute,
+  getQuadraticBounds,
+  type RouteDirection,
+  type RoutePoint,
+} from './connector_geometry';
+import {
+  getShapeBorderPointToward,
+  getShapeDistToBoundary,
+  getShapeNearestBorderPoint,
+} from './shape_geometry';
 
 /**
  * Returns the distance from (px, py) to the actual visual boundary of an element.
@@ -30,6 +45,12 @@ export function distToShapeBoundary(
     // Distance to diamond boundary: |L1_normalized - 1| * min_half
     const n = Math.abs(dx) / hw + Math.abs(dy) / hh;
     return Math.abs(n - 1) * Math.min(hw, hh);
+  }
+  if (el.type === 'shape') {
+    const [lx, ly] = el.rotation
+      ? rotatePoint(px, py, cx, cy, -el.rotation)
+      : [px, py];
+    return getShapeDistToBoundary(el.kind, b.w, b.h, lx - b.x, ly - b.y);
   }
   // Rectangle / text / image / freehand: distance to nearest edge
   const insideX = hw - Math.abs(dx);
@@ -82,6 +103,10 @@ export function getElementBorderPoint(
     const t = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh);
     lx = dx * t;
     ly = dy * t;
+  } else if (el.type === 'shape') {
+    const [bx, by] = getShapeBorderPointToward(el.kind, b.w, b.h, dx, dy);
+    lx = bx - b.w / 2;
+    ly = by - b.h / 2;
   } else {
     // Rectangle / text / image / freehand — axis-aligned border intersection
     const hw = b.w / 2;
@@ -194,6 +219,15 @@ export function getNearestElementBorderPoint(
       const t = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh);
       localPoint = [cx + dx * t, cy + dy * t];
     }
+  } else if (el.type === 'shape') {
+    const [nx, ny] = getShapeNearestBorderPoint(
+      el.kind,
+      b.w,
+      b.h,
+      localPx - b.x,
+      localPy - b.y,
+    );
+    localPoint = [b.x + nx, b.y + ny];
   } else {
     localPoint = nearestRectBorderPoint(b, localPx, localPy);
   }
@@ -208,6 +242,124 @@ export interface ElementSnapTarget {
   worldX: number;
   worldY: number;
   distance: number;
+  /** Set when the target is a port: the connector end gets pinned there. */
+  anchor?: ConnectorAnchor;
+}
+
+/** Elements that expose N/E/S/W connection ports. */
+function hasPorts(el: Element): boolean {
+  return (
+    el.type === 'rectangle' ||
+    el.type === 'ellipse' ||
+    el.type === 'rhombus' ||
+    el.type === 'shape' ||
+    el.type === 'text' ||
+    el.type === 'image'
+  );
+}
+
+/** Converts a world point to an anchor relative to the element's local box. */
+export function worldToAnchor(
+  el: Element,
+  wx: number,
+  wy: number,
+): ConnectorAnchor {
+  const b = getElementBounds(el);
+  const cx = b.x + b.w / 2;
+  const cy = b.y + b.h / 2;
+  const [lx, ly] = el.rotation
+    ? rotatePoint(wx, wy, cx, cy, -el.rotation)
+    : [wx, wy];
+  return {
+    x: b.w > 0 ? clamp((lx - b.x) / b.w, 0, 1) : 0.5,
+    y: b.h > 0 ? clamp((ly - b.y) / b.h, 0, 1) : 0.5,
+  };
+}
+
+/**
+ * World position of an anchor, projected onto the element's outline. The
+ * projection keeps the end on the border when a resize changes the shape's
+ * proportions (e.g. the slanted side of a data block moves).
+ */
+export function anchorToWorld(
+  el: Element,
+  anchor: ConnectorAnchor,
+): [number, number] {
+  const b = getElementBounds(el);
+  const lx = b.x + anchor.x * b.w;
+  const ly = b.y + anchor.y * b.h;
+  const [wx, wy] = el.rotation
+    ? rotatePoint(lx, ly, b.x + b.w / 2, b.y + b.h / 2, el.rotation)
+    : [lx, ly];
+  return getNearestElementBorderPoint(el, wx, wy);
+}
+
+export interface ElementPort {
+  worldX: number;
+  worldY: number;
+  anchor: ConnectorAnchor;
+}
+
+/** The four cardinal ports of an element, following its rotation. */
+export function getElementPorts(el: Element): ElementPort[] {
+  if (!hasPorts(el)) return [];
+  const b = getElementBounds(el);
+  const cx = b.x + b.w / 2;
+  const cy = b.y + b.h / 2;
+  const reach = b.w + b.h + 1;
+  const rotation = el.rotation ?? 0;
+  const dirs: Array<[number, number]> = [
+    [0, -1],
+    [1, 0],
+    [0, 1],
+    [-1, 0],
+  ];
+  return dirs.map(([dx, dy]) => {
+    const [tx, ty] = rotatePoint(
+      cx + dx * reach,
+      cy + dy * reach,
+      cx,
+      cy,
+      rotation,
+    );
+    const [worldX, worldY] = getElementBorderPoint(el, tx, ty);
+    return { worldX, worldY, anchor: worldToAnchor(el, worldX, worldY) };
+  });
+}
+
+/**
+ * Snap target for a connector end: a port within `portRadius` wins (pinned
+ * end), otherwise the nearest border point within `snapRadius` (floating end).
+ */
+export function findConnectorSnapTarget(
+  elements: ReadonlyArray<Element>,
+  px: number,
+  py: number,
+  snapRadius: number,
+  portRadius: number,
+  ignoreId?: string,
+): ElementSnapTarget | null {
+  let bestPort: ElementSnapTarget | null = null;
+  for (const el of elements) {
+    if (el.id === ignoreId || el.visible === false) continue;
+    for (const port of getElementPorts(el)) {
+      const distance = Math.hypot(px - port.worldX, py - port.worldY);
+      if (distance > portRadius) continue;
+      if (!bestPort || distance < bestPort.distance) {
+        bestPort = {
+          elementId: el.id,
+          worldX: port.worldX,
+          worldY: port.worldY,
+          distance,
+          anchor: port.anchor,
+        };
+      }
+    }
+  }
+  return (
+    bestPort ??
+    findNearestElementSnapTarget(elements, px, py, snapRadius, ignoreId)
+  );
 }
 
 export function findNearestElementSnapTarget(
@@ -243,6 +395,8 @@ export function resolveArrowEndpoints(
     y2: number;
     startElementId?: string;
     endElementId?: string;
+    startAnchor?: ConnectorAnchor;
+    endAnchor?: ConnectorAnchor;
   },
   allElements: ReadonlyArray<Element>,
 ): { x: number; y: number; x2: number; y2: number } {
@@ -255,15 +409,25 @@ export function resolveArrowEndpoints(
     ? (allElements.find((e) => e.id === el.endElementId) ?? null)
     : null;
 
-  // Effective centers used for direction computation
+  // Pinned ends are resolved first: a floating end then faces the pinned
+  // point instead of the other element's center.
+  const startPinned =
+    startEl && el.startAnchor ? anchorToWorld(startEl, el.startAnchor) : null;
+  const endPinned =
+    endEl && el.endAnchor ? anchorToWorld(endEl, el.endAnchor) : null;
+
+  // Effective targets used for direction computation
   const startB = startEl ? getElementBounds(startEl) : null;
   const endB = endEl ? getElementBounds(endEl) : null;
-  const startCx = startB ? startB.x + startB.w / 2 : x;
-  const startCy = startB ? startB.y + startB.h / 2 : y;
-  const endCx = endB ? endB.x + endB.w / 2 : x2;
-  const endCy = endB ? endB.y + endB.h / 2 : y2;
+  const [startCx, startCy] =
+    startPinned ??
+    (startB ? [startB.x + startB.w / 2, startB.y + startB.h / 2] : [x, y]);
+  const [endCx, endCy] =
+    endPinned ?? (endB ? [endB.x + endB.w / 2, endB.y + endB.h / 2] : [x2, y2]);
 
-  if (startEl) {
+  if (startPinned) {
+    [x, y] = startPinned;
+  } else if (startEl) {
     const startBounds = getElementBounds(startEl);
     const storedStartDist = distToShapeBoundary(startEl, startBounds, x, y);
     [x, y] =
@@ -271,7 +435,9 @@ export function resolveArrowEndpoints(
         ? getNearestElementBorderPoint(startEl, x, y)
         : getElementBorderPoint(startEl, endCx, endCy);
   }
-  if (endEl) {
+  if (endPinned) {
+    [x2, y2] = endPinned;
+  } else if (endEl) {
     const endBounds = getElementBounds(endEl);
     const storedEndDist = distToShapeBoundary(endEl, endBounds, x2, y2);
     [x2, y2] =
@@ -281,6 +447,154 @@ export function resolveArrowEndpoints(
   }
 
   return { x, y, x2, y2 };
+}
+
+/** Local unit directions of the N/E/S/W sides, in `getElementPorts` order. */
+const SIDE_DIRS: ReadonlyArray<readonly [number, number]> = [
+  [0, -1],
+  [1, 0],
+  [0, 1],
+  [-1, 0],
+];
+
+/** Side (index into SIDE_DIRS) of the element's box facing a local offset. */
+function sideFacing(lx: number, ly: number, hw: number, hh: number): number {
+  const nx = hw > 0 ? lx / hw : lx;
+  const ny = hh > 0 ? ly / hh : ly;
+  if (Math.abs(nx) >= Math.abs(ny)) return nx >= 0 ? 1 : 3;
+  return ny >= 0 ? 2 : 0;
+}
+
+/** World-space axis direction of a side, snapped after applying rotation. */
+function sideDirection(el: Element, side: number): RouteDirection {
+  const [ldx, ldy] = SIDE_DIRS[side]!;
+  const rot = el.rotation ?? 0;
+  const wx = ldx * Math.cos(rot) - ldy * Math.sin(rot);
+  const wy = ldx * Math.sin(rot) + ldy * Math.cos(rot);
+  return Math.abs(wx) >= Math.abs(wy)
+    ? { dx: wx >= 0 ? 1 : -1, dy: 0 }
+    : { dx: 0, dy: wy >= 0 ? 1 : -1 };
+}
+
+/**
+ * Where a connector end attached to `el` leaves it on an elbow route. A
+ * pinned end keeps its point and leaves by the side its anchor sits on; a
+ * floating end moves to the port facing `target`, so flowcharts get clean
+ * mid-side attachments instead of corner hits.
+ */
+function elbowEnd(
+  el: Element,
+  anchor: ConnectorAnchor | undefined,
+  pinned: RoutePoint,
+  target: RoutePoint,
+): { point: RoutePoint; dir: RouteDirection } {
+  const b = getElementBounds(el);
+  const cx = b.x + b.w / 2;
+  const cy = b.y + b.h / 2;
+  if (anchor) {
+    const side = sideFacing(anchor.x - 0.5, anchor.y - 0.5, 0.5, 0.5);
+    return { point: pinned, dir: sideDirection(el, side) };
+  }
+  const [lx, ly] = el.rotation
+    ? rotatePoint(target[0], target[1], cx, cy, -el.rotation)
+    : target;
+  const side = sideFacing(lx - cx, ly - cy, b.w / 2, b.h / 2);
+  const port = getElementPorts(el)[side];
+  return {
+    point: port ? [port.worldX, port.worldY] : pinned,
+    dir: sideDirection(el, side),
+  };
+}
+
+/**
+ * Polyline a connector is drawn along: its two resolved ends, or the full
+ * orthogonal route for `routing: 'elbow'`. Curved lines (cx/cy) are not
+ * covered here; callers keep their quadratic path for those.
+ */
+export function resolveConnectorRoute(
+  el: LineElement | ArrowElement,
+  allElements: ReadonlyArray<Element>,
+): RoutePoint[] {
+  const pts = resolveArrowEndpoints(el, allElements);
+  const start: RoutePoint = [pts.x, pts.y];
+  const end: RoutePoint = [pts.x2, pts.y2];
+  if (el.routing !== 'elbow') return [start, end];
+
+  const startEl = el.startElementId
+    ? allElements.find((e) => e.id === el.startElementId)
+    : undefined;
+  const endEl = el.endElementId
+    ? allElements.find((e) => e.id === el.endElementId)
+    : undefined;
+
+  // A floating end faces the other end's pinned point, its element's
+  // center, or its free position, in that order.
+  const targetOf = (
+    other: Element | undefined,
+    otherAnchor: ConnectorAnchor | undefined,
+    otherPoint: RoutePoint,
+  ): RoutePoint => {
+    if (!other || otherAnchor) return otherPoint;
+    const [ocx, ocy] = getElementCenter(other);
+    return [ocx, ocy];
+  };
+
+  const s = startEl
+    ? elbowEnd(
+        startEl,
+        el.startAnchor,
+        start,
+        targetOf(endEl, el.endAnchor, end),
+      )
+    : null;
+  const e = endEl
+    ? elbowEnd(
+        endEl,
+        el.endAnchor,
+        end,
+        targetOf(startEl, el.startAnchor, start),
+      )
+    : null;
+
+  return computeElbowRoute(
+    s?.point ?? start,
+    s?.dir ?? null,
+    e?.point ?? end,
+    e?.dir ?? null,
+  );
+}
+
+/**
+ * Draws the connection ports of a snap candidate; the port the connector
+ * would pin to (if any) is filled.
+ */
+export function drawPortIndicators(
+  ctx: CanvasRenderingContext2D,
+  el: Element,
+  viewport: Viewport,
+  activeAnchor?: ConnectorAnchor,
+): void {
+  const ports = getElementPorts(el);
+  if (ports.length === 0) return;
+  ctx.save();
+  ctx.resetTransform();
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  ctx.setLineDash([]);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'cyan';
+  for (const port of ports) {
+    const [sx, sy] = worldToScreen(viewport, port.worldX, port.worldY);
+    const isActive =
+      activeAnchor !== undefined &&
+      Math.abs(activeAnchor.x - port.anchor.x) < 1e-6 &&
+      Math.abs(activeAnchor.y - port.anchor.y) < 1e-6;
+    ctx.fillStyle = isActive ? 'cyan' : 'rgba(0,0,0,0.6)';
+    ctx.beginPath();
+    ctx.arc(sx, sy, isActive ? 5 : 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 /** Draws a cyan snap indicator circle at the given world-space position. */
@@ -328,6 +642,7 @@ export function getElementBounds(
     case 'rectangle':
     case 'ellipse':
     case 'rhombus':
+    case 'shape':
     case 'text':
     case 'image': {
       const x = el.width < 0 ? el.x + el.width : el.x;
@@ -336,6 +651,19 @@ export function getElementBounds(
     }
     case 'line':
     case 'arrow': {
+      if (el.routing === 'elbow') {
+        const route = resolveConnectorRoute(el, allElements ?? [el]);
+        const xs = route.map((p) => p[0]);
+        const ys = route.map((p) => p[1]);
+        const minX = Math.min(...xs);
+        const minY = Math.min(...ys);
+        return {
+          x: minX,
+          y: minY,
+          w: Math.max(...xs) - minX,
+          h: Math.max(...ys) - minY,
+        };
+      }
       const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
       if (el.type === 'line' && el.cx !== undefined && el.cy !== undefined) {
         const bounds = getQuadraticBounds(
@@ -604,7 +932,8 @@ export function drawSelection(
 
       // Midpoint control-point handle for lines
       // cx/cy set → full handle (curve active); undefined → ghost handle (drag to curve)
-      if (el.type === 'line') {
+      // Elbow routes ignore cx/cy, so they get no curve handle.
+      if (el.type === 'line' && el.routing !== 'elbow') {
         const curveActive = el.cx !== undefined && el.cy !== undefined;
         const cpX = el.cx ?? (pts.x + pts.x2) / 2;
         const cpY = el.cy ?? (pts.y + pts.y2) / 2;
@@ -664,6 +993,17 @@ function drawSelectedElementOutline(
   switch (element.type) {
     case 'line':
     case 'arrow': {
+      if (element.routing === 'elbow') {
+        const route = resolveConnectorRoute(element, allElements ?? [element]);
+        ctx.beginPath();
+        route.forEach(([wx, wy], i) => {
+          const [sx, sy] = s(wx, wy);
+          if (i === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        });
+        ctx.stroke();
+        break;
+      }
       const pts = resolveArrowEndpoints(element, allElements ?? [element]);
       const [x1s, y1s] = s(pts.x, pts.y);
       const [x2s, y2s] = s(pts.x2, pts.y2);
@@ -769,6 +1109,7 @@ function drawSelectedElementOutline(
     element.type !== 'freehand' &&
     element.type !== 'polygon' &&
     element.type !== 'rectangle' &&
+    element.type !== 'shape' &&
     element.type !== 'text' &&
     element.type !== 'image'
   ) {
@@ -783,6 +1124,7 @@ export function drawHoverHighlight(
   ctx: CanvasRenderingContext2D,
   element: Element,
   viewport: Viewport,
+  allElements?: ReadonlyArray<Element>,
 ): void {
   ctx.save();
   ctx.resetTransform();
@@ -797,20 +1139,28 @@ export function drawHoverHighlight(
   switch (element.type) {
     case 'line':
     case 'arrow': {
-      const [x1s, y1s] = s(element.x, element.y);
-      const [x2s, y2s] = s(element.x2, element.y2);
+      // Follow the connector as rendered: ends resolved against the shapes
+      // they are bound to, and the full route for elbow connectors.
+      const all = allElements ?? [element];
       ctx.beginPath();
       if (
         element.type === 'line' &&
+        element.routing !== 'elbow' &&
         element.cx !== undefined &&
         element.cy !== undefined
       ) {
+        const pts = resolveArrowEndpoints(element, all);
+        const [x1s, y1s] = s(pts.x, pts.y);
+        const [x2s, y2s] = s(pts.x2, pts.y2);
         const [cxs, cys] = s(element.cx, element.cy);
         ctx.moveTo(x1s, y1s);
         ctx.quadraticCurveTo(cxs, cys, x2s, y2s);
       } else {
-        ctx.moveTo(x1s, y1s);
-        ctx.lineTo(x2s, y2s);
+        resolveConnectorRoute(element, all).forEach(([wx, wy], i) => {
+          const [sx, sy] = s(wx, wy);
+          if (i === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        });
       }
       ctx.stroke();
       break;

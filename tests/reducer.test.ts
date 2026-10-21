@@ -8,6 +8,7 @@ import type {
   LineElement,
   PolygonElement,
   RectangleElement,
+  ShapeElement,
   TextElement,
 } from '../src/elements/element';
 import { reducer } from '../src/engine/reducer';
@@ -1425,5 +1426,216 @@ describe('reducer', () => {
       [60, 5],
       [35, 30],
     ]);
+  });
+});
+
+function makeShape(overrides: Partial<ShapeElement> = {}): ShapeElement {
+  return {
+    id: 'shape-1',
+    type: 'shape',
+    kind: 'terminator',
+    x: 0,
+    y: 0,
+    width: 120,
+    height: 60,
+    strokeColor: '#000',
+    fillColor: 'transparent',
+    strokeWidth: 2,
+    opacity: 1,
+    roughness: 0,
+    ...overrides,
+  };
+}
+
+describe('flowchart shapes', () => {
+  it('RESIZE_ELEMENT updates the shape box', () => {
+    const scene = { ...createScene(), elements: [makeShape()] };
+    const next = reducer(scene, {
+      type: 'RESIZE_ELEMENT',
+      id: 'shape-1',
+      x: 5,
+      width: 200,
+      height: 90,
+    });
+    expect(next.elements[0]).toMatchObject({
+      x: 5,
+      y: 0,
+      width: 200,
+      height: 90,
+      kind: 'terminator',
+    });
+  });
+
+  it('SET_SHAPE_LABEL labels a shape', () => {
+    const scene = { ...createScene(), elements: [makeShape()] };
+    const next = reducer(scene, {
+      type: 'SET_SHAPE_LABEL',
+      id: 'shape-1',
+      label: 'Start',
+      labelFontSize: 16,
+      labelFontFamily: 'Arial',
+    });
+    expect(next.elements[0]).toMatchObject({ label: 'Start' });
+  });
+
+  it('APPLY_STYLE shapeKind changes only shapes and the tool default', () => {
+    const scene: Scene = {
+      ...createScene(),
+      elements: [makeShape(), makeRect()],
+    };
+    const next = reducer(scene, {
+      type: 'APPLY_STYLE',
+      ids: ['shape-1', 'rect-1'],
+      shapeKind: 'database',
+    });
+    expect(next.elements[0]).toMatchObject({ kind: 'database' });
+    expect(next.elements[1]).not.toHaveProperty('kind');
+    expect(next.appState.shapeKind).toBe('database');
+  });
+
+  it('APPLY_STYLE from a remote peer keeps the local tool default', () => {
+    const scene: Scene = { ...createScene(), elements: [makeShape()] };
+    const next = reducer(
+      scene,
+      { type: 'APPLY_STYLE', ids: ['shape-1'], shapeKind: 'delay' },
+      true,
+    );
+    expect(next.elements[0]).toMatchObject({ kind: 'delay' });
+    expect(next.appState.shapeKind).toBe(scene.appState.shapeKind);
+  });
+
+  it('SET_TOOL can pick the shape kind', () => {
+    const next = reducer(createScene(), {
+      type: 'SET_TOOL',
+      tool: 'shape',
+      shapeKind: 'document',
+    });
+    expect(next.appState.activeTool).toBe('shape');
+    expect(next.appState.shapeKind).toBe('document');
+  });
+
+  it('SET_TOOL without shapeKind keeps the previous kind', () => {
+    const scene = reducer(createScene(), {
+      type: 'SET_TOOL',
+      tool: 'shape',
+      shapeKind: 'data',
+    });
+    const next = reducer(scene, { type: 'SET_TOOL', tool: 'shape' });
+    expect(next.appState.shapeKind).toBe('data');
+  });
+});
+
+describe('connector anchors in RESIZE_ELEMENT', () => {
+  const line: LineElement = {
+    id: 'line-1',
+    type: 'line',
+    x: 0,
+    y: 0,
+    x2: 100,
+    y2: 0,
+    strokeColor: '#000',
+    fillColor: 'transparent',
+    strokeWidth: 2,
+    opacity: 1,
+    roughness: 0,
+  };
+
+  it('sets and removes anchors', () => {
+    const scene = { ...createScene(), elements: [line] };
+    const pinned = reducer(scene, {
+      type: 'RESIZE_ELEMENT',
+      id: 'line-1',
+      startElementId: 'rect-1',
+      startAnchor: { x: 1, y: 0.5 },
+    });
+    expect(pinned.elements[0]).toMatchObject({
+      startElementId: 'rect-1',
+      startAnchor: { x: 1, y: 0.5 },
+    });
+
+    const floating = reducer(pinned, {
+      type: 'RESIZE_ELEMENT',
+      id: 'line-1',
+      x: 5,
+      startAnchor: null,
+    });
+    expect(floating.elements[0]).toMatchObject({
+      x: 5,
+      startElementId: 'rect-1',
+    });
+    expect(floating.elements[0]).not.toHaveProperty('startAnchor');
+  });
+
+  it('removes connection and anchor together when disconnecting', () => {
+    const scene = {
+      ...createScene(),
+      elements: [
+        {
+          ...line,
+          endElementId: 'rect-1',
+          endAnchor: { x: 0, y: 0.5 },
+        },
+      ],
+    };
+    const next = reducer(scene, {
+      type: 'RESIZE_ELEMENT',
+      id: 'line-1',
+      endElementId: null,
+      endAnchor: null,
+    });
+    expect(next.elements[0]).not.toHaveProperty('endElementId');
+    expect(next.elements[0]).not.toHaveProperty('endAnchor');
+  });
+});
+
+describe('APPLY_STYLE routing', () => {
+  it('applies routing to connectors only and sets the line tool default', () => {
+    const line: LineElement = {
+      id: 'line-1',
+      type: 'line',
+      x: 0,
+      y: 0,
+      x2: 10,
+      y2: 10,
+      strokeColor: '#000',
+      fillColor: 'transparent',
+      strokeWidth: 1,
+      opacity: 1,
+      roughness: 0,
+    };
+    const scene: Scene = { ...createScene(), elements: [line, makeRect()] };
+    const next = reducer(scene, {
+      type: 'APPLY_STYLE',
+      ids: ['line-1', 'rect-1'],
+      routing: 'elbow',
+    });
+    expect(next.elements[0]).toMatchObject({ routing: 'elbow' });
+    expect(next.elements[1]).not.toHaveProperty('routing');
+    expect(next.appState.lineRouting).toBe('elbow');
+  });
+
+  it('applies head styles to connectors only', () => {
+    const arrow: ArrowElement = {
+      id: 'arrow-1',
+      type: 'arrow',
+      x: 0,
+      y: 0,
+      x2: 10,
+      y2: 10,
+      strokeColor: '#000',
+      fillColor: 'transparent',
+      strokeWidth: 1,
+      opacity: 1,
+      roughness: 0,
+    };
+    const scene: Scene = { ...createScene(), elements: [arrow, makeRect()] };
+    const next = reducer(scene, {
+      type: 'APPLY_STYLE',
+      ids: ['arrow-1', 'rect-1'],
+      endHeadStyle: 'diamondFilled',
+    });
+    expect(next.elements[0]).toMatchObject({ endHeadStyle: 'diamondFilled' });
+    expect(next.elements[0]).not.toHaveProperty('startHeadStyle');
+    expect(next.elements[1]).not.toHaveProperty('endHeadStyle');
   });
 });

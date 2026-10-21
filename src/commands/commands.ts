@@ -1,6 +1,12 @@
 import type { ActiveTool, GridType } from '../core/app_state';
 import type { Viewport } from '../core/viewport';
-import type { Element } from '../elements/element';
+import type {
+  ArrowHeadStyle,
+  ConnectorAnchor,
+  ConnectorRouting,
+  Element,
+  ShapeKind,
+} from '../elements/element';
 
 export type Command =
   | { type: 'CREATE_ELEMENT'; element: Element; select?: boolean }
@@ -23,6 +29,9 @@ export type Command =
       points?: ReadonlyArray<readonly [number, number]>;
       startElementId?: string | null;
       endElementId?: string | null;
+      /** `null` unpins the end so it floats along the border again. */
+      startAnchor?: ConnectorAnchor | null;
+      endAnchor?: ConnectorAnchor | null;
     }
   | { type: 'DELETE_ELEMENTS'; ids: string[] }
   | { type: 'EDIT_TEXT'; id: string; content: string }
@@ -38,7 +47,13 @@ export type Command =
   | { type: 'PAN_VIEWPORT'; dx: number; dy: number }
   | { type: 'ZOOM_VIEWPORT'; factor: number; originX: number; originY: number }
   | { type: 'SET_VIEWPORT'; offsetX: number; offsetY: number; zoom: number }
-  | { type: 'SET_TOOL'; tool: ActiveTool; keepSelection?: boolean }
+  | {
+      type: 'SET_TOOL';
+      tool: ActiveTool;
+      keepSelection?: boolean;
+      /** Picks the flowchart symbol for the `shape` tool in the same step. */
+      shapeKind?: ShapeKind;
+    }
   | { type: 'SET_STROKE_COLOR'; color: string } // appState only (default for next shape)
   | { type: 'SET_FILL_COLOR'; color: string } // appState only
   | { type: 'SET_STROKE_WIDTH'; width: number } // appState only
@@ -92,4 +107,11 @@ export type Command =
       underline?: boolean;
       strikethrough?: boolean;
       arrowHead?: 'none' | 'start' | 'end' | 'both';
+      /** Applied to `shape` elements only; also becomes the tool default. */
+      shapeKind?: ShapeKind;
+      /** Applied to lines/arrows only; also becomes the line tool default. */
+      routing?: ConnectorRouting;
+      /** Applied to lines/arrows only. */
+      startHeadStyle?: ArrowHeadStyle;
+      endHeadStyle?: ArrowHeadStyle;
     };

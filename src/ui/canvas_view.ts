@@ -2,10 +2,13 @@ import type { ActiveTool } from '../core/app_state';
 import { screenToWorld, worldToScreen } from '../core/viewport';
 import { cloneElementsWithOffset } from '../elements/clone';
 import type {
+  ConnectorAnchor,
+  Element as DrawableElement,
   EllipseElement,
   LineElement,
   RectangleElement,
   RhombusElement,
+  ShapeElement,
   TextElement,
 } from '../elements/element';
 import type { History } from '../engine/history';
@@ -15,14 +18,18 @@ import {
   sendLocalCursor,
   subscribeCursors,
 } from '../io/presence';
+import { distToRoute, getRoutePointAt } from '../rendering/connector_geometry';
 import { contrastColor, drawElement } from '../rendering/draw_element';
 import {
   drawAlignGuides,
   drawHoverHighlight,
   drawMarquee,
+  drawPortIndicators,
   drawSnapIndicator,
+  resolveConnectorRoute,
 } from '../rendering/draw_selection';
 import { render } from '../rendering/renderer';
+import { getShapeTextBox } from '../rendering/shape_geometry';
 import { EllipseTool } from '../tools/ellipse_tool';
 import { EraserTool, type SlashPoint } from '../tools/eraser_tool';
 import { HandTool } from '../tools/hand_tool';
@@ -31,6 +38,7 @@ import { PenTool } from '../tools/pen_tool';
 import { RectangleTool } from '../tools/rectangle_tool';
 import { RomboTool } from '../tools/rombo_tool';
 import { SelectTool } from '../tools/select_tool';
+import { ShapeTool } from '../tools/shape_tool';
 import { StickyTool } from '../tools/sticky_tool';
 import { TextTool } from '../tools/text_tool';
 import type { Tool, ToolContext } from '../tools/tool';
@@ -46,6 +54,7 @@ const TOOLS: Record<ActiveTool, Tool> = {
   ellipse: new EllipseTool(),
   line: new LineTool(),
   rombo: new RomboTool(),
+  shape: new ShapeTool(),
   freehand: new PenTool(),
   text: textTool,
   sticky: stickyTool,
@@ -80,6 +89,7 @@ export function initCanvasView(
     'rectangle',
     'ellipse',
     'rombo',
+    'shape',
     'arrow',
     'line',
     'text',
@@ -203,7 +213,8 @@ export function initCanvasView(
       if (
         el.type === 'rectangle' ||
         el.type === 'ellipse' ||
-        el.type === 'rhombus'
+        el.type === 'rhombus' ||
+        el.type === 'shape'
       ) {
         const bx = el.width < 0 ? el.x + el.width : el.x;
         const by = el.height < 0 ? el.y + el.height : el.y;
@@ -222,7 +233,11 @@ export function initCanvasView(
             keepSelection: true,
           });
           openShapeLabelEditor(
-            el as RectangleElement | EllipseElement | RhombusElement,
+            el as
+              | RectangleElement
+              | EllipseElement
+              | RhombusElement
+              | ShapeElement,
             history,
             canvas,
             (id) => {
@@ -237,9 +252,15 @@ export function initCanvasView(
 
       if (el.type === 'arrow' || el.type === 'line') {
         const line = el as LineElement;
-        const hitLabel = isPointInArrowLabel(wx, wy, line);
+        const route =
+          line.routing === 'elbow'
+            ? resolveConnectorRoute(line, scene.elements)
+            : null;
+        const hitLabel = isPointInArrowLabel(wx, wy, line, scene.elements);
         const hitShaft =
-          distPointToSegment(wx, wy, line.x, line.y, line.x2, line.y2) <
+          (route
+            ? distToRoute(wx, wy, route)
+            : distPointToSegment(wx, wy, line.x, line.y, line.x2, line.y2)) <
           line.strokeWidth / 2 + 8;
         if (hitLabel || hitShaft) {
           history.dispatch({ type: 'SELECT_ELEMENTS', ids: [line.id] });
@@ -803,7 +824,15 @@ export function initCanvasView(
       const snapEl = scene.elements.find(
         (el) => el.id === selectTool.endpointSnapElementId,
       );
-      if (snapEl) drawHoverHighlight(ctx2d, snapEl, scene.viewport);
+      if (snapEl) {
+        drawHoverHighlight(ctx2d, snapEl, scene.viewport, scene.elements);
+        drawPortIndicators(
+          ctx2d,
+          snapEl,
+          scene.viewport,
+          selectTool.endpointSnapAnchor ?? undefined,
+        );
+      }
     }
 
     // Draw hover highlight when using select tool (unselected elements only)
@@ -811,16 +840,27 @@ export function initCanvasView(
       const hoveredEl = scene.elements.find(
         (el) => el.id === selectTool.hoveredId && !scene.selectedIds.has(el.id),
       );
-      if (hoveredEl) drawHoverHighlight(ctx2d, hoveredEl, scene.viewport);
+      if (hoveredEl)
+        drawHoverHighlight(ctx2d, hoveredEl, scene.viewport, scene.elements);
     }
 
     // Draw hover highlight for arrow/line tool snap target (magnetic connection point)
     if ('snapElementId' in activeTool) {
-      const snapElId = (activeTool as { snapElementId: string | null })
-        .snapElementId;
+      const { snapElementId: snapElId, snapAnchor } = activeTool as {
+        snapElementId: string | null;
+        snapAnchor?: ConnectorAnchor | null;
+      };
       if (snapElId) {
         const snapEl = scene.elements.find((el) => el.id === snapElId);
-        if (snapEl) drawHoverHighlight(ctx2d, snapEl, scene.viewport);
+        if (snapEl) {
+          drawHoverHighlight(ctx2d, snapEl, scene.viewport, scene.elements);
+          drawPortIndicators(
+            ctx2d,
+            snapEl,
+            scene.viewport,
+            snapAnchor ?? undefined,
+          );
+        }
       }
     }
 
@@ -830,7 +870,8 @@ export function initCanvasView(
       const hoveredEl = scene.elements.find(
         (el) => el.id === eraserTool.hoveredId,
       );
-      if (hoveredEl) drawHoverHighlight(ctx2d, hoveredEl, scene.viewport);
+      if (hoveredEl)
+        drawHoverHighlight(ctx2d, hoveredEl, scene.viewport, scene.elements);
     }
 
     // Draw eraser slash trail
@@ -990,7 +1031,7 @@ function drawSlashTrail(
 // ── Shape label editor ─────────────────────────────────────────────────────────
 
 function openShapeLabelEditor(
-  el: RectangleElement | EllipseElement | RhombusElement,
+  el: RectangleElement | EllipseElement | RhombusElement | ShapeElement,
   history: History,
   canvas: HTMLCanvasElement,
   onEditingChange: (id: string | null) => void,
@@ -1000,15 +1041,20 @@ function openShapeLabelEditor(
   const by = el.height < 0 ? el.y + el.height : el.y;
   const bw = Math.abs(el.width);
   const bh = Math.abs(el.height);
-  const cx = bx + bw / 2;
-  const cy = by + bh / 2;
+  // Flowchart shapes lay their label out in a dedicated text box.
+  const textBox =
+    el.type === 'shape'
+      ? getShapeTextBox(el.kind, bw, bh)
+      : { x: 0, y: 0, w: bw, h: bh };
+  const cx = bx + textBox.x + textBox.w / 2;
+  const cy = by + textBox.y + textBox.h / 2;
 
   const [screenCX, screenCY] = worldToScreen(viewport, cx, cy);
   const canvasRect = canvas.getBoundingClientRect();
 
   const fontSize = el.labelFontSize ?? appState.fontSize;
   const fontFamily = el.labelFontFamily ?? appState.fontFamily;
-  const shapeW = bw * viewport.zoom;
+  const shapeW = textBox.w * viewport.zoom;
 
   const ta = document.createElement('textarea');
   ta.spellcheck = true;
@@ -1049,7 +1095,8 @@ function openShapeLabelEditor(
     if (
       latest?.type === 'rectangle' ||
       latest?.type === 'ellipse' ||
-      latest?.type === 'rhombus'
+      latest?.type === 'rhombus' ||
+      latest?.type === 'shape'
     ) {
       ta.style.color =
         latest.labelColor ??
@@ -1090,10 +1137,29 @@ function openShapeLabelEditor(
   ta.select();
 }
 
-function isPointInArrowLabel(wx: number, wy: number, el: LineElement): boolean {
+/**
+ * Where a connector label sits: the midpoint of the elbow route, or of the
+ * stored segment for straight/curved connectors.
+ */
+function connectorLabelCenter(
+  el: LineElement,
+  allElements: ReadonlyArray<DrawableElement>,
+): [number, number] {
+  if (el.routing === 'elbow') {
+    const [x, y] = getRoutePointAt(resolveConnectorRoute(el, allElements), 0.5);
+    return [x, y];
+  }
+  return [(el.x + el.x2) / 2, (el.y + el.y2) / 2];
+}
+
+function isPointInArrowLabel(
+  wx: number,
+  wy: number,
+  el: LineElement,
+  allElements: ReadonlyArray<DrawableElement>,
+): boolean {
   if (!el.label) return false;
-  const mx = (el.x + el.x2) / 2;
-  const my = (el.y + el.y2) / 2;
+  const [mx, my] = connectorLabelCenter(el, allElements);
   const fontSize = el.labelFontSize ?? 12;
   const lines = el.label.split('\n');
   const maxLen = Math.max(...lines.map((l) => l.length));
@@ -1130,9 +1196,8 @@ function openArrowLabelEditor(
   canvas: HTMLCanvasElement,
   onEditingChange?: (id: string | null) => void,
 ): void {
-  const { viewport, appState } = history.present;
-  const mx = (el.x + el.x2) / 2;
-  const my = (el.y + el.y2) / 2;
+  const { viewport, appState, elements } = history.present;
+  const [mx, my] = connectorLabelCenter(el, elements);
   const [screenX, screenY] = worldToScreen(viewport, mx, my);
   const canvasRect = canvas.getBoundingClientRect();
 
