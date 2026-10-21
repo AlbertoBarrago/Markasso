@@ -4,6 +4,18 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Connector routing and arrowhead styles on mobile.** The touch style sheet now offers the same routing (straight / elbow) and start/end head styles as the desktop panel.
+
+### Fixed
+- **Shapes stay editable after editing a label.** Editing a shape or connector label switched to the text tool and left it active, so the next clicks created text or reopened labels instead of selecting, and shapes (most visibly in the presets, e.g. the mind map) could no longer be moved, resized or restyled. Closing the editor (click elsewhere, `Esc`, `Enter` on connectors) now brings back the previous tool, and a click on the canvas closes the editor before it is handled, on touch devices too.
+- **Live session messages are translated** in German, Spanish, French, Japanese, Portuguese and Chinese.
+- **The manual's Mermaid section** describes the current Mermaid engine.
+
+---
+
 ## [1.12.0] - 2026-10-21
 
 ### Added
