@@ -92,6 +92,7 @@ export class SelectTool implements Tool {
   private resizeInitialSignX = 1;
   private resizeInitialSignY = 1;
   // Original bounds per element for multi-selection resize (keyed by element id)
+  private resizeOrigElements = new Map<string, Element>();
   private resizeOrigElBounds = new Map<
     string,
     { x: number; y: number; w: number; h: number }
@@ -310,6 +311,7 @@ export class SelectTool implements Tool {
           // Multi-selection: treat union bounds as the resize surface
           this.resizeOrigEl = null;
           this.resizeOrigElBounds.clear();
+          this.resizeOrigElements.clear();
           let minX = Infinity,
             minY = Infinity,
             maxX = -Infinity,
@@ -317,6 +319,7 @@ export class SelectTool implements Tool {
           for (const el of selectedEls) {
             const b = getElementBounds(el);
             this.resizeOrigElBounds.set(el.id, b);
+            this.resizeOrigElements.set(el.id, el);
             minX = Math.min(minX, b.x);
             minY = Math.min(minY, b.y);
             maxX = Math.max(maxX, b.x + b.w);
@@ -539,7 +542,9 @@ export class SelectTool implements Tool {
           worldX,
           worldY,
           ob,
-          e.shiftKey,
+          e.shiftKey ||
+            (isCornerHandle(this.resizeHandle) &&
+              selectedEls.some((el) => el.type === 'text')),
           this.resizeInitialSignX,
           this.resizeInitialSignY,
           MIN_RESIZE_SCREEN_PX / scene.viewport.zoom,
@@ -555,11 +560,12 @@ export class SelectTool implements Tool {
             const relX = (b.x - ob.x) * scaleX + newBounds.x;
             const relY = (b.y - ob.y) * scaleY + newBounds.y;
             const resized = scaleElement(
-              el,
+              this.resizeOrigElements.get(el.id) ?? el,
               relX,
               relY,
               b.w * scaleX,
               b.h * scaleY,
+              isCornerHandle(this.resizeHandle),
             );
             if (resized)
               ctx.history.dispatch({
@@ -777,6 +783,7 @@ export class SelectTool implements Tool {
     this.resizeInitialSignX = 1;
     this.resizeInitialSignY = 1;
     this.resizeOrigElBounds.clear();
+    this.resizeOrigElements.clear();
     this.endpointSide = null;
     this.endpointElId = null;
     this.rotateElId = null;
@@ -996,12 +1003,19 @@ function newBoundsFromHandle(
   return { x: minX, y: minY, w, h };
 }
 
+function isCornerHandle(handle: HandlePosition): boolean {
+  return (
+    handle === 'nw' || handle === 'ne' || handle === 'sw' || handle === 'se'
+  );
+}
+
 function scaleElement(
   el: Element,
   newX: number,
   newY: number,
   newW: number,
   newH: number,
+  scaleText = false,
 ): ResizePayload | null {
   switch (el.type) {
     case 'rectangle':
@@ -1011,7 +1025,14 @@ function scaleElement(
     case 'stencil':
       return { x: newX, y: newY, width: newW, height: newH };
     case 'text':
-      return { x: newX, y: newY, width: newW, height: newH };
+      return {
+        x: newX,
+        y: newY,
+        width: newW,
+        height: newH,
+        ...(scaleText &&
+          el.width > 0 && { fontSize: (el.fontSize * newW) / el.width }),
+      };
     case 'line':
     case 'arrow': {
       const origB = getElementBounds(el);
@@ -1075,13 +1096,13 @@ export function computeResize(
     curX,
     curY,
     origBounds,
-    shiftKey,
+    shiftKey || (el.type === 'text' && isCornerHandle(handle)),
     initialSignX,
     initialSignY,
     MIN_RESIZE_SCREEN_PX / zoom,
   );
   if (!nb) return null;
-  return scaleElement(el, nb.x, nb.y, nb.w, nb.h);
+  return scaleElement(el, nb.x, nb.y, nb.w, nb.h, isCornerHandle(handle));
 }
 
 // ── Hit testing ───────────────────────────────────────────────────────────────
