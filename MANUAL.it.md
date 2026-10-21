@@ -353,8 +353,9 @@ Passa tra i temi **Scuro**, **Chiaro** e **Sistema** dal pannello Impostazioni (
 - **Apri .markasso:** trascina e rilascia un file `.markasso` sul canvas, oppure usa File → Apri nel menu Impostazioni.
 - **Salva .markasso:** File → Salva nel menu Impostazioni. Salva l'intera scena incluse le immagini.
 - **Importa diagramma Mermaid:** trascina e rilascia un file `.mmd` o `.mermaid` sul canvas, clicca il pulsante Mermaid nella toolbar, oppure incolla testo Mermaid con `Ctrl+V`. Tipi di diagramma supportati:
-  - `graph` / `flowchart` — direzioni TD, LR, RL, BT; forme dei nodi `[]` (rettangolo), `(())` (ellisse), `{}` (rombo); frecce solide `-->`, frecce tratteggiate `-.->`, linee semplici `---`; etichette inline sugli archi
-  - `sequenceDiagram` — i partecipanti diventano rettangoli disposti in riga; i messaggi diventano frecce con etichette
+  - Parsing e disposizione usano il motore ufficiale Mermaid, caricato alla prima importazione.
+  - Flowchart (inclusi i sottografi), diagrammi di sequenza, classi, stati ed entità-relazioni vengono convertiti in elementi nativi modificabili.
+  - Gli altri tipi di diagramma, come gantt, pie, gitGraph e mindmap, vengono importati come immagine SVG; i singoli nodi non sono modificabili.
   - Dopo la conversione la vista si adatta automaticamente al diagramma importato.
 - **Importa pacchetto di icone (ZIP):** i pacchetti di icone AWS, Azure e Google Cloud si importano dalla Libreria. Vedi *Importare le icone AWS, Azure e Google Cloud*.
 - **Esporta PNG:** scarica un PNG a 2× ritagliato al riquadro che racchiude tutti gli elementi.

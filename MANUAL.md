@@ -353,8 +353,9 @@ Switch between **Dark**, **Light**, and **System** themes from the Settings pane
 - **Open .markasso:** drag and drop a `.markasso` file onto the canvas, or use File → Open in the Settings menu.
 - **Save .markasso:** File → Save in the Settings menu. Saves the full scene including images.
 - **Import Mermaid diagram:** drag and drop a `.mmd` or `.mermaid` file onto the canvas, click the Mermaid button in the toolbar, or paste Mermaid text with `Ctrl+V`. Supported diagram types:
-  - `graph` / `flowchart` — directions TD, LR, RL, BT; node shapes `[]` (rectangle), `(())` (ellipse), `{}` (rhombus); solid arrows `-->`, dashed arrows `-.->`, plain lines `---`; inline edge labels
-  - `sequenceDiagram` — participants become rectangles arranged in a row; messages become arrows with labels
+  - Parsing and layout use the official Mermaid engine, loaded on first import.
+  - Flowcharts (including subgraphs), sequence, class, state and entity-relationship diagrams are converted to native, editable elements.
+  - Other diagram types, such as gantt, pie, gitGraph and mindmap, are imported as an SVG image; their individual nodes cannot be edited.
   - The viewport auto-fits to the imported diagram after conversion.
 - **Import icon pack (ZIP):** AWS, Azure and Google Cloud icon packs are imported from the Library. See *Importing AWS, Azure and Google Cloud Icons*.
 - **Export PNG:** downloads a 2× PNG cropped to the bounding box of all elements.
