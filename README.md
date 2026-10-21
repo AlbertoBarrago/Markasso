@@ -176,6 +176,15 @@ Cloud vendors allow their icons in diagrams but not their redistribution in tool
 | **Per-peer views** | Pan, zoom, selection and tool choice stay local — everyone pans and selects independently |
 | **Room safety** | Max 20 peers/room, per-peer command rate limit, and a max message-size guard to protect the room |
 
+### AI Agents (MCP)
+
+| Feature | Description |
+|---|---|
+| **MCP server** | `mcp/` ships an [MCP](https://modelcontextprotocol.io) server so Claude, Codex, Gemini and local models (e.g. Gemma in LM Studio) can create, read and edit Markasso diagrams. Setup and tools: [`mcp/README.md`](mcp/README.md) |
+| **Document mode** | Agents add nodes (shapes, flowchart symbols, icons) and connections by short keys, auto-arrange them in layers, then save `.markasso`, export SVG or publish a share link |
+| **Live mode** | An agent joins a live session from its `?live=` link and draws on the shared board in real time: people see it in the room and follow its cursor, and the agent reads what they drew |
+| **Same engine** | Every change goes through Markasso's own reducer and validation, so agent diagrams are identical to hand-made ones and undo works |
+
 ### Persistence & Export
 
 | Feature | Description |
@@ -221,6 +230,7 @@ pnpm dev        # Start dev server at http://localhost:5173
 pnpm build      # Type-check and bundle → dist/
 pnpm typecheck  # TypeScript validation
 pnpm test       # Run Vitest unit tests
+pnpm mcp:build  # Build the MCP server → mcp/dist/markasso-mcp.js
 ```
 
 No `.env` files. No API keys. No containerization required.
@@ -356,6 +366,7 @@ Client C ──┘                                           │ serializes comm
 src/
 ├── core/
 │   ├── scene.ts            # Scene interface + factory
+│   ├── layout.ts           # Layered auto-layout (used by the MCP server)
 │   ├── viewport.ts         # Pan/zoom math (screenToWorld, worldToScreen)
 │   └── app_state.ts        # AppState (activeTool, colors, grid, …)
 ├── elements/
@@ -412,6 +423,15 @@ src/
     ├── settings.ts          # Hamburger panel: grid, accent color, theme, language
     ├── mobile_action_bar.ts # Compact bottom-right action bar for touch devices
     └── shortcuts.ts         # Global keyboard map
+
+mcp/                         # MCP server for AI agents (separate pnpm package)
+├── src/
+│   ├── server.ts            # Tool definitions over stdio
+│   ├── diagram.ts           # Agent-facing diagram API on top of History
+│   ├── describe.ts          # Compact text description of a diagram
+│   ├── storage.ts           # .markasso files and share links
+│   └── live.ts              # Live-session peer (same protocol as the app)
+└── README.md                # Setup for Claude, Codex, Gemini, LM Studio
 ```
 
 ---
