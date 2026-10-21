@@ -1,12 +1,14 @@
 import type { ActiveTool } from '../core/app_state';
 import { fitToElements } from '../core/viewport';
 import { cloneElementsWithOffset } from '../elements/clone';
+import { SHAPE_KINDS } from '../elements/element';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { exportMarkasso } from '../io/markasso';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 import type { SelectTool } from '../tools/select_tool';
+import { SHAPE_KIND_LABEL_KEYS, shapeKindIcon } from './shape_icons';
 
 interface PaletteItem {
   id: string;
@@ -181,6 +183,23 @@ export function initCommandPalette(
         category: 'tool',
         icon: td.icon,
         execute: () => history.dispatch({ type: 'SET_TOOL', tool: td.id }),
+      });
+    }
+
+    // One entry per flowchart kind, so "database" or "delay" is one search away
+    for (const kind of SHAPE_KINDS) {
+      items.push({
+        id: `tool:shape:${kind}`,
+        label: `${t('shapes')}: ${t(SHAPE_KIND_LABEL_KEYS[kind])}`,
+        hint: 'S',
+        category: 'tool',
+        icon: shapeKindIcon(kind, 14),
+        execute: () =>
+          history.dispatch({
+            type: 'SET_TOOL',
+            tool: 'shape',
+            shapeKind: kind,
+          }),
       });
     }
 

@@ -2,6 +2,7 @@ export type ElementType =
   | 'rectangle'
   | 'ellipse'
   | 'rhombus'
+  | 'shape'
   | 'line'
   | 'arrow'
   | 'curve'
@@ -60,6 +61,39 @@ export interface RhombusElement extends BaseElement {
   readonly width: number;
   readonly height: number;
   readonly cornerRadius?: number;
+  readonly label?: string;
+  readonly labelFontSize?: number;
+  readonly labelFontFamily?: string;
+  readonly labelColor?: string;
+}
+
+/**
+ * Flowchart symbols rendered by the `shape` element. Kept as a runtime list
+ * (not just a type) so validation can check incoming data against it.
+ */
+export const SHAPE_KINDS = [
+  'terminator',
+  'data',
+  'document',
+  'database',
+  'predefinedProcess',
+  'preparation',
+  'manualInput',
+  'delay',
+] as const;
+
+export type ShapeKind = (typeof SHAPE_KINDS)[number];
+
+/**
+ * Parametric flowchart shape. Its outline is defined by the geometry
+ * registry in `elements/shapes.ts`, so every kind shares bounds, connector
+ * snapping, rendering and export code.
+ */
+export interface ShapeElement extends BaseElement {
+  readonly type: 'shape';
+  readonly kind: ShapeKind;
+  readonly width: number;
+  readonly height: number;
   readonly label?: string;
   readonly labelFontSize?: number;
   readonly labelFontFamily?: string;
@@ -149,6 +183,7 @@ export type Element =
   | RectangleElement
   | EllipseElement
   | RhombusElement
+  | ShapeElement
   | LineElement
   | ArrowElement
   | CurveElement

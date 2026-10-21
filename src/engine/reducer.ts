@@ -72,7 +72,8 @@ export function reducer(
           ? scene.appState
           : {
               ...scene.appState,
-              lastCreatedId: command.select === false ? command.element.id : null,
+              lastCreatedId:
+                command.select === false ? command.element.id : null,
             },
       };
 
@@ -127,6 +128,7 @@ export function reducer(
             el.type === 'rectangle' ||
             el.type === 'ellipse' ||
             el.type === 'rhombus' ||
+            el.type === 'shape' ||
             el.type === 'text' ||
             el.type === 'image'
           ) {
@@ -238,6 +240,7 @@ export function reducer(
           (el.type === 'rectangle' ||
             el.type === 'ellipse' ||
             el.type === 'rhombus' ||
+            el.type === 'shape' ||
             el.type === 'arrow' ||
             el.type === 'line')
             ? {
@@ -301,6 +304,9 @@ export function reducer(
         activeTool: command.tool,
         lastCreatedId: null,
         ...(leavingText && { fontSize: 20 }),
+        ...(command.shapeKind !== undefined && {
+          shapeKind: command.shapeKind,
+        }),
       };
 
       // When switching to a drawing tool while an element is selected,
@@ -549,6 +555,7 @@ export function reducer(
         underline,
         strikethrough,
         arrowHead,
+        shapeKind,
       } = command;
       const patch: Record<string, unknown> = {};
       if (strokeColor !== undefined) patch.strokeColor = strokeColor;
@@ -581,6 +588,7 @@ export function reducer(
       if (roughness !== undefined) statePatch.roughness = roughness;
       if (strokeStyle !== undefined) statePatch.strokeStyle = strokeStyle;
       if (textAlign !== undefined) statePatch.textAlign = textAlign;
+      if (shapeKind !== undefined) statePatch.shapeKind = shapeKind;
 
       const targetIds = command.ids ?? [...scene.selectedIds];
       const fallbackId =
@@ -595,11 +603,14 @@ export function reducer(
         appState: isRemote
           ? scene.appState
           : { ...scene.appState, ...statePatch },
-        elements: scene.elements.map((el) =>
-          targetIds.includes(el.id) || el.id === fallbackId
-            ? ({ ...el, ...patch } as Element)
-            : el,
-        ),
+        elements: scene.elements.map((el) => {
+          if (!targetIds.includes(el.id) && el.id !== fallbackId) return el;
+          const next = { ...el, ...patch } as Element;
+          // `kind` only exists on shapes: never leak it onto other types.
+          return shapeKind !== undefined && next.type === 'shape'
+            ? { ...next, kind: shapeKind }
+            : next;
+        }),
       };
     }
 

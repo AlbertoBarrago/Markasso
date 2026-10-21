@@ -176,5 +176,17 @@
   "reportSuccessTitle": "Report sent!",
   "reportSuccessDesc": "Thanks, we opened a public issue on GitHub:",
   "reportClose": "Close",
-  "guideSearchPlaceholder": "Search the guide…"
+  "guideSearchPlaceholder": "Search the guide…",
+  "shape": "Flowchart shape",
+  "shapes": "Flowchart shapes",
+  "shapeKind": "Shape",
+  "hintShape": "Drag to draw the selected flowchart shape. Pick another one from the [[▾]] menu",
+  "shapeTerminator": "Start / End",
+  "shapeData": "Data (I/O)",
+  "shapeDocument": "Document",
+  "shapeDatabase": "Database",
+  "shapePredefinedProcess": "Predefined process",
+  "shapePreparation": "Preparation",
+  "shapeManualInput": "Manual input",
+  "shapeDelay": "Delay"
 }

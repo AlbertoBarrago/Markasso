@@ -2,6 +2,11 @@ import type { Viewport } from '../core/viewport';
 import { worldToScreen } from '../core/viewport';
 import type { Element } from '../elements/element';
 import { getQuadraticBounds } from './connector_geometry';
+import {
+  getShapeBorderPointToward,
+  getShapeDistToBoundary,
+  getShapeNearestBorderPoint,
+} from './shape_geometry';
 
 /**
  * Returns the distance from (px, py) to the actual visual boundary of an element.
@@ -30,6 +35,12 @@ export function distToShapeBoundary(
     // Distance to diamond boundary: |L1_normalized - 1| * min_half
     const n = Math.abs(dx) / hw + Math.abs(dy) / hh;
     return Math.abs(n - 1) * Math.min(hw, hh);
+  }
+  if (el.type === 'shape') {
+    const [lx, ly] = el.rotation
+      ? rotatePoint(px, py, cx, cy, -el.rotation)
+      : [px, py];
+    return getShapeDistToBoundary(el.kind, b.w, b.h, lx - b.x, ly - b.y);
   }
   // Rectangle / text / image / freehand: distance to nearest edge
   const insideX = hw - Math.abs(dx);
@@ -82,6 +93,10 @@ export function getElementBorderPoint(
     const t = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh);
     lx = dx * t;
     ly = dy * t;
+  } else if (el.type === 'shape') {
+    const [bx, by] = getShapeBorderPointToward(el.kind, b.w, b.h, dx, dy);
+    lx = bx - b.w / 2;
+    ly = by - b.h / 2;
   } else {
     // Rectangle / text / image / freehand — axis-aligned border intersection
     const hw = b.w / 2;
@@ -194,6 +209,15 @@ export function getNearestElementBorderPoint(
       const t = 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh);
       localPoint = [cx + dx * t, cy + dy * t];
     }
+  } else if (el.type === 'shape') {
+    const [nx, ny] = getShapeNearestBorderPoint(
+      el.kind,
+      b.w,
+      b.h,
+      localPx - b.x,
+      localPy - b.y,
+    );
+    localPoint = [b.x + nx, b.y + ny];
   } else {
     localPoint = nearestRectBorderPoint(b, localPx, localPy);
   }
@@ -328,6 +352,7 @@ export function getElementBounds(
     case 'rectangle':
     case 'ellipse':
     case 'rhombus':
+    case 'shape':
     case 'text':
     case 'image': {
       const x = el.width < 0 ? el.x + el.width : el.x;
@@ -769,6 +794,7 @@ function drawSelectedElementOutline(
     element.type !== 'freehand' &&
     element.type !== 'polygon' &&
     element.type !== 'rectangle' &&
+    element.type !== 'shape' &&
     element.type !== 'text' &&
     element.type !== 'image'
   ) {

@@ -170,5 +170,17 @@
   "reportSuccessDesc": "Gracias, hemos abierto una incidencia pública en GitHub:",
   "reportClose": "Cerrar",
   "guideSearchPlaceholder": "Buscar en la guía…",
-  "people": "Personas"
+  "people": "Personas",
+  "shape": "Forma de diagrama",
+  "shapes": "Formas de diagrama",
+  "shapeKind": "Forma",
+  "hintShape": "Arrastrar para dibujar la forma seleccionada. Elige otra en el menú [[▾]]",
+  "shapeTerminator": "Inicio / Fin",
+  "shapeData": "Datos (E/S)",
+  "shapeDocument": "Documento",
+  "shapeDatabase": "Base de datos",
+  "shapePredefinedProcess": "Proceso predefinido",
+  "shapePreparation": "Preparación",
+  "shapeManualInput": "Entrada manual",
+  "shapeDelay": "Espera"
 }

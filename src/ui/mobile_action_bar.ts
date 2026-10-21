@@ -691,11 +691,18 @@ export function initMobileActionBar(
     opacityVal.textContent = String(pct);
 
     // Hide sections based on selected element types (mirrors desktop context panel logic)
-    const FILL_TYPES = new Set(['rectangle', 'ellipse', 'rhombus', 'text']);
+    const FILL_TYPES = new Set([
+      'rectangle',
+      'ellipse',
+      'rhombus',
+      'shape',
+      'text',
+    ]);
     const STYLE_TYPES = new Set([
       'rectangle',
       'ellipse',
       'rhombus',
+      'shape',
       'line',
       'arrow',
     ]);

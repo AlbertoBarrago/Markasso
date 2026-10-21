@@ -1,5 +1,6 @@
 import type { ActiveTool } from '../core/app_state';
 import { fitToElements } from '../core/viewport';
+import { SHAPE_KINDS } from '../elements/element';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
@@ -18,6 +19,7 @@ import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 import { onLiveHide, onLiveReveal, setLiveUI } from './live_name';
 import { initPeopleList } from './people_list';
+import { SHAPE_KIND_LABEL_KEYS, shapeKindIcon } from './shape_icons';
 import {
   copyToClipboard,
   showLiveStatusToast,
@@ -144,7 +146,96 @@ export function initToolbar(container: HTMLElement, history: History): void {
   lockSep.className = 'tb-separator';
   centerPill.appendChild(lockSep);
 
+  // ── Flowchart shapes: split button + flyout ───────────────────────────────
+  // Main area activates the shape tool with the current kind; the chevron
+  // opens a flyout to pick another kind.
+  let shapeFlyoutOpen = false;
+  const shapeWrap = div('tb-group-wrap');
+  const shapeSplit = div('tb-split-inner');
+  const shapeBtn = document.createElement('button');
+  shapeBtn.className = 'tb-btn tb-btn-group';
+  shapeBtn.setAttribute('aria-pressed', 'false');
+  const shapeChevron = document.createElement('button');
+  shapeChevron.className = 'tb-group-chevron-btn';
+  shapeChevron.innerHTML = '▾';
+  shapeChevron.title = t('shapes');
+  shapeChevron.setAttribute('aria-label', t('shapes'));
+  shapeChevron.setAttribute('aria-haspopup', 'true');
+  shapeChevron.setAttribute('aria-expanded', 'false');
+  const shapeFlyout = div('tb-group-flyout tb-shape-flyout');
+  shapeFlyout.setAttribute('role', 'menu');
+  shapeFlyout.setAttribute('aria-label', t('shapes'));
+
+  const closeShapeFlyout = (): void => {
+    shapeFlyoutOpen = false;
+    shapeFlyout.classList.remove('open');
+    shapeChevron.setAttribute('aria-expanded', 'false');
+  };
+  shapeBtn.addEventListener('click', () => {
+    history.dispatch({ type: 'SET_TOOL', tool: 'shape' });
+    closeShapeFlyout();
+  });
+  shapeChevron.addEventListener('click', (e) => {
+    e.stopPropagation();
+    shapeFlyoutOpen = !shapeFlyoutOpen;
+    shapeFlyout.classList.toggle('open', shapeFlyoutOpen);
+    shapeChevron.setAttribute('aria-expanded', String(shapeFlyoutOpen));
+    if (shapeFlyoutOpen)
+      shapeFlyout.querySelector<HTMLButtonElement>('button')?.focus();
+  });
+  for (const kind of SHAPE_KINDS) {
+    const label = t(SHAPE_KIND_LABEL_KEYS[kind]);
+    const b = document.createElement('button');
+    b.className = 'tb-btn tb-group-flyout-btn';
+    b.title = label;
+    b.setAttribute('aria-label', label);
+    b.setAttribute('role', 'menuitem');
+    b.dataset.kind = kind;
+    b.innerHTML = shapeKindIcon(kind);
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      history.dispatch({ type: 'SET_TOOL', tool: 'shape', shapeKind: kind });
+      closeShapeFlyout();
+    });
+    shapeFlyout.appendChild(b);
+  }
+  shapeWrap.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && shapeFlyoutOpen) {
+      closeShapeFlyout();
+      shapeChevron.focus();
+    }
+  });
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (shapeFlyoutOpen && !shapeWrap.contains(e.target as Node)) {
+        closeShapeFlyout();
+      }
+    },
+    { capture: true },
+  );
+  shapeSplit.append(shapeBtn, shapeChevron);
+  shapeWrap.append(shapeSplit, shapeFlyout);
+
+  function syncShapeButton(): void {
+    const { activeTool, shapeKind } = history.present.appState;
+    const label = `${t('shapes')}: ${t(SHAPE_KIND_LABEL_KEYS[shapeKind])}`;
+    const isActive = activeTool === 'shape';
+    shapeBtn.innerHTML = shapeKindIcon(shapeKind);
+    shapeBtn.title = `${label} (S)`;
+    shapeBtn.setAttribute('aria-label', label);
+    shapeBtn.classList.toggle('active', isActive);
+    shapeBtn.setAttribute('aria-pressed', String(isActive));
+    shapeChevron.classList.toggle('active', isActive);
+    shapeFlyout
+      .querySelectorAll<HTMLButtonElement>('button[data-kind]')
+      .forEach((b) => {
+        b.classList.toggle('active', b.dataset.kind === shapeKind);
+      });
+  }
+
   TOOLS.forEach((toolDef) => {
+    if (toolDef.tool === 'line') centerPill.appendChild(shapeWrap);
     if (toolDef.tool === 'eraser') {
       const sep = document.createElement('span');
       sep.className = 'tb-separator';
@@ -908,8 +999,22 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const toolsPopup = document.createElement('div');
   toolsPopup.id = 'mobile-tools-popup';
 
-  // Mobile tools mirror the desktop toolbar exactly.
-  const mobileTools: ToolDef[] = [...TOOLS];
+  // Mobile tools mirror the desktop toolbar; the shape split button becomes
+  // a plain entry (the kind is switched from the action sheet).
+  const mobileTools: ToolDef[] = TOOLS.flatMap((def) =>
+    def.tool === 'line'
+      ? [
+          {
+            tool: 'shape',
+            icon: shapeKindIcon('terminator'),
+            label: t('shapes'),
+            key: 'S',
+            num: '',
+          },
+          def,
+        ]
+      : [def],
+  );
 
   for (const toolDef of mobileTools) {
     const b = document.createElement('button');
@@ -991,6 +1096,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
       b.classList.toggle('active', isActive);
       b.setAttribute('aria-pressed', String(isActive));
     }
+    syncShapeButton();
     toolsPopup
       .querySelectorAll<HTMLButtonElement>('.mobile-tools-popup-btn[data-tool]')
       .forEach((btn) => {

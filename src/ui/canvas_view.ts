@@ -6,6 +6,7 @@ import type {
   LineElement,
   RectangleElement,
   RhombusElement,
+  ShapeElement,
   TextElement,
 } from '../elements/element';
 import type { History } from '../engine/history';
@@ -23,6 +24,7 @@ import {
   drawSnapIndicator,
 } from '../rendering/draw_selection';
 import { render } from '../rendering/renderer';
+import { getShapeTextBox } from '../rendering/shape_geometry';
 import { EllipseTool } from '../tools/ellipse_tool';
 import { EraserTool, type SlashPoint } from '../tools/eraser_tool';
 import { HandTool } from '../tools/hand_tool';
@@ -31,6 +33,7 @@ import { PenTool } from '../tools/pen_tool';
 import { RectangleTool } from '../tools/rectangle_tool';
 import { RomboTool } from '../tools/rombo_tool';
 import { SelectTool } from '../tools/select_tool';
+import { ShapeTool } from '../tools/shape_tool';
 import { StickyTool } from '../tools/sticky_tool';
 import { TextTool } from '../tools/text_tool';
 import type { Tool, ToolContext } from '../tools/tool';
@@ -46,6 +49,7 @@ const TOOLS: Record<ActiveTool, Tool> = {
   ellipse: new EllipseTool(),
   line: new LineTool(),
   rombo: new RomboTool(),
+  shape: new ShapeTool(),
   freehand: new PenTool(),
   text: textTool,
   sticky: stickyTool,
@@ -80,6 +84,7 @@ export function initCanvasView(
     'rectangle',
     'ellipse',
     'rombo',
+    'shape',
     'arrow',
     'line',
     'text',
@@ -203,7 +208,8 @@ export function initCanvasView(
       if (
         el.type === 'rectangle' ||
         el.type === 'ellipse' ||
-        el.type === 'rhombus'
+        el.type === 'rhombus' ||
+        el.type === 'shape'
       ) {
         const bx = el.width < 0 ? el.x + el.width : el.x;
         const by = el.height < 0 ? el.y + el.height : el.y;
@@ -222,7 +228,11 @@ export function initCanvasView(
             keepSelection: true,
           });
           openShapeLabelEditor(
-            el as RectangleElement | EllipseElement | RhombusElement,
+            el as
+              | RectangleElement
+              | EllipseElement
+              | RhombusElement
+              | ShapeElement,
             history,
             canvas,
             (id) => {
@@ -990,7 +1000,7 @@ function drawSlashTrail(
 // ── Shape label editor ─────────────────────────────────────────────────────────
 
 function openShapeLabelEditor(
-  el: RectangleElement | EllipseElement | RhombusElement,
+  el: RectangleElement | EllipseElement | RhombusElement | ShapeElement,
   history: History,
   canvas: HTMLCanvasElement,
   onEditingChange: (id: string | null) => void,
@@ -1000,15 +1010,20 @@ function openShapeLabelEditor(
   const by = el.height < 0 ? el.y + el.height : el.y;
   const bw = Math.abs(el.width);
   const bh = Math.abs(el.height);
-  const cx = bx + bw / 2;
-  const cy = by + bh / 2;
+  // Flowchart shapes lay their label out in a dedicated text box.
+  const textBox =
+    el.type === 'shape'
+      ? getShapeTextBox(el.kind, bw, bh)
+      : { x: 0, y: 0, w: bw, h: bh };
+  const cx = bx + textBox.x + textBox.w / 2;
+  const cy = by + textBox.y + textBox.h / 2;
 
   const [screenCX, screenCY] = worldToScreen(viewport, cx, cy);
   const canvasRect = canvas.getBoundingClientRect();
 
   const fontSize = el.labelFontSize ?? appState.fontSize;
   const fontFamily = el.labelFontFamily ?? appState.fontFamily;
-  const shapeW = bw * viewport.zoom;
+  const shapeW = textBox.w * viewport.zoom;
 
   const ta = document.createElement('textarea');
   ta.spellcheck = true;
@@ -1049,7 +1064,8 @@ function openShapeLabelEditor(
     if (
       latest?.type === 'rectangle' ||
       latest?.type === 'ellipse' ||
-      latest?.type === 'rhombus'
+      latest?.type === 'rhombus' ||
+      latest?.type === 'shape'
     ) {
       ta.style.color =
         latest.labelColor ??

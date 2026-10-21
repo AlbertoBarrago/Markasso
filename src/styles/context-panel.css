@@ -503,3 +503,8 @@
 #props-panel {
   display: none !important;
 }
+
+/* 8 flowchart kinds don't fit on one row */
+#cp-shape-kind-presets {
+  flex-wrap: wrap;
+}

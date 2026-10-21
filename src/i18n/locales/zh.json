@@ -170,5 +170,17 @@
   "reportSuccessDesc": "感谢反馈，我们已在 GitHub 上创建了一个公开 issue：",
   "reportClose": "关闭",
   "guideSearchPlaceholder": "搜索指南…",
-  "people": "成员"
+  "people": "成员",
+  "shape": "流程图形状",
+  "shapes": "流程图形状",
+  "shapeKind": "形状",
+  "hintShape": "拖动绘制所选形状，可在 [[▾]] 菜单中切换",
+  "shapeTerminator": "开始 / 结束",
+  "shapeData": "数据 (输入/输出)",
+  "shapeDocument": "文档",
+  "shapeDatabase": "数据库",
+  "shapePredefinedProcess": "预定义流程",
+  "shapePreparation": "准备",
+  "shapeManualInput": "手动输入",
+  "shapeDelay": "延迟"
 }

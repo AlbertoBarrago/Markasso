@@ -8,11 +8,14 @@ import type {
   LineElement,
   RectangleElement,
   RhombusElement,
+  ShapeElement,
   TextElement,
 } from '../elements/element';
+import { SHAPE_DEFINITIONS, shapeCommandsToPathData } from '../elements/shapes';
 import { getArrowHeadVector } from './connector_geometry';
 import { drawElement } from './draw_element';
 import { getElementBounds } from './draw_selection';
+import { getShapeTextBox } from './shape_geometry';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -156,6 +159,7 @@ function computeBounds(elements: ReadonlyArray<Element>): {
       case 'rectangle':
       case 'ellipse':
       case 'rhombus':
+      case 'shape':
       case 'text': {
         const x = el.width < 0 ? el.x + el.width : el.x;
         const y = el.height < 0 ? el.y + el.height : el.y;
@@ -237,6 +241,8 @@ function elementToSVG(el: Element, ox: number, oy: number): string {
       return ellipseToSVG(el, ox, oy);
     case 'rhombus':
       return rhombusToSVG(el, ox, oy);
+    case 'shape':
+      return shapeToSVG(el, ox, oy);
     case 'line':
       return lineToSVG(el, ox, oy);
     case 'arrow':
@@ -375,6 +381,39 @@ function rhombusToSVG(el: RhombusElement, ox: number, oy: number): string {
     `${round(x)},${round(y + h / 2)}`,
   ].join(' ');
   return `<polygon points="${pts}" ${shapeProps(el)}${rotateAttr(el, ox, oy)}/>`;
+}
+
+function shapeToSVG(el: ShapeElement, ox: number, oy: number): string {
+  const x = (el.width < 0 ? el.x + el.width : el.x) + ox;
+  const y = (el.height < 0 ? el.y + el.height : el.y) + oy;
+  const w = Math.abs(el.width);
+  const h = Math.abs(el.height);
+  const def = SHAPE_DEFINITIONS[el.kind];
+  const parts = [
+    `<path d="${shapeCommandsToPathData(def.outline(w, h), x, y)}" ${shapeProps(el)}/>`,
+  ];
+  const details = def.details?.(w, h);
+  if (details) {
+    parts.push(
+      `<path d="${shapeCommandsToPathData(details, x, y)}" ${shapeProps({ ...el, fillColor: 'transparent' })}/>`,
+    );
+  }
+  if (el.label) {
+    const box = getShapeTextBox(el.kind, w, h);
+    parts.push(
+      shapeLabelToSVG(
+        x + box.x + box.w / 2,
+        y + box.y + box.h / 2,
+        el.label,
+        el.labelFontSize ?? 16,
+        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.labelColor ?? el.strokeColor,
+        el.opacity,
+      ),
+    );
+  }
+  // Group so rotation applies to outline, details and label together.
+  return `<g${rotateAttr(el, ox, oy)}>${parts.join('')}</g>`;
 }
 
 function lineArrowHeadSVG(

@@ -170,5 +170,17 @@
   "reportSuccessDesc": "Merci, nous avons ouvert une issue publique sur GitHub :",
   "reportClose": "Fermer",
   "guideSearchPlaceholder": "Rechercher dans le guide…",
-  "people": "Personnes"
+  "people": "Personnes",
+  "shape": "Forme d'organigramme",
+  "shapes": "Formes d'organigramme",
+  "shapeKind": "Forme",
+  "hintShape": "Glisser pour dessiner la forme sélectionnée. Choisissez-en une autre dans le menu [[▾]]",
+  "shapeTerminator": "Début / Fin",
+  "shapeData": "Données (E/S)",
+  "shapeDocument": "Document",
+  "shapeDatabase": "Base de données",
+  "shapePredefinedProcess": "Processus prédéfini",
+  "shapePreparation": "Préparation",
+  "shapeManualInput": "Saisie manuelle",
+  "shapeDelay": "Attente"
 }

@@ -4,6 +4,7 @@ import type {
   ArrowElement,
   LineElement,
   RectangleElement,
+  ShapeElement,
 } from '../src/elements/element';
 import type { Handle } from '../src/rendering/draw_selection';
 import {
@@ -493,5 +494,79 @@ describe('distToShapeBoundary', () => {
     };
     const dist = distToShapeBoundary(ellipse, b, 50, 30);
     expect(dist).toBeGreaterThan(0);
+  });
+});
+
+function makeShape(overrides: Partial<ShapeElement> = {}): ShapeElement {
+  return {
+    id: 's1',
+    type: 'shape',
+    kind: 'terminator',
+    x: 0,
+    y: 0,
+    width: 200,
+    height: 100,
+    strokeColor: '#000',
+    fillColor: 'transparent',
+    strokeWidth: 2,
+    opacity: 1,
+    roughness: 0,
+    ...overrides,
+  };
+}
+
+describe('flowchart shape snapping', () => {
+  it('uses the shape outline for the border point', () => {
+    const data = makeShape({ kind: 'data', x: 100, y: 100 });
+    const [x, y] = getElementBorderPoint(data, 1000, 150);
+    expect(x).toBeCloseTo(280);
+    expect(y).toBeCloseTo(150);
+  });
+
+  it('normalizes negative width/height boxes', () => {
+    const flipped = makeShape({ x: 200, y: 100, width: -200, height: -100 });
+    expect(getElementBounds(flipped)).toEqual({ x: 0, y: 0, w: 200, h: 100 });
+    const [x, y] = getElementBorderPoint(flipped, 1000, 50);
+    expect(x).toBeCloseTo(200);
+    expect(y).toBeCloseTo(50);
+  });
+
+  it('accounts for rotation', () => {
+    const rotated = makeShape({ rotation: Math.PI / 2 });
+    // World "down" is local "right": the cap tip, rotated back below center.
+    const [x, y] = getElementBorderPoint(rotated, 100, 500);
+    expect(x).toBeCloseTo(100);
+    expect(y).toBeCloseTo(150);
+  });
+
+  it('snaps the nearest border point onto the outline', () => {
+    const db = makeShape({ kind: 'database' });
+    const [x, y] = getNearestElementBorderPoint(db, 100, -10);
+    expect(x).toBeCloseTo(100);
+    expect(y).toBeCloseTo(0);
+    expect(distToShapeBoundary(db, getElementBounds(db), 100, -10)).toBeCloseTo(
+      10,
+    );
+  });
+
+  it('is a snap target for connectors', () => {
+    const shape = makeShape();
+    const target = findNearestElementSnapTarget([shape], 205, 50, 10);
+    expect(target?.elementId).toBe('s1');
+    expect(target?.worldX).toBeCloseTo(200);
+  });
+
+  it('resolves bound connector endpoints on the outline', () => {
+    const shape = makeShape({ kind: 'preparation' });
+    const arrow = makeArrow({
+      x: 500,
+      y: 50,
+      x2: 500,
+      y2: 50,
+      startElementId: 's1',
+    });
+    const pts = resolveArrowEndpoints(arrow, [shape, arrow]);
+    expect(pts.x).toBeCloseTo(200);
+    expect(pts.y).toBeCloseTo(50);
   });
 });

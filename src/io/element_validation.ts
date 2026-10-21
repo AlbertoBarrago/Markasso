@@ -1,10 +1,15 @@
 import type { Viewport } from '../core/viewport';
-import type { Element, ElementType } from '../elements/element';
+import {
+  type Element,
+  type ElementType,
+  SHAPE_KINDS,
+} from '../elements/element';
 
 const ELEMENT_TYPES: ReadonlySet<ElementType> = new Set([
   'rectangle',
   'ellipse',
   'rhombus',
+  'shape',
   'line',
   'arrow',
   'curve',
@@ -19,6 +24,7 @@ const LINE_CAPS = new Set(['round', 'butt', 'square']);
 const LINE_JOINS = new Set(['round', 'miter', 'bevel']);
 const TEXT_ALIGNS = new Set(['left', 'center', 'right']);
 const ARROW_HEADS = new Set(['none', 'start', 'end', 'both']);
+const SHAPE_KIND_SET: ReadonlySet<string> = new Set(SHAPE_KINDS);
 
 export const MAX_ELEMENTS = 5_000;
 export const MAX_POINTS_PER_ELEMENT = 100_000;
@@ -172,6 +178,14 @@ export function isValidElement(value: unknown): value is Element {
         hasBoxFields(value) &&
         hasShapeLabelFields(value) &&
         isOptionalFiniteNumber(value.cornerRadius, 0, 1_000)
+      );
+
+    case 'shape':
+      return (
+        hasBoxFields(value) &&
+        hasShapeLabelFields(value) &&
+        typeof value.kind === 'string' &&
+        SHAPE_KIND_SET.has(value.kind)
       );
 
     case 'line':

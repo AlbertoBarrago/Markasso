@@ -8,6 +8,7 @@ import type {
   LineElement,
   PolygonElement,
   RectangleElement,
+  ShapeElement,
   TextElement,
 } from '../src/elements/element';
 import { reducer } from '../src/engine/reducer';
@@ -1425,5 +1426,101 @@ describe('reducer', () => {
       [60, 5],
       [35, 30],
     ]);
+  });
+});
+
+function makeShape(overrides: Partial<ShapeElement> = {}): ShapeElement {
+  return {
+    id: 'shape-1',
+    type: 'shape',
+    kind: 'terminator',
+    x: 0,
+    y: 0,
+    width: 120,
+    height: 60,
+    strokeColor: '#000',
+    fillColor: 'transparent',
+    strokeWidth: 2,
+    opacity: 1,
+    roughness: 0,
+    ...overrides,
+  };
+}
+
+describe('flowchart shapes', () => {
+  it('RESIZE_ELEMENT updates the shape box', () => {
+    const scene = { ...createScene(), elements: [makeShape()] };
+    const next = reducer(scene, {
+      type: 'RESIZE_ELEMENT',
+      id: 'shape-1',
+      x: 5,
+      width: 200,
+      height: 90,
+    });
+    expect(next.elements[0]).toMatchObject({
+      x: 5,
+      y: 0,
+      width: 200,
+      height: 90,
+      kind: 'terminator',
+    });
+  });
+
+  it('SET_SHAPE_LABEL labels a shape', () => {
+    const scene = { ...createScene(), elements: [makeShape()] };
+    const next = reducer(scene, {
+      type: 'SET_SHAPE_LABEL',
+      id: 'shape-1',
+      label: 'Start',
+      labelFontSize: 16,
+      labelFontFamily: 'Arial',
+    });
+    expect(next.elements[0]).toMatchObject({ label: 'Start' });
+  });
+
+  it('APPLY_STYLE shapeKind changes only shapes and the tool default', () => {
+    const scene: Scene = {
+      ...createScene(),
+      elements: [makeShape(), makeRect()],
+    };
+    const next = reducer(scene, {
+      type: 'APPLY_STYLE',
+      ids: ['shape-1', 'rect-1'],
+      shapeKind: 'database',
+    });
+    expect(next.elements[0]).toMatchObject({ kind: 'database' });
+    expect(next.elements[1]).not.toHaveProperty('kind');
+    expect(next.appState.shapeKind).toBe('database');
+  });
+
+  it('APPLY_STYLE from a remote peer keeps the local tool default', () => {
+    const scene: Scene = { ...createScene(), elements: [makeShape()] };
+    const next = reducer(
+      scene,
+      { type: 'APPLY_STYLE', ids: ['shape-1'], shapeKind: 'delay' },
+      true,
+    );
+    expect(next.elements[0]).toMatchObject({ kind: 'delay' });
+    expect(next.appState.shapeKind).toBe(scene.appState.shapeKind);
+  });
+
+  it('SET_TOOL can pick the shape kind', () => {
+    const next = reducer(createScene(), {
+      type: 'SET_TOOL',
+      tool: 'shape',
+      shapeKind: 'document',
+    });
+    expect(next.appState.activeTool).toBe('shape');
+    expect(next.appState.shapeKind).toBe('document');
+  });
+
+  it('SET_TOOL without shapeKind keeps the previous kind', () => {
+    const scene = reducer(createScene(), {
+      type: 'SET_TOOL',
+      tool: 'shape',
+      shapeKind: 'data',
+    });
+    const next = reducer(scene, { type: 'SET_TOOL', tool: 'shape' });
+    expect(next.appState.shapeKind).toBe('data');
   });
 });

@@ -156,3 +156,32 @@ describe('element validation', () => {
     ).toBeNull();
   });
 });
+
+describe('shape element validation', () => {
+  const base = {
+    id: 'shape-1',
+    type: 'shape',
+    x: 0,
+    y: 0,
+    width: 120,
+    height: 60,
+    strokeColor: '#000',
+    fillColor: 'transparent',
+    strokeWidth: 1,
+    opacity: 1,
+    roughness: 0,
+  };
+
+  it('accepts a labeled shape with a known kind', () => {
+    const shape = { ...base, kind: 'database', label: 'Users' };
+    expect(validateElements([shape])).toEqual([shape]);
+  });
+
+  it('rejects an unknown kind', () => {
+    expect(validateElements([{ ...base, kind: 'script' }])).toBeNull();
+  });
+
+  it('rejects a shape without kind', () => {
+    expect(validateElements([base])).toBeNull();
+  });
+});

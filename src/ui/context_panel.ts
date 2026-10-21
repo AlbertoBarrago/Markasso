@@ -1,6 +1,6 @@
 import { measureTextBounds } from '../core/text_measure';
 import { cloneElementsWithOffset } from '../elements/clone';
-import type { Element } from '../elements/element';
+import { type Element, SHAPE_KINDS, type ShapeKind } from '../elements/element';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { getElementBounds } from '../rendering/draw_selection';
@@ -11,6 +11,7 @@ import {
   saveCustomColor,
   updateCustomColorButton,
 } from './color_picker';
+import { SHAPE_KIND_LABEL_KEYS, shapeKindIcon } from './shape_icons';
 
 const SHARED_COLOR_PRESETS = [
   '#e2e2ef',
@@ -27,6 +28,7 @@ function hasShapeLabel(el: Element): el is Element & { labelColor?: string } {
     el.type === 'rectangle' ||
     el.type === 'ellipse' ||
     el.type === 'rhombus' ||
+    el.type === 'shape' ||
     el.type === 'line' ||
     el.type === 'arrow'
   );
@@ -44,6 +46,11 @@ export function initContextPanel(
   workspace.appendChild(panel);
 
   panel.innerHTML = `
+    <div class="cp-section" id="cp-shape-kind-section">
+      <div class="cp-label">${t('shapeKind')}</div>
+      <div class="cp-btn-row" id="cp-shape-kind-presets" role="group" aria-label="${t('shapeKind')}"></div>
+    </div>
+
     <div class="cp-section">
       <div class="cp-label">${t('fill')}</div>
       <div class="cp-color-row" role="group" aria-label="${t('fill')}">
@@ -424,6 +431,47 @@ export function initContextPanel(
       history.dispatch({ type: 'APPLY_STYLE', arrowHead: ah.value });
     });
     arrowHeadPresets.appendChild(btn);
+  }
+
+  // ── Flowchart shape kind ──────────────────────────────────────────────────
+  // With shapes selected the kind is restyled in place (undoable); in tool
+  // mode it only changes what the shape tool draws next.
+  const shapeKindPresets = panel.querySelector('#cp-shape-kind-presets')!;
+  for (const kind of SHAPE_KINDS) {
+    const label = t(SHAPE_KIND_LABEL_KEYS[kind]);
+    const btn = document.createElement('button');
+    btn.className = 'cp-btn cp-shape-kind-btn';
+    btn.title = label;
+    btn.setAttribute('aria-label', label);
+    btn.innerHTML = shapeKindIcon(kind);
+    btn.dataset.kind = kind;
+    btn.addEventListener('click', () => {
+      const scene = history.present;
+      const hasSelectedShape = [...scene.selectedIds].some(
+        (id) => scene.elements.find((el) => el.id === id)?.type === 'shape',
+      );
+      if (hasSelectedShape) {
+        history.dispatch({ type: 'APPLY_STYLE', shapeKind: kind });
+      } else {
+        history.dispatch({ type: 'SET_TOOL', tool: 'shape', shapeKind: kind });
+      }
+    });
+    shapeKindPresets.appendChild(btn);
+  }
+
+  function syncShapeKind(visible: boolean, kind: ShapeKind | undefined): void {
+    (
+      panel.querySelector('#cp-shape-kind-section') as HTMLElement
+    ).style.display = visible ? '' : 'none';
+    panel
+      .querySelectorAll<HTMLButtonElement>('#cp-shape-kind-presets .cp-btn')
+      .forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.kind === kind);
+      });
+    syncAriaPressed(
+      panel.querySelector<HTMLElement>('#cp-shape-kind-presets')!,
+      '.cp-btn',
+    );
   }
 
   // ── Roughness presets ──────────────────────────────────────────────────────
@@ -892,6 +940,7 @@ export function initContextPanel(
     'ellipse',
     'line',
     'rombo',
+    'shape',
     'freehand',
     'text',
   ]);
@@ -938,6 +987,7 @@ export function initContextPanel(
         activeTool === 'rectangle' ||
         activeTool === 'ellipse' ||
         activeTool === 'rombo' ||
+        activeTool === 'shape' ||
         activeTool === 'text';
       const hasStyle = activeTool !== 'text' && activeTool !== 'freehand';
 
@@ -1046,6 +1096,7 @@ export function initContextPanel(
       ).style.display = hasArrowHead ? '' : 'none';
       panel.querySelector('#cp-border-presets')!.parentElement!.style.display =
         activeTool === 'rectangle' || activeTool === 'rombo' ? '' : 'none';
+      syncShapeKind(activeTool === 'shape', scene.appState.shapeKind);
 
       const textPropsSection =
         panel.querySelector<HTMLElement>('#cp-text-props')!;
@@ -1243,8 +1294,20 @@ export function initContextPanel(
     opacityVal.textContent = String(Math.round(first.opacity * 100));
 
     // Dynamic section visibility based on selected element types
-    const FILL_TYPES = new Set(['rectangle', 'ellipse', 'rhombus', 'text']);
-    const STYLE_TYPES = new Set(['rectangle', 'ellipse', 'rhombus', 'line']);
+    const FILL_TYPES = new Set([
+      'rectangle',
+      'ellipse',
+      'rhombus',
+      'shape',
+      'text',
+    ]);
+    const STYLE_TYPES = new Set([
+      'rectangle',
+      'ellipse',
+      'rhombus',
+      'shape',
+      'line',
+    ]);
     const CAP_TYPES = new Set(['line', 'freehand']);
     const hasFill =
       !labelColorMode &&
@@ -1305,6 +1368,11 @@ export function initContextPanel(
     ).style.display = hasArrowHead ? '' : 'none';
     panel.querySelector('#cp-border-presets')!.parentElement!.style.display =
       hasBorder ? '' : 'none';
+    const firstShape = selected.find((el) => el.type === 'shape');
+    syncShapeKind(
+      !labelColorMode && firstShape !== undefined,
+      firstShape?.type === 'shape' ? firstShape.kind : undefined,
+    );
 
     // Spatial alignment section — only when ≥2 elements are selected
     panel.querySelector<HTMLElement>(

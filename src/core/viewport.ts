@@ -77,6 +77,7 @@ export function fitToElements(
       el.type === 'ellipse' ||
       el.type === 'text' ||
       el.type === 'rhombus' ||
+      el.type === 'shape' ||
       el.type === 'image'
     ) {
       const x1 = Math.min(el.x, el.x + el.width);

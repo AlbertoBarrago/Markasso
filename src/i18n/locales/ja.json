@@ -170,5 +170,17 @@
   "reportSuccessDesc": "ありがとうございます。GitHub に公開 issue を作成しました：",
   "reportClose": "閉じる",
   "guideSearchPlaceholder": "ガイドを検索…",
-  "people": "メンバー"
+  "people": "メンバー",
+  "shape": "フローチャート図形",
+  "shapes": "フローチャート図形",
+  "shapeKind": "図形",
+  "hintShape": "ドラッグで選択した図形を描画。[[▾]] メニューで切り替え",
+  "shapeTerminator": "開始 / 終了",
+  "shapeData": "データ (入出力)",
+  "shapeDocument": "書類",
+  "shapeDatabase": "データベース",
+  "shapePredefinedProcess": "定義済み処理",
+  "shapePreparation": "準備",
+  "shapeManualInput": "手操作入力",
+  "shapeDelay": "遅延"
 }

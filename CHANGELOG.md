@@ -4,6 +4,17 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Flowchart shapes.** A new shape tool (`S`, or the split button next to the ellipse) draws eight standard flowchart symbols: start/end, data (I/O), document, database, predefined process, preparation, manual input and delay.
+  - Pick the symbol from the toolbar flyout, the command palette, or the context panel, which also switches the symbol of selected shapes in place (undoable).
+  - Shapes support labels, fill, stroke styles, hand-drawn roughness, rotation, PNG/SVG export and live sessions.
+  - Connectors snap to the real outline of each symbol (the slanted side of a data block, the wavy edge of a document, the cylinder caps of a database).
+  - Every symbol is defined once as a parametric outline; bounds, snapping, rendering, export and toolbar icons are all derived from it.
+
+---
+
 ## [1.11.0] - 2026-10-19
 
 ### Changed

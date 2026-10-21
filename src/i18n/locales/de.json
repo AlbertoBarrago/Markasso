@@ -170,5 +170,17 @@
   "reportSuccessDesc": "Danke, wir haben ein öffentliches Issue auf GitHub erstellt:",
   "reportClose": "Schließen",
   "guideSearchPlaceholder": "Anleitung durchsuchen…",
-  "people": "Personen"
+  "people": "Personen",
+  "shape": "Flussdiagramm-Form",
+  "shapes": "Flussdiagramm-Formen",
+  "shapeKind": "Form",
+  "hintShape": "Ziehen zum Zeichnen der gewählten Form. Eine andere im Menü [[▾]] wählen",
+  "shapeTerminator": "Start / Ende",
+  "shapeData": "Daten (E/A)",
+  "shapeDocument": "Dokument",
+  "shapeDatabase": "Datenbank",
+  "shapePredefinedProcess": "Vordefinierter Prozess",
+  "shapePreparation": "Vorbereitung",
+  "shapeManualInput": "Manuelle Eingabe",
+  "shapeDelay": "Verzögerung"
 }

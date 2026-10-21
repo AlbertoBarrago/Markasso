@@ -1,4 +1,5 @@
-import type { Element } from '../elements/element';
+import type { Element, ShapeElement } from '../elements/element';
+import { SHAPE_DEFINITIONS, type ShapeCommand } from '../elements/shapes';
 import {
   getArrowHeadVector,
   getQuadraticLength,
@@ -9,6 +10,7 @@ import {
 import { getElementCenter, resolveArrowEndpoints } from './draw_selection';
 import { buildFreehandOutline } from './freehand_outline';
 import { getCachedImage } from './image_cache';
+import { getShapeTextBox } from './shape_geometry';
 import { getIsLightTheme } from './theme_cache';
 
 export function contrastColor(fill: string, fallback: string): string {
@@ -162,6 +164,38 @@ export function drawElement(
           cx,
           cy,
           rw * 0.7,
+          el.label,
+          el.labelFontSize ?? 16,
+          el.labelFontFamily ?? 'Arial, sans-serif',
+          el.labelColor ?? contrastColor(el.fillColor, strokeColor),
+        );
+        ctx.restore();
+      }
+      break;
+    }
+    case 'shape': {
+      drawShape(ctx, el, el.roughness ?? 0, hashId(el.id));
+      if (el.label && editingShapeLabelId !== el.id) {
+        const bx = el.width < 0 ? el.x + el.width : el.x;
+        const by = el.height < 0 ? el.y + el.height : el.y;
+        const bw = Math.abs(el.width);
+        const bh = Math.abs(el.height);
+        const box = getShapeTextBox(el.kind, bw, bh);
+        ctx.save();
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        traceShapeCommands(
+          ctx,
+          SHAPE_DEFINITIONS[el.kind].outline(bw, bh),
+          bx,
+          by,
+        );
+        ctx.clip();
+        drawShapeLabel(
+          ctx,
+          bx + box.x + box.w / 2,
+          by + box.y + box.h / 2,
+          box.w,
           el.label,
           el.labelFontSize ?? 16,
           el.labelFontFamily ?? 'Arial, sans-serif',
@@ -759,6 +793,144 @@ function drawRhombus(
   }
   ctx.closePath();
   ctx.stroke();
+}
+
+/** Appends shape commands to the current path, offset by (ox, oy). */
+function traceShapeCommands(
+  ctx: CanvasRenderingContext2D,
+  commands: ReadonlyArray<ShapeCommand>,
+  ox: number,
+  oy: number,
+): void {
+  for (const cmd of commands) {
+    switch (cmd[0]) {
+      case 'M':
+        ctx.moveTo(ox + cmd[1], oy + cmd[2]);
+        break;
+      case 'L':
+        ctx.lineTo(ox + cmd[1], oy + cmd[2]);
+        break;
+      case 'C':
+        ctx.bezierCurveTo(
+          ox + cmd[1],
+          oy + cmd[2],
+          ox + cmd[3],
+          oy + cmd[4],
+          ox + cmd[5],
+          oy + cmd[6],
+        );
+        break;
+      case 'Z':
+        ctx.closePath();
+        break;
+    }
+  }
+}
+
+/**
+ * Hand-drawn variant of `traceShapeCommands`: straight edges get the same
+ * two-quadratic wobble as rectangles and rhombi, cubic control points are
+ * jittered. Deterministic for a given seed so shapes don't flicker.
+ */
+function traceRoughShapeCommands(
+  ctx: CanvasRenderingContext2D,
+  commands: ReadonlyArray<ShapeCommand>,
+  ox: number,
+  oy: number,
+  seed: number,
+  amp: number,
+): void {
+  let startX = ox;
+  let startY = oy;
+  let curX = ox;
+  let curY = oy;
+  const wobbleTo = (x2: number, y2: number, i: number): void => {
+    const mx = (curX + x2) / 2;
+    const my = (curY + y2) / 2;
+    ctx.quadraticCurveTo(
+      (curX + mx) / 2 + roughOffset(seed, i * 7 + 1, 1, amp),
+      (curY + my) / 2 + roughOffset(seed + 99, i * 7 + 1, 1, amp),
+      mx,
+      my,
+    );
+    ctx.quadraticCurveTo(
+      (mx + x2) / 2 + roughOffset(seed, i * 7 + 3, 1, amp),
+      (my + y2) / 2 + roughOffset(seed + 99, i * 7 + 3, 1, amp),
+      x2,
+      y2,
+    );
+    curX = x2;
+    curY = y2;
+  };
+  commands.forEach((cmd, i) => {
+    switch (cmd[0]) {
+      case 'M':
+        curX = startX = ox + cmd[1];
+        curY = startY = oy + cmd[2];
+        ctx.moveTo(curX, curY);
+        break;
+      case 'L':
+        wobbleTo(ox + cmd[1], oy + cmd[2], i);
+        break;
+      case 'C':
+        ctx.bezierCurveTo(
+          ox + cmd[1] + roughOffset(seed, i * 5 + 2, 1, amp),
+          oy + cmd[2] + roughOffset(seed + 99, i * 5 + 2, 1, amp),
+          ox + cmd[3] + roughOffset(seed, i * 5 + 4, 1, amp),
+          oy + cmd[4] + roughOffset(seed + 99, i * 5 + 4, 1, amp),
+          ox + cmd[5],
+          oy + cmd[6],
+        );
+        curX = ox + cmd[5];
+        curY = oy + cmd[6];
+        break;
+      case 'Z':
+        if (Math.hypot(curX - startX, curY - startY) > 0.5) {
+          wobbleTo(startX, startY, i);
+        }
+        break;
+    }
+  });
+}
+
+function drawShape(
+  ctx: CanvasRenderingContext2D,
+  el: ShapeElement,
+  roughness: number,
+  seed: number,
+): void {
+  const bx = el.width < 0 ? el.x + el.width : el.x;
+  const by = el.height < 0 ? el.y + el.height : el.y;
+  const bw = Math.abs(el.width);
+  const bh = Math.abs(el.height);
+  const def = SHAPE_DEFINITIONS[el.kind];
+  const outline = def.outline(bw, bh);
+  const details = def.details?.(bw, bh);
+
+  // Fill always uses the clean outline so rough strokes never leak the fill.
+  ctx.beginPath();
+  traceShapeCommands(ctx, outline, bx, by);
+  ctx.fill();
+
+  if (roughness < 0.05) {
+    ctx.stroke();
+    if (details) {
+      ctx.beginPath();
+      traceShapeCommands(ctx, details, bx, by);
+      ctx.stroke();
+    }
+    return;
+  }
+
+  const amp = roughness * Math.min(bw, bh) * 0.03;
+  ctx.beginPath();
+  traceRoughShapeCommands(ctx, outline, bx, by, seed, amp);
+  ctx.stroke();
+  if (details) {
+    ctx.beginPath();
+    traceRoughShapeCommands(ctx, details, bx, by, seed + 7, amp);
+    ctx.stroke();
+  }
 }
 
 function drawLine(

@@ -990,6 +990,7 @@ function scaleElement(
     case 'rectangle':
     case 'ellipse':
     case 'rhombus':
+    case 'shape':
       return { x: newX, y: newY, width: newW, height: newH };
     case 'text':
       return { x: newX, y: newY, width: newW, height: newH };
@@ -1108,7 +1109,10 @@ function hitTestElement(
   }
 
   switch (el.type) {
+    // Shapes hit-test on their box: thin symbols (document wave, cylinder
+    // caps) stay easy to grab, as in other diagram editors.
     case 'rectangle':
+    case 'shape':
     case 'text':
     case 'image': {
       const x = el.width < 0 ? el.x + el.width : el.x;

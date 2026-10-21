@@ -170,5 +170,17 @@
   "reportSuccessDesc": "Obrigado, abrimos uma issue pública no GitHub:",
   "reportClose": "Fechar",
   "guideSearchPlaceholder": "Pesquisar no guia…",
-  "people": "Pessoas"
+  "people": "Pessoas",
+  "shape": "Forma de fluxograma",
+  "shapes": "Formas de fluxograma",
+  "shapeKind": "Forma",
+  "hintShape": "Arraste para desenhar a forma selecionada. Escolha outra no menu [[▾]]",
+  "shapeTerminator": "Início / Fim",
+  "shapeData": "Dados (E/S)",
+  "shapeDocument": "Documento",
+  "shapeDatabase": "Banco de dados",
+  "shapePredefinedProcess": "Processo predefinido",
+  "shapePreparation": "Preparação",
+  "shapeManualInput": "Entrada manual",
+  "shapeDelay": "Espera"
 }
