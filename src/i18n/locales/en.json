@@ -237,5 +237,17 @@
   "libraryDeletePack": "Delete pack",
   "libraryDeletePackConfirm": "Delete the “{name}” icon pack from this browser? Diagrams that already use its icons keep them.",
   "libraryStorageError": "Icon packs can't be stored in this browser.",
-  "libraryDownloadFrom": "Download:"
+  "libraryDownloadFrom": "Download:",
+  "whatsNewAria": "What's new in Markasso",
+  "whatsNewTitle": "What's new",
+  "whatsNewDesc": "Markasso grows into a tool for architecture and process diagrams, and now AI agents can draw with you.",
+  "whatsNewMcpTitle": "AI agents draw for you.",
+  "whatsNewMcp": "With the new MCP server, Claude, Codex, Gemini and local models create and edit diagrams, even live on a shared board.",
+  "whatsNewFlowchartTitle": "Flowcharts and connectors.",
+  "whatsNewFlowchart": "Standard flowchart symbols, connection ports, elbow lines and UML arrowheads.",
+  "whatsNewIconsTitle": "Icon library.",
+  "whatsNewIcons": "Architecture and Kubernetes icons in the Library (I); import the official AWS, Azure and Google Cloud packs.",
+  "whatsNewTextTitle": "Smarter text.",
+  "whatsNewText": "Drag a corner to scale text with its box, a side to reflow it.",
+  "whatsNewDetails": "Release notes"
 }

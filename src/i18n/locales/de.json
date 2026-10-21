@@ -235,5 +235,17 @@
   "liveName": "Dein Name",
   "livePeers": "Live · {{count}}",
   "liveDisconnected": "Live-Sitzung getrennt — Verbindung wird wiederhergestellt…",
-  "liveReconnected": "Live-Sitzung wieder verbunden"
+  "liveReconnected": "Live-Sitzung wieder verbunden",
+  "whatsNewAria": "Neu in Markasso",
+  "whatsNewTitle": "Neuigkeiten",
+  "whatsNewDesc": "Markasso wird zum Werkzeug für Architektur- und Prozessdiagramme. Jetzt können auch KI-Agenten mit dir zeichnen.",
+  "whatsNewMcpTitle": "KI-Agenten zeichnen für dich.",
+  "whatsNewMcp": "Mit dem neuen MCP-Server erstellen und bearbeiten Claude, Codex, Gemini und lokale Modelle Diagramme, auch live auf einem gemeinsamen Whiteboard.",
+  "whatsNewFlowchartTitle": "Flussdiagramme und Verbinder.",
+  "whatsNewFlowchart": "Standardsymbole für Flussdiagramme, Anschlusspunkte, rechtwinklige Linien und UML-Pfeilspitzen.",
+  "whatsNewIconsTitle": "Symbolbibliothek.",
+  "whatsNewIcons": "Architektur- und Kubernetes-Symbole in der Bibliothek (I); importiere die offiziellen Pakete von AWS, Azure und Google Cloud.",
+  "whatsNewTextTitle": "Intelligenterer Text.",
+  "whatsNewText": "Ziehe an einer Ecke, um Text und Rahmen gemeinsam zu skalieren, oder an einer Seite, um den Zeilenumbruch anzupassen.",
+  "whatsNewDetails": "Versionshinweise"
 }

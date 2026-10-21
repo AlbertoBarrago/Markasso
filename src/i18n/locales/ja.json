@@ -235,5 +235,17 @@
   "liveName": "あなたの名前",
   "livePeers": "ライブ · {{count}}",
   "liveDisconnected": "ライブセッションが切断されました — 再接続中…",
-  "liveReconnected": "ライブセッションに再接続しました"
+  "liveReconnected": "ライブセッションに再接続しました",
+  "whatsNewAria": "Markasso の新機能",
+  "whatsNewTitle": "新機能",
+  "whatsNewDesc": "Markasso はアーキテクチャ図や業務フロー図の作成ツールへと進化。AI エージェントと一緒に図を描けるようになりました。",
+  "whatsNewMcpTitle": "AI エージェントが図を作成。",
+  "whatsNewMcp": "新しい MCP サーバーを使えば、Claude、Codex、Gemini やローカルモデルが図を作成・編集。共有ホワイトボードでのリアルタイム操作にも対応します。",
+  "whatsNewFlowchartTitle": "フローチャートとコネクタ。",
+  "whatsNewFlowchart": "標準のフローチャート記号、接続ポート、直角コネクタ、UML の矢印に対応。",
+  "whatsNewIconsTitle": "アイコンライブラリ。",
+  "whatsNewIcons": "ライブラリ (I) にアーキテクチャや Kubernetes のアイコンを用意。AWS、Azure、Google Cloud の公式パックもインポートできます。",
+  "whatsNewTextTitle": "テキスト操作がもっと便利に。",
+  "whatsNewText": "枠の角をドラッグするとテキストも一緒に拡大・縮小。辺をドラッグすると折り返し位置を調整できます。",
+  "whatsNewDetails": "リリースノート"
 }

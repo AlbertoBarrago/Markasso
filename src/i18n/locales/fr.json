@@ -235,5 +235,17 @@
   "liveName": "Votre nom",
   "livePeers": "En direct · {{count}}",
   "liveDisconnected": "Session en direct déconnectée — reconnexion…",
-  "liveReconnected": "Session en direct reconnectée"
+  "liveReconnected": "Session en direct reconnectée",
+  "whatsNewAria": "Nouveautés de Markasso",
+  "whatsNewTitle": "Nouveautés",
+  "whatsNewDesc": "Markasso devient un outil de création de diagrammes d’architecture et de processus. Les agents IA peuvent désormais dessiner avec vous.",
+  "whatsNewMcpTitle": "Les agents IA dessinent pour vous.",
+  "whatsNewMcp": "Grâce au nouveau serveur MCP, Claude, Codex, Gemini et les modèles locaux créent et modifient des diagrammes, même en direct sur un tableau partagé.",
+  "whatsNewFlowchartTitle": "Organigrammes et connecteurs.",
+  "whatsNewFlowchart": "Symboles standard d’organigrammes, points de connexion, lignes à angle droit et pointes de flèche UML.",
+  "whatsNewIconsTitle": "Bibliothèque d’icônes.",
+  "whatsNewIcons": "Icônes d’architecture et Kubernetes dans la Bibliothèque (I) ; importez les packs officiels AWS, Azure et Google Cloud.",
+  "whatsNewTextTitle": "Un texte plus intelligent.",
+  "whatsNewText": "Faites glisser un coin pour redimensionner le texte avec son cadre, ou un côté pour ajuster les retours à la ligne.",
+  "whatsNewDetails": "Notes de version"
 }
