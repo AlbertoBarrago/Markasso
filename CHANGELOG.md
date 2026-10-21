@@ -4,7 +4,7 @@ All notable changes to this project will be documented here.
 
 ---
 
-## [Unreleased]
+## [1.13.0] - 2026-10-21
 
 ### Added
 - **MCP server for AI agents.** A new `mcp/` package lets Claude, Codex, Gemini and local models (e.g. Gemma in LM Studio) work with Markasso diagrams through the [Model Context Protocol](https://modelcontextprotocol.io). Build it with `pnpm mcp:build`; setup for each client is in [`mcp/README.md`](mcp/README.md).
