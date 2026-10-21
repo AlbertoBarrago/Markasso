@@ -81,6 +81,8 @@ That surprised me. And it's the only reason this repository exists in its curren
 | Pen (freehand) | `P` / `6` |
 | Text | `T` / `7` |
 | Sticky note | `N` |
+| Flowchart shape | `S` |
+| Library (shapes & icons) | `I` |
 | Eraser | `0` |
 
 Curves are made by dragging the midpoint handle of a line after placement — there is no separate curve tool.
@@ -112,6 +114,22 @@ Curves are made by dragging the midpoint handle of a line after placement — th
 | **Smart arrow links** | Connect arrows to shapes — arrows attach to the border (not center), facing each other |
 | **Hover preview** | Hover to preview connection points before drawing |
 | **Cascade delete** | Deleting a shape removes all connected arrows and lines |
+| **Connection ports** | Drop an end on a top/right/bottom/left port to pin it there through moves, resizes and rotations |
+| **Elbow routing** | Orthogonal connectors recomputed from their ends, with clean mid-side attachments |
+| **Arrowhead styles** | Per end: open, hollow/filled triangle, hollow/filled diamond, circle (UML-ready) |
+
+### Diagrams & Icon Libraries
+
+| Feature | Description |
+|---|---|
+| **Library sidebar** | `I` opens a searchable sidebar (modeled on Excalidraw's library): click to insert at the center of the view, drag onto the canvas to drop it, recently used items first |
+| **Flowchart shapes** | Start/end, data (I/O), document, database, predefined process, preparation, manual input, delay; drawn with `S` or inserted from the Library; connectors snap to their real outline |
+| **Generic icons** | 20 architecture icons (server, database, queue, load balancer, firewall, API, container, user, ...) that follow stroke/fill colors, theme and rough mode, with a label below |
+| **Kubernetes icons** | The official Kubernetes icon set (39 icons, Apache-2.0), loaded on demand as a separate chunk |
+| **Vendor icon packs** | Import the official ZIP of [AWS](https://aws.amazon.com/architecture/icons/), [Azure](https://learn.microsoft.com/azure/architecture/icons/) or [Google Cloud](https://cloud.google.com/icons) icons: read in the browser, grouped by the vendor's categories, stored only locally |
+
+Cloud vendors allow their icons in diagrams but not their redistribution in tools, so Markasso does not ship them: you download the official pack and import it. Only the icons you place travel with the diagram, and vendor icons are never recolored or rotated, as their terms require. Bundled third-party material is listed in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
+
 
 ### Groups & Labels
 
@@ -228,6 +246,8 @@ No `.env` files. No API keys. No containerization required.
 | `P` / `6` | Pen (freehand) |
 | `T` / `7` | Text |
 | `N` | Sticky note |
+| `S` | Flowchart shape |
+| `I` | Library (shapes & icons) |
 | `0` | Eraser |
 
 ### Navigation
@@ -339,7 +359,9 @@ src/
 │   ├── viewport.ts         # Pan/zoom math (screenToWorld, worldToScreen)
 │   └── app_state.ts        # AppState (activeTool, colors, grid, …)
 ├── elements/
-│   └── element.ts          # Discriminated union for all element types
+│   ├── element.ts          # Discriminated union for all element types
+│   ├── shapes.ts           # Parametric outlines of the flowchart shapes
+│   └── stencils/           # Icon element: generic icon set, registry, bundled packs loader
 ├── commands/
 │   └── commands.ts         # Full Command discriminated union
 ├── engine/
@@ -352,12 +374,19 @@ src/
 │   ├── session.ts          # localStorage auto-save / restore + quota warning toast
 │   ├── share.ts            # URL-hash scene encoding / decoding for share links
 │   ├── realtime.ts         # Live-session WebSocket client (join, broadcast, seeding, remote undo)
-│   └── presence.ts         # Remote cursor store + throttled local cursor sender
+│   ├── presence.ts         # Remote cursor store + throttled local cursor sender
+│   ├── zip_reader.ts       # Dependency-free ZIP reader on DecompressionStream
+│   ├── icon_pack.ts        # Vendor icon ZIP → icon pack (names, categories, variants)
+│   └── icon_pack_store.ts  # Imported packs in IndexedDB (browser only)
+├── libraries/
+│   └── kubernetes/         # Generated Kubernetes icon pack (lazy chunk) + upstream LICENSE
 ├── rendering/
 │   ├── renderer.ts         # rAF render loop entry point
 │   ├── draw_element.ts     # Per-type draw dispatch (with rotation + shape labels)
 │   ├── draw_grid.ts        # Dot / line / mm graph-paper grids
-│   ├── draw_selection.ts   # Selection box, resize/rotation/endpoint handles + hit testing
+│   ├── draw_selection.ts   # Selection box, handles, connector snapping, ports and routes
+│   ├── connector_geometry.ts # Curves, elbow routing, arrowhead shapes
+│   ├── shape_geometry.ts   # Border points and distances derived from shape outlines
 │   └── export.ts           # exportPNG / exportSVG / exportHTML (bounding-box auto-fit)
 ├── tools/
 │   ├── tool.ts             # Tool interface
@@ -366,6 +395,7 @@ src/
 │   ├── ellipse_tool.ts
 │   ├── rombo_tool.ts       # Rhombus tool
 │   ├── line_tool.ts        # Line tool; arrowheads are a style on line elements
+│   ├── shape_tool.ts       # Flowchart shape tool (S)
 │   ├── pen_tool.ts         # Freehand with Catmull-Rom smoothing + stylus pressure
 │   ├── text_tool.ts        # Invisible overlay textarea + in-place editing
 │   └── sticky_tool.ts      # Sticky note with editable text and color picker
@@ -376,6 +406,8 @@ src/
     ├── command_palette.ts   # Ctrl+K fuzzy-search command launcher
     ├── element_search.ts    # Ctrl+F canvas element search overlay
     ├── minimap.ts           # Collapsible canvas overview + viewport panning
+    ├── library_panel.ts     # Library sidebar: shapes, icons, packs, ZIP import
+    ├── svg_sanitize.ts      # Sanitizer for imported vendor SVGs
     ├── image_import.ts      # File picker, drag-and-drop, paste — images + .markasso
     ├── settings.ts          # Hamburger panel: grid, accent color, theme, language
     ├── mobile_action_bar.ts # Compact bottom-right action bar for touch devices
@@ -403,7 +435,7 @@ src/
 | Rendering | Canvas 2D API | Direct pixel control without virtual DOM overhead |
 | Testing | Vitest | Runs in Node — no browser needed for reducer/viewport math |
 | Realtime | Cloudflare Workers + Durable Objects | Free WebSocket hosting; one DO per room serializes commands; no extra npm deps |
-| Dependencies | Core: none; Mermaid import: `@excalidraw/mermaid-to-excalidraw` | Core relies on native `crypto.randomUUID()`, `requestAnimationFrame`, `ResizeObserver`; Mermaid is a lazy-loaded chunk, so it costs nothing until used |
+| Dependencies | Core: none; Mermaid import: `@excalidraw/mermaid-to-excalidraw` | Core relies on native `crypto.randomUUID()`, `requestAnimationFrame`, `ResizeObserver`; Mermaid is a lazy-loaded chunk, so it costs nothing until used. Icon pack import uses the native `DecompressionStream`, no ZIP library |
 
 ---
 
@@ -413,6 +445,6 @@ See [CONTRIBUTORS.md](./CONTRIBUTORS.md) for guidelines.
 
 ## License
 
-MIT · © 2026 Alberto Barrago
+MIT · © 2026 Alberto Barrago. Bundled third-party material (Kubernetes icons, Apache-2.0) is listed in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
 
 _Draw things. Ship things. Touch grass._

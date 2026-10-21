@@ -1007,6 +1007,7 @@ function scaleElement(
     case 'ellipse':
     case 'rhombus':
     case 'shape':
+    case 'stencil':
       return { x: newX, y: newY, width: newW, height: newH };
     case 'text':
       return { x: newX, y: newY, width: newW, height: newH };
@@ -1136,6 +1137,7 @@ function hitTestElement(
     // caps) stay easy to grab, as in other diagram editors.
     case 'rectangle':
     case 'shape':
+    case 'stencil':
     case 'text':
     case 'image': {
       const x = el.width < 0 ? el.x + el.width : el.x;

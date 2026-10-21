@@ -29,7 +29,8 @@ export interface ShapeDefinition {
 }
 
 /** Cubic bezier constant approximating a quarter circle. */
-const K = 0.5523;
+export const CUBIC_CIRCLE_K = 0.5523;
+const K = CUBIC_CIRCLE_K;
 
 /**
  * Quarter-ellipse arc from (x0, y0) to (x1, y1) that leaves the start point

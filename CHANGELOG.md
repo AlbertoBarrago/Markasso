@@ -4,11 +4,11 @@ All notable changes to this project will be documented here.
 
 ---
 
-## [Unreleased]
+## [1.12.0] - 2026-10-21
 
 ### Added
-- **Flowchart shapes.** A new shape tool (`S`, or the split button next to the ellipse) draws eight standard flowchart symbols: start/end, data (I/O), document, database, predefined process, preparation, manual input and delay.
-  - Pick the symbol from the toolbar flyout, the command palette, or the context panel, which also switches the symbol of selected shapes in place (undoable).
+- **Flowchart shapes.** Eight standard flowchart symbols, inserted from the Library sidebar or drawn with the shape tool (`S`): start/end, data (I/O), document, database, predefined process, preparation, manual input and delay.
+  - Pick the symbol in the Library, the command palette, or the context panel, which also switches the symbol of selected shapes in place (undoable).
   - Shapes support labels, fill, stroke styles, hand-drawn roughness, rotation, PNG/SVG export and live sessions.
   - Connectors snap to the real outline of each symbol (the slanted side of a data block, the wavy edge of a document, the cylinder caps of a database).
   - Every symbol is defined once as a parametric outline; bounds, snapping, rendering, export and toolbar icons are all derived from it.
@@ -16,7 +16,18 @@ All notable changes to this project will be documented here.
 - **Elbow connectors.** Lines and arrows can be routed orthogonally (context panel, "Routing"). The route is recomputed from the two ends: attached ends leave their shape with a short stub, floating ends move to the mid-side port facing the other end, and labels sit at the middle of the route. Elbow connectors export to SVG with their full route.
 - **Arrowhead styles.** Each end of a line or arrow can use an open head, a hollow or filled triangle, a hollow or filled diamond, or a circle (context panel, "Start head" / "End head"), covering UML inheritance, aggregation and composition. Closed heads cut the line out of their area, so hollow heads stay hollow on any background, including transparent PNG and SVG exports.
 
+- **Architecture icons.** A new icon element ships with Markasso's own set of 20 generic architecture icons (server, database, cache, queue, storage, load balancer, firewall, router, network, API, container, function, browser, mobile and desktop apps, user, users, external system, secret, document). Icons follow the stroke and fill colors, the theme and rough mode, keep their proportions in any box, carry a label below, expose connection ports and export to SVG.
+  - Icons from vendor packs imported by the user (coming next) are embedded in the diagram and are never recolored or rotated, as the vendors' terms require.
+
+- **Library sidebar.** Shapes and icons live in a searchable sidebar on the right, modeled on Excalidraw's library: toggle it with `I` or the library button in the top-right toolbar. Click an item to insert it at the center of the view, or drag it onto the canvas; recently used items are listed first. On touch devices it opens as a bottom sheet from the tools menu. Icons are also reachable from the command palette (`Ctrl/Cmd+K`, "Icon: ...").
+- **Kubernetes icons.** The official Kubernetes icon set (39 icons: control plane, nodes, workloads, networking, storage, config and access control) is available in the Library. It loads on demand in a separate chunk the first time its section is opened or searched, so the initial bundle is unchanged. Bundled under Apache-2.0, see `THIRD_PARTY_NOTICES.md`.
+- **Import vendor icon packs (AWS, Azure, Google Cloud).** Their icons can't be redistributed, so Markasso doesn't ship them: download the official ZIP from the vendor ([AWS](https://aws.amazon.com/architecture/icons/), [Azure](https://learn.microsoft.com/azure/architecture/icons/), [Google Cloud](https://cloud.google.com/icons); the Library links to these pages) and import it from the Library ("Import icon pack"). The ZIP is read in the browser (no dependency, built on the platform's `DecompressionStream`), each icon is kept once (the largest size variant), named and grouped by the vendor's own categories, and its SVG is sanitized. Packs stay in this browser (IndexedDB) and can be deleted; only the icons placed in a diagram are embedded in it, so shared diagrams render for everyone. Vendor icons are never recolored or rotated.
+- **Connectors stop under icon labels.** An arrow attached to the bottom of a labeled icon now ends below the label instead of crossing it.
+
 ### Fixed
+- **Hidden elements no longer catch connector snaps.**
+- **Arrows from Mermaid import and presets show the stroke style and roughness options** in the desktop context panel, as they already did on mobile.
+- **Images redraw as soon as they finish loading** instead of keeping their placeholder until the next interaction.
 - **SVG export centers shape labels vertically**, matching the canvas.
 - **Hover highlight follows connected lines.** Hovering a line or arrow bound to shapes highlighted its stored endpoints instead of the drawn ones; it now traces the actual path, including elbow routes.
 

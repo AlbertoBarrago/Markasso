@@ -9,8 +9,15 @@ import type {
   RectangleElement,
   RhombusElement,
   ShapeElement,
+  StencilElement,
   TextElement,
 } from '../elements/element';
+import { onBundledPackLoad } from '../elements/stencils/packs';
+import {
+  DEFAULT_STENCIL_LABEL_FONT_SIZE,
+  getStencilLabelWidth,
+  STENCIL_LABEL_GAP,
+} from '../elements/stencils/registry';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import {
@@ -28,6 +35,7 @@ import {
   drawSnapIndicator,
   resolveConnectorRoute,
 } from '../rendering/draw_selection';
+import { onImageLoad } from '../rendering/image_cache';
 import { render } from '../rendering/renderer';
 import { getShapeTextBox } from '../rendering/shape_geometry';
 import { EllipseTool } from '../tools/ellipse_tool';
@@ -80,6 +88,13 @@ export function initCanvasView(
       needsRender = true;
     },
   };
+
+  onImageLoad(() => {
+    needsRender = true;
+  });
+  onBundledPackLoad(() => {
+    needsRender = true;
+  });
 
   function getActiveTool(): Tool {
     return TOOLS[history.present.appState.activeTool];
@@ -214,7 +229,8 @@ export function initCanvasView(
         el.type === 'rectangle' ||
         el.type === 'ellipse' ||
         el.type === 'rhombus' ||
-        el.type === 'shape'
+        el.type === 'shape' ||
+        el.type === 'stencil'
       ) {
         const bx = el.width < 0 ? el.x + el.width : el.x;
         const by = el.height < 0 ? el.y + el.height : el.y;
@@ -232,19 +248,10 @@ export function initCanvasView(
             tool: 'text',
             keepSelection: true,
           });
-          openShapeLabelEditor(
-            el as
-              | RectangleElement
-              | EllipseElement
-              | RhombusElement
-              | ShapeElement,
-            history,
-            canvas,
-            (id) => {
-              editingShapeLabelId = id;
-              needsRender = true;
-            },
-          );
+          openShapeLabelEditor(el, history, canvas, (id) => {
+            editingShapeLabelId = id;
+            needsRender = true;
+          });
           needsRender = true;
           return;
         }
@@ -1030,8 +1037,32 @@ function drawSlashTrail(
 
 // ── Shape label editor ─────────────────────────────────────────────────────────
 
+/**
+ * Text color while editing a label, matching how it is drawn: inside the
+ * fill (contrast with it) for shapes, below the icon (stroke color) for
+ * stencils.
+ */
+function labelEditorColor(
+  el:
+    | RectangleElement
+    | EllipseElement
+    | RhombusElement
+    | ShapeElement
+    | StencilElement,
+): string {
+  if (el.labelColor) return el.labelColor;
+  return el.type === 'stencil'
+    ? el.strokeColor
+    : contrastColor(el.fillColor, el.strokeColor);
+}
+
 function openShapeLabelEditor(
-  el: RectangleElement | EllipseElement | RhombusElement | ShapeElement,
+  el:
+    | RectangleElement
+    | EllipseElement
+    | RhombusElement
+    | ShapeElement
+    | StencilElement,
   history: History,
   canvas: HTMLCanvasElement,
   onEditingChange: (id: string | null) => void,
@@ -1041,18 +1072,31 @@ function openShapeLabelEditor(
   const by = el.height < 0 ? el.y + el.height : el.y;
   const bw = Math.abs(el.width);
   const bh = Math.abs(el.height);
-  // Flowchart shapes lay their label out in a dedicated text box.
+  // Flowchart shapes lay their label out in a dedicated text box; stencil
+  // labels hang below the icon.
+  const stencilLabelW = getStencilLabelWidth(bw);
   const textBox =
     el.type === 'shape'
       ? getShapeTextBox(el.kind, bw, bh)
-      : { x: 0, y: 0, w: bw, h: bh };
+      : el.type === 'stencil'
+        ? {
+            x: (bw - stencilLabelW) / 2,
+            y: bh + STENCIL_LABEL_GAP,
+            w: stencilLabelW,
+            h: (el.labelFontSize ?? DEFAULT_STENCIL_LABEL_FONT_SIZE) * 1.2,
+          }
+        : { x: 0, y: 0, w: bw, h: bh };
   const cx = bx + textBox.x + textBox.w / 2;
   const cy = by + textBox.y + textBox.h / 2;
 
   const [screenCX, screenCY] = worldToScreen(viewport, cx, cy);
   const canvasRect = canvas.getBoundingClientRect();
 
-  const fontSize = el.labelFontSize ?? appState.fontSize;
+  const fontSize =
+    el.labelFontSize ??
+    (el.type === 'stencil'
+      ? DEFAULT_STENCIL_LABEL_FONT_SIZE
+      : appState.fontSize);
   const fontFamily = el.labelFontFamily ?? appState.fontFamily;
   const shapeW = textBox.w * viewport.zoom;
 
@@ -1066,7 +1110,7 @@ function openShapeLabelEditor(
   ta.style.width = `${shapeW}px`;
   ta.style.minHeight = `${fontSize * viewport.zoom * 1.2}px`;
   ta.style.font = `${fontSize * viewport.zoom}px ${fontFamily}`;
-  ta.style.color = el.labelColor ?? contrastColor(el.fillColor, el.strokeColor);
+  ta.style.color = labelEditorColor(el);
   ta.style.caretColor = 'var(--accent, #7c63d4)';
   ta.style.textAlign = 'center';
   ta.style.lineHeight = '1.2';
@@ -1096,11 +1140,10 @@ function openShapeLabelEditor(
       latest?.type === 'rectangle' ||
       latest?.type === 'ellipse' ||
       latest?.type === 'rhombus' ||
-      latest?.type === 'shape'
+      latest?.type === 'shape' ||
+      latest?.type === 'stencil'
     ) {
-      ta.style.color =
-        latest.labelColor ??
-        contrastColor(latest.fillColor, latest.strokeColor);
+      ta.style.color = labelEditorColor(latest);
     }
   });
 

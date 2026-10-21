@@ -1,0 +1,243 @@
+/* ── Library sidebar (shapes and icons), modeled on Excalidraw's ──────── */
+#library-panel {
+  position: fixed;
+  top: 72px;
+  right: 16px;
+  bottom: 76px;
+  /* Wide enough that shapes and generic icons fit without scrolling;
+     bundled packs start collapsed for the same reason. */
+  width: min(440px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--bg-island);
+  border: 1px solid var(--island-border);
+  border-radius: var(--island-radius);
+  box-shadow: var(--island-shadow);
+  color: var(--text);
+  z-index: 30;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(8px);
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+#library-panel.open {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateX(0);
+}
+/* The minimap shares the right edge: hide it while the library is open. */
+body.library-open #minimap {
+  display: none;
+}
+
+.lib-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.lib-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+.lib-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.lib-close:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.lib-search {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.lib-search:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.lib-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lib-section > summary {
+  padding: 4px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.lib-section > summary:hover {
+  color: var(--text);
+}
+
+.lib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 4px;
+  padding: 2px 0 4px;
+}
+
+.lib-item img {
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+}
+
+.lib-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 2px 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--bg-hover);
+  color: var(--text);
+  cursor: grab;
+  font: inherit;
+}
+.lib-item:hover {
+  border-color: var(--accent);
+}
+.lib-item:active {
+  cursor: grabbing;
+}
+.lib-item:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+.lib-item-label {
+  width: 100%;
+  font-size: 10.5px;
+  line-height: 1.2;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lib-credit {
+  padding: 0 2px 6px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.lib-empty {
+  padding: 16px 4px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* Mobile: bottom sheet above the action bar */
+@media (pointer: coarse) {
+  #library-panel {
+    top: auto;
+    left: 12px;
+    right: 12px;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    max-height: 60vh;
+    transform: translateY(8px);
+  }
+  #library-panel.open {
+    transform: translateY(0);
+  }
+  .lib-grid {
+    grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+  }
+}
+
+/* ── Imported packs ─────────────────────────────────────────────────── */
+.lib-section > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.lib-pack-delete {
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+  cursor: pointer;
+}
+.lib-pack-delete:hover {
+  background: var(--bg-hover);
+  color: var(--alert);
+}
+.lib-category {
+  padding: 6px 2px 2px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+.lib-import {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0 4px;
+  border-top: 1px solid var(--island-border);
+}
+.lib-import-btn {
+  padding: 7px 10px;
+  border: 1px dashed var(--island-border);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.lib-import-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.lib-import-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.lib-status {
+  font-size: 11.5px;
+  color: var(--text);
+}
+.lib-status-error {
+  color: var(--alert);
+}
+.lib-links a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.lib-links a:hover {
+  text-decoration: underline;
+}

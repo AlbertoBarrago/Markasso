@@ -6,7 +6,7 @@ import type {
 
 export type DrawableTool = Exclude<
   ElementType,
-  'image' | 'rhombus' | 'curve' | 'polygon' | 'arrow'
+  'image' | 'rhombus' | 'curve' | 'polygon' | 'arrow' | 'stencil'
 >;
 export type ActiveTool =
   | 'select'

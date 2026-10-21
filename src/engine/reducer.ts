@@ -1,7 +1,13 @@
 import type { Command } from '../commands/commands';
 import type { Scene } from '../core/scene';
 import { pan, zoom } from '../core/viewport';
-import type { Element } from '../elements/element';
+import type { ArrowElement, Element, LineElement } from '../elements/element';
+import {
+  isRestylableStencil,
+  isRotatableStencil,
+} from '../elements/stencils/registry';
+
+type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
 export function assertNever(x: never): never {
   throw new Error(`Unhandled command: ${(x as { type: string }).type}`);
@@ -129,6 +135,7 @@ export function reducer(
             el.type === 'ellipse' ||
             el.type === 'rhombus' ||
             el.type === 'shape' ||
+            el.type === 'stencil' ||
             el.type === 'text' ||
             el.type === 'image'
           ) {
@@ -152,26 +159,31 @@ export function reducer(
             return { ...el, ...patch } as Element;
           }
           if (el.type === 'line' || el.type === 'arrow') {
-            // Build patch carefully to avoid exactOptionalPropertyTypes issues
-            const patch: Record<string, unknown> = { ...el };
-            if (x !== undefined) patch.x = x;
-            if (y !== undefined) patch.y = y;
-            if (x2 !== undefined) patch.x2 = x2;
-            if (y2 !== undefined) patch.y2 = y2;
-            if (cx !== undefined) patch.cx = cx;
-            if (cy !== undefined) patch.cy = cy;
-            // Connection fields: undefined = keep, null = remove the property.
-            for (const key of [
-              'startElementId',
-              'endElementId',
-              'startAnchor',
-              'endAnchor',
-            ] as const) {
-              const value = command[key];
-              if (value === null) delete patch[key];
-              else if (value !== undefined) patch[key] = value;
+            const next: Mutable<LineElement | ArrowElement> = { ...el };
+            if (x !== undefined) next.x = x;
+            if (y !== undefined) next.y = y;
+            if (x2 !== undefined) next.x2 = x2;
+            if (y2 !== undefined) next.y2 = y2;
+            // Only lines curve.
+            if (next.type === 'line') {
+              if (cx !== undefined) next.cx = cx;
+              if (cy !== undefined) next.cy = cy;
             }
-            return patch as unknown as Element;
+            // Connection fields: undefined = keep, null = remove the property
+            // (exactOptionalPropertyTypes forbids storing undefined).
+            const { startElementId, endElementId, startAnchor, endAnchor } =
+              command;
+            if (startElementId === null) delete next.startElementId;
+            else if (startElementId !== undefined)
+              next.startElementId = startElementId;
+            if (endElementId === null) delete next.endElementId;
+            else if (endElementId !== undefined)
+              next.endElementId = endElementId;
+            if (startAnchor === null) delete next.startAnchor;
+            else if (startAnchor !== undefined) next.startAnchor = startAnchor;
+            if (endAnchor === null) delete next.endAnchor;
+            else if (endAnchor !== undefined) next.endAnchor = endAnchor;
+            return next;
           }
           if (el.type === 'freehand' || el.type === 'polygon') {
             return {
@@ -225,6 +237,7 @@ export function reducer(
             el.type === 'ellipse' ||
             el.type === 'rhombus' ||
             el.type === 'shape' ||
+            el.type === 'stencil' ||
             el.type === 'arrow' ||
             el.type === 'line')
             ? {
@@ -393,7 +406,10 @@ export function reducer(
       return {
         ...scene,
         elements: scene.elements.map((el) =>
-          el.id === command.id ? { ...el, rotation: command.rotation } : el,
+          el.id === command.id &&
+          !(el.type === 'stencil' && !isRotatableStencil(el))
+            ? { ...el, rotation: command.rotation }
+            : el,
         ),
       };
 
@@ -593,6 +609,15 @@ export function reducer(
           : { ...scene.appState, ...statePatch },
         elements: scene.elements.map((el) => {
           if (!targetIds.includes(el.id) && el.id !== fallbackId) return el;
+          // Vendor icons keep their artwork (no recoloring): only their
+          // label color and the element's opacity can change.
+          if (el.type === 'stencil' && !isRestylableStencil(el)) {
+            return {
+              ...el,
+              ...(labelColor !== undefined && { labelColor }),
+              ...(opacity !== undefined && { opacity }),
+            };
+          }
           const next = { ...el, ...patch } as Element;
           // `kind`, `routing` and head styles only exist on shapes and
           // connectors: never leak them onto other types.
@@ -603,7 +628,9 @@ export function reducer(
             return {
               ...next,
               ...(routing !== undefined && { routing }),
-              ...(startHeadStyle !== undefined && { startHeadStyle }),
+              // Only lines can have a start head.
+              ...(startHeadStyle !== undefined &&
+                next.type === 'line' && { startHeadStyle }),
               ...(endHeadStyle !== undefined && { endHeadStyle }),
             };
           }

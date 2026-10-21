@@ -1,7 +1,6 @@
 import type { Scene } from '../core/scene';
 import type {
   ArrowElement,
-  ArrowHeadStyle,
   Element,
   EllipseElement,
   FreehandElement,
@@ -10,17 +9,32 @@ import type {
   RectangleElement,
   RhombusElement,
   ShapeElement,
+  StencilElement,
   TextElement,
 } from '../elements/element';
 import { SHAPE_DEFINITIONS, shapeCommandsToPathData } from '../elements/shapes';
+import { ICON_GRID } from '../elements/stencils/generic';
+import { getBundledIcon } from '../elements/stencils/packs';
+import {
+  DEFAULT_STENCIL_LABEL_FONT_SIZE,
+  getGenericIcon,
+  getStencilLabelHeight,
+  getStencilLabelWidth,
+  STENCIL_LABEL_GAP,
+} from '../elements/stencils/registry';
 import {
   type ArrowHeadShape,
+  type ArrowHeadVector,
+  CLIP_EXTENT,
+  type ConnectorHead,
   getArrowHeadShape,
   getArrowHeadVector,
+  getConnectorHeads,
+  getRouteHeadVector,
   getRoutePointAt,
   type RoutePoint,
 } from './connector_geometry';
-import { drawElement } from './draw_element';
+import { drawElement, getIconStrokeWidth } from './draw_element';
 import { getElementBounds, resolveConnectorRoute } from './draw_selection';
 import { getShapeTextBox } from './shape_geometry';
 
@@ -162,7 +176,29 @@ function computeBounds(elements: ReadonlyArray<Element>): {
     maxY = -Infinity;
 
   for (const el of elements) {
+    // Elbow routes depend on the elements they connect.
+    if ((el.type === 'line' || el.type === 'arrow') && el.routing === 'elbow') {
+      const b = getElementBounds(el, elements);
+      minX = Math.min(minX, b.x);
+      minY = Math.min(minY, b.y);
+      maxX = Math.max(maxX, b.x + b.w);
+      maxY = Math.max(maxY, b.y + b.h);
+      continue;
+    }
     switch (el.type) {
+      case 'stencil': {
+        // Include the label, which hangs below the icon box.
+        const x = el.width < 0 ? el.x + el.width : el.x;
+        const y = el.height < 0 ? el.y + el.height : el.y;
+        const w = Math.abs(el.width);
+        const h = Math.abs(el.height);
+        const labelW = el.label ? getStencilLabelWidth(w) : w;
+        minX = Math.min(minX, x + w / 2 - labelW / 2);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x + w / 2 + labelW / 2);
+        maxY = Math.max(maxY, y + h + getStencilLabelHeight(el));
+        break;
+      }
       case 'rectangle':
       case 'ellipse':
       case 'rhombus':
@@ -177,14 +213,6 @@ function computeBounds(elements: ReadonlyArray<Element>): {
         break;
       }
       case 'line':
-        if (el.routing === 'elbow') {
-          const b = getElementBounds(el, elements);
-          minX = Math.min(minX, b.x);
-          minY = Math.min(minY, b.y);
-          maxX = Math.max(maxX, b.x + b.w);
-          maxY = Math.max(maxY, b.y + b.h);
-          break;
-        }
         minX = Math.min(
           minX,
           el.x,
@@ -211,14 +239,6 @@ function computeBounds(elements: ReadonlyArray<Element>): {
         );
         break;
       case 'arrow':
-        if (el.routing === 'elbow') {
-          const b = getElementBounds(el, elements);
-          minX = Math.min(minX, b.x);
-          minY = Math.min(minY, b.y);
-          maxX = Math.max(maxX, b.x + b.w);
-          maxY = Math.max(maxY, b.y + b.h);
-          break;
-        }
         minX = Math.min(minX, el.x, el.x2);
         minY = Math.min(minY, el.y, el.y2);
         maxX = Math.max(maxX, el.x, el.x2);
@@ -274,6 +294,8 @@ function elementToSVG(
       return rhombusToSVG(el, ox, oy);
     case 'shape':
       return shapeToSVG(el, ox, oy);
+    case 'stencil':
+      return stencilToSVG(el, ox, oy);
     case 'line':
       return lineToSVG(el, ox, oy);
     case 'arrow':
@@ -414,6 +436,68 @@ function rhombusToSVG(el: RhombusElement, ox: number, oy: number): string {
   return `<polygon points="${pts}" ${shapeProps(el)}${rotateAttr(el, ox, oy)}/>`;
 }
 
+function stencilToSVG(el: StencilElement, ox: number, oy: number): string {
+  const x = (el.width < 0 ? el.x + el.width : el.x) + ox;
+  const y = (el.height < 0 ? el.y + el.height : el.y) + oy;
+  const w = Math.abs(el.width);
+  const h = Math.abs(el.height);
+  const parts: string[] = [];
+
+  const { source } = el;
+  const imageSrc =
+    source.kind === 'embedded' ? source.src : getBundledIcon(source.ref)?.src;
+  if (imageSrc) {
+    parts.push(
+      `<image href="${escapeXml(imageSrc)}" x="${round(x)}" y="${round(y)}" width="${round(w)}" height="${round(h)}" opacity="${el.opacity}" preserveAspectRatio="xMidYMid meet"/>`,
+    );
+  } else {
+    const icon = source.kind === 'builtin' ? getGenericIcon(source.ref) : null;
+    const size = Math.min(w, h);
+    if (icon && size > 0) {
+      const scale = size / ICON_GRID;
+      const tx = x + (w - size) / 2;
+      const ty = y + (h - size) / 2;
+      const stroke = escapeXml(el.strokeColor);
+      const fill = el.fillColor === 'transparent' ? 'none' : el.fillColor;
+      const inner: string[] = [];
+      if (icon.fill && fill !== 'none') {
+        inner.push(
+          `<path d="${shapeCommandsToPathData(icon.fill, 0, 0)}" fill="${escapeXml(fill)}" stroke="none"/>`,
+        );
+      }
+      inner.push(
+        `<path d="${shapeCommandsToPathData(icon.strokes, 0, 0)}" fill="none" stroke="${stroke}" stroke-width="${getIconStrokeWidth(el.strokeWidth)}" stroke-linecap="round" stroke-linejoin="round"/>`,
+      );
+      parts.push(
+        `<g opacity="${el.opacity}" transform="translate(${round(tx)} ${round(ty)}) scale(${round(scale)})">${inner.join('')}</g>`,
+      );
+    } else {
+      parts.push(
+        `<rect x="${round(x)}" y="${round(y)}" width="${round(w)}" height="${round(h)}" fill="none" stroke="${escapeXml(el.strokeColor)}" stroke-dasharray="4 4"/>`,
+      );
+    }
+  }
+
+  if (el.label) {
+    const fontSize = el.labelFontSize ?? DEFAULT_STENCIL_LABEL_FONT_SIZE;
+    // Center the text block in the label area below the icon.
+    const labelH = getStencilLabelHeight(el) - STENCIL_LABEL_GAP;
+    parts.push(
+      shapeLabelToSVG(
+        x + w / 2,
+        y + h + STENCIL_LABEL_GAP + labelH / 2,
+        el.label,
+        fontSize,
+        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.labelColor ?? el.strokeColor,
+        el.opacity,
+      ),
+    );
+  }
+  // Group so rotation applies to the artwork and its label together.
+  return `<g${rotateAttr(el, ox, oy)}>${parts.join('')}</g>`;
+}
+
 function shapeToSVG(el: ShapeElement, ox: number, oy: number): string {
   const x = (el.width < 0 ? el.x + el.width : el.x) + ox;
   const y = (el.height < 0 ? el.y + el.height : el.y) + oy;
@@ -447,37 +531,22 @@ function shapeToSVG(el: ShapeElement, ox: number, oy: number): string {
   return `<g${rotateAttr(el, ox, oy)}>${parts.join('')}</g>`;
 }
 
-interface SVGHead {
-  readonly style: ArrowHeadStyle;
-  readonly fromX: number;
-  readonly fromY: number;
-  readonly tipX: number;
-  readonly tipY: number;
+/** Shifts a head vector into export coordinates. */
+function offsetVector(
+  v: ArrowHeadVector,
+  ox: number,
+  oy: number,
+): ArrowHeadVector {
+  return {
+    fromX: v.fromX + ox,
+    fromY: v.fromY + oy,
+    tipX: v.tipX + ox,
+    tipY: v.tipY + oy,
+  };
 }
 
-/** Heads of a connector, in export coordinates (already offset). */
-function connectorHeadsForSVG(
-  el: LineElement | ArrowElement,
-  vectorFor: (placement: 'start' | 'end') => {
-    fromX: number;
-    fromY: number;
-    tipX: number;
-    tipY: number;
-  },
-): SVGHead[] {
-  const hasEnd =
-    el.type === 'arrow' || el.arrowHead === 'end' || el.arrowHead === 'both';
-  const hasStart =
-    el.type === 'line' && (el.arrowHead === 'start' || el.arrowHead === 'both');
-  const heads: SVGHead[] = [];
-  if (hasEnd) {
-    heads.push({ style: el.endHeadStyle ?? 'open', ...vectorFor('end') });
-  }
-  if (hasStart) {
-    heads.push({ style: el.startHeadStyle ?? 'open', ...vectorFor('start') });
-  }
-  return heads;
-}
+/** SVG box attributes covering any drawable area (see CLIP_EXTENT). */
+const EVERYTHING_BOX = `x="${-CLIP_EXTENT}" y="${-CLIP_EXTENT}" width="${CLIP_EXTENT * 2}" height="${CLIP_EXTENT * 2}"`;
 
 function headShapeToSVG(shape: ArrowHeadShape, attrs: string): string {
   if (shape.kind === 'circle') {
@@ -499,7 +568,7 @@ function headShapeToSVG(shape: ArrowHeadShape, attrs: string): string {
 function connectorToSVG(
   el: LineElement | ArrowElement,
   shaft: string,
-  heads: ReadonlyArray<SVGHead>,
+  heads: ReadonlyArray<ConnectorHead>,
   rot: string,
 ): string {
   const color = escapeXml(el.strokeColor);
@@ -523,7 +592,7 @@ function connectorToSVG(
       .map(({ shape }) => headShapeToSVG(shape, 'fill="black"'))
       .join('');
     parts.push(
-      `<mask id="${id}" maskUnits="userSpaceOnUse" x="-1000000" y="-1000000" width="2000000" height="2000000"><rect x="-1000000" y="-1000000" width="2000000" height="2000000" fill="white"/>${cutouts}</mask>`,
+      `<mask id="${id}" maskUnits="userSpaceOnUse" ${EVERYTHING_BOX}><rect ${EVERYTHING_BOX} fill="white"/>${cutouts}</mask>`,
       `<g mask="url(#${id})">${shaft}</g>`,
     );
   } else {
@@ -547,15 +616,9 @@ function lineToSVG(el: LineElement, ox: number, oy: number): string {
     el.cx !== undefined && el.cy !== undefined
       ? `<path d="M ${round(x1)} ${round(y1)} Q ${round(el.cx + ox)} ${round(el.cy + oy)} ${round(x2)} ${round(y2)}" ${sp}${rot}/>`
       : `<line x1="${round(x1)}" y1="${round(y1)}" x2="${round(x2)}" y2="${round(y2)}" ${sp}${rot}/>`;
-  const heads = connectorHeadsForSVG(el, (placement) => {
-    const v = getArrowHeadVector(el, el, placement);
-    return {
-      fromX: v.fromX + ox,
-      fromY: v.fromY + oy,
-      tipX: v.tipX + ox,
-      tipY: v.tipY + oy,
-    };
-  });
+  const heads = getConnectorHeads(el, (placement) =>
+    offsetVector(getArrowHeadVector(el, el, placement), ox, oy),
+  );
   return connectorToSVG(el, shaft, heads, rot);
 }
 
@@ -571,12 +634,10 @@ function elbowToSVG(
   const points = route
     .map(([x, y]) => `${round(x + ox)},${round(y + oy)}`)
     .join(' ');
-  const n = route.length;
-  const heads = connectorHeadsForSVG(el, (placement) => {
-    const [fx, fy] = placement === 'end' ? route[n - 2]! : route[1]!;
-    const [tx, ty] = placement === 'end' ? route[n - 1]! : route[0]!;
-    return { fromX: fx + ox, fromY: fy + oy, tipX: tx + ox, tipY: ty + oy };
-  });
+  const _n = route.length;
+  const heads = getConnectorHeads(el, (placement) =>
+    offsetVector(getRouteHeadVector(route, placement), ox, oy),
+  );
   const parts = [
     connectorToSVG(el, `<polyline points="${points}" ${sp}/>`, heads, ''),
   ];
@@ -616,7 +677,7 @@ function arrowToSVG(el: ArrowElement, ox: number, oy: number): string {
   const sp = `stroke="${escapeXml(el.strokeColor)}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"`;
   const rot = rotateAttr(el, ox, oy);
   const shaft = `<line x1="${round(x1)}" y1="${round(y1)}" x2="${round(x2)}" y2="${round(y2)}" ${sp}${rot}/>`;
-  const heads = connectorHeadsForSVG(el, () => ({
+  const heads = getConnectorHeads(el, () => ({
     fromX: x1,
     fromY: y1,
     tipX: x2,

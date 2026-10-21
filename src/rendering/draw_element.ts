@@ -1,20 +1,31 @@
 import type {
   ArrowElement,
-  ArrowHeadStyle,
   Element,
   LineElement,
   ShapeElement,
+  StencilElement,
 } from '../elements/element';
 import { SHAPE_DEFINITIONS, type ShapeCommand } from '../elements/shapes';
+import { type GenericIcon, ICON_GRID } from '../elements/stencils/generic';
+import { getBundledIcon } from '../elements/stencils/packs';
+import {
+  DEFAULT_STENCIL_LABEL_FONT_SIZE,
+  getGenericIcon,
+  getStencilLabelWidth,
+  STENCIL_LABEL_GAP,
+} from '../elements/stencils/registry';
 import {
   type ArrowHeadShape,
-  type ConnectorEndpoints,
+  CLIP_EXTENT,
+  type ConnectorHead,
   getArrowHeadShape,
   getArrowHeadVector,
+  getConnectorHeads,
   getQuadraticLength,
   getQuadraticPoint,
   getQuadraticSegment,
   getQuadraticTangent,
+  getRouteHeadVector,
   getRoutePointAt,
   type RoutePoint,
 } from './connector_geometry';
@@ -220,6 +231,10 @@ export function drawElement(
       }
       break;
     }
+    case 'stencil': {
+      drawStencil(ctx, el, strokeColor, editingShapeLabelId);
+      break;
+    }
     case 'ellipse': {
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
@@ -262,7 +277,9 @@ export function drawElement(
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
       const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
-      const heads = getConnectorHeads(el, pts, null);
+      const heads = getConnectorHeads(el, (p) =>
+        getArrowHeadVector(pts, el.type === 'line' ? el : {}, p),
+      );
       const headClip = clipOutClosedHeads(ctx, heads, el.strokeWidth);
 
       if (el.label && editingShapeLabelId !== el.id) {
@@ -408,7 +425,9 @@ export function drawElement(
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
       const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
-      const heads = getConnectorHeads(el, pts, null);
+      const heads = getConnectorHeads(el, (p) =>
+        getArrowHeadVector(pts, {}, p),
+      );
       const headClip = clipOutClosedHeads(ctx, heads, el.strokeWidth);
       if (el.label && editingShapeLabelId !== el.id) {
         const fontSize = el.labelFontSize ?? 12;
@@ -925,21 +944,13 @@ function drawElbowConnector(
     const labelW =
       Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2;
     const labelH = lines.length * fontSize * 1.2 + pad * 2;
-    const xs = route.map((p) => p[0]);
-    const ys = route.map((p) => p[1]);
-    const margin = el.strokeWidth * 8 + 32;
     ctx.beginPath();
-    ctx.rect(
-      Math.min(...xs) - margin,
-      Math.min(...ys) - margin,
-      Math.max(...xs) - Math.min(...xs) + margin * 2,
-      Math.max(...ys) - Math.min(...ys) + margin * 2,
-    );
+    ctx.rect(-CLIP_EXTENT, -CLIP_EXTENT, CLIP_EXTENT * 2, CLIP_EXTENT * 2);
     ctx.rect(mx - labelW / 2, my - labelH / 2, labelW, labelH);
     ctx.clip('evenodd');
   }
 
-  const heads = getConnectorHeads(el, null, route);
+  const heads = getConnectorHeads(el, (p) => getRouteHeadVector(route, p));
   const headClip = clipOutClosedHeads(ctx, heads, el.strokeWidth);
   if (roughness < 0.05) {
     ctx.beginPath();
@@ -974,6 +985,138 @@ function drawElbowConnector(
     );
     ctx.restore();
   }
+}
+
+function drawStencil(
+  ctx: CanvasRenderingContext2D,
+  el: StencilElement,
+  strokeColor: string,
+  editingShapeLabelId: string | null | undefined,
+): void {
+  const bx = el.width < 0 ? el.x + el.width : el.x;
+  const by = el.height < 0 ? el.y + el.height : el.y;
+  const bw = Math.abs(el.width);
+  const bh = Math.abs(el.height);
+
+  if (el.source.kind === 'embedded') {
+    drawImageContained(ctx, el.source.src, bx, by, bw, bh);
+  } else {
+    const icon = getGenericIcon(el.source.ref);
+    const bundled = icon ? null : getBundledIcon(el.source.ref);
+    if (icon) {
+      drawGenericIcon(ctx, el, icon, bx, by, bw, bh);
+    } else if (bundled) {
+      drawImageContained(ctx, bundled.src, bx, by, bw, bh);
+    } else {
+      // Unknown reference, or a bundled pack still loading.
+      drawMissingStencil(ctx, bx, by, bw, bh);
+    }
+  }
+
+  if (el.label && editingShapeLabelId !== el.id) {
+    const fontSize = el.labelFontSize ?? DEFAULT_STENCIL_LABEL_FONT_SIZE;
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.font = `${fontSize}px ${el.labelFontFamily ?? 'Arial, sans-serif'}`;
+    ctx.fillStyle = el.labelColor ?? strokeColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    const lines = el.label
+      .split('\n')
+      .flatMap((l) => buildWrappedLines(ctx, l, getStencilLabelWidth(bw)));
+    lines.forEach((l, i) => {
+      ctx.fillText(
+        l,
+        bx + bw / 2,
+        by + bh + STENCIL_LABEL_GAP + i * fontSize * 1.2,
+      );
+    });
+    ctx.restore();
+  }
+}
+
+/**
+ * Generic icons are drawn on their 24-unit grid, scaled uniformly and
+ * centered in the box so they never distort. Stroke width is expressed in
+ * grid units and capped, so thick canvas strokes don't blot small icons.
+ */
+function drawGenericIcon(
+  ctx: CanvasRenderingContext2D,
+  el: StencilElement,
+  icon: GenericIcon,
+  bx: number,
+  by: number,
+  bw: number,
+  bh: number,
+): void {
+  const size = Math.min(bw, bh);
+  if (size <= 0) return;
+  const scale = size / ICON_GRID;
+  ctx.save();
+  ctx.translate(bx + (bw - size) / 2, by + (bh - size) / 2);
+  ctx.scale(scale, scale);
+  ctx.lineWidth = getIconStrokeWidth(el.strokeWidth);
+  if (icon.fill) {
+    ctx.beginPath();
+    traceShapeCommands(ctx, icon.fill, 0, 0);
+    ctx.fill();
+  }
+  ctx.beginPath();
+  const roughness = el.roughness ?? 0;
+  if (roughness < 0.05) {
+    traceShapeCommands(ctx, icon.strokes, 0, 0);
+  } else {
+    traceRoughShapeCommands(
+      ctx,
+      icon.strokes,
+      0,
+      0,
+      hashId(el.id),
+      roughness * 0.35,
+    );
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Icon stroke width in grid units for an element stroke width. */
+export function getIconStrokeWidth(strokeWidth: number): number {
+  return Math.min(Math.max(strokeWidth, 1) * 1.5, 3);
+}
+
+/** Placeholder for a reference this build doesn't know (or still loads). */
+function drawMissingStencil(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
+  ctx.save();
+  ctx.setLineDash([4, 4]);
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+  ctx.restore();
+}
+
+/** Draws an image inside the box with its aspect ratio kept (no distortion). */
+function drawImageContained(
+  ctx: CanvasRenderingContext2D,
+  src: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
+  const img = getCachedImage(src);
+  if (!img?.complete || img.naturalWidth === 0) {
+    drawImage(ctx, src, x, y, w, h);
+    return;
+  }
+  const ratio = Math.min(w / img.naturalWidth, h / img.naturalHeight);
+  const dw = img.naturalWidth * ratio;
+  const dh = img.naturalHeight * ratio;
+  ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
 }
 
 function drawLine(
@@ -1039,49 +1182,6 @@ function drawQuadraticSegment(
   ctx.stroke();
 }
 
-interface ConnectorHead {
-  readonly style: ArrowHeadStyle;
-  readonly fromX: number;
-  readonly fromY: number;
-  readonly tipX: number;
-  readonly tipY: number;
-}
-
-/**
- * Heads a connector shows, oriented along its last drawn segment: the
- * route's end segments for elbow connectors, the quadratic tangent for
- * curved lines, the straight segment otherwise. Arrows always have an end
- * head; lines follow `arrowHead`.
- */
-function getConnectorHeads(
-  el: LineElement | ArrowElement,
-  pts: ConnectorEndpoints | null,
-  route: ReadonlyArray<RoutePoint> | null,
-): ConnectorHead[] {
-  const hasEnd =
-    el.type === 'arrow' || el.arrowHead === 'end' || el.arrowHead === 'both';
-  const hasStart =
-    el.type === 'line' && (el.arrowHead === 'start' || el.arrowHead === 'both');
-  const control = el.type === 'line' ? el : {};
-  const vectorFor = (placement: 'start' | 'end') => {
-    if (route && route.length >= 2) {
-      const n = route.length;
-      const [fromX, fromY] = placement === 'end' ? route[n - 2]! : route[1]!;
-      const [tipX, tipY] = placement === 'end' ? route[n - 1]! : route[0]!;
-      return { fromX, fromY, tipX, tipY };
-    }
-    return getArrowHeadVector(pts ?? el, control, placement);
-  };
-  const heads: ConnectorHead[] = [];
-  if (hasEnd) {
-    heads.push({ style: el.endHeadStyle ?? 'open', ...vectorFor('end') });
-  }
-  if (hasStart) {
-    heads.push({ style: el.startHeadStyle ?? 'open', ...vectorFor('start') });
-  }
-  return heads;
-}
-
 function traceHeadShape(
   ctx: CanvasRenderingContext2D,
   shape: ArrowHeadShape,
@@ -1113,7 +1213,7 @@ function clipOutClosedHeads(
   if (closed.length === 0) return false;
   ctx.save();
   ctx.beginPath();
-  ctx.rect(-1e7, -1e7, 2e7, 2e7);
+  ctx.rect(-CLIP_EXTENT, -CLIP_EXTENT, CLIP_EXTENT * 2, CLIP_EXTENT * 2);
   for (const h of closed) {
     traceHeadShape(
       ctx,

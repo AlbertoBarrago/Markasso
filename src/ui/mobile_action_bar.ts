@@ -24,6 +24,7 @@ import {
   showLiveStatusToast,
   showShareToast,
 } from './share_actions';
+import { hasFillStyle, hasStrokeStyle, styleTypeOf } from './style_type';
 
 const STROKE_PRESETS = [
   '#000000',
@@ -609,7 +610,7 @@ export function initMobileActionBar(
 
     const first = selected[0]!;
     const allText = selected.every((el) => el.type === 'text');
-    const allImage = selected.every((el) => el.type === 'image');
+    const allImage = selected.every((el) => styleTypeOf(el) === 'image');
 
     // Stroke swatches
     sheet
@@ -691,24 +692,8 @@ export function initMobileActionBar(
     opacityVal.textContent = String(pct);
 
     // Hide sections based on selected element types (mirrors desktop context panel logic)
-    const FILL_TYPES = new Set([
-      'rectangle',
-      'ellipse',
-      'rhombus',
-      'shape',
-      'text',
-    ]);
-    const STYLE_TYPES = new Set([
-      'rectangle',
-      'ellipse',
-      'rhombus',
-      'shape',
-      'line',
-      'arrow',
-    ]);
-    const hasFill = !allImage && selected.some((el) => FILL_TYPES.has(el.type));
-    const hasStyle =
-      !allImage && !allText && selected.some((el) => STYLE_TYPES.has(el.type));
+    const hasFill = !allImage && selected.some(hasFillStyle);
+    const hasStyle = !allImage && !allText && selected.some(hasStrokeStyle);
     const hasWidth = !allText && !allImage;
     (
       sheet

@@ -2,13 +2,16 @@ import type { ActiveTool } from '../core/app_state';
 import { fitToElements } from '../core/viewport';
 import { cloneElementsWithOffset } from '../elements/clone';
 import { SHAPE_KINDS } from '../elements/element';
+import { GENERIC_ICON_IDS } from '../elements/stencils/generic';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { exportMarkasso } from '../io/markasso';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 import type { SelectTool } from '../tools/select_tool';
+import { insertStencil } from './library_insert';
 import { SHAPE_KIND_LABEL_KEYS, shapeKindIcon } from './shape_icons';
+import { GENERIC_ICON_LABEL_KEYS, genericIconSvg } from './stencil_icons';
 
 interface PaletteItem {
   id: string;
@@ -183,6 +186,23 @@ export function initCommandPalette(
         category: 'tool',
         icon: td.icon,
         execute: () => history.dispatch({ type: 'SET_TOOL', tool: td.id }),
+      });
+    }
+
+    // Generic architecture icons, inserted at the center of the view
+    for (const id of GENERIC_ICON_IDS) {
+      const name = t(GENERIC_ICON_LABEL_KEYS[id]);
+      items.push({
+        id: `insert:icon:${id}`,
+        label: `${t('insertIcon')}: ${name}`,
+        category: 'action',
+        icon: genericIconSvg(id, 14),
+        execute: () =>
+          insertStencil(
+            history,
+            { kind: 'builtin', ref: `generic/${id}` },
+            name,
+          ),
       });
     }
 

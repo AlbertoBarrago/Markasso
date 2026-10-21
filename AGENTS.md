@@ -43,13 +43,14 @@ User Event → Tool → Command → History.dispatch → reducer(Scene, Command)
 | Module | Responsibility |
 |--------|----------------|
 | `core/` | `Scene`, `AppState` (active tool, colors, grid), `Viewport` (pan/zoom math) |
-| `elements/` | Discriminated union of all drawable element types (rect, ellipse, line, arrow, freehand, text, image) |
+| `elements/` | Discriminated union of all drawable element types (rectangle, ellipse, rhombus, flowchart `shape`, `stencil` icon, line, arrow, curve, polygon, freehand, text, image); flowchart outlines (`shapes.ts`) and icon sets/registry (`stencils/`) |
 | `commands/` | Discriminated union of all state-mutating commands |
 | `engine/` | Pure `reducer(scene, command) → scene` + `History` (undo/redo + pub/sub) |
-| `io/` | `.markasso` format (JSON save/load), localStorage auto-save/restore |
-| `rendering/` | Canvas 2D renderer, per-element draw dispatch, grid, selection handles, PNG/SVG export |
-| `tools/` | 8 tools (select, hand, rectangle, ellipse, line, arrow, pen, text) |
-| `ui/` | DOM init, canvas event hub, toolbar, properties panel, context panel, keyboard shortcuts |
+| `io/` | `.markasso` format (JSON save/load), localStorage auto-save/restore, share links, realtime, Mermaid import, vendor icon pack import (ZIP reader, IndexedDB store) |
+| `libraries/` | Bundled icon packs loaded as lazy chunks (generated, e.g. `kubernetes/` via `scripts/build-k8s-icons.mjs`) |
+| `rendering/` | Canvas 2D renderer, per-element draw dispatch, grid, selection handles, connector geometry (ports, elbow routing, arrowheads), shape geometry, PNG/SVG export |
+| `tools/` | Select, hand, eraser, rectangle, rhombus, ellipse, flowchart shape, line (arrowheads are a line style), pen, text, sticky note |
+| `ui/` | DOM init, canvas event hub, toolbar, context panel, library sidebar, command palette, keyboard shortcuts |
 
 ### Data flow detail
 

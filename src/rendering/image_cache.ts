@@ -1,5 +1,16 @@
 const cache: Map<string, HTMLImageElement> = new Map();
 const failed: Set<string> = new Set();
+const loadListeners = new Set<() => void>();
+
+/**
+ * Notifies when a cached image finishes loading. The canvas only redraws
+ * on scene changes, so without this an image (or embedded icon) would keep
+ * its loading placeholder until the next interaction.
+ */
+export function onImageLoad(listener: () => void): () => void {
+  loadListeners.add(listener);
+  return () => loadListeners.delete(listener);
+}
 
 export function getCachedImage(src: string): HTMLImageElement | null {
   if (failed.has(src)) return null;
@@ -7,6 +18,9 @@ export function getCachedImage(src: string): HTMLImageElement | null {
   let img = cache.get(src);
   if (!img) {
     img = new Image();
+    img.onload = (): void => {
+      for (const listener of loadListeners) listener();
+    };
     img.onerror = (): void => {
       cache.delete(src);
       failed.add(src);
@@ -16,9 +30,4 @@ export function getCachedImage(src: string): HTMLImageElement | null {
     cache.set(src, img);
   }
   return img;
-}
-
-export function clearImageCache(): void {
-  cache.clear();
-  failed.clear();
 }

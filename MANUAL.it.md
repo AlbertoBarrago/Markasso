@@ -26,6 +26,8 @@ Seleziona uno strumento dalla toolbar o premi la sua scorciatoia da tastiera.
 | Penna       | `P` o `6` | Disegno a mano libera |
 | Testo       | `T` o `7` | Aggiungi testo |
 | Nota adesiva | `N` | Aggiungi note adesive (disponibile anche dal riquadro comandi) |
+| Forma flowchart | `S` | Disegna l'ultimo simbolo flowchart scelto nella Libreria |
+| Libreria    | `I` | Apri la Libreria: forme flowchart e icone (vedi sotto) |
 | Gomma       | `0` | Cancella elementi cliccando o trascinando sopra di essi |
 
 Non esiste uno strumento curva separato: trascina la maniglia del punto medio di una linea dopo averla tracciata per piegarla in una curva di Bézier quadratica (vedi Modifica dei connettori più sotto).
@@ -40,6 +42,8 @@ Lo slot connettore principale è **Linea** (posizione `5` nella toolbar).
 - Le punte di freccia sono uno stile delle linee, configurabile dal pannello proprietà.
 - Trascina la maniglia di controllo del punto medio dopo averla tracciata per piegare una linea in una curva di Bézier quadratica.
 - Le etichette sui connettori curvi ora riservano il proprio spazio lungo la curva effettiva, non lungo la corda diritta.
+- **Percorso:** passa un connettore da **Dritto** a **A gomito** (ortogonale) nel pannello proprietà. Vedi Smart Arrow Link più sotto.
+- **Stili delle punte:** ogni estremità può avere una punta aperta, un triangolo vuoto o pieno, un rombo vuoto o pieno, oppure un cerchio.
 
 ### Blocco strumento
 
@@ -89,6 +93,55 @@ Fai doppio clic su un rettangolo o un'ellisse per aggiungere un'etichetta di tes
 
 ### Etichette sui connettori
 Fai doppio clic su una linea con punte di freccia per aggiungere un'etichetta lungo il suo percorso. Sui connettori curvi, lo spazio vuoto segue la curvatura della Bézier.
+
+---
+
+## Libreria: forme flowchart e icone
+
+Apri la **Libreria** con `I` o con il pulsante libreria (i libri) nella toolbar in alto a destra. È un pannello laterale con ricerca, come quello di Excalidraw:
+
+- **Clic** su un elemento per inserirlo al centro della vista, oppure **trascinalo** sul canvas per posizionarlo dove vuoi.
+- La **ricerca** filtra tutte le sezioni insieme. Gli elementi usati di recente compaiono per primi.
+- Le sezioni si possono chiudere; i pacchetti di icone partono chiusi per tenere l'elenco corto.
+- Sui dispositivi touch la Libreria si apre come foglio dal basso, dal menu degli strumenti.
+
+### Forme flowchart
+Otto simboli standard: **Inizio / Fine**, **Dati (I/O)**, **Documento**, **Database**, **Processo predefinito**, **Preparazione**, **Input manuale** e **Attesa**.
+
+- Inseriscili dalla Libreria, oppure premi `S` e trascina per disegnare l'ultimo simbolo scelto.
+- Doppio clic su una forma per scrivere un'etichetta, che si dispone nell'area di testo del simbolo.
+- Con delle forme selezionate, la riga **Forma** del pannello proprietà cambia il simbolo sul posto (si può annullare).
+- Supportano riempimento, stili del tratto, imprecisione, rotazione, export PNG/SVG e sessioni live; i connettori si agganciano al loro contorno reale.
+
+### Icone
+La sezione **Icone** contiene le icone di architettura di Markasso: server, database, cache, coda, storage, load balancer, firewall, router, rete, API, container, funzione, browser, app mobile e desktop, utente, utenti, sistema esterno, segreto e documento.
+
+- Seguono i colori del tratto e del riempimento, il tema e l'imprecisione, e mantengono le proporzioni quando le ridimensioni.
+- Ogni icona ha un'etichetta sotto (doppio clic per modificarla). I connettori agganciati dal basso si fermano sotto l'etichetta.
+- Sono disponibili anche dal riquadro comandi (`Ctrl+K`, "Icona: ...").
+
+### Icone Kubernetes
+La sezione **Kubernetes** contiene il set ufficiale di icone Kubernetes (control plane, nodi, workload, rete, storage, configurazione, controllo accessi). Si carica la prima volta che apri la sezione o cerchi nella Libreria. Le icone sono incluse sotto licenza Apache-2.0.
+
+### Importare le icone AWS, Azure e Google Cloud
+I fornitori cloud consentono di usare le loro icone nei diagrammi ma non di ridistribuirle dentro uno strumento, quindi Markasso non le include. Scarichi tu il pacchetto ufficiale e lo importi:
+
+Dove scaricare lo ZIP ufficiale:
+
+- **AWS:** [AWS Architecture Icons](https://aws.amazon.com/architecture/icons/) ("Icon package")
+- **Azure:** [Azure architecture icons](https://learn.microsoft.com/azure/architecture/icons/) (accetta i termini, poi "Download SVG icons")
+- **Google Cloud:** [Google Cloud icons](https://cloud.google.com/icons) (icone dei prodotti principali e/o delle categorie)
+
+Poi:
+
+1. Nella Libreria clicca **Importa pacchetto di icone (ZIP)** in fondo e scegli il file. Gli stessi link di download sono indicati anche lì.
+2. Il pacchetto compare come nuova sezione, con il nome del fornitore e diviso nelle sue categorie. Ogni icona è presente una sola volta, alla dimensione più grande.
+3. Per eliminare un pacchetto clicca la **✕** accanto al suo nome.
+
+Da sapere:
+- I pacchetti restano **solo in questo browser** e non vengono mai caricati online. I diagrammi contengono le icone che usano, quindi diagrammi condivisi ed export le mostrano a tutti.
+- Le icone dei fornitori non si ricolorano e non si ruotano, come richiedono i loro termini; puoi comunque ridimensionarle e cambiarne opacità e colore dell'etichetta.
+- Usale nel rispetto dei termini di ciascun fornitore.
 
 ---
 
@@ -183,6 +236,12 @@ Seleziona la freccia → trascina una delle due maniglie ciano alle estremità. 
 **Scollegare:** trascina una maniglia di estremità lontano dalla forma collegata e rilascia nello spazio vuoto.
 
 **Eliminare una forma collegata:** eliminando una forma vengono automaticamente rimosse tutte le frecce e le linee ad essa collegate.
+
+**Porte di connessione:** mentre disegni un connettore o ne trascini un'estremità vicino a una forma compaiono quattro porte (sopra, destra, sotto, sinistra). Rilascia l'estremità su una porta per **fissarla** lì: resta su quel punto quando la forma viene spostata, ridimensionata o ruotata. Rilasciala in un altro punto del bordo e resta **libera**, scorrendo lungo il bordo verso l'altra estremità.
+
+**Connettori a gomito:** imposta **Percorso → A gomito** nel pannello proprietà (con lo strumento linea attivo vale per i connettori che disegni dopo). Il percorso ortogonale si ricalcola dalle due estremità: esce da ogni forma con un breve tratto dritto, le estremità libere si spostano al centro del lato rivolto verso l'altra forma, e l'etichetta sta a metà del percorso.
+
+**Stili delle punte:** con un connettore selezionato scegli lo stile di **Punta iniziale** e **Punta finale**: aperta, triangolo, triangolo pieno, rombo, rombo pieno o cerchio (ereditarietà, aggregazione e composizione UML). Le punte chiuse restano vuote su qualsiasi sfondo, export compresi.
 
 ---
 
@@ -297,6 +356,7 @@ Passa tra i temi **Scuro**, **Chiaro** e **Sistema** dal pannello Impostazioni (
   - `graph` / `flowchart` — direzioni TD, LR, RL, BT; forme dei nodi `[]` (rettangolo), `(())` (ellisse), `{}` (rombo); frecce solide `-->`, frecce tratteggiate `-.->`, linee semplici `---`; etichette inline sugli archi
   - `sequenceDiagram` — i partecipanti diventano rettangoli disposti in riga; i messaggi diventano frecce con etichette
   - Dopo la conversione la vista si adatta automaticamente al diagramma importato.
+- **Importa pacchetto di icone (ZIP):** i pacchetti di icone AWS, Azure e Google Cloud si importano dalla Libreria. Vedi *Importare le icone AWS, Azure e Google Cloud*.
 - **Esporta PNG:** scarica un PNG a 2× ritagliato al riquadro che racchiude tutti gli elementi.
 - **Esporta SVG:** scarica un SVG pulito ritagliato al riquadro che racchiude gli elementi.
 - **Esporta HTML:** scarica un file `.html` autonomo con il canvas incorporato come immagine.
@@ -317,6 +377,8 @@ Passa tra i temi **Scuro**, **Chiaro** e **Sistema** dal pannello Impostazioni (
 | `P` / `6` | Penna |
 | `T` / `7` | Testo |
 | `N` | Nota adesiva |
+| `S` | Forma flowchart (ultimo simbolo scelto) |
+| `I` | Apri / chiudi la Libreria |
 | `0` | Gomma |
 | `?` | Apri la finestra di aiuto scorciatoie |
 | `Esc` | Torna a Selezione / esci dal gruppo / deseleziona |

@@ -2,14 +2,15 @@ import { measureTextBounds } from '../core/text_measure';
 import { cloneElementsWithOffset } from '../elements/clone';
 import {
   ARROW_HEAD_STYLES,
-  type ArrowHeadStyle,
+  type ArrowElement,
   type ConnectorRouting,
   type Element,
+  type LineElement,
   SHAPE_KINDS,
-  type ShapeKind,
 } from '../elements/element';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
+import { hasEndHead, hasStartHead } from '../rendering/connector_geometry';
 import { getElementBounds } from '../rendering/draw_selection';
 import {
   ARROW_HEAD_STYLE_LABEL_KEYS,
@@ -23,6 +24,7 @@ import {
   updateCustomColorButton,
 } from './color_picker';
 import { SHAPE_KIND_LABEL_KEYS, shapeKindIcon } from './shape_icons';
+import { hasFillStyle, hasStrokeStyle, styleTypeOf } from './style_type';
 
 const SHARED_COLOR_PRESETS = [
   '#e2e2ef',
@@ -40,6 +42,7 @@ function hasShapeLabel(el: Element): el is Element & { labelColor?: string } {
     el.type === 'ellipse' ||
     el.type === 'rhombus' ||
     el.type === 'shape' ||
+    el.type === 'stencil' ||
     el.type === 'line' ||
     el.type === 'arrow'
   );
@@ -459,6 +462,24 @@ export function initContextPanel(
     arrowHeadPresets.appendChild(btn);
   }
 
+  /**
+   * Shows the `#cp-<name>-section` preset row (or hides it) and marks the
+   * button whose `data-value` matches.
+   */
+  function syncPresetRow(
+    name: string,
+    visible: boolean,
+    value: string | undefined,
+  ): void {
+    panel.querySelector<HTMLElement>(`#cp-${name}-section`)!.style.display =
+      visible ? '' : 'none';
+    const row = panel.querySelector<HTMLElement>(`#cp-${name}-presets`)!;
+    row.querySelectorAll<HTMLButtonElement>('.cp-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.value === value);
+    });
+    syncAriaPressed(row, '.cp-btn');
+  }
+
   // ── Arrowhead styles (per end) ────────────────────────────────────────────
   for (const placement of ['start', 'end'] as const) {
     const row = panel.querySelector(`#cp-${placement}-head-presets`)!;
@@ -469,7 +490,7 @@ export function initContextPanel(
       btn.title = label;
       btn.setAttribute('aria-label', label);
       btn.innerHTML = arrowHeadStyleIcon(style, placement);
-      btn.dataset.headStyle = style;
+      btn.dataset.value = style;
       btn.addEventListener('click', () => {
         history.dispatch(
           placement === 'start'
@@ -479,24 +500,6 @@ export function initContextPanel(
       });
       row.appendChild(btn);
     }
-  }
-
-  /** Shows the head-style row of one end and marks the active style. */
-  function syncHeadStyle(
-    placement: 'start' | 'end',
-    visible: boolean,
-    style: ArrowHeadStyle,
-  ): void {
-    (
-      panel.querySelector(`#cp-${placement}-head-section`) as HTMLElement
-    ).style.display = visible ? '' : 'none';
-    const row = panel.querySelector<HTMLElement>(
-      `#cp-${placement}-head-presets`,
-    )!;
-    row.querySelectorAll<HTMLButtonElement>('.cp-btn').forEach((btn) => {
-      btn.classList.toggle('active', btn.dataset.headStyle === style);
-    });
-    syncAriaPressed(row, '.cp-btn');
   }
 
   // ── Connector routing ─────────────────────────────────────────────────────
@@ -523,25 +526,11 @@ export function initContextPanel(
     btn.title = r.label;
     btn.setAttribute('aria-label', r.label);
     btn.innerHTML = r.icon;
-    btn.dataset.routing = r.value;
+    btn.dataset.value = r.value;
     btn.addEventListener('click', () => {
       history.dispatch({ type: 'APPLY_STYLE', routing: r.value });
     });
     routingPresets.appendChild(btn);
-  }
-
-  function syncRouting(visible: boolean, routing: ConnectorRouting): void {
-    (panel.querySelector('#cp-routing-section') as HTMLElement).style.display =
-      visible ? '' : 'none';
-    panel
-      .querySelectorAll<HTMLButtonElement>('#cp-routing-presets .cp-btn')
-      .forEach((btn) => {
-        btn.classList.toggle('active', btn.dataset.routing === routing);
-      });
-    syncAriaPressed(
-      panel.querySelector<HTMLElement>('#cp-routing-presets')!,
-      '.cp-btn',
-    );
   }
 
   // ── Flowchart shape kind ──────────────────────────────────────────────────
@@ -555,7 +544,7 @@ export function initContextPanel(
     btn.title = label;
     btn.setAttribute('aria-label', label);
     btn.innerHTML = shapeKindIcon(kind);
-    btn.dataset.kind = kind;
+    btn.dataset.value = kind;
     btn.addEventListener('click', () => {
       const scene = history.present;
       const hasSelectedShape = [...scene.selectedIds].some(
@@ -568,21 +557,6 @@ export function initContextPanel(
       }
     });
     shapeKindPresets.appendChild(btn);
-  }
-
-  function syncShapeKind(visible: boolean, kind: ShapeKind | undefined): void {
-    (
-      panel.querySelector('#cp-shape-kind-section') as HTMLElement
-    ).style.display = visible ? '' : 'none';
-    panel
-      .querySelectorAll<HTMLButtonElement>('#cp-shape-kind-presets .cp-btn')
-      .forEach((btn) => {
-        btn.classList.toggle('active', btn.dataset.kind === kind);
-      });
-    syncAriaPressed(
-      panel.querySelector<HTMLElement>('#cp-shape-kind-presets')!,
-      '.cp-btn',
-    );
   }
 
   // ── Roughness presets ──────────────────────────────────────────────────────
@@ -1207,10 +1181,18 @@ export function initContextPanel(
       ).style.display = hasArrowHead ? '' : 'none';
       panel.querySelector('#cp-border-presets')!.parentElement!.style.display =
         activeTool === 'rectangle' || activeTool === 'rombo' ? '' : 'none';
-      syncShapeKind(activeTool === 'shape', scene.appState.shapeKind);
-      syncRouting(activeTool === 'line', scene.appState.lineRouting);
-      syncHeadStyle('start', false, 'open');
-      syncHeadStyle('end', false, 'open');
+      syncPresetRow(
+        'shape-kind',
+        activeTool === 'shape',
+        scene.appState.shapeKind,
+      );
+      syncPresetRow(
+        'routing',
+        activeTool === 'line',
+        scene.appState.lineRouting,
+      );
+      syncPresetRow('start-head', false, 'open');
+      syncPresetRow('end-head', false, 'open');
 
       const textPropsSection =
         panel.querySelector<HTMLElement>('#cp-text-props')!;
@@ -1292,7 +1274,7 @@ export function initContextPanel(
 
     const first = selected[0]!;
     const allText = selected.every((el) => el.type === 'text');
-    const allImage = selected.every((el) => el.type === 'image');
+    const allImage = selected.every((el) => styleTypeOf(el) === 'image');
     const labelColorMode =
       scene.appState.activeTool === 'text' && selected.some(hasShapeLabel);
     const firstLabelTarget = selected.find(hasShapeLabel);
@@ -1408,30 +1390,10 @@ export function initContextPanel(
     opacityVal.textContent = String(Math.round(first.opacity * 100));
 
     // Dynamic section visibility based on selected element types
-    const FILL_TYPES = new Set([
-      'rectangle',
-      'ellipse',
-      'rhombus',
-      'shape',
-      'text',
-    ]);
-    const STYLE_TYPES = new Set([
-      'rectangle',
-      'ellipse',
-      'rhombus',
-      'shape',
-      'line',
-    ]);
     const CAP_TYPES = new Set(['line', 'freehand']);
-    const hasFill =
-      !labelColorMode &&
-      !allImage &&
-      selected.some((el) => FILL_TYPES.has(el.type));
+    const hasFill = !labelColorMode && !allImage && selected.some(hasFillStyle);
     const hasStyle =
-      !labelColorMode &&
-      !allImage &&
-      !allText &&
-      selected.some((el) => STYLE_TYPES.has(el.type));
+      !labelColorMode && !allImage && !allText && selected.some(hasStrokeStyle);
     const hasLineCap =
       !labelColorMode &&
       !allImage &&
@@ -1486,39 +1448,34 @@ export function initContextPanel(
       (el) => el.type === 'line' || el.type === 'arrow',
     );
     // A head row shows when a selected connector actually draws that head.
-    const withStartHead = selected.find(
-      (el) =>
-        el.type === 'line' &&
-        (el.arrowHead === 'start' || el.arrowHead === 'both'),
+    const connectors = selected.filter(
+      (el): el is LineElement | ArrowElement =>
+        el.type === 'line' || el.type === 'arrow',
     );
-    const withEndHead = selected.find(
-      (el) =>
-        el.type === 'arrow' ||
-        (el.type === 'line' &&
-          (el.arrowHead === 'end' || el.arrowHead === 'both')),
-    );
-    syncHeadStyle(
-      'start',
+    const withStartHead = connectors.find(hasStartHead);
+    const withEndHead = connectors.find(hasEndHead);
+    syncPresetRow(
+      'start-head',
       !labelColorMode && withStartHead !== undefined,
       (withStartHead?.type === 'line'
         ? withStartHead.startHeadStyle
         : undefined) ?? 'open',
     );
-    syncHeadStyle(
-      'end',
+    syncPresetRow(
+      'end-head',
       !labelColorMode && withEndHead !== undefined,
-      (withEndHead?.type === 'line' || withEndHead?.type === 'arrow'
-        ? withEndHead.endHeadStyle
-        : undefined) ?? 'open',
+      withEndHead?.endHeadStyle ?? 'open',
     );
-    syncRouting(
+    syncPresetRow(
+      'routing',
       !labelColorMode && firstConnector !== undefined,
       (firstConnector?.type === 'line' || firstConnector?.type === 'arrow'
         ? firstConnector.routing
         : undefined) ?? 'straight',
     );
     const firstShape = selected.find((el) => el.type === 'shape');
-    syncShapeKind(
+    syncPresetRow(
+      'shape-kind',
       !labelColorMode && firstShape !== undefined,
       firstShape?.type === 'shape' ? firstShape.kind : undefined,
     );

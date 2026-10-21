@@ -1,16 +1,23 @@
 import type { Viewport } from '../core/viewport';
 import {
   ARROW_HEAD_STYLES,
+  CONNECTOR_ROUTINGS,
   type Element,
   type ElementType,
   SHAPE_KINDS,
 } from '../elements/element';
+import {
+  isValidEmbeddedSvg,
+  isValidStencilRef,
+  MAX_EMBEDDED_SVG_CHARS,
+} from '../elements/stencils/registry';
 
 const ELEMENT_TYPES: ReadonlySet<ElementType> = new Set([
   'rectangle',
   'ellipse',
   'rhombus',
   'shape',
+  'stencil',
   'line',
   'arrow',
   'curve',
@@ -26,7 +33,7 @@ const LINE_JOINS = new Set(['round', 'miter', 'bevel']);
 const TEXT_ALIGNS = new Set(['left', 'center', 'right']);
 const ARROW_HEADS = new Set(['none', 'start', 'end', 'both']);
 const SHAPE_KIND_SET: ReadonlySet<string> = new Set(SHAPE_KINDS);
-const ROUTINGS = new Set(['straight', 'elbow']);
+const ROUTINGS: ReadonlySet<string> = new Set(CONNECTOR_ROUTINGS);
 const HEAD_STYLES: ReadonlySet<string> = new Set(ARROW_HEAD_STYLES);
 
 export const MAX_ELEMENTS = 5_000;
@@ -139,6 +146,22 @@ function hasShapeLabelFields(el: Record<string, unknown>): boolean {
   );
 }
 
+function isValidStencilSource(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  if (value.kind === 'builtin') {
+    return isString(value.ref, 128) && isValidStencilRef(value.ref);
+  }
+  if (value.kind === 'embedded') {
+    return (
+      isString(value.src, MAX_EMBEDDED_SVG_CHARS) &&
+      isValidEmbeddedSvg(value.src) &&
+      isString(value.pack, 128) &&
+      isString(value.name, 256)
+    );
+  }
+  return false;
+}
+
 function hasEndpointFields(el: Record<string, unknown>): boolean {
   return (
     isFiniteNumberInRange(el.x2, -10_000_000, 10_000_000) &&
@@ -162,7 +185,6 @@ function hasConnectorFields(el: Record<string, unknown>): boolean {
     isOptionalAnchor(el.startAnchor) &&
     isOptionalAnchor(el.endAnchor) &&
     isOptionalEnum(el.routing, ROUTINGS) &&
-    isOptionalEnum(el.startHeadStyle, HEAD_STYLES) &&
     isOptionalEnum(el.endHeadStyle, HEAD_STYLES) &&
     hasShapeLabelFields(el)
   );
@@ -205,13 +227,28 @@ export function isValidElement(value: unknown): value is Element {
         SHAPE_KIND_SET.has(value.kind)
       );
 
+    case 'stencil':
+      return (
+        hasBoxFields(value) &&
+        hasShapeLabelFields(value) &&
+        isValidStencilSource(value.source) &&
+        // Embedded vendor icons may not be rotated (see isRotatableStencil).
+        !(
+          isRecord(value.source) &&
+          value.source.kind === 'embedded' &&
+          value.rotation !== undefined &&
+          value.rotation !== 0
+        )
+      );
+
     case 'line':
       return (
         hasEndpointFields(value) &&
         hasConnectorFields(value) &&
         isOptionalFiniteNumber(value.cx) &&
         isOptionalFiniteNumber(value.cy) &&
-        isOptionalEnum(value.arrowHead, ARROW_HEADS)
+        isOptionalEnum(value.arrowHead, ARROW_HEADS) &&
+        isOptionalEnum(value.startHeadStyle, HEAD_STYLES)
       );
 
     case 'arrow':
