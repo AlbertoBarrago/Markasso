@@ -1,4 +1,8 @@
-import type { ElementType, ShapeKind } from '../elements/element';
+import type {
+  ConnectorRouting,
+  ElementType,
+  ShapeKind,
+} from '../elements/element';
 
 export type DrawableTool = Exclude<
   ElementType,
@@ -32,6 +36,8 @@ export interface AppState {
   readonly toolLocked: boolean;
   /** Flowchart symbol drawn by the `shape` tool. */
   readonly shapeKind: ShapeKind;
+  /** Routing applied to connectors drawn with the line tool. */
+  readonly lineRouting: ConnectorRouting;
   /** ID of the last element created with select:false — allows the panel to style it without selecting it */
   readonly lastCreatedId: string | null;
 }
@@ -65,6 +71,7 @@ export function createAppState(): AppState {
     justCreatedText: false,
     toolLocked: false,
     shapeKind: 'terminator',
+    lineRouting: 'straight',
     lastCreatedId: null,
   };
 }

@@ -22,6 +22,7 @@ import {
   hitTestEndpoint,
   hitTestHandle,
   resolveArrowEndpoints,
+  resolveConnectorRoute,
   worldToAnchor,
 } from '../src/rendering/draw_selection';
 
@@ -660,5 +661,62 @@ describe('connector anchors', () => {
     expect(
       distToShapeBoundary(data, getElementBounds(data), pts.x, pts.y),
     ).toBeCloseTo(0);
+  });
+});
+
+describe('resolveConnectorRoute', () => {
+  const r1 = makeRect('r1', 0, 0, 100, 60);
+  const r2 = makeRect('r2', 300, 200, 100, 60);
+
+  it('returns the two ends for straight connectors', () => {
+    const line = makeLine({ x: 0, y: 0, x2: 50, y2: 50 });
+    expect(resolveConnectorRoute(line, [line])).toEqual([
+      [0, 0],
+      [50, 50],
+    ]);
+  });
+
+  it('attaches floating elbow ends to the facing mid-side ports', () => {
+    const line = makeLine({
+      x: 50,
+      y: 30,
+      x2: 350,
+      y2: 230,
+      routing: 'elbow',
+      startElementId: 'r1',
+      endElementId: 'r2',
+    });
+    const route = resolveConnectorRoute(line, [r1, r2, line]);
+    expect(route.length).toBe(4);
+    const rounded = route.map(([x, y]) => [Math.round(x), Math.round(y)]);
+    expect(rounded).toEqual([
+      [50, 60],
+      [50, 130],
+      [350, 130],
+      [350, 200],
+    ]);
+    expect(getElementBounds(line, [r1, r2, line])).toMatchObject({
+      x: 50,
+      w: 300,
+    });
+  });
+
+  it('leaves a pinned elbow end by the side of its anchor', () => {
+    const line = makeLine({
+      x: 100,
+      y: 30,
+      x2: 350,
+      y2: 230,
+      routing: 'elbow',
+      startElementId: 'r1',
+      startAnchor: { x: 1, y: 0.5 },
+      endElementId: 'r2',
+    });
+    const route = resolveConnectorRoute(line, [r1, r2, line]);
+    expect(route[0]![0]).toBeCloseTo(100);
+    expect(route[0]![1]).toBeCloseTo(30);
+    // First leg heads right, out of the anchored side.
+    expect(route[1]![0]).toBeGreaterThan(100);
+    expect(route[1]![1]).toBeCloseTo(30);
   });
 });

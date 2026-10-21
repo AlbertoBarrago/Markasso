@@ -1,7 +1,10 @@
 import { worldToScreen } from '../core/viewport';
 import { cloneElementsWithOffset } from '../elements/clone';
 import type { ConnectorAnchor, Element } from '../elements/element';
-import { distToQuadraticCurve } from '../rendering/connector_geometry';
+import {
+  distToQuadraticCurve,
+  distToRoute,
+} from '../rendering/connector_geometry';
 import type {
   ElementSnapTarget,
   HandlePosition,
@@ -16,6 +19,7 @@ import {
   hitTestHandle,
   ROTATION_HANDLE_R,
   resolveArrowEndpoints,
+  resolveConnectorRoute,
 } from '../rendering/draw_selection';
 import { PORT_SNAP_RADIUS_PX } from './line_tool';
 import type { Tool, ToolContext } from './tool';
@@ -224,7 +228,7 @@ export class SelectTool implements Tool {
     // 1b. Check line midpoint control-point handle (single line selected)
     if (selectedEls.length === 1) {
       const el = selectedEls[0]!;
-      if (el.type === 'line') {
+      if (el.type === 'line' && el.routing !== 'elbow') {
         const cpX = el.cx ?? (el.x + el.x2) / 2;
         const cpY = el.cy ?? (el.y + el.y2) / 2;
         const [scx, scy] = worldToScreen(scene.viewport, cpX, cpY);
@@ -861,7 +865,7 @@ export class SelectTool implements Tool {
       // Check line midpoint control-point handle
       if (selectedEls.length === 1) {
         const el = selectedEls[0]!;
-        if (el.type === 'line') {
+        if (el.type === 'line' && el.routing !== 'elbow') {
           const cpX = el.cx ?? (el.x + el.x2) / 2;
           const cpY = el.cy ?? (el.y + el.y2) / 2;
           const [scx, scy] = worldToScreen(scene.viewport, cpX, cpY);
@@ -1118,6 +1122,13 @@ function hitTestElement(
     const dy = wy - cy;
     lx = cx + dx * cos - dy * sin;
     ly = cy + dx * sin + dy * cos;
+  }
+
+  if ((el.type === 'line' || el.type === 'arrow') && el.routing === 'elbow') {
+    return (
+      distToRoute(lx, ly, resolveConnectorRoute(el, allElements)) <
+      el.strokeWidth / 2 + LINE_PAD
+    );
   }
 
   switch (el.type) {

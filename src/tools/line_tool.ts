@@ -145,6 +145,7 @@ export class LineTool implements Tool {
       roughness: appState.roughness,
       strokeStyle: appState.strokeStyle,
       arrowHead: 'end',
+      ...(appState.lineRouting === 'elbow' && { routing: 'elbow' }),
       ...(this.startElementId && { startElementId: this.startElementId }),
       ...(this.startElementId &&
         this.startAnchor && { startAnchor: this.startAnchor }),
@@ -211,6 +212,7 @@ export class LineTool implements Tool {
       roughness: appState.roughness,
       strokeStyle: appState.strokeStyle,
       arrowHead: 'end',
+      ...(appState.lineRouting === 'elbow' && { routing: 'elbow' }),
       ...(this.startElementId && { startElementId: this.startElementId }),
       ...(this.startElementId &&
         this.startAnchor && { startAnchor: this.startAnchor }),

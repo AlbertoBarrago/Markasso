@@ -207,6 +207,12 @@ describe('connector anchor validation', () => {
     expect(validateElements([el])).toEqual([el]);
   });
 
+  it('accepts known routings and rejects unknown ones', () => {
+    const el = { ...line, routing: 'elbow' };
+    expect(validateElements([el])).toEqual([el]);
+    expect(validateElements([{ ...line, routing: 'spline' }])).toBeNull();
+  });
+
   it('rejects anchors outside the unit box or malformed', () => {
     expect(
       validateElements([{ ...line, startAnchor: { x: 1.5, y: 0 } }]),

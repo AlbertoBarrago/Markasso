@@ -182,5 +182,8 @@
   "shapePredefinedProcess": "定義済み処理",
   "shapePreparation": "準備",
   "shapeManualInput": "手操作入力",
-  "shapeDelay": "遅延"
+  "shapeDelay": "遅延",
+  "routing": "経路",
+  "routingStraight": "直線",
+  "routingElbow": "カギ線"
 }

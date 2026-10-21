@@ -25,6 +25,7 @@ const LINE_JOINS = new Set(['round', 'miter', 'bevel']);
 const TEXT_ALIGNS = new Set(['left', 'center', 'right']);
 const ARROW_HEADS = new Set(['none', 'start', 'end', 'both']);
 const SHAPE_KIND_SET: ReadonlySet<string> = new Set(SHAPE_KINDS);
+const ROUTINGS = new Set(['straight', 'elbow']);
 
 export const MAX_ELEMENTS = 5_000;
 export const MAX_POINTS_PER_ELEMENT = 100_000;
@@ -158,6 +159,7 @@ function hasConnectorFields(el: Record<string, unknown>): boolean {
     isOptionalString(el.endElementId, 128) &&
     isOptionalAnchor(el.startAnchor) &&
     isOptionalAnchor(el.endAnchor) &&
+    isOptionalEnum(el.routing, ROUTINGS) &&
     hasShapeLabelFields(el)
   );
 }

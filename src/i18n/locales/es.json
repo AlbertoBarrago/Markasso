@@ -182,5 +182,8 @@
   "shapePredefinedProcess": "Proceso predefinido",
   "shapePreparation": "Preparación",
   "shapeManualInput": "Entrada manual",
-  "shapeDelay": "Espera"
+  "shapeDelay": "Espera",
+  "routing": "Trazado",
+  "routingStraight": "Recto",
+  "routingElbow": "En codo"
 }

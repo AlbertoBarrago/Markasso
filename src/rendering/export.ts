@@ -12,9 +12,13 @@ import type {
   TextElement,
 } from '../elements/element';
 import { SHAPE_DEFINITIONS, shapeCommandsToPathData } from '../elements/shapes';
-import { getArrowHeadVector } from './connector_geometry';
+import {
+  getArrowHeadVector,
+  getRoutePointAt,
+  type RoutePoint,
+} from './connector_geometry';
 import { drawElement } from './draw_element';
-import { getElementBounds } from './draw_selection';
+import { getElementBounds, resolveConnectorRoute } from './draw_selection';
 import { getShapeTextBox } from './shape_geometry';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -130,7 +134,7 @@ export function exportSVG(scene: Scene, withBackground = true): void {
   }
 
   for (const el of elements) {
-    parts.push(elementToSVG(el, ox, oy));
+    parts.push(elementToSVG(el, ox, oy, elements));
   }
 
   parts.push('</svg>');
@@ -170,6 +174,14 @@ function computeBounds(elements: ReadonlyArray<Element>): {
         break;
       }
       case 'line':
+        if (el.routing === 'elbow') {
+          const b = getElementBounds(el, elements);
+          minX = Math.min(minX, b.x);
+          minY = Math.min(minY, b.y);
+          maxX = Math.max(maxX, b.x + b.w);
+          maxY = Math.max(maxY, b.y + b.h);
+          break;
+        }
         minX = Math.min(
           minX,
           el.x,
@@ -196,6 +208,14 @@ function computeBounds(elements: ReadonlyArray<Element>): {
         );
         break;
       case 'arrow':
+        if (el.routing === 'elbow') {
+          const b = getElementBounds(el, elements);
+          minX = Math.min(minX, b.x);
+          minY = Math.min(minY, b.y);
+          maxX = Math.max(maxX, b.x + b.w);
+          maxY = Math.max(maxY, b.y + b.h);
+          break;
+        }
         minX = Math.min(minX, el.x, el.x2);
         minY = Math.min(minY, el.y, el.y2);
         maxX = Math.max(maxX, el.x, el.x2);
@@ -233,7 +253,15 @@ function computeBounds(elements: ReadonlyArray<Element>): {
 
 // ── Element → SVG ──────────────────────────────────────────────────────────────
 
-function elementToSVG(el: Element, ox: number, oy: number): string {
+function elementToSVG(
+  el: Element,
+  ox: number,
+  oy: number,
+  allElements: ReadonlyArray<Element>,
+): string {
+  if ((el.type === 'line' || el.type === 'arrow') && el.routing === 'elbow') {
+    return elbowToSVG(el, resolveConnectorRoute(el, allElements), ox, oy);
+  }
   switch (el.type) {
     case 'rectangle':
       return rectToSVG(el, ox, oy);
@@ -483,6 +511,82 @@ function lineToSVG(el: LineElement, ox: number, oy: number): string {
   return parts.join('\n');
 }
 
+/** Orthogonal connector: one polyline plus heads on the end segments. */
+function elbowToSVG(
+  el: LineElement | ArrowElement,
+  route: ReadonlyArray<RoutePoint>,
+  ox: number,
+  oy: number,
+): string {
+  if (route.length < 2) return '';
+  const sp = `stroke="${escapeXml(el.strokeColor)}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"${strokeDashAttr(el)}`;
+  const points = route
+    .map(([x, y]) => `${round(x + ox)},${round(y + oy)}`)
+    .join(' ');
+  const parts = [`<polyline points="${points}" ${sp}/>`];
+  const n = route.length;
+  const drawEnd =
+    el.type === 'arrow' || el.arrowHead === 'end' || el.arrowHead === 'both';
+  const drawStart =
+    el.type === 'line' && (el.arrowHead === 'start' || el.arrowHead === 'both');
+  if (drawEnd) {
+    const [fx, fy] = route[n - 2]!;
+    const [tx, ty] = route[n - 1]!;
+    parts.push(
+      lineArrowHeadSVG(
+        fx + ox,
+        fy + oy,
+        tx + ox,
+        ty + oy,
+        el.strokeWidth,
+        sp,
+        '',
+      ),
+    );
+  }
+  if (drawStart) {
+    const [fx, fy] = route[1]!;
+    const [tx, ty] = route[0]!;
+    parts.push(
+      lineArrowHeadSVG(
+        fx + ox,
+        fy + oy,
+        tx + ox,
+        ty + oy,
+        el.strokeWidth,
+        sp,
+        '',
+      ),
+    );
+  }
+  if (el.label) {
+    const [mx, my] = getRoutePointAt(route, 0.5);
+    // Mask the polyline under the label, mirroring the canvas gap. Text width
+    // is estimated since there is no measuring context in SVG export.
+    const fontSize = el.labelFontSize ?? 12;
+    const lines = el.label.split('\n');
+    const pad = fontSize * 0.4;
+    const w =
+      Math.max(...lines.map((l) => l.length)) * fontSize * 0.6 + pad * 2;
+    const h = lines.length * fontSize * 1.2 + pad * 2;
+    parts.push(
+      `<rect x="${round(mx + ox - w / 2)}" y="${round(my + oy - h / 2)}" width="${round(w)}" height="${round(h)}" fill="${escapeXml(getCanvasBg())}"/>`,
+    );
+    parts.push(
+      shapeLabelToSVG(
+        mx + ox,
+        my + oy,
+        el.label,
+        el.labelFontSize ?? 12,
+        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.labelColor ?? el.strokeColor,
+        el.opacity,
+      ),
+    );
+  }
+  return parts.join('\n');
+}
+
 function arrowToSVG(el: ArrowElement, ox: number, oy: number): string {
   const x1 = el.x + ox,
     y1 = el.y + oy;
@@ -590,7 +694,7 @@ function shapeLabelToSVG(
         `<tspan x="${round(cx)}" y="${round(startY + i * lineHeight + lineHeight / 2)}">${escapeXml(line)}</tspan>`,
     )
     .join('');
-  return `<text font-family="${escapeXml(fontFamily)}" font-size="${fontSize}" fill="${escapeXml(color)}" opacity="${opacity}" text-anchor="middle">${tspans}</text>`;
+  return `<text font-family="${escapeXml(fontFamily)}" font-size="${fontSize}" fill="${escapeXml(color)}" opacity="${opacity}" text-anchor="middle" dominant-baseline="central">${tspans}</text>`;
 }
 
 function imageToSVG(el: ImageElement, ox: number, oy: number): string {

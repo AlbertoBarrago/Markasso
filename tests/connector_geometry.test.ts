@@ -1,11 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
+  computeElbowRoute,
   distToQuadraticCurve,
+  distToRoute,
   getArrowHeadVector,
   getQuadraticBounds,
   getQuadraticPoint,
   getQuadraticSegment,
   getQuadraticTangent,
+  getRouteLength,
+  getRoutePointAt,
+  type RouteDirection,
+  type RoutePoint,
+  simplifyRoute,
 } from '../src/rendering/connector_geometry';
 
 describe('getArrowHeadVector', () => {
@@ -71,5 +78,151 @@ describe('getArrowHeadVector', () => {
   it('measures distance to the actual quadratic curve', () => {
     const dist = distToQuadraticCurve(50, 50, 0, 0, 50, 100, 100, 0);
     expect(dist).toBeCloseTo(0, 4);
+  });
+});
+
+const RIGHT: RouteDirection = { dx: 1, dy: 0 };
+const LEFT: RouteDirection = { dx: -1, dy: 0 };
+const UP: RouteDirection = { dx: 0, dy: -1 };
+const DOWN: RouteDirection = { dx: 0, dy: 1 };
+
+/** Every elbow route must be orthogonal and respect both end directions. */
+function expectValidRoute(
+  route: RoutePoint[],
+  start: RoutePoint,
+  startDir: RouteDirection | null,
+  end: RoutePoint,
+  endDir: RouteDirection | null,
+): void {
+  expect(route[0]).toEqual(start);
+  expect(route[route.length - 1]).toEqual(end);
+  for (let i = 1; i < route.length; i++) {
+    const [ax, ay] = route[i - 1]!;
+    const [bx, by] = route[i]!;
+    expect(ax === bx || ay === by).toBe(true);
+  }
+  if (startDir) {
+    const [ax, ay] = route[0]!;
+    const [bx, by] = route[1]!;
+    expect(Math.sign(bx - ax)).toBe(startDir.dx);
+    expect(Math.sign(by - ay)).toBe(startDir.dy);
+  }
+  if (endDir) {
+    const [ax, ay] = route[route.length - 2]!;
+    const [bx, by] = route[route.length - 1]!;
+    // The last leg travels into the shape, against its outward normal.
+    expect(Math.sign(bx - ax)).toBe(-endDir.dx || 0);
+    expect(Math.sign(by - ay)).toBe(-endDir.dy || 0);
+  }
+}
+
+describe('computeElbowRoute', () => {
+  it('joins facing horizontal stubs with a Z through the midpoint', () => {
+    const route = computeElbowRoute([0, 0], RIGHT, [100, 50], LEFT);
+    expect(route).toEqual([
+      [0, 0],
+      [50, 0],
+      [50, 50],
+      [100, 50],
+    ]);
+    expectValidRoute(route, [0, 0], RIGHT, [100, 50], LEFT);
+  });
+
+  it('joins perpendicular stubs with a single corner', () => {
+    const route = computeElbowRoute([0, 0], RIGHT, [100, 100], UP);
+    expect(route).toEqual([
+      [0, 0],
+      [100, 0],
+      [100, 100],
+    ]);
+  });
+
+  it('uses the mirrored corner when the direct one would double back', () => {
+    const route = computeElbowRoute([0, 0], RIGHT, [-100, 100], UP);
+    expect(route).toEqual([
+      [0, 0],
+      [16, 0],
+      [16, 84],
+      [-100, 84],
+      [-100, 100],
+    ]);
+    expectValidRoute(route, [0, 0], RIGHT, [-100, 100], UP);
+  });
+
+  it('detours around when both stubs face away on the same line', () => {
+    const route = computeElbowRoute([0, 0], LEFT, [100, 0], RIGHT);
+    expectValidRoute(route, [0, 0], LEFT, [100, 0], RIGHT);
+    expect(Math.min(...route.map((p) => p[1]))).toBeLessThan(0);
+  });
+
+  it('routes free ends along the dominant axis', () => {
+    expect(computeElbowRoute([0, 0], null, [100, 40], null)).toEqual([
+      [0, 0],
+      [50, 0],
+      [50, 40],
+      [100, 40],
+    ]);
+    expect(computeElbowRoute([0, 0], null, [40, 100], null)).toEqual([
+      [0, 0],
+      [0, 50],
+      [40, 50],
+      [40, 100],
+    ]);
+  });
+
+  it('turns once toward a free end', () => {
+    expect(computeElbowRoute([0, 0], DOWN, [100, 100], null)).toEqual([
+      [0, 0],
+      [0, 100],
+      [100, 100],
+    ]);
+  });
+
+  it('produces valid routes for every pair of directions', () => {
+    const dirs = [UP, RIGHT, DOWN, LEFT];
+    const ends: RoutePoint[] = [
+      [200, 120],
+      [-150, 80],
+      [60, -200],
+      [-90, -40],
+    ];
+    for (const sd of dirs) {
+      for (const ed of dirs) {
+        for (const end of ends) {
+          const route = computeElbowRoute([0, 0], sd, end, ed);
+          expectValidRoute(route, [0, 0], sd, end, ed);
+        }
+      }
+    }
+  });
+});
+
+describe('route helpers', () => {
+  const route: RoutePoint[] = [
+    [0, 0],
+    [100, 0],
+    [100, 100],
+  ];
+
+  it('simplifies duplicates and collinear points', () => {
+    expect(
+      simplifyRoute([
+        [0, 0],
+        [0, 0],
+        [50, 0],
+        [100, 0],
+        [100, 100],
+      ]),
+    ).toEqual(route);
+  });
+
+  it('measures and samples along the route', () => {
+    expect(getRouteLength(route)).toBe(200);
+    expect(getRoutePointAt(route, 0.5)).toEqual([100, 0]);
+    expect(getRoutePointAt(route, 0.75)).toEqual([100, 50]);
+  });
+
+  it('measures the distance to the closest segment', () => {
+    expect(distToRoute(110, 50, route)).toBe(10);
   });
 });

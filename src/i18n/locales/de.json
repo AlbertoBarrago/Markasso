@@ -182,5 +182,8 @@
   "shapePredefinedProcess": "Vordefinierter Prozess",
   "shapePreparation": "Vorbereitung",
   "shapeManualInput": "Manuelle Eingabe",
-  "shapeDelay": "Verzögerung"
+  "shapeDelay": "Verzögerung",
+  "routing": "Verlauf",
+  "routingStraight": "Gerade",
+  "routingElbow": "Gewinkelt"
 }

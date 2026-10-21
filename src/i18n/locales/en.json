@@ -188,5 +188,8 @@
   "shapePredefinedProcess": "Predefined process",
   "shapePreparation": "Preparation",
   "shapeManualInput": "Manual input",
-  "shapeDelay": "Delay"
+  "shapeDelay": "Delay",
+  "routing": "Routing",
+  "routingStraight": "Straight",
+  "routingElbow": "Elbow"
 }

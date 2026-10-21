@@ -1,4 +1,9 @@
-import type { Element, ShapeElement } from '../elements/element';
+import type {
+  ArrowElement,
+  Element,
+  LineElement,
+  ShapeElement,
+} from '../elements/element';
 import { SHAPE_DEFINITIONS, type ShapeCommand } from '../elements/shapes';
 import {
   getArrowHeadVector,
@@ -6,8 +11,14 @@ import {
   getQuadraticPoint,
   getQuadraticSegment,
   getQuadraticTangent,
+  getRoutePointAt,
+  type RoutePoint,
 } from './connector_geometry';
-import { getElementCenter, resolveArrowEndpoints } from './draw_selection';
+import {
+  getElementCenter,
+  resolveArrowEndpoints,
+  resolveConnectorRoute,
+} from './draw_selection';
 import { buildFreehandOutline } from './freehand_outline';
 import { getCachedImage } from './image_cache';
 import { getShapeTextBox } from './shape_geometry';
@@ -234,6 +245,16 @@ export function drawElement(
       break;
     }
     case 'line': {
+      if (el.routing === 'elbow') {
+        drawElbowConnector(
+          ctx,
+          el,
+          resolveConnectorRoute(el, allElements ?? [el]),
+          strokeColor,
+          editingShapeLabelId,
+        );
+        break;
+      }
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
       const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
@@ -435,6 +456,16 @@ export function drawElement(
       break;
     }
     case 'arrow': {
+      if (el.routing === 'elbow') {
+        drawElbowConnector(
+          ctx,
+          el,
+          resolveConnectorRoute(el, allElements ?? [el]),
+          strokeColor,
+          editingShapeLabelId,
+        );
+        break;
+      }
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
       const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
@@ -930,6 +961,96 @@ function drawShape(
     ctx.beginPath();
     traceRoughShapeCommands(ctx, details, bx, by, seed + 7, amp);
     ctx.stroke();
+  }
+}
+
+/**
+ * Orthogonal connector. The label gap is cut with an even-odd clip around
+ * the label box instead of splitting segments, which works for any number
+ * of turns.
+ */
+function drawElbowConnector(
+  ctx: CanvasRenderingContext2D,
+  el: LineElement | ArrowElement,
+  route: ReadonlyArray<RoutePoint>,
+  strokeColor: string,
+  editingShapeLabelId: string | null | undefined,
+): void {
+  if (route.length < 2) return;
+  const roughness = el.roughness ?? 0;
+  const seed = hashId(el.id);
+  const showLabel = !!el.label && editingShapeLabelId !== el.id;
+  const fontSize = el.labelFontSize ?? 12;
+  const fontFamily = el.labelFontFamily ?? 'Arial, sans-serif';
+  const [mx, my] = getRoutePointAt(route, 0.5);
+
+  ctx.save();
+  if (showLabel && el.label) {
+    ctx.font = `${fontSize}px ${fontFamily}`;
+    const lines = el.label.split('\n');
+    const pad = fontSize * 0.4;
+    const labelW =
+      Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2;
+    const labelH = lines.length * fontSize * 1.2 + pad * 2;
+    const xs = route.map((p) => p[0]);
+    const ys = route.map((p) => p[1]);
+    const margin = el.strokeWidth * 8 + 32;
+    ctx.beginPath();
+    ctx.rect(
+      Math.min(...xs) - margin,
+      Math.min(...ys) - margin,
+      Math.max(...xs) - Math.min(...xs) + margin * 2,
+      Math.max(...ys) - Math.min(...ys) + margin * 2,
+    );
+    ctx.rect(mx - labelW / 2, my - labelH / 2, labelW, labelH);
+    ctx.clip('evenodd');
+  }
+
+  if (roughness < 0.05) {
+    ctx.beginPath();
+    route.forEach(([x, y], i) => {
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  } else {
+    for (let i = 1; i < route.length; i++) {
+      const [x1, y1] = route[i - 1]!;
+      const [x2, y2] = route[i]!;
+      drawLine(ctx, x1, y1, x2, y2, roughness, seed + i * 31);
+    }
+  }
+  ctx.restore();
+
+  const n = route.length;
+  const drawEnd =
+    el.type === 'arrow' || el.arrowHead === 'end' || el.arrowHead === 'both';
+  const drawStart =
+    el.type === 'line' && (el.arrowHead === 'start' || el.arrowHead === 'both');
+  if (drawEnd) {
+    const [fx, fy] = route[n - 2]!;
+    const [tx, ty] = route[n - 1]!;
+    drawArrowHead(ctx, fx, fy, tx, ty, el.strokeWidth);
+  }
+  if (drawStart) {
+    const [fx, fy] = route[1]!;
+    const [tx, ty] = route[0]!;
+    drawArrowHead(ctx, fx, fy, tx, ty, el.strokeWidth);
+  }
+
+  if (showLabel && el.label) {
+    ctx.save();
+    ctx.setLineDash([]);
+    drawArrowLabel(
+      ctx,
+      mx,
+      my,
+      el.label,
+      fontSize,
+      fontFamily,
+      el.labelColor ?? strokeColor,
+    );
+    ctx.restore();
   }
 }
 

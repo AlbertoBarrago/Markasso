@@ -182,5 +182,8 @@
   "shapePredefinedProcess": "预定义流程",
   "shapePreparation": "准备",
   "shapeManualInput": "手动输入",
-  "shapeDelay": "延迟"
+  "shapeDelay": "延迟",
+  "routing": "路径",
+  "routingStraight": "直线",
+  "routingElbow": "折线"
 }

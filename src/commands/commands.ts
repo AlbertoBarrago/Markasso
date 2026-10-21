@@ -1,6 +1,11 @@
 import type { ActiveTool, GridType } from '../core/app_state';
 import type { Viewport } from '../core/viewport';
-import type { ConnectorAnchor, Element, ShapeKind } from '../elements/element';
+import type {
+  ConnectorAnchor,
+  ConnectorRouting,
+  Element,
+  ShapeKind,
+} from '../elements/element';
 
 export type Command =
   | { type: 'CREATE_ELEMENT'; element: Element; select?: boolean }
@@ -103,4 +108,6 @@ export type Command =
       arrowHead?: 'none' | 'start' | 'end' | 'both';
       /** Applied to `shape` elements only; also becomes the tool default. */
       shapeKind?: ShapeKind;
+      /** Applied to lines/arrows only; also becomes the line tool default. */
+      routing?: ConnectorRouting;
     };

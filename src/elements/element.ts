@@ -111,6 +111,9 @@ export interface ConnectorAnchor {
   readonly y: number;
 }
 
+/** `elbow` draws an orthogonal route, recomputed from the two ends. */
+export type ConnectorRouting = 'straight' | 'elbow';
+
 export interface LineElement extends BaseElement {
   readonly type: 'line';
   readonly x2: number;
@@ -119,6 +122,7 @@ export interface LineElement extends BaseElement {
   readonly endElementId?: string;
   readonly startAnchor?: ConnectorAnchor;
   readonly endAnchor?: ConnectorAnchor;
+  readonly routing?: ConnectorRouting;
   /** Optional quadratic bezier control point — when set the line renders as a curve */
   readonly cx?: number;
   readonly cy?: number;
@@ -138,6 +142,7 @@ export interface ArrowElement extends BaseElement {
   readonly endElementId?: string;
   readonly startAnchor?: ConnectorAnchor;
   readonly endAnchor?: ConnectorAnchor;
+  readonly routing?: ConnectorRouting;
   readonly label?: string;
   readonly labelFontSize?: number;
   readonly labelFontFamily?: string;

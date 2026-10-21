@@ -1587,3 +1587,30 @@ describe('connector anchors in RESIZE_ELEMENT', () => {
     expect(next.elements[0]).not.toHaveProperty('endAnchor');
   });
 });
+
+describe('APPLY_STYLE routing', () => {
+  it('applies routing to connectors only and sets the line tool default', () => {
+    const line: LineElement = {
+      id: 'line-1',
+      type: 'line',
+      x: 0,
+      y: 0,
+      x2: 10,
+      y2: 10,
+      strokeColor: '#000',
+      fillColor: 'transparent',
+      strokeWidth: 1,
+      opacity: 1,
+      roughness: 0,
+    };
+    const scene: Scene = { ...createScene(), elements: [line, makeRect()] };
+    const next = reducer(scene, {
+      type: 'APPLY_STYLE',
+      ids: ['line-1', 'rect-1'],
+      routing: 'elbow',
+    });
+    expect(next.elements[0]).toMatchObject({ routing: 'elbow' });
+    expect(next.elements[1]).not.toHaveProperty('routing');
+    expect(next.appState.lineRouting).toBe('elbow');
+  });
+});

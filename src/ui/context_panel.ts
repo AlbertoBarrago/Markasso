@@ -1,6 +1,11 @@
 import { measureTextBounds } from '../core/text_measure';
 import { cloneElementsWithOffset } from '../elements/clone';
-import { type Element, SHAPE_KINDS, type ShapeKind } from '../elements/element';
+import {
+  type ConnectorRouting,
+  type Element,
+  SHAPE_KINDS,
+  type ShapeKind,
+} from '../elements/element';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { getElementBounds } from '../rendering/draw_selection';
@@ -85,6 +90,11 @@ export function initContextPanel(
     <div class="cp-section" id="cp-arrowhead-section">
       <div class="cp-label">${t('arrowHead')}</div>
       <div class="cp-btn-row" id="cp-arrowhead-presets" role="group" aria-label="${t('arrowHead')}"></div>
+    </div>
+
+    <div class="cp-section" id="cp-routing-section">
+      <div class="cp-label">${t('routing')}</div>
+      <div class="cp-btn-row" id="cp-routing-presets" role="group" aria-label="${t('routing')}"></div>
     </div>
 
     <div class="cp-section">
@@ -431,6 +441,51 @@ export function initContextPanel(
       history.dispatch({ type: 'APPLY_STYLE', arrowHead: ah.value });
     });
     arrowHeadPresets.appendChild(btn);
+  }
+
+  // ── Connector routing ─────────────────────────────────────────────────────
+  const routingPresets = panel.querySelector('#cp-routing-presets')!;
+  const ROUTINGS: Array<{
+    value: ConnectorRouting;
+    label: string;
+    icon: string;
+  }> = [
+    {
+      value: 'straight',
+      label: t('routingStraight'),
+      icon: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="16" x2="16" y2="4"/></svg>`,
+    },
+    {
+      value: 'elbow',
+      label: t('routingElbow'),
+      icon: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-6h12V4"/></svg>`,
+    },
+  ];
+  for (const r of ROUTINGS) {
+    const btn = document.createElement('button');
+    btn.className = 'cp-btn cp-routing-btn';
+    btn.title = r.label;
+    btn.setAttribute('aria-label', r.label);
+    btn.innerHTML = r.icon;
+    btn.dataset.routing = r.value;
+    btn.addEventListener('click', () => {
+      history.dispatch({ type: 'APPLY_STYLE', routing: r.value });
+    });
+    routingPresets.appendChild(btn);
+  }
+
+  function syncRouting(visible: boolean, routing: ConnectorRouting): void {
+    (panel.querySelector('#cp-routing-section') as HTMLElement).style.display =
+      visible ? '' : 'none';
+    panel
+      .querySelectorAll<HTMLButtonElement>('#cp-routing-presets .cp-btn')
+      .forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.routing === routing);
+      });
+    syncAriaPressed(
+      panel.querySelector<HTMLElement>('#cp-routing-presets')!,
+      '.cp-btn',
+    );
   }
 
   // ── Flowchart shape kind ──────────────────────────────────────────────────
@@ -1097,6 +1152,7 @@ export function initContextPanel(
       panel.querySelector('#cp-border-presets')!.parentElement!.style.display =
         activeTool === 'rectangle' || activeTool === 'rombo' ? '' : 'none';
       syncShapeKind(activeTool === 'shape', scene.appState.shapeKind);
+      syncRouting(activeTool === 'line', scene.appState.lineRouting);
 
       const textPropsSection =
         panel.querySelector<HTMLElement>('#cp-text-props')!;
@@ -1368,6 +1424,15 @@ export function initContextPanel(
     ).style.display = hasArrowHead ? '' : 'none';
     panel.querySelector('#cp-border-presets')!.parentElement!.style.display =
       hasBorder ? '' : 'none';
+    const firstConnector = selected.find(
+      (el) => el.type === 'line' || el.type === 'arrow',
+    );
+    syncRouting(
+      !labelColorMode && firstConnector !== undefined,
+      (firstConnector?.type === 'line' || firstConnector?.type === 'arrow'
+        ? firstConnector.routing
+        : undefined) ?? 'straight',
+    );
     const firstShape = selected.find((el) => el.type === 'shape');
     syncShapeKind(
       !labelColorMode && firstShape !== undefined,

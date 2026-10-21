@@ -540,6 +540,7 @@ export function reducer(
         strikethrough,
         arrowHead,
         shapeKind,
+        routing,
       } = command;
       const patch: Record<string, unknown> = {};
       if (strokeColor !== undefined) patch.strokeColor = strokeColor;
@@ -573,6 +574,7 @@ export function reducer(
       if (strokeStyle !== undefined) statePatch.strokeStyle = strokeStyle;
       if (textAlign !== undefined) statePatch.textAlign = textAlign;
       if (shapeKind !== undefined) statePatch.shapeKind = shapeKind;
+      if (routing !== undefined) statePatch.lineRouting = routing;
 
       const targetIds = command.ids ?? [...scene.selectedIds];
       const fallbackId =
@@ -590,10 +592,18 @@ export function reducer(
         elements: scene.elements.map((el) => {
           if (!targetIds.includes(el.id) && el.id !== fallbackId) return el;
           const next = { ...el, ...patch } as Element;
-          // `kind` only exists on shapes: never leak it onto other types.
-          return shapeKind !== undefined && next.type === 'shape'
-            ? { ...next, kind: shapeKind }
-            : next;
+          // `kind` and `routing` only exist on shapes and connectors: never
+          // leak them onto other types.
+          if (shapeKind !== undefined && next.type === 'shape') {
+            return { ...next, kind: shapeKind };
+          }
+          if (
+            routing !== undefined &&
+            (next.type === 'line' || next.type === 'arrow')
+          ) {
+            return { ...next, routing };
+          }
+          return next;
         }),
       };
     }

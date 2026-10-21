@@ -1,7 +1,17 @@
 import type { Viewport } from '../core/viewport';
 import { worldToScreen } from '../core/viewport';
-import type { ConnectorAnchor, Element } from '../elements/element';
-import { getQuadraticBounds } from './connector_geometry';
+import type {
+  ArrowElement,
+  ConnectorAnchor,
+  Element,
+  LineElement,
+} from '../elements/element';
+import {
+  computeElbowRoute,
+  getQuadraticBounds,
+  type RouteDirection,
+  type RoutePoint,
+} from './connector_geometry';
 import {
   getShapeBorderPointToward,
   getShapeDistToBoundary,
@@ -439,6 +449,121 @@ export function resolveArrowEndpoints(
   return { x, y, x2, y2 };
 }
 
+/** Local unit directions of the N/E/S/W sides, in `getElementPorts` order. */
+const SIDE_DIRS: ReadonlyArray<readonly [number, number]> = [
+  [0, -1],
+  [1, 0],
+  [0, 1],
+  [-1, 0],
+];
+
+/** Side (index into SIDE_DIRS) of the element's box facing a local offset. */
+function sideFacing(lx: number, ly: number, hw: number, hh: number): number {
+  const nx = hw > 0 ? lx / hw : lx;
+  const ny = hh > 0 ? ly / hh : ly;
+  if (Math.abs(nx) >= Math.abs(ny)) return nx >= 0 ? 1 : 3;
+  return ny >= 0 ? 2 : 0;
+}
+
+/** World-space axis direction of a side, snapped after applying rotation. */
+function sideDirection(el: Element, side: number): RouteDirection {
+  const [ldx, ldy] = SIDE_DIRS[side]!;
+  const rot = el.rotation ?? 0;
+  const wx = ldx * Math.cos(rot) - ldy * Math.sin(rot);
+  const wy = ldx * Math.sin(rot) + ldy * Math.cos(rot);
+  return Math.abs(wx) >= Math.abs(wy)
+    ? { dx: wx >= 0 ? 1 : -1, dy: 0 }
+    : { dx: 0, dy: wy >= 0 ? 1 : -1 };
+}
+
+/**
+ * Where a connector end attached to `el` leaves it on an elbow route. A
+ * pinned end keeps its point and leaves by the side its anchor sits on; a
+ * floating end moves to the port facing `target`, so flowcharts get clean
+ * mid-side attachments instead of corner hits.
+ */
+function elbowEnd(
+  el: Element,
+  anchor: ConnectorAnchor | undefined,
+  pinned: RoutePoint,
+  target: RoutePoint,
+): { point: RoutePoint; dir: RouteDirection } {
+  const b = getElementBounds(el);
+  const cx = b.x + b.w / 2;
+  const cy = b.y + b.h / 2;
+  if (anchor) {
+    const side = sideFacing(anchor.x - 0.5, anchor.y - 0.5, 0.5, 0.5);
+    return { point: pinned, dir: sideDirection(el, side) };
+  }
+  const [lx, ly] = el.rotation
+    ? rotatePoint(target[0], target[1], cx, cy, -el.rotation)
+    : target;
+  const side = sideFacing(lx - cx, ly - cy, b.w / 2, b.h / 2);
+  const port = getElementPorts(el)[side];
+  return {
+    point: port ? [port.worldX, port.worldY] : pinned,
+    dir: sideDirection(el, side),
+  };
+}
+
+/**
+ * Polyline a connector is drawn along: its two resolved ends, or the full
+ * orthogonal route for `routing: 'elbow'`. Curved lines (cx/cy) are not
+ * covered here; callers keep their quadratic path for those.
+ */
+export function resolveConnectorRoute(
+  el: LineElement | ArrowElement,
+  allElements: ReadonlyArray<Element>,
+): RoutePoint[] {
+  const pts = resolveArrowEndpoints(el, allElements);
+  const start: RoutePoint = [pts.x, pts.y];
+  const end: RoutePoint = [pts.x2, pts.y2];
+  if (el.routing !== 'elbow') return [start, end];
+
+  const startEl = el.startElementId
+    ? allElements.find((e) => e.id === el.startElementId)
+    : undefined;
+  const endEl = el.endElementId
+    ? allElements.find((e) => e.id === el.endElementId)
+    : undefined;
+
+  // A floating end faces the other end's pinned point, its element's
+  // center, or its free position, in that order.
+  const targetOf = (
+    other: Element | undefined,
+    otherAnchor: ConnectorAnchor | undefined,
+    otherPoint: RoutePoint,
+  ): RoutePoint => {
+    if (!other || otherAnchor) return otherPoint;
+    const [ocx, ocy] = getElementCenter(other);
+    return [ocx, ocy];
+  };
+
+  const s = startEl
+    ? elbowEnd(
+        startEl,
+        el.startAnchor,
+        start,
+        targetOf(endEl, el.endAnchor, end),
+      )
+    : null;
+  const e = endEl
+    ? elbowEnd(
+        endEl,
+        el.endAnchor,
+        end,
+        targetOf(startEl, el.startAnchor, start),
+      )
+    : null;
+
+  return computeElbowRoute(
+    s?.point ?? start,
+    s?.dir ?? null,
+    e?.point ?? end,
+    e?.dir ?? null,
+  );
+}
+
 /**
  * Draws the connection ports of a snap candidate; the port the connector
  * would pin to (if any) is filled.
@@ -526,6 +651,19 @@ export function getElementBounds(
     }
     case 'line':
     case 'arrow': {
+      if (el.routing === 'elbow') {
+        const route = resolveConnectorRoute(el, allElements ?? [el]);
+        const xs = route.map((p) => p[0]);
+        const ys = route.map((p) => p[1]);
+        const minX = Math.min(...xs);
+        const minY = Math.min(...ys);
+        return {
+          x: minX,
+          y: minY,
+          w: Math.max(...xs) - minX,
+          h: Math.max(...ys) - minY,
+        };
+      }
       const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
       if (el.type === 'line' && el.cx !== undefined && el.cy !== undefined) {
         const bounds = getQuadraticBounds(
@@ -794,7 +932,8 @@ export function drawSelection(
 
       // Midpoint control-point handle for lines
       // cx/cy set → full handle (curve active); undefined → ghost handle (drag to curve)
-      if (el.type === 'line') {
+      // Elbow routes ignore cx/cy, so they get no curve handle.
+      if (el.type === 'line' && el.routing !== 'elbow') {
         const curveActive = el.cx !== undefined && el.cy !== undefined;
         const cpX = el.cx ?? (pts.x + pts.x2) / 2;
         const cpY = el.cy ?? (pts.y + pts.y2) / 2;
@@ -854,6 +993,17 @@ function drawSelectedElementOutline(
   switch (element.type) {
     case 'line':
     case 'arrow': {
+      if (element.routing === 'elbow') {
+        const route = resolveConnectorRoute(element, allElements ?? [element]);
+        ctx.beginPath();
+        route.forEach(([wx, wy], i) => {
+          const [sx, sy] = s(wx, wy);
+          if (i === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        });
+        ctx.stroke();
+        break;
+      }
       const pts = resolveArrowEndpoints(element, allElements ?? [element]);
       const [x1s, y1s] = s(pts.x, pts.y);
       const [x2s, y2s] = s(pts.x2, pts.y2);
@@ -974,6 +1124,7 @@ export function drawHoverHighlight(
   ctx: CanvasRenderingContext2D,
   element: Element,
   viewport: Viewport,
+  allElements?: ReadonlyArray<Element>,
 ): void {
   ctx.save();
   ctx.resetTransform();
@@ -988,20 +1139,28 @@ export function drawHoverHighlight(
   switch (element.type) {
     case 'line':
     case 'arrow': {
-      const [x1s, y1s] = s(element.x, element.y);
-      const [x2s, y2s] = s(element.x2, element.y2);
+      // Follow the connector as rendered: ends resolved against the shapes
+      // they are bound to, and the full route for elbow connectors.
+      const all = allElements ?? [element];
       ctx.beginPath();
       if (
         element.type === 'line' &&
+        element.routing !== 'elbow' &&
         element.cx !== undefined &&
         element.cy !== undefined
       ) {
+        const pts = resolveArrowEndpoints(element, all);
+        const [x1s, y1s] = s(pts.x, pts.y);
+        const [x2s, y2s] = s(pts.x2, pts.y2);
         const [cxs, cys] = s(element.cx, element.cy);
         ctx.moveTo(x1s, y1s);
         ctx.quadraticCurveTo(cxs, cys, x2s, y2s);
       } else {
-        ctx.moveTo(x1s, y1s);
-        ctx.lineTo(x2s, y2s);
+        resolveConnectorRoute(element, all).forEach(([wx, wy], i) => {
+          const [sx, sy] = s(wx, wy);
+          if (i === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        });
       }
       ctx.stroke();
       break;
