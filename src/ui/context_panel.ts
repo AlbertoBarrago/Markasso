@@ -23,6 +23,7 @@ import {
   updateCustomColorButton,
 } from './color_picker';
 import { SHAPE_KIND_LABEL_KEYS, shapeKindIcon } from './shape_icons';
+import { styleTypeOf } from './style_type';
 
 const SHARED_COLOR_PRESETS = [
   '#e2e2ef',
@@ -40,6 +41,7 @@ function hasShapeLabel(el: Element): el is Element & { labelColor?: string } {
     el.type === 'ellipse' ||
     el.type === 'rhombus' ||
     el.type === 'shape' ||
+    el.type === 'stencil' ||
     el.type === 'line' ||
     el.type === 'arrow'
   );
@@ -1292,7 +1294,7 @@ export function initContextPanel(
 
     const first = selected[0]!;
     const allText = selected.every((el) => el.type === 'text');
-    const allImage = selected.every((el) => el.type === 'image');
+    const allImage = selected.every((el) => styleTypeOf(el) === 'image');
     const labelColorMode =
       scene.appState.activeTool === 'text' && selected.some(hasShapeLabel);
     const firstLabelTarget = selected.find(hasShapeLabel);
@@ -1413,6 +1415,7 @@ export function initContextPanel(
       'ellipse',
       'rhombus',
       'shape',
+      'stencil',
       'text',
     ]);
     const STYLE_TYPES = new Set([
@@ -1420,18 +1423,19 @@ export function initContextPanel(
       'ellipse',
       'rhombus',
       'shape',
+      'stencil',
       'line',
     ]);
     const CAP_TYPES = new Set(['line', 'freehand']);
     const hasFill =
       !labelColorMode &&
       !allImage &&
-      selected.some((el) => FILL_TYPES.has(el.type));
+      selected.some((el) => FILL_TYPES.has(styleTypeOf(el)));
     const hasStyle =
       !labelColorMode &&
       !allImage &&
       !allText &&
-      selected.some((el) => STYLE_TYPES.has(el.type));
+      selected.some((el) => STYLE_TYPES.has(styleTypeOf(el)));
     const hasLineCap =
       !labelColorMode &&
       !allImage &&

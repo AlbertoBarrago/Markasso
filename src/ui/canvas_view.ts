@@ -9,6 +9,7 @@ import type {
   RectangleElement,
   RhombusElement,
   ShapeElement,
+  StencilElement,
   TextElement,
 } from '../elements/element';
 import type { History } from '../engine/history';
@@ -19,7 +20,12 @@ import {
   subscribeCursors,
 } from '../io/presence';
 import { distToRoute, getRoutePointAt } from '../rendering/connector_geometry';
-import { contrastColor, drawElement } from '../rendering/draw_element';
+import {
+  contrastColor,
+  drawElement,
+  getStencilLabelWidth,
+  STENCIL_LABEL_GAP,
+} from '../rendering/draw_element';
 import {
   drawAlignGuides,
   drawHoverHighlight,
@@ -28,6 +34,7 @@ import {
   drawSnapIndicator,
   resolveConnectorRoute,
 } from '../rendering/draw_selection';
+import { onImageLoad } from '../rendering/image_cache';
 import { render } from '../rendering/renderer';
 import { getShapeTextBox } from '../rendering/shape_geometry';
 import { EllipseTool } from '../tools/ellipse_tool';
@@ -80,6 +87,10 @@ export function initCanvasView(
       needsRender = true;
     },
   };
+
+  onImageLoad(() => {
+    needsRender = true;
+  });
 
   function getActiveTool(): Tool {
     return TOOLS[history.present.appState.activeTool];
@@ -214,7 +225,8 @@ export function initCanvasView(
         el.type === 'rectangle' ||
         el.type === 'ellipse' ||
         el.type === 'rhombus' ||
-        el.type === 'shape'
+        el.type === 'shape' ||
+        el.type === 'stencil'
       ) {
         const bx = el.width < 0 ? el.x + el.width : el.x;
         const by = el.height < 0 ? el.y + el.height : el.y;
@@ -237,7 +249,8 @@ export function initCanvasView(
               | RectangleElement
               | EllipseElement
               | RhombusElement
-              | ShapeElement,
+              | ShapeElement
+              | StencilElement,
             history,
             canvas,
             (id) => {
@@ -1031,7 +1044,12 @@ function drawSlashTrail(
 // ── Shape label editor ─────────────────────────────────────────────────────────
 
 function openShapeLabelEditor(
-  el: RectangleElement | EllipseElement | RhombusElement | ShapeElement,
+  el:
+    | RectangleElement
+    | EllipseElement
+    | RhombusElement
+    | ShapeElement
+    | StencilElement,
   history: History,
   canvas: HTMLCanvasElement,
   onEditingChange: (id: string | null) => void,
@@ -1041,18 +1059,28 @@ function openShapeLabelEditor(
   const by = el.height < 0 ? el.y + el.height : el.y;
   const bw = Math.abs(el.width);
   const bh = Math.abs(el.height);
-  // Flowchart shapes lay their label out in a dedicated text box.
+  // Flowchart shapes lay their label out in a dedicated text box; stencil
+  // labels hang below the icon.
+  const stencilLabelW = getStencilLabelWidth(bw);
   const textBox =
     el.type === 'shape'
       ? getShapeTextBox(el.kind, bw, bh)
-      : { x: 0, y: 0, w: bw, h: bh };
+      : el.type === 'stencil'
+        ? {
+            x: (bw - stencilLabelW) / 2,
+            y: bh + STENCIL_LABEL_GAP,
+            w: stencilLabelW,
+            h: (el.labelFontSize ?? 14) * 1.2,
+          }
+        : { x: 0, y: 0, w: bw, h: bh };
   const cx = bx + textBox.x + textBox.w / 2;
   const cy = by + textBox.y + textBox.h / 2;
 
   const [screenCX, screenCY] = worldToScreen(viewport, cx, cy);
   const canvasRect = canvas.getBoundingClientRect();
 
-  const fontSize = el.labelFontSize ?? appState.fontSize;
+  const fontSize =
+    el.labelFontSize ?? (el.type === 'stencil' ? 14 : appState.fontSize);
   const fontFamily = el.labelFontFamily ?? appState.fontFamily;
   const shapeW = textBox.w * viewport.zoom;
 
@@ -1096,7 +1124,8 @@ function openShapeLabelEditor(
       latest?.type === 'rectangle' ||
       latest?.type === 'ellipse' ||
       latest?.type === 'rhombus' ||
-      latest?.type === 'shape'
+      latest?.type === 'shape' ||
+      latest?.type === 'stencil'
     ) {
       ta.style.color =
         latest.labelColor ??

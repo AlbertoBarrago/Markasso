@@ -2,6 +2,10 @@ import type { Command } from '../commands/commands';
 import type { Scene } from '../core/scene';
 import { pan, zoom } from '../core/viewport';
 import type { Element } from '../elements/element';
+import {
+  isRestylableStencil,
+  isRotatableStencil,
+} from '../elements/stencils/registry';
 
 export function assertNever(x: never): never {
   throw new Error(`Unhandled command: ${(x as { type: string }).type}`);
@@ -129,6 +133,7 @@ export function reducer(
             el.type === 'ellipse' ||
             el.type === 'rhombus' ||
             el.type === 'shape' ||
+            el.type === 'stencil' ||
             el.type === 'text' ||
             el.type === 'image'
           ) {
@@ -225,6 +230,7 @@ export function reducer(
             el.type === 'ellipse' ||
             el.type === 'rhombus' ||
             el.type === 'shape' ||
+            el.type === 'stencil' ||
             el.type === 'arrow' ||
             el.type === 'line')
             ? {
@@ -393,7 +399,10 @@ export function reducer(
       return {
         ...scene,
         elements: scene.elements.map((el) =>
-          el.id === command.id ? { ...el, rotation: command.rotation } : el,
+          el.id === command.id &&
+          !(el.type === 'stencil' && !isRotatableStencil(el))
+            ? { ...el, rotation: command.rotation }
+            : el,
         ),
       };
 
@@ -593,6 +602,10 @@ export function reducer(
           : { ...scene.appState, ...statePatch },
         elements: scene.elements.map((el) => {
           if (!targetIds.includes(el.id) && el.id !== fallbackId) return el;
+          // Vendor icons keep their artwork: only their label can be styled.
+          if (el.type === 'stencil' && !isRestylableStencil(el)) {
+            return labelColor !== undefined ? { ...el, labelColor } : el;
+          }
           const next = { ...el, ...patch } as Element;
           // `kind`, `routing` and head styles only exist on shapes and
           // connectors: never leak them onto other types.

@@ -16,7 +16,11 @@ All notable changes to this project will be documented here.
 - **Elbow connectors.** Lines and arrows can be routed orthogonally (context panel, "Routing"). The route is recomputed from the two ends: attached ends leave their shape with a short stub, floating ends move to the mid-side port facing the other end, and labels sit at the middle of the route. Elbow connectors export to SVG with their full route.
 - **Arrowhead styles.** Each end of a line or arrow can use an open head, a hollow or filled triangle, a hollow or filled diamond, or a circle (context panel, "Start head" / "End head"), covering UML inheritance, aggregation and composition. Closed heads cut the line out of their area, so hollow heads stay hollow on any background, including transparent PNG and SVG exports.
 
+- **Architecture icons.** A new icon element ships with Markasso's own set of 20 generic architecture icons (server, database, cache, queue, storage, load balancer, firewall, router, network, API, container, function, browser, mobile and desktop apps, user, users, external system, secret, document). Icons follow the stroke and fill colors, the theme and rough mode, keep their proportions in any box, carry a label below, expose connection ports and export to SVG. Insert them from the command palette (`Ctrl/Cmd+K`, "Icon: ...").
+  - Icons from vendor packs imported by the user (coming next) are embedded in the diagram and are never recolored or rotated, as the vendors' terms require.
+
 ### Fixed
+- **Images redraw as soon as they finish loading** instead of keeping their placeholder until the next interaction.
 - **SVG export centers shape labels vertically**, matching the canvas.
 - **Hover highlight follows connected lines.** Hovering a line or arrow bound to shapes highlighted its stored endpoints instead of the drawn ones; it now traces the actual path, including elbow routes.
 

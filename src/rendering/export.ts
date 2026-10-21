@@ -10,9 +10,12 @@ import type {
   RectangleElement,
   RhombusElement,
   ShapeElement,
+  StencilElement,
   TextElement,
 } from '../elements/element';
 import { SHAPE_DEFINITIONS, shapeCommandsToPathData } from '../elements/shapes';
+import { ICON_GRID } from '../elements/stencils/generic';
+import { getGenericIcon } from '../elements/stencils/registry';
 import {
   type ArrowHeadShape,
   getArrowHeadShape,
@@ -20,7 +23,12 @@ import {
   getRoutePointAt,
   type RoutePoint,
 } from './connector_geometry';
-import { drawElement } from './draw_element';
+import {
+  drawElement,
+  getIconStrokeWidth,
+  getStencilLabelWidth,
+  STENCIL_LABEL_GAP,
+} from './draw_element';
 import { getElementBounds, resolveConnectorRoute } from './draw_selection';
 import { getShapeTextBox } from './shape_geometry';
 
@@ -163,6 +171,19 @@ function computeBounds(elements: ReadonlyArray<Element>): {
 
   for (const el of elements) {
     switch (el.type) {
+      case 'stencil': {
+        // Include the label, which hangs below the icon box.
+        const x = el.width < 0 ? el.x + el.width : el.x;
+        const y = el.height < 0 ? el.y + el.height : el.y;
+        const w = Math.abs(el.width);
+        const h = Math.abs(el.height);
+        const labelW = el.label ? getStencilLabelWidth(w) : w;
+        minX = Math.min(minX, x + w / 2 - labelW / 2);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x + w / 2 + labelW / 2);
+        maxY = Math.max(maxY, y + h + stencilLabelHeight(el));
+        break;
+      }
       case 'rectangle':
       case 'ellipse':
       case 'rhombus':
@@ -274,6 +295,8 @@ function elementToSVG(
       return rhombusToSVG(el, ox, oy);
     case 'shape':
       return shapeToSVG(el, ox, oy);
+    case 'stencil':
+      return stencilToSVG(el, ox, oy);
     case 'line':
       return lineToSVG(el, ox, oy);
     case 'arrow':
@@ -412,6 +435,69 @@ function rhombusToSVG(el: RhombusElement, ox: number, oy: number): string {
     `${round(x)},${round(y + h / 2)}`,
   ].join(' ');
   return `<polygon points="${pts}" ${shapeProps(el)}${rotateAttr(el, ox, oy)}/>`;
+}
+
+function stencilLabelHeight(el: StencilElement): number {
+  if (!el.label) return 0;
+  const lines = el.label.split('\n').length;
+  return STENCIL_LABEL_GAP + lines * (el.labelFontSize ?? 14) * 1.2;
+}
+
+function stencilToSVG(el: StencilElement, ox: number, oy: number): string {
+  const x = (el.width < 0 ? el.x + el.width : el.x) + ox;
+  const y = (el.height < 0 ? el.y + el.height : el.y) + oy;
+  const w = Math.abs(el.width);
+  const h = Math.abs(el.height);
+  const parts: string[] = [];
+
+  if (el.source.kind === 'embedded') {
+    parts.push(
+      `<image href="${escapeXml(el.source.src)}" x="${round(x)}" y="${round(y)}" width="${round(w)}" height="${round(h)}" opacity="${el.opacity}" preserveAspectRatio="xMidYMid meet"/>`,
+    );
+  } else {
+    const icon = getGenericIcon(el.source.ref);
+    const size = Math.min(w, h);
+    if (icon && size > 0) {
+      const scale = size / ICON_GRID;
+      const tx = x + (w - size) / 2;
+      const ty = y + (h - size) / 2;
+      const stroke = escapeXml(el.strokeColor);
+      const fill = el.fillColor === 'transparent' ? 'none' : el.fillColor;
+      const inner: string[] = [];
+      if (icon.fill && fill !== 'none') {
+        inner.push(
+          `<path d="${shapeCommandsToPathData(icon.fill, 0, 0)}" fill="${escapeXml(fill)}" stroke="none"/>`,
+        );
+      }
+      inner.push(
+        `<path d="${shapeCommandsToPathData(icon.strokes, 0, 0)}" fill="none" stroke="${stroke}" stroke-width="${getIconStrokeWidth(el.strokeWidth)}" stroke-linecap="round" stroke-linejoin="round"/>`,
+      );
+      parts.push(
+        `<g opacity="${el.opacity}"${rotateAttr(el, ox, oy)}><g transform="translate(${round(tx)} ${round(ty)}) scale(${round(scale)})">${inner.join('')}</g></g>`,
+      );
+    } else {
+      parts.push(
+        `<rect x="${round(x)}" y="${round(y)}" width="${round(w)}" height="${round(h)}" fill="none" stroke="${escapeXml(el.strokeColor)}" stroke-dasharray="4 4"/>`,
+      );
+    }
+  }
+
+  if (el.label) {
+    const fontSize = el.labelFontSize ?? 14;
+    const lines = el.label.split('\n').length;
+    parts.push(
+      shapeLabelToSVG(
+        x + w / 2,
+        y + h + STENCIL_LABEL_GAP + (lines * fontSize * 1.2) / 2,
+        el.label,
+        fontSize,
+        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.labelColor ?? el.strokeColor,
+        el.opacity,
+      ),
+    );
+  }
+  return parts.join('\n');
 }
 
 function shapeToSVG(el: ShapeElement, ox: number, oy: number): string {

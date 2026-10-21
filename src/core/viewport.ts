@@ -78,6 +78,7 @@ export function fitToElements(
       el.type === 'text' ||
       el.type === 'rhombus' ||
       el.type === 'shape' ||
+      el.type === 'stencil' ||
       el.type === 'image'
     ) {
       const x1 = Math.min(el.x, el.x + el.width);

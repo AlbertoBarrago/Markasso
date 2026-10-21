@@ -24,6 +24,7 @@ import {
   showLiveStatusToast,
   showShareToast,
 } from './share_actions';
+import { styleTypeOf } from './style_type';
 
 const STROKE_PRESETS = [
   '#000000',
@@ -609,7 +610,7 @@ export function initMobileActionBar(
 
     const first = selected[0]!;
     const allText = selected.every((el) => el.type === 'text');
-    const allImage = selected.every((el) => el.type === 'image');
+    const allImage = selected.every((el) => styleTypeOf(el) === 'image');
 
     // Stroke swatches
     sheet
@@ -696,6 +697,7 @@ export function initMobileActionBar(
       'ellipse',
       'rhombus',
       'shape',
+      'stencil',
       'text',
     ]);
     const STYLE_TYPES = new Set([
@@ -703,12 +705,16 @@ export function initMobileActionBar(
       'ellipse',
       'rhombus',
       'shape',
+      'stencil',
       'line',
       'arrow',
     ]);
-    const hasFill = !allImage && selected.some((el) => FILL_TYPES.has(el.type));
+    const hasFill =
+      !allImage && selected.some((el) => FILL_TYPES.has(styleTypeOf(el)));
     const hasStyle =
-      !allImage && !allText && selected.some((el) => STYLE_TYPES.has(el.type));
+      !allImage &&
+      !allText &&
+      selected.some((el) => STYLE_TYPES.has(styleTypeOf(el)));
     const hasWidth = !allText && !allImage;
     (
       sheet

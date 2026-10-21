@@ -6,6 +6,7 @@ import type {
   Element,
   LineElement,
 } from '../elements/element';
+import { isRotatableStencil } from '../elements/stencils/registry';
 import {
   computeElbowRoute,
   getQuadraticBounds,
@@ -253,6 +254,7 @@ function hasPorts(el: Element): boolean {
     el.type === 'ellipse' ||
     el.type === 'rhombus' ||
     el.type === 'shape' ||
+    el.type === 'stencil' ||
     el.type === 'text' ||
     el.type === 'image'
   );
@@ -643,6 +645,7 @@ export function getElementBounds(
     case 'ellipse':
     case 'rhombus':
     case 'shape':
+    case 'stencil':
     case 'text':
     case 'image': {
       const x = el.width < 0 ? el.x + el.width : el.x;
@@ -727,6 +730,10 @@ export function getRotationHandleScreen(
   allElements?: ReadonlyArray<Element>,
 ): { screenX: number; screenY: number } | null {
   if (elements.length === 0) return null;
+  // No handle at all when a selected vendor icon may not be rotated.
+  if (elements.some((el) => el.type === 'stencil' && !isRotatableStencil(el))) {
+    return null;
+  }
 
   let minX = Infinity,
     minY = Infinity,
@@ -858,55 +865,61 @@ export function drawSelection(
     );
   }
 
-  // Rotation handle — connector line + circle with ↻ arc indicator
-  const mx = (sx + ex) / 2;
-  const rotHandleY = sy - ROTATION_HANDLE_OFFSET;
-
-  // Connector line from top-center of box to rotation handle
-  ctx.strokeStyle = 'rgba(120,180,255,0.5)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(mx, sy - 1);
-  ctx.lineTo(mx, rotHandleY + ROTATION_HANDLE_R);
-  ctx.stroke();
-
-  // Rotation handle circle
-  ctx.strokeStyle = 'rgba(120,180,255,0.9)';
-  ctx.fillStyle = '#1c1c2a';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.arc(mx, rotHandleY, ROTATION_HANDLE_R, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-
-  // ↻ arc indicator inside circle (partial arc with arrowhead)
-  const arcR = ROTATION_HANDLE_R - 2.5;
-  const arcStart = -0.7 * Math.PI;
-  const arcEnd = 0.5 * Math.PI;
-  ctx.strokeStyle = 'rgba(120,180,255,0.9)';
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.arc(mx, rotHandleY, arcR, arcStart, arcEnd);
-  ctx.stroke();
-
-  // Small filled arrowhead at end of arc
-  const arrowAngle = arcEnd + Math.PI / 2;
-  const arrowTipX = mx + arcR * Math.cos(arcEnd);
-  const arrowTipY = rotHandleY + arcR * Math.sin(arcEnd);
-  const ah = 3;
-  ctx.fillStyle = 'rgba(120,180,255,0.9)';
-  ctx.beginPath();
-  ctx.moveTo(arrowTipX, arrowTipY);
-  ctx.lineTo(
-    arrowTipX - ah * Math.cos(arrowAngle - Math.PI / 6),
-    arrowTipY - ah * Math.sin(arrowAngle - Math.PI / 6),
+  // Rotation handle, hidden when a selected vendor icon may not rotate.
+  const canRotate = !elements.some(
+    (el) => el.type === 'stencil' && !isRotatableStencil(el),
   );
-  ctx.lineTo(
-    arrowTipX - ah * Math.cos(arrowAngle + Math.PI / 6),
-    arrowTipY - ah * Math.sin(arrowAngle + Math.PI / 6),
-  );
-  ctx.closePath();
-  ctx.fill();
+  if (canRotate) {
+    // Rotation handle — connector line + circle with ↻ arc indicator
+    const mx = (sx + ex) / 2;
+    const rotHandleY = sy - ROTATION_HANDLE_OFFSET;
+
+    // Connector line from top-center of box to rotation handle
+    ctx.strokeStyle = 'rgba(120,180,255,0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(mx, sy - 1);
+    ctx.lineTo(mx, rotHandleY + ROTATION_HANDLE_R);
+    ctx.stroke();
+
+    // Rotation handle circle
+    ctx.strokeStyle = 'rgba(120,180,255,0.9)';
+    ctx.fillStyle = '#1c1c2a';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(mx, rotHandleY, ROTATION_HANDLE_R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // ↻ arc indicator inside circle (partial arc with arrowhead)
+    const arcR = ROTATION_HANDLE_R - 2.5;
+    const arcStart = -0.7 * Math.PI;
+    const arcEnd = 0.5 * Math.PI;
+    ctx.strokeStyle = 'rgba(120,180,255,0.9)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(mx, rotHandleY, arcR, arcStart, arcEnd);
+    ctx.stroke();
+
+    // Small filled arrowhead at end of arc
+    const arrowAngle = arcEnd + Math.PI / 2;
+    const arrowTipX = mx + arcR * Math.cos(arcEnd);
+    const arrowTipY = rotHandleY + arcR * Math.sin(arcEnd);
+    const ah = 3;
+    ctx.fillStyle = 'rgba(120,180,255,0.9)';
+    ctx.beginPath();
+    ctx.moveTo(arrowTipX, arrowTipY);
+    ctx.lineTo(
+      arrowTipX - ah * Math.cos(arrowAngle - Math.PI / 6),
+      arrowTipY - ah * Math.sin(arrowAngle - Math.PI / 6),
+    );
+    ctx.lineTo(
+      arrowTipX - ah * Math.cos(arrowAngle + Math.PI / 6),
+      arrowTipY - ah * Math.sin(arrowAngle + Math.PI / 6),
+    );
+    ctx.closePath();
+    ctx.fill();
+  }
 
   // Endpoint handles for single line/arrow selection (drawn on top of bounding box handles)
   if (elements.length === 1) {
@@ -1110,6 +1123,7 @@ function drawSelectedElementOutline(
     element.type !== 'polygon' &&
     element.type !== 'rectangle' &&
     element.type !== 'shape' &&
+    element.type !== 'stencil' &&
     element.type !== 'text' &&
     element.type !== 'image'
   ) {

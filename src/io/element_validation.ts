@@ -5,12 +5,18 @@ import {
   type ElementType,
   SHAPE_KINDS,
 } from '../elements/element';
+import {
+  isValidEmbeddedSvg,
+  isValidStencilRef,
+  MAX_EMBEDDED_SVG_CHARS,
+} from '../elements/stencils/registry';
 
 const ELEMENT_TYPES: ReadonlySet<ElementType> = new Set([
   'rectangle',
   'ellipse',
   'rhombus',
   'shape',
+  'stencil',
   'line',
   'arrow',
   'curve',
@@ -139,6 +145,22 @@ function hasShapeLabelFields(el: Record<string, unknown>): boolean {
   );
 }
 
+function isValidStencilSource(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  if (value.kind === 'builtin') {
+    return isString(value.ref, 128) && isValidStencilRef(value.ref);
+  }
+  if (value.kind === 'embedded') {
+    return (
+      isString(value.src, MAX_EMBEDDED_SVG_CHARS) &&
+      isValidEmbeddedSvg(value.src) &&
+      isString(value.pack, 128) &&
+      isString(value.name, 256)
+    );
+  }
+  return false;
+}
+
 function hasEndpointFields(el: Record<string, unknown>): boolean {
   return (
     isFiniteNumberInRange(el.x2, -10_000_000, 10_000_000) &&
@@ -203,6 +225,20 @@ export function isValidElement(value: unknown): value is Element {
         hasShapeLabelFields(value) &&
         typeof value.kind === 'string' &&
         SHAPE_KIND_SET.has(value.kind)
+      );
+
+    case 'stencil':
+      return (
+        hasBoxFields(value) &&
+        hasShapeLabelFields(value) &&
+        isValidStencilSource(value.source) &&
+        // Embedded vendor icons may not be rotated (see isRotatableStencil).
+        !(
+          isRecord(value.source) &&
+          value.source.kind === 'embedded' &&
+          value.rotation !== undefined &&
+          value.rotation !== 0
+        )
       );
 
     case 'line':

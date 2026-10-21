@@ -4,8 +4,11 @@ import type {
   Element,
   LineElement,
   ShapeElement,
+  StencilElement,
 } from '../elements/element';
 import { SHAPE_DEFINITIONS, type ShapeCommand } from '../elements/shapes';
+import { type GenericIcon, ICON_GRID } from '../elements/stencils/generic';
+import { getGenericIcon } from '../elements/stencils/registry';
 import {
   type ArrowHeadShape,
   type ConnectorEndpoints,
@@ -218,6 +221,10 @@ export function drawElement(
         );
         ctx.restore();
       }
+      break;
+    }
+    case 'stencil': {
+      drawStencil(ctx, el, strokeColor, editingShapeLabelId);
       break;
     }
     case 'ellipse': {
@@ -974,6 +981,145 @@ function drawElbowConnector(
     );
     ctx.restore();
   }
+}
+
+/** Gap between a stencil's box and the first line of its label. */
+export const STENCIL_LABEL_GAP = 6;
+
+/**
+ * Width available to a stencil label: icons are small, so labels may run
+ * wider than the icon itself, as in other diagram editors.
+ */
+export function getStencilLabelWidth(boxWidth: number): number {
+  return Math.max(boxWidth * 2, 120);
+}
+
+function drawStencil(
+  ctx: CanvasRenderingContext2D,
+  el: StencilElement,
+  strokeColor: string,
+  editingShapeLabelId: string | null | undefined,
+): void {
+  const bx = el.width < 0 ? el.x + el.width : el.x;
+  const by = el.height < 0 ? el.y + el.height : el.y;
+  const bw = Math.abs(el.width);
+  const bh = Math.abs(el.height);
+
+  if (el.source.kind === 'embedded') {
+    drawImageContained(ctx, el.source.src, bx, by, bw, bh);
+  } else {
+    const icon = getGenericIcon(el.source.ref);
+    if (icon) {
+      drawGenericIcon(ctx, el, icon, bx, by, bw, bh);
+    } else {
+      drawMissingStencil(ctx, bx, by, bw, bh);
+    }
+  }
+
+  if (el.label && editingShapeLabelId !== el.id) {
+    const fontSize = el.labelFontSize ?? 14;
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.font = `${fontSize}px ${el.labelFontFamily ?? 'Arial, sans-serif'}`;
+    ctx.fillStyle = el.labelColor ?? strokeColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    const lines = el.label
+      .split('\n')
+      .flatMap((l) => buildWrappedLines(ctx, l, getStencilLabelWidth(bw)));
+    lines.forEach((l, i) => {
+      ctx.fillText(
+        l,
+        bx + bw / 2,
+        by + bh + STENCIL_LABEL_GAP + i * fontSize * 1.2,
+      );
+    });
+    ctx.restore();
+  }
+}
+
+/**
+ * Generic icons are drawn on their 24-unit grid, scaled uniformly and
+ * centered in the box so they never distort. Stroke width is expressed in
+ * grid units and capped, so thick canvas strokes don't blot small icons.
+ */
+function drawGenericIcon(
+  ctx: CanvasRenderingContext2D,
+  el: StencilElement,
+  icon: GenericIcon,
+  bx: number,
+  by: number,
+  bw: number,
+  bh: number,
+): void {
+  const size = Math.min(bw, bh);
+  if (size <= 0) return;
+  const scale = size / ICON_GRID;
+  ctx.save();
+  ctx.translate(bx + (bw - size) / 2, by + (bh - size) / 2);
+  ctx.scale(scale, scale);
+  ctx.lineWidth = getIconStrokeWidth(el.strokeWidth);
+  if (icon.fill) {
+    ctx.beginPath();
+    traceShapeCommands(ctx, icon.fill, 0, 0);
+    ctx.fill();
+  }
+  ctx.beginPath();
+  const roughness = el.roughness ?? 0;
+  if (roughness < 0.05) {
+    traceShapeCommands(ctx, icon.strokes, 0, 0);
+  } else {
+    traceRoughShapeCommands(
+      ctx,
+      icon.strokes,
+      0,
+      0,
+      hashId(el.id),
+      roughness * 0.35,
+    );
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Icon stroke width in grid units for an element stroke width. */
+export function getIconStrokeWidth(strokeWidth: number): number {
+  return Math.min(Math.max(strokeWidth, 1) * 1.5, 3);
+}
+
+/** Placeholder for a reference this build doesn't know (or still loads). */
+function drawMissingStencil(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
+  ctx.save();
+  ctx.setLineDash([4, 4]);
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+  ctx.restore();
+}
+
+/** Draws an image inside the box with its aspect ratio kept (no distortion). */
+function drawImageContained(
+  ctx: CanvasRenderingContext2D,
+  src: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
+  const img = getCachedImage(src);
+  if (!img?.complete || img.naturalWidth === 0) {
+    drawImage(ctx, src, x, y, w, h);
+    return;
+  }
+  const ratio = Math.min(w / img.naturalWidth, h / img.naturalHeight);
+  const dw = img.naturalWidth * ratio;
+  const dh = img.naturalHeight * ratio;
+  ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
 }
 
 function drawLine(

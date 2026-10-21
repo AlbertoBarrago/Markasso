@@ -3,6 +3,7 @@ export type ElementType =
   | 'ellipse'
   | 'rhombus'
   | 'shape'
+  | 'stencil'
   | 'line'
   | 'arrow'
   | 'curve'
@@ -94,6 +95,39 @@ export interface ShapeElement extends BaseElement {
   readonly kind: ShapeKind;
   readonly width: number;
   readonly height: number;
+  readonly label?: string;
+  readonly labelFontSize?: number;
+  readonly labelFontFamily?: string;
+  readonly labelColor?: string;
+}
+
+/**
+ * Where a stencil's artwork comes from.
+ * - `builtin`: an icon shipped with Markasso, referenced as `<pack>/<id>`
+ *   (e.g. `generic/database`). Only the reference travels with the scene.
+ * - `embedded`: an icon from a pack the user imported (vendor icon sets that
+ *   may not be redistributed). The SVG travels inside the scene as a base64
+ *   data URL, so shared diagrams render for everyone.
+ */
+export type StencilSource =
+  | { readonly kind: 'builtin'; readonly ref: string }
+  | {
+      readonly kind: 'embedded';
+      readonly src: string;
+      readonly pack: string;
+      readonly name: string;
+    };
+
+/**
+ * Icon from a library, drawn inside its box with its aspect ratio kept and
+ * labeled below. Embedded vendor icons are never recolored or rotated, as
+ * their usage terms forbid altering them.
+ */
+export interface StencilElement extends BaseElement {
+  readonly type: 'stencil';
+  readonly width: number;
+  readonly height: number;
+  readonly source: StencilSource;
   readonly label?: string;
   readonly labelFontSize?: number;
   readonly labelFontFamily?: string;
@@ -226,6 +260,7 @@ export type Element =
   | EllipseElement
   | RhombusElement
   | ShapeElement
+  | StencilElement
   | LineElement
   | ArrowElement
   | CurveElement

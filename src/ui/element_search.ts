@@ -1,8 +1,10 @@
-import type { Element } from '../elements/element';
+import type { Element, StencilElement } from '../elements/element';
+import { isGenericIconId } from '../elements/stencils/generic';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { getElementBounds } from '../rendering/draw_selection';
 import { SHAPE_KIND_LABEL_KEYS, shapeKindIcon } from './shape_icons';
+import { GENERIC_ICON_LABEL_KEYS, genericIconSvg } from './stencil_icons';
 
 const TYPE_ICONS: Record<string, string> = {
   rectangle: `<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="14" height="10" rx="1.5"/></svg>`,
@@ -18,7 +20,24 @@ const TYPE_ICONS: Record<string, string> = {
 /** Localized type name; flowchart shapes use their kind ("Database"…). */
 function getTypeName(el: Element): string {
   if (el.type === 'shape') return t(SHAPE_KIND_LABEL_KEYS[el.kind]);
+  if (el.type === 'stencil') {
+    if (el.source.kind === 'embedded') return el.source.name;
+    const id = el.source.ref.split('/')[1] ?? '';
+    return isGenericIconId(id) ? t(GENERIC_ICON_LABEL_KEYS[id]) : t('stencil');
+  }
   return t(el.type) || el.type;
+}
+
+/**
+ * Generic icons show their own artwork; vendor icons use the image glyph
+ * rather than injecting their (scene-supplied) SVG into the results list.
+ */
+function stencilSearchIcon(el: StencilElement): string {
+  if (el.source.kind === 'builtin') {
+    const id = el.source.ref.split('/')[1] ?? '';
+    if (isGenericIconId(id)) return genericIconSvg(id, 13);
+  }
+  return TYPE_ICONS.image ?? '';
 }
 
 function getElementLabel(el: Element): string {
@@ -110,7 +129,9 @@ export function initElementSearch(
       const icon =
         el.type === 'shape'
           ? shapeKindIcon(el.kind, 13)
-          : (TYPE_ICONS[el.type] ?? '');
+          : el.type === 'stencil'
+            ? stencilSearchIcon(el)
+            : (TYPE_ICONS[el.type] ?? '');
       const fillColor =
         el.fillColor !== 'transparent' ? el.fillColor : el.strokeColor;
       const iconEl = document.createElement('span');
