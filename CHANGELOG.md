@@ -4,7 +4,7 @@ All notable changes to this project will be documented here.
 
 ---
 
-## [Unreleased]
+## [1.12.0] - 2026-10-21
 
 ### Added
 - **Flowchart shapes.** Eight standard flowchart symbols, inserted from the Library sidebar or drawn with the shape tool (`S`): start/end, data (I/O), document, database, predefined process, preparation, manual input and delay.
