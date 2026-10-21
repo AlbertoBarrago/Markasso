@@ -180,7 +180,7 @@
   "shape": "Flowchart shape",
   "shapes": "Flowchart shapes",
   "shapeKind": "Shape",
-  "hintShape": "Drag to draw the selected flowchart shape. Pick another one from the [[▾]] menu",
+  "hintShape": "Drag to draw the selected flowchart shape. Pick another one in the Library [[I]]",
   "shapeTerminator": "Start / End",
   "shapeData": "Data (I/O)",
   "shapeDocument": "Document",
@@ -221,5 +221,11 @@
   "iconUsers": "Users",
   "iconExternalSystem": "External system",
   "iconSecret": "Secret",
-  "iconDocument": "Document"
+  "iconDocument": "Document",
+  "library": "Library",
+  "libraryIcons": "Icons",
+  "librarySearch": "Search shapes and icons",
+  "libraryRecent": "Recent",
+  "libraryNoResults": "No matching shapes or icons",
+  "close": "Close"
 }

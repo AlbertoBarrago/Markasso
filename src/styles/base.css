@@ -441,11 +441,6 @@ body {
 .tb-group-flyout.open {
   display: flex;
 }
-/* Flowchart shapes: 8 kinds laid out as a compact 4x2 grid */
-.tb-group-flyout.tb-shape-flyout.open {
-  display: grid;
-  grid-template-columns: repeat(4, auto);
-}
 
 /* Zoom percentage label */
 .tb-zoom {

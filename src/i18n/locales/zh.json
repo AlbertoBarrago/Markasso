@@ -174,7 +174,7 @@
   "shape": "流程图形状",
   "shapes": "流程图形状",
   "shapeKind": "形状",
-  "hintShape": "拖动绘制所选形状，可在 [[▾]] 菜单中切换",
+  "hintShape": "拖动绘制所选形状，可在素材库中切换 [[I]]",
   "shapeTerminator": "开始 / 结束",
   "shapeData": "数据 (输入/输出)",
   "shapeDocument": "文档",
@@ -215,5 +215,11 @@
   "iconUsers": "用户组",
   "iconExternalSystem": "外部系统",
   "iconSecret": "密钥",
-  "iconDocument": "文档"
+  "iconDocument": "文档",
+  "library": "素材库",
+  "libraryIcons": "图标",
+  "librarySearch": "搜索形状和图标",
+  "libraryRecent": "最近使用",
+  "libraryNoResults": "没有匹配的形状或图标",
+  "close": "关闭"
 }

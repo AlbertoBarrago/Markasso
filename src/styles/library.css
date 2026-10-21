@@ -1,0 +1,164 @@
+/* ── Library sidebar (shapes and icons), modeled on Excalidraw's ──────── */
+#library-panel {
+  position: fixed;
+  top: 72px;
+  right: 16px;
+  bottom: 76px;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--bg-island);
+  border: 1px solid var(--island-border);
+  border-radius: var(--island-radius);
+  box-shadow: var(--island-shadow);
+  color: var(--text);
+  z-index: 30;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(8px);
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+#library-panel.open {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateX(0);
+}
+/* The minimap shares the right edge: hide it while the library is open. */
+body.library-open #minimap {
+  display: none;
+}
+
+.lib-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.lib-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+.lib-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.lib-close:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.lib-search {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.lib-search:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.lib-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lib-section > summary {
+  padding: 4px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.lib-section > summary:hover {
+  color: var(--text);
+}
+
+.lib-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 4px 0 6px;
+}
+
+.lib-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--bg-hover);
+  color: var(--text);
+  cursor: grab;
+  font: inherit;
+}
+.lib-item:hover {
+  border-color: var(--accent);
+}
+.lib-item:active {
+  cursor: grabbing;
+}
+.lib-item:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+.lib-item-label {
+  width: 100%;
+  font-size: 10.5px;
+  line-height: 1.2;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lib-empty {
+  padding: 16px 4px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* Mobile: bottom sheet above the action bar */
+@media (pointer: coarse) {
+  #library-panel {
+    top: auto;
+    left: 12px;
+    right: 12px;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    max-height: 60vh;
+    transform: translateY(8px);
+  }
+  #library-panel.open {
+    transform: translateY(0);
+  }
+  .lib-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

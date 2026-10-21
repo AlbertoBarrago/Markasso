@@ -9,9 +9,9 @@ import { exportMarkasso } from '../io/markasso';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 import type { SelectTool } from '../tools/select_tool';
+import { insertStencil } from './library_insert';
 import { SHAPE_KIND_LABEL_KEYS, shapeKindIcon } from './shape_icons';
 import { GENERIC_ICON_LABEL_KEYS, genericIconSvg } from './stencil_icons';
-import { insertStencil } from './stencil_insert';
 
 interface PaletteItem {
   id: string;

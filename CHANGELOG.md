@@ -7,8 +7,8 @@ All notable changes to this project will be documented here.
 ## [Unreleased]
 
 ### Added
-- **Flowchart shapes.** A new shape tool (`S`, or the split button next to the ellipse) draws eight standard flowchart symbols: start/end, data (I/O), document, database, predefined process, preparation, manual input and delay.
-  - Pick the symbol from the toolbar flyout, the command palette, or the context panel, which also switches the symbol of selected shapes in place (undoable).
+- **Flowchart shapes.** Eight standard flowchart symbols, inserted from the Library sidebar or drawn with the shape tool (`S`): start/end, data (I/O), document, database, predefined process, preparation, manual input and delay.
+  - Pick the symbol in the Library, the command palette, or the context panel, which also switches the symbol of selected shapes in place (undoable).
   - Shapes support labels, fill, stroke styles, hand-drawn roughness, rotation, PNG/SVG export and live sessions.
   - Connectors snap to the real outline of each symbol (the slanted side of a data block, the wavy edge of a document, the cylinder caps of a database).
   - Every symbol is defined once as a parametric outline; bounds, snapping, rendering, export and toolbar icons are all derived from it.
@@ -16,8 +16,10 @@ All notable changes to this project will be documented here.
 - **Elbow connectors.** Lines and arrows can be routed orthogonally (context panel, "Routing"). The route is recomputed from the two ends: attached ends leave their shape with a short stub, floating ends move to the mid-side port facing the other end, and labels sit at the middle of the route. Elbow connectors export to SVG with their full route.
 - **Arrowhead styles.** Each end of a line or arrow can use an open head, a hollow or filled triangle, a hollow or filled diamond, or a circle (context panel, "Start head" / "End head"), covering UML inheritance, aggregation and composition. Closed heads cut the line out of their area, so hollow heads stay hollow on any background, including transparent PNG and SVG exports.
 
-- **Architecture icons.** A new icon element ships with Markasso's own set of 20 generic architecture icons (server, database, cache, queue, storage, load balancer, firewall, router, network, API, container, function, browser, mobile and desktop apps, user, users, external system, secret, document). Icons follow the stroke and fill colors, the theme and rough mode, keep their proportions in any box, carry a label below, expose connection ports and export to SVG. Insert them from the command palette (`Ctrl/Cmd+K`, "Icon: ...").
+- **Architecture icons.** A new icon element ships with Markasso's own set of 20 generic architecture icons (server, database, cache, queue, storage, load balancer, firewall, router, network, API, container, function, browser, mobile and desktop apps, user, users, external system, secret, document). Icons follow the stroke and fill colors, the theme and rough mode, keep their proportions in any box, carry a label below, expose connection ports and export to SVG.
   - Icons from vendor packs imported by the user (coming next) are embedded in the diagram and are never recolored or rotated, as the vendors' terms require.
+
+- **Library sidebar.** Shapes and icons live in a searchable sidebar on the right, modeled on Excalidraw's library: toggle it with `I` or the library button in the top-right toolbar. Click an item to insert it at the center of the view, or drag it onto the canvas; recently used items are listed first. On touch devices it opens as a bottom sheet from the tools menu. Icons are also reachable from the command palette (`Ctrl/Cmd+K`, "Icon: ...").
 
 ### Fixed
 - **Images redraw as soon as they finish loading** instead of keeping their placeholder until the next interaction.

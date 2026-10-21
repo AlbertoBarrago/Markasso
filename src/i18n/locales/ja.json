@@ -174,7 +174,7 @@
   "shape": "フローチャート図形",
   "shapes": "フローチャート図形",
   "shapeKind": "図形",
-  "hintShape": "ドラッグで選択した図形を描画。[[▾]] メニューで切り替え",
+  "hintShape": "ドラッグで選択した図形を描画。ライブラリで切り替え [[I]]",
   "shapeTerminator": "開始 / 終了",
   "shapeData": "データ (入出力)",
   "shapeDocument": "書類",
@@ -215,5 +215,11 @@
   "iconUsers": "ユーザー群",
   "iconExternalSystem": "外部システム",
   "iconSecret": "シークレット",
-  "iconDocument": "ドキュメント"
+  "iconDocument": "ドキュメント",
+  "library": "ライブラリ",
+  "libraryIcons": "アイコン",
+  "librarySearch": "図形とアイコンを検索",
+  "libraryRecent": "最近使用",
+  "libraryNoResults": "該当する図形やアイコンはありません",
+  "close": "閉じる"
 }

@@ -10,6 +10,7 @@ import type { History } from '../engine/history';
 import { validateElements } from '../io/element_validation';
 import type { SelectTool } from '../tools/select_tool';
 import { isFocusInPanel } from './keyboard_utils';
+import { toggleLibrary } from './library_panel';
 
 export function initShortcuts(history: History, selectTool: SelectTool): void {
   let pasteCount = 0;
@@ -32,6 +33,7 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     ['d', () => history.dispatch({ type: 'SET_TOOL', tool: 'rombo' })],
     ['3', () => history.dispatch({ type: 'SET_TOOL', tool: 'rombo' })],
     ['s', () => history.dispatch({ type: 'SET_TOOL', tool: 'shape' })],
+    ['i', () => toggleLibrary()],
     ['0', () => history.dispatch({ type: 'SET_TOOL', tool: 'eraser' })],
     ['g', () => history.dispatch({ type: 'TOGGLE_GRID' })],
   ]);
@@ -267,7 +269,12 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
 
     if (!e.ctrlKey && !e.metaKey && !e.altKey) {
       const fn = shortcuts.get(e.key.toLowerCase());
-      if (fn) fn();
+      if (fn) {
+        // A shortcut may move focus to an input (e.g. `I` focuses the library
+        // search): without this the key itself would be typed into it.
+        e.preventDefault();
+        fn();
+      }
     }
   });
 

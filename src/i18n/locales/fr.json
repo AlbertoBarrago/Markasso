@@ -174,7 +174,7 @@
   "shape": "Forme d'organigramme",
   "shapes": "Formes d'organigramme",
   "shapeKind": "Forme",
-  "hintShape": "Glisser pour dessiner la forme sélectionnée. Choisissez-en une autre dans le menu [[▾]]",
+  "hintShape": "Glisser pour dessiner la forme sélectionnée. Choisissez-en une autre dans la Bibliothèque [[I]]",
   "shapeTerminator": "Début / Fin",
   "shapeData": "Données (E/S)",
   "shapeDocument": "Document",
@@ -215,5 +215,11 @@
   "iconUsers": "Utilisateurs",
   "iconExternalSystem": "Système externe",
   "iconSecret": "Secret",
-  "iconDocument": "Document"
+  "iconDocument": "Document",
+  "library": "Bibliothèque",
+  "libraryIcons": "Icônes",
+  "librarySearch": "Rechercher formes et icônes",
+  "libraryRecent": "Récents",
+  "libraryNoResults": "Aucune forme ni icône trouvée",
+  "close": "Fermer"
 }

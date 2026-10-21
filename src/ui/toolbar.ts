@@ -1,6 +1,5 @@
 import type { ActiveTool } from '../core/app_state';
 import { fitToElements } from '../core/viewport';
-import { SHAPE_KINDS } from '../elements/element';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
@@ -17,9 +16,9 @@ import {
 } from '../io/realtime';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
+import { onLibraryVisibilityChange, toggleLibrary } from './library_panel';
 import { onLiveHide, onLiveReveal, setLiveUI } from './live_name';
 import { initPeopleList } from './people_list';
-import { SHAPE_KIND_LABEL_KEYS, shapeKindIcon } from './shape_icons';
 import {
   copyToClipboard,
   showLiveStatusToast,
@@ -53,6 +52,7 @@ const IC = {
   hamburger: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/></svg>`,
   importImg: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="16" height="14" rx="2"/><circle cx="7" cy="8" r="1.5"/><path d="M2 14l4-4 3 3 3-3 4 4"/><path d="M13 7l2-2 2 2M15 5v5"/></svg>`,
   eraser: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h14"/><path d="M5 17l-2-4 9-8 4 4-7 8H5z"/><path d="M12 5l4 4"/></svg>`,
+  library: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="3.5" height="13" rx="0.8"/><rect x="8" y="3.5" width="3.5" height="13" rx="0.8"/><path d="M13.2 4.6l3.2-.9 3 11.6-3.2.9z"/></svg>`,
   toolbox: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="6" height="6" rx="1.5"/><rect x="12" y="2" width="6" height="6" rx="1.5"/><rect x="2" y="12" width="6" height="6" rx="1.5"/><rect x="12" y="12" width="6" height="6" rx="1.5"/></svg>`,
   close: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="2" y1="2" x2="14" y2="14"/><line x1="14" y1="2" x2="2" y2="14"/></svg>`,
   sticky: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h12a1 1 0 011 1v9l-4 4H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M13 13v3.5L17 13h-4z" fill="currentColor" stroke="none"/><line x1="6" y1="7" x2="14" y2="7"/><line x1="6" y1="10" x2="11" y2="10"/></svg>`,
@@ -146,96 +146,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   lockSep.className = 'tb-separator';
   centerPill.appendChild(lockSep);
 
-  // ── Flowchart shapes: split button + flyout ───────────────────────────────
-  // Main area activates the shape tool with the current kind; the chevron
-  // opens a flyout to pick another kind.
-  let shapeFlyoutOpen = false;
-  const shapeWrap = div('tb-group-wrap');
-  const shapeSplit = div('tb-split-inner');
-  const shapeBtn = document.createElement('button');
-  shapeBtn.className = 'tb-btn tb-btn-group';
-  shapeBtn.setAttribute('aria-pressed', 'false');
-  const shapeChevron = document.createElement('button');
-  shapeChevron.className = 'tb-group-chevron-btn';
-  shapeChevron.innerHTML = '▾';
-  shapeChevron.title = t('shapes');
-  shapeChevron.setAttribute('aria-label', t('shapes'));
-  shapeChevron.setAttribute('aria-haspopup', 'true');
-  shapeChevron.setAttribute('aria-expanded', 'false');
-  const shapeFlyout = div('tb-group-flyout tb-shape-flyout');
-  shapeFlyout.setAttribute('role', 'menu');
-  shapeFlyout.setAttribute('aria-label', t('shapes'));
-
-  const closeShapeFlyout = (): void => {
-    shapeFlyoutOpen = false;
-    shapeFlyout.classList.remove('open');
-    shapeChevron.setAttribute('aria-expanded', 'false');
-  };
-  shapeBtn.addEventListener('click', () => {
-    history.dispatch({ type: 'SET_TOOL', tool: 'shape' });
-    closeShapeFlyout();
-  });
-  shapeChevron.addEventListener('click', (e) => {
-    e.stopPropagation();
-    shapeFlyoutOpen = !shapeFlyoutOpen;
-    shapeFlyout.classList.toggle('open', shapeFlyoutOpen);
-    shapeChevron.setAttribute('aria-expanded', String(shapeFlyoutOpen));
-    if (shapeFlyoutOpen)
-      shapeFlyout.querySelector<HTMLButtonElement>('button')?.focus();
-  });
-  for (const kind of SHAPE_KINDS) {
-    const label = t(SHAPE_KIND_LABEL_KEYS[kind]);
-    const b = document.createElement('button');
-    b.className = 'tb-btn tb-group-flyout-btn';
-    b.title = label;
-    b.setAttribute('aria-label', label);
-    b.setAttribute('role', 'menuitem');
-    b.dataset.kind = kind;
-    b.innerHTML = shapeKindIcon(kind);
-    b.addEventListener('click', (e) => {
-      e.stopPropagation();
-      history.dispatch({ type: 'SET_TOOL', tool: 'shape', shapeKind: kind });
-      closeShapeFlyout();
-    });
-    shapeFlyout.appendChild(b);
-  }
-  shapeWrap.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && shapeFlyoutOpen) {
-      closeShapeFlyout();
-      shapeChevron.focus();
-    }
-  });
-  document.addEventListener(
-    'pointerdown',
-    (e) => {
-      if (shapeFlyoutOpen && !shapeWrap.contains(e.target as Node)) {
-        closeShapeFlyout();
-      }
-    },
-    { capture: true },
-  );
-  shapeSplit.append(shapeBtn, shapeChevron);
-  shapeWrap.append(shapeSplit, shapeFlyout);
-
-  function syncShapeButton(): void {
-    const { activeTool, shapeKind } = history.present.appState;
-    const label = `${t('shapes')}: ${t(SHAPE_KIND_LABEL_KEYS[shapeKind])}`;
-    const isActive = activeTool === 'shape';
-    shapeBtn.innerHTML = shapeKindIcon(shapeKind);
-    shapeBtn.title = `${label} (S)`;
-    shapeBtn.setAttribute('aria-label', label);
-    shapeBtn.classList.toggle('active', isActive);
-    shapeBtn.setAttribute('aria-pressed', String(isActive));
-    shapeChevron.classList.toggle('active', isActive);
-    shapeFlyout
-      .querySelectorAll<HTMLButtonElement>('button[data-kind]')
-      .forEach((b) => {
-        b.classList.toggle('active', b.dataset.kind === shapeKind);
-      });
-  }
-
   TOOLS.forEach((toolDef) => {
-    if (toolDef.tool === 'line') centerPill.appendChild(shapeWrap);
     if (toolDef.tool === 'eraser') {
       const sep = document.createElement('span');
       sep.className = 'tb-separator';
@@ -976,9 +887,22 @@ export function initToolbar(container: HTMLElement, history: History): void {
   });
   presetsIsland.append(presetsTrigger, presetsPanel);
 
+  // Library sidebar toggle (shapes and icons), as in Excalidraw
+  const libraryIsland = div('tb-island');
+  const libraryTrigger = mkBtn(IC.library, `${t('library')} (I)`);
+  libraryTrigger.setAttribute('aria-label', t('library'));
+  libraryTrigger.setAttribute('aria-pressed', 'false');
+  libraryTrigger.addEventListener('click', () => toggleLibrary());
+  onLibraryVisibilityChange((open) => {
+    libraryTrigger.classList.toggle('active', open);
+    libraryTrigger.setAttribute('aria-pressed', String(open));
+  });
+  libraryIsland.append(libraryTrigger);
+
   topRight.append(
     importIsland,
     presetsIsland,
+    libraryIsland,
     exportIsland,
     peopleIsland,
     shareIsland,
@@ -999,22 +923,8 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const toolsPopup = document.createElement('div');
   toolsPopup.id = 'mobile-tools-popup';
 
-  // Mobile tools mirror the desktop toolbar; the shape split button becomes
-  // a plain entry (the kind is switched from the action sheet).
-  const mobileTools: ToolDef[] = TOOLS.flatMap((def) =>
-    def.tool === 'line'
-      ? [
-          {
-            tool: 'shape',
-            icon: shapeKindIcon('terminator'),
-            label: t('shapes'),
-            key: 'S',
-            num: '',
-          },
-          def,
-        ]
-      : [def],
-  );
+  // Mobile tools mirror the desktop toolbar exactly.
+  const mobileTools: ToolDef[] = [...TOOLS];
 
   for (const toolDef of mobileTools) {
     const b = document.createElement('button');
@@ -1029,6 +939,19 @@ export function initToolbar(container: HTMLElement, history: History): void {
     });
     toolsPopup.appendChild(b);
   }
+
+  // Library (shapes and icons) opens as a bottom sheet on mobile
+  const mobileLibraryBtn = document.createElement('button');
+  mobileLibraryBtn.className = 'mobile-tools-popup-btn';
+  mobileLibraryBtn.title = t('library');
+  mobileLibraryBtn.setAttribute('aria-label', t('library'));
+  mobileLibraryBtn.innerHTML = IC.library;
+  mobileLibraryBtn.addEventListener('click', () => {
+    toggleLibrary(true);
+    toolsPopup.classList.remove('open');
+    toolsFab.classList.remove('active');
+  });
+  toolsPopup.appendChild(mobileLibraryBtn);
 
   // Lock button row at the bottom of the popup
   const lockRowSep = document.createElement('div');
@@ -1096,7 +1019,6 @@ export function initToolbar(container: HTMLElement, history: History): void {
       b.classList.toggle('active', isActive);
       b.setAttribute('aria-pressed', String(isActive));
     }
-    syncShapeButton();
     toolsPopup
       .querySelectorAll<HTMLButtonElement>('.mobile-tools-popup-btn[data-tool]')
       .forEach((btn) => {

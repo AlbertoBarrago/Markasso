@@ -180,7 +180,7 @@
   "shape": "Forma flowchart",
   "shapes": "Forme flowchart",
   "shapeKind": "Forma",
-  "hintShape": "Trascina per disegnare la forma selezionata. Scegline un'altra dal menu [[▾]]",
+  "hintShape": "Trascina per disegnare la forma selezionata. Scegline un'altra nella Libreria [[I]]",
   "shapeTerminator": "Inizio / Fine",
   "shapeData": "Dati (I/O)",
   "shapeDocument": "Documento",
@@ -221,5 +221,11 @@
   "iconUsers": "Utenti",
   "iconExternalSystem": "Sistema esterno",
   "iconSecret": "Segreto",
-  "iconDocument": "Documento"
+  "iconDocument": "Documento",
+  "library": "Libreria",
+  "libraryIcons": "Icone",
+  "librarySearch": "Cerca forme e icone",
+  "libraryRecent": "Recenti",
+  "libraryNoResults": "Nessuna forma o icona trovata",
+  "close": "Chiudi"
 }

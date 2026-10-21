@@ -174,7 +174,7 @@
   "shape": "Forma de diagrama",
   "shapes": "Formas de diagrama",
   "shapeKind": "Forma",
-  "hintShape": "Arrastrar para dibujar la forma seleccionada. Elige otra en el menú [[▾]]",
+  "hintShape": "Arrastrar para dibujar la forma seleccionada. Elige otra en la Biblioteca [[I]]",
   "shapeTerminator": "Inicio / Fin",
   "shapeData": "Datos (E/S)",
   "shapeDocument": "Documento",
@@ -215,5 +215,11 @@
   "iconUsers": "Usuarios",
   "iconExternalSystem": "Sistema externo",
   "iconSecret": "Secreto",
-  "iconDocument": "Documento"
+  "iconDocument": "Documento",
+  "library": "Biblioteca",
+  "libraryIcons": "Iconos",
+  "librarySearch": "Buscar formas e iconos",
+  "libraryRecent": "Recientes",
+  "libraryNoResults": "No se encontraron formas ni iconos",
+  "close": "Cerrar"
 }

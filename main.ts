@@ -12,6 +12,7 @@ import { initElementSearch } from './src/ui/element_search';
 import { initGuide } from './src/ui/guide';
 import { initHintBar } from './src/ui/hint_bar';
 import { initImageImport } from './src/ui/image_import';
+import { initLibraryPanel } from './src/ui/library_panel';
 import { setLiveUI } from './src/ui/live_name';
 import { initMinimap } from './src/ui/minimap';
 import { initMobileActionBar } from './src/ui/mobile_action_bar';
@@ -120,6 +121,7 @@ async function bootstrap(): Promise<void> {
   initCommandPalette(hist, selectTool);
   initMinimap(workspace, hist);
   initElementSearch(workspace, hist);
+  initLibraryPanel(workspace, hist, canvas);
   initShortcutsHelp(appEl);
   initHintBar(appEl, hist);
   initSession(hist);
