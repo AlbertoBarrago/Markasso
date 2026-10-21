@@ -491,6 +491,24 @@ function sideFacing(lx: number, ly: number, hw: number, hh: number): number {
   return ny >= 0 ? 2 : 0;
 }
 
+/**
+ * Side of `from` facing `to`, picked like draw.io: leave along the axis
+ * with the larger free gap between the two boxes. Comparing gaps (not
+ * center offsets scaled by the box) keeps wide, short shapes from always
+ * exiting through the bottom and crossing their neighbors.
+ */
+function sideTowardBox(
+  from: { x: number; y: number; w: number; h: number },
+  to: { x: number; y: number; w: number; h: number },
+): number {
+  const dx = to.x + to.w / 2 - (from.x + from.w / 2);
+  const dy = to.y + to.h / 2 - (from.y + from.h / 2);
+  const gapX = Math.abs(dx) - (from.w + to.w) / 2;
+  const gapY = Math.abs(dy) - (from.h + to.h) / 2;
+  if (gapX >= gapY) return dx >= 0 ? 1 : 3;
+  return dy >= 0 ? 2 : 0;
+}
+
 /** World-space axis direction of a side, snapped after applying rotation. */
 function sideDirection(el: Element, side: number): RouteDirection {
   const [ldx, ldy] = SIDE_DIRS[side]!;
@@ -513,6 +531,7 @@ function elbowEnd(
   anchor: ConnectorAnchor | undefined,
   pinned: RoutePoint,
   target: RoutePoint,
+  targetBox?: { x: number; y: number; w: number; h: number },
 ): { point: RoutePoint; dir: RouteDirection } {
   const b = getElementBounds(el);
   const cx = b.x + b.w / 2;
@@ -524,7 +543,10 @@ function elbowEnd(
   const [lx, ly] = el.rotation
     ? rotatePoint(target[0], target[1], cx, cy, -el.rotation)
     : target;
-  const side = sideFacing(lx - cx, ly - cy, b.w / 2, b.h / 2);
+  const side =
+    targetBox && !el.rotation
+      ? sideTowardBox(b, targetBox)
+      : sideFacing(lx - cx, ly - cy, b.w / 2, b.h / 2);
   const port = getElementPorts(el)[side];
   return {
     point: port ? [port.worldX, port.worldY] : pinned,
@@ -565,12 +587,23 @@ export function resolveConnectorRoute(
     return [ocx, ocy];
   };
 
+  // Two floating ends on unrotated shapes pick their sides from the gap
+  // between the boxes, so both ends agree on the axis.
+  const boxOf = (
+    other: Element | undefined,
+    otherAnchor: ConnectorAnchor | undefined,
+  ) =>
+    other && !otherAnchor && !other.rotation
+      ? getElementBounds(other)
+      : undefined;
+
   const s = startEl
     ? elbowEnd(
         startEl,
         el.startAnchor,
         start,
         targetOf(endEl, el.endAnchor, end),
+        boxOf(endEl, el.endAnchor),
       )
     : null;
   const e = endEl
@@ -579,6 +612,7 @@ export function resolveConnectorRoute(
         el.endAnchor,
         end,
         targetOf(startEl, el.startAnchor, start),
+        boxOf(startEl, el.startAnchor),
       )
     : null;
 
