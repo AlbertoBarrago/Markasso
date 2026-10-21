@@ -1,3 +1,4 @@
+import { detectLocale, type Locale } from './detect';
 import de from './locales/de.json';
 import en from './locales/en.json';
 import es from './locales/es.json';
@@ -9,7 +10,7 @@ import zh from './locales/zh.json';
 
 const STORAGE_KEY = 'markasso-locale';
 
-export type Locale = 'it' | 'en' | 'es' | 'fr' | 'de' | 'pt' | 'zh' | 'ja';
+export type { Locale };
 
 export const LOCALES: Record<Locale, string> = {
   it: 'Italiano',
@@ -33,8 +34,11 @@ const dicts: Record<Locale, Record<string, string>> = {
   ja,
 };
 
-const stored = localStorage.getItem(STORAGE_KEY);
-const current: Locale = stored && stored in dicts ? (stored as Locale) : 'it';
+const current: Locale = detectLocale(
+  localStorage.getItem(STORAGE_KEY),
+  navigator.languages.length > 0 ? navigator.languages : [navigator.language],
+);
+document.documentElement.lang = current;
 
 export function t(key: string): string {
   return dicts[current][key] ?? dicts.en[key] ?? key;
