@@ -1,0 +1,29 @@
+{
+  "name": "@markasso/mcp",
+  "version": "0.1.0",
+  "description": "MCP server that lets AI agents create, read and edit Markasso diagrams, offline or live on a shared board",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "markasso-mcp": "dist/markasso-mcp.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build --config vite.config.ts",
+    "start": "node dist/markasso-mcp.js",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.7"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.19.2"
+  }
+}

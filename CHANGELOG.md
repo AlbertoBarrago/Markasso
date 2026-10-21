@@ -4,6 +4,25 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.13.0] - 2026-10-21
+
+### Added
+- **MCP server for AI agents.** A new `mcp/` package lets Claude, Codex, Gemini and local models (e.g. Gemma in LM Studio) work with Markasso diagrams through the [Model Context Protocol](https://modelcontextprotocol.io). Build it with `pnpm mcp:build`; setup for each client is in [`mcp/README.md`](mcp/README.md).
+  - **Document mode:** agents add nodes (shapes, flowchart symbols, generic and Kubernetes icons) and connections by short keys, update or remove them, read the diagram back as compact text, then save a `.markasso` file, export SVG or publish a markasso.it share link.
+  - **Live mode:** an agent joins a live session from its `?live=` link and draws on the shared board in real time. People see it in the room and follow its cursor; the agent reads what they drew. Board labels are passed to the model as data, not instructions.
+  - Every change goes through Markasso's own reducer and validation, so agent diagrams match hand-made ones and undo works. Vendor icon packs stay out of reach of agents, as their terms require.
+- **Layered auto-layout.** Nodes can be arranged in layers, top-to-bottom or left-to-right, following their connections (used by the MCP `diagram_layout` tool).
+
+### Changed
+- **Standalone text resizes proportionally.** Dragging a corner of a text box scales the font together with the box; dragging a side keeps the font size and reflows the text. Multi-selections with text keep their aspect ratio from the corners.
+- **SVG export is a pure function** of the elements and the canvas color, shared by the app and the MCP server.
+
+### Fixed
+- **Elbow connectors pick the side facing the free space.** A floating elbow end between a wide shape and a shape below it no longer cuts across a neighbor: the side is chosen by the gap between the two shapes, as in draw.io.
+- **Remote changes no longer steal your selection.** Elements created by another participant in a live session were selected on your screen; your selection now stays as it was.
+
+---
+
 ## [1.12.1] - 2026-10-21
 
 ### Added

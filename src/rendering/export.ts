@@ -132,8 +132,37 @@ export function exportHTML(scene: Scene): void {
 // ── SVG export ─────────────────────────────────────────────────────────────────
 
 export function exportSVG(scene: Scene, withBackground = true): void {
-  const { elements } = scene;
-  if (elements.length === 0) return;
+  const svgStr = sceneToSVG(scene.elements, {
+    canvasColor: getCanvasBg(),
+    withBackground,
+  });
+  if (!svgStr) return;
+  const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  triggerDownload(url, 'markasso-export.svg');
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+export interface SceneToSVGOptions {
+  /**
+   * Color of the canvas the diagram sits on. Fills the page when
+   * `withBackground` is set, and always masks connector lines under elbow
+   * labels, mirroring the gap the canvas renderer cuts.
+   */
+  readonly canvasColor: string;
+  readonly withBackground: boolean;
+}
+
+/**
+ * Standalone SVG document of the given elements, cropped to their bounds
+ * with a margin; null when there is nothing to export. Pure (no DOM), so
+ * it also runs outside the browser, e.g. in the MCP server.
+ */
+export function sceneToSVG(
+  elements: ReadonlyArray<Element>,
+  options: SceneToSVGOptions,
+): string | null {
+  if (elements.length === 0) return null;
 
   const { minX, minY, maxX, maxY } = computeBounds(elements);
   const PAD = 24;
@@ -141,26 +170,21 @@ export function exportSVG(scene: Scene, withBackground = true): void {
   const h = maxY - minY + PAD * 2;
   const ox = PAD - minX;
   const oy = PAD - minY;
+  const canvasColor = escapeXml(options.canvasColor);
 
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${round(w)}" height="${round(h)}" viewBox="0 0 ${round(w)} ${round(h)}">`,
   ];
-  if (withBackground) {
+  if (options.withBackground) {
     parts.push(
-      `<rect width="${round(w)}" height="${round(h)}" fill="${escapeXml(getCanvasBg())}"/>`,
+      `<rect width="${round(w)}" height="${round(h)}" fill="${canvasColor}"/>`,
     );
   }
-
   for (const el of elements) {
-    parts.push(elementToSVG(el, ox, oy, elements));
+    parts.push(elementToSVG(el, ox, oy, elements, canvasColor));
   }
-
   parts.push('</svg>');
-  const svgStr = parts.join('\n');
-  const blob = new Blob([svgStr], { type: 'image/svg+xml' });
-  const url = URL.createObjectURL(blob);
-  triggerDownload(url, 'markasso-export.svg');
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  return parts.join('\n');
 }
 
 // ── Bounds ─────────────────────────────────────────────────────────────────────
@@ -277,9 +301,16 @@ function elementToSVG(
   ox: number,
   oy: number,
   allElements: ReadonlyArray<Element>,
+  canvasColor: string,
 ): string {
   if ((el.type === 'line' || el.type === 'arrow') && el.routing === 'elbow') {
-    return elbowToSVG(el, resolveConnectorRoute(el, allElements), ox, oy);
+    return elbowToSVG(
+      el,
+      resolveConnectorRoute(el, allElements),
+      ox,
+      oy,
+      canvasColor,
+    );
   }
   switch (el.type) {
     case 'rectangle':
@@ -620,6 +651,7 @@ function elbowToSVG(
   route: ReadonlyArray<RoutePoint>,
   ox: number,
   oy: number,
+  canvasColor: string,
 ): string {
   if (route.length < 2) return '';
   const sp = `stroke="${escapeXml(el.strokeColor)}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"${strokeDashAttr(el)}`;
@@ -644,7 +676,7 @@ function elbowToSVG(
       Math.max(...lines.map((l) => l.length)) * fontSize * 0.6 + pad * 2;
     const h = lines.length * fontSize * 1.2 + pad * 2;
     parts.push(
-      `<rect x="${round(mx + ox - w / 2)}" y="${round(my + oy - h / 2)}" width="${round(w)}" height="${round(h)}" fill="${escapeXml(getCanvasBg())}"/>`,
+      `<rect x="${round(mx + ox - w / 2)}" y="${round(my + oy - h / 2)}" width="${round(w)}" height="${round(h)}" fill="${canvasColor}"/>`,
     );
     parts.push(
       shapeLabelToSVG(

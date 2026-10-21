@@ -689,16 +689,50 @@ describe('resolveConnectorRoute', () => {
     const route = resolveConnectorRoute(line, [r1, r2, line]);
     expect(route.length).toBe(4);
     const rounded = route.map(([x, y]) => [Math.round(x), Math.round(y)]);
+    // The horizontal gap (200) beats the vertical one (140): leave right,
+    // enter left, turn in the corridor between the shapes.
     expect(rounded).toEqual([
-      [50, 60],
-      [50, 130],
-      [350, 130],
-      [350, 200],
+      [100, 30],
+      [200, 30],
+      [200, 230],
+      [300, 230],
     ]);
     expect(getElementBounds(line, [r1, r2, line])).toMatchObject({
-      x: 50,
-      w: 300,
+      x: 100,
+      w: 200,
     });
+  });
+
+  it('routes a wide shape sideways instead of across its neighbor below', () => {
+    // Orders above Payments, Postgres to the right (the MCP e2e layout).
+    const orders = makeRect('orders', 492, 2, 160, 70);
+    const payments = makeRect('payments', 492, 132, 160, 70);
+    const db = makeRect('db', 752, 124, 160, 80);
+    const line = makeLine({
+      routing: 'elbow',
+      startElementId: 'orders',
+      endElementId: 'db',
+    });
+    const route = resolveConnectorRoute(line, [orders, payments, db, line]);
+    expect(route[0]).toEqual([652, 37]);
+    // No point of the route enters the Payments box.
+    for (const [x, y] of route) {
+      const inside = x > 492 && x < 652 && y > 132 && y < 202;
+      expect(inside).toBe(false);
+    }
+  });
+
+  it('keeps vertical stacks on their top and bottom sides', () => {
+    const top = makeRect('top', 0, 0, 160, 60);
+    const below = makeRect('below', 20, 200, 160, 60);
+    const line = makeLine({
+      routing: 'elbow',
+      startElementId: 'top',
+      endElementId: 'below',
+    });
+    const route = resolveConnectorRoute(line, [top, below, line]);
+    expect(route[0]).toEqual([80, 60]);
+    expect(route[route.length - 1]).toEqual([100, 200]);
   });
 
   it('leaves a pinned elbow end by the side of its anchor', () => {

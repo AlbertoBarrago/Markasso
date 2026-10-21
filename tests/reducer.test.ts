@@ -1666,3 +1666,45 @@ describe('APPLY_STYLE routing', () => {
     expect(next.elements[1]).toMatchObject({ startHeadStyle: 'circle' });
   });
 });
+
+describe('remote element creation', () => {
+  it('keeps the local selection when a peer creates elements', () => {
+    const mine = makeRect({ id: 'mine' });
+    const scene: Scene = {
+      ...createScene(),
+      elements: [mine],
+      selectedIds: new Set(['mine']),
+    };
+    const one = reducer(
+      scene,
+      { type: 'CREATE_ELEMENT', element: makeRect({ id: 'peer-1' }) },
+      true,
+    );
+    expect([...one.selectedIds]).toEqual(['mine']);
+    const quiet = reducer(
+      scene,
+      {
+        type: 'CREATE_ELEMENT',
+        element: makeRect({ id: 'peer-2' }),
+        select: false,
+      },
+      true,
+    );
+    expect([...quiet.selectedIds]).toEqual(['mine']);
+    const many = reducer(
+      scene,
+      { type: 'CREATE_ELEMENTS', elements: [makeRect({ id: 'peer-3' })] },
+      true,
+    );
+    expect([...many.selectedIds]).toEqual(['mine']);
+    expect(many.elements.map((e) => e.id)).toEqual(['mine', 'peer-3']);
+  });
+
+  it('still selects locally created elements', () => {
+    const next = reducer(createScene(), {
+      type: 'CREATE_ELEMENTS',
+      elements: [makeRect({ id: 'a' })],
+    });
+    expect([...next.selectedIds]).toEqual(['a']);
+  });
+});

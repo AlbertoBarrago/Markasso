@@ -67,8 +67,13 @@ export function reducer(
       return {
         ...scene,
         elements: [...scene.elements, command.element],
-        selectedIds:
-          command.select === false ? new Set() : new Set([command.element.id]),
+        // Selection is per-user as well: a peer's (or an agent's) new element
+        // must not replace or clear what the receiver has selected.
+        selectedIds: isRemote
+          ? scene.selectedIds
+          : command.select === false
+            ? new Set()
+            : new Set([command.element.id]),
         // `lastCreatedId` drives the APPLY_STYLE fallback target (see
         // withApplyStyleTargets in history.ts) and is per-user: a peer's
         // freshly drawn element must never become "the element I'll restyle
@@ -87,7 +92,9 @@ export function reducer(
       return {
         ...scene,
         elements: [...scene.elements, ...command.elements],
-        selectedIds: new Set(command.elements.map((el) => el.id)),
+        selectedIds: isRemote
+          ? scene.selectedIds
+          : new Set(command.elements.map((el) => el.id)),
       };
 
     case 'UPDATE_ELEMENT':
