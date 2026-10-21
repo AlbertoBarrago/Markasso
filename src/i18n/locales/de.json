@@ -231,5 +231,9 @@
   "libraryDeletePack": "Paket löschen",
   "libraryDeletePackConfirm": "Paket „{name}“ aus diesem Browser löschen? Diagramme, die seine Symbole bereits nutzen, behalten sie.",
   "libraryStorageError": "Symbolpakete können in diesem Browser nicht gespeichert werden.",
-  "libraryDownloadFrom": "Herunterladen:"
+  "libraryDownloadFrom": "Herunterladen:",
+  "liveName": "Dein Name",
+  "livePeers": "Live · {{count}}",
+  "liveDisconnected": "Live-Sitzung getrennt — Verbindung wird wiederhergestellt…",
+  "liveReconnected": "Live-Sitzung wieder verbunden"
 }

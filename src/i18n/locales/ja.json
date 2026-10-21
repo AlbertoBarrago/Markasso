@@ -231,5 +231,9 @@
   "libraryDeletePack": "パックを削除",
   "libraryDeletePackConfirm": "このブラウザからアイコンパック「{name}」を削除しますか？既にそのアイコンを使っている図はそのまま残ります。",
   "libraryStorageError": "このブラウザではアイコンパックを保存できません。",
-  "libraryDownloadFrom": "ダウンロード："
+  "libraryDownloadFrom": "ダウンロード：",
+  "liveName": "あなたの名前",
+  "livePeers": "ライブ · {{count}}",
+  "liveDisconnected": "ライブセッションが切断されました — 再接続中…",
+  "liveReconnected": "ライブセッションに再接続しました"
 }

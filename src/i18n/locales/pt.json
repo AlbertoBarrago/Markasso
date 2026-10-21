@@ -231,5 +231,9 @@
   "libraryDeletePack": "Excluir pacote",
   "libraryDeletePackConfirm": "Excluir o pacote “{name}” deste navegador? Diagramas que já usam seus ícones os mantêm.",
   "libraryStorageError": "Não é possível salvar pacotes de ícones neste navegador.",
-  "libraryDownloadFrom": "Baixar:"
+  "libraryDownloadFrom": "Baixar:",
+  "liveName": "Seu nome",
+  "livePeers": "Ao vivo · {{count}}",
+  "liveDisconnected": "Sessão ao vivo desconectada — reconectando…",
+  "liveReconnected": "Sessão ao vivo reconectada"
 }

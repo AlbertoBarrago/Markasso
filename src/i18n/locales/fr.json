@@ -231,5 +231,9 @@
   "libraryDeletePack": "Supprimer le pack",
   "libraryDeletePackConfirm": "Supprimer le pack « {name} » de ce navigateur ? Les diagrammes qui utilisent déjà ses icônes les conservent.",
   "libraryStorageError": "Impossible d'enregistrer des packs d'icônes dans ce navigateur.",
-  "libraryDownloadFrom": "Télécharger :"
+  "libraryDownloadFrom": "Télécharger :",
+  "liveName": "Votre nom",
+  "livePeers": "En direct · {{count}}",
+  "liveDisconnected": "Session en direct déconnectée — reconnexion…",
+  "liveReconnected": "Session en direct reconnectée"
 }
