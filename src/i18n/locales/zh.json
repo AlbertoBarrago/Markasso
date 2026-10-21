@@ -230,5 +230,6 @@
   "libraryImportError": "导入失败。",
   "libraryDeletePack": "删除图标包",
   "libraryDeletePackConfirm": "要从此浏览器删除图标包“{name}”吗？已使用其图标的图表会保留这些图标。",
-  "libraryStorageError": "无法在此浏览器中保存图标包。"
+  "libraryStorageError": "无法在此浏览器中保存图标包。",
+  "libraryDownloadFrom": "下载："
 }

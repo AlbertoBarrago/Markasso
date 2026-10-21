@@ -230,5 +230,6 @@
   "libraryImportError": "インポートに失敗しました。",
   "libraryDeletePack": "パックを削除",
   "libraryDeletePackConfirm": "このブラウザからアイコンパック「{name}」を削除しますか？既にそのアイコンを使っている図はそのまま残ります。",
-  "libraryStorageError": "このブラウザではアイコンパックを保存できません。"
+  "libraryStorageError": "このブラウザではアイコンパックを保存できません。",
+  "libraryDownloadFrom": "ダウンロード："
 }

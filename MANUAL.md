@@ -26,6 +26,8 @@ Select a tool from the toolbar or press its keyboard shortcut.
 | Pen        | `P` or `6` | Freehand drawing |
 | Text       | `T` or `7` | Add text |
 | Sticky note | `N` | Add sticky notes (also available from the command palette) |
+| Flowchart shape | `S` | Draw the flowchart symbol last picked in the Library |
+| Library    | `I` | Open the Library: flowchart shapes and icons (see below) |
 | Eraser     | `0` | Erase elements by clicking or dragging over them |
 
 There is no separate curve tool: drag the midpoint handle of a line after placement to bend it into a quadratic bezier (see Connector Editing below).
@@ -40,6 +42,8 @@ The main numbered connector slot is **Line** (toolbar position `5`).
 - Arrowheads are a style of line elements, configurable from the properties panel.
 - Drag the midpoint control handle after placement to bend a line into a quadratic bezier.
 - Labels on curved connectors now reserve their gap along the actual curve, not along the straight chord.
+- **Routing:** switch a connector between **Straight** and **Elbow** (orthogonal) in the properties panel. See Smart Arrow Links below.
+- **Arrowhead styles:** each end can use an open head, a hollow or filled triangle, a hollow or filled diamond, or a circle.
 
 ### Tool Lock
 
@@ -89,6 +93,55 @@ Double-click any rectangle or ellipse to add a text label inside it. The label i
 
 ### Connector Labels
 Double-click any line with arrowheads to add a label along its path. On curved connectors, the blank gap follows the bezier bend.
+
+---
+
+## Library: Flowchart Shapes & Icons
+
+Open the **Library** with `I` or the library button (stacked books) in the top-right toolbar. It is a searchable sidebar, like Excalidraw's:
+
+- **Click** an item to insert it at the center of the view, or **drag** it onto the canvas to drop it where you want.
+- **Search** filters every section at once. Recently used items are listed first.
+- Sections can be collapsed; icon packs start collapsed to keep the list short.
+- On touch devices the Library opens as a bottom sheet from the tools menu.
+
+### Flowchart Shapes
+Eight standard flowchart symbols: **Start / End**, **Data (I/O)**, **Document**, **Database**, **Predefined process**, **Preparation**, **Manual input** and **Delay**.
+
+- Insert them from the Library, or press `S` and drag to draw the last symbol you picked.
+- Double-click a shape to type a label; it is laid out in the symbol's text area.
+- With shapes selected, the **Shape** row in the properties panel switches their symbol in place (undoable).
+- They support fill, stroke styles, roughness, rotation, PNG/SVG export and live sessions, and connectors snap to their real outline.
+
+### Icons
+The **Icons** section holds Markasso's own architecture icons: server, database, cache, queue, storage, load balancer, firewall, router, network, API, container, function, browser, mobile and desktop apps, user, users, external system, secret and document.
+
+- They follow the stroke and fill colors, the theme and the roughness setting, and keep their proportions when resized.
+- Each icon carries a label below it (double-click to edit). Connectors attached from below stop under the label.
+- They are also available from the command palette (`Ctrl+K`, "Icon: ...").
+
+### Kubernetes Icons
+The **Kubernetes** section contains the official Kubernetes icon set (control plane, nodes, workloads, networking, storage, config, access control). It loads the first time you open the section or search the Library. The icons are bundled under the Apache-2.0 license.
+
+### Importing AWS, Azure and Google Cloud Icons
+Cloud vendors allow their icons in diagrams but not their redistribution inside tools, so Markasso does not ship them. You download the official pack yourself and import it:
+
+Where to download the official ZIP:
+
+- **AWS:** [AWS Architecture Icons](https://aws.amazon.com/architecture/icons/) ("Icon package")
+- **Azure:** [Azure architecture icons](https://learn.microsoft.com/azure/architecture/icons/) (accept the terms, then "Download SVG icons")
+- **Google Cloud:** [Google Cloud icons](https://cloud.google.com/icons) (core product icons and/or category icons)
+
+Then:
+
+1. In the Library, click **Import icon pack (ZIP)** at the bottom and pick the file. The same download links are shown there.
+2. The pack appears as a new section, named after the vendor and grouped by the vendor's own categories. Each icon is kept once, at its largest size.
+3. To remove a pack, click the **✕** next to its name.
+
+Good to know:
+- Packs are stored **only in this browser** and are never uploaded. Diagrams embed the icons they use, so shared diagrams and exports show them to everyone.
+- Vendor icons are never recolored or rotated, as the vendors' terms require; you can still resize them, change their opacity and label color.
+- Use them according to each vendor's terms.
 
 ---
 
@@ -183,6 +236,12 @@ Select the arrow → drag either cyan endpoint handle. Drag near a shape to reco
 **Disconnecting:** drag an endpoint handle away from the connected shape and release in empty space.
 
 **Deleting a linked shape:** deleting a shape automatically removes all arrows and lines connected to it.
+
+**Connection ports:** while drawing a connector or dragging one of its ends near a shape, four ports appear (top, right, bottom, left). Drop the end on a port to **pin** it there: it stays on that point when the shape is moved, resized or rotated. Drop it anywhere else on the border and it **floats**, sliding along the border to face the other end.
+
+**Elbow connectors:** set **Routing → Elbow** in the properties panel (with the line tool active, it applies to the next connectors you draw). The orthogonal route is recomputed from the two ends: it leaves each shape with a short straight segment, floating ends move to the middle of the side facing the other shape, and the label sits at the middle of the route.
+
+**Arrowhead styles:** with a connector selected, pick the **Start head** and **End head** style: open, triangle, filled triangle, diamond, filled diamond or circle (UML inheritance, aggregation and composition). Closed heads stay hollow on any background, exports included.
 
 ---
 
@@ -297,6 +356,7 @@ Switch between **Dark**, **Light**, and **System** themes from the Settings pane
   - `graph` / `flowchart` — directions TD, LR, RL, BT; node shapes `[]` (rectangle), `(())` (ellipse), `{}` (rhombus); solid arrows `-->`, dashed arrows `-.->`, plain lines `---`; inline edge labels
   - `sequenceDiagram` — participants become rectangles arranged in a row; messages become arrows with labels
   - The viewport auto-fits to the imported diagram after conversion.
+- **Import icon pack (ZIP):** AWS, Azure and Google Cloud icon packs are imported from the Library. See *Importing AWS, Azure and Google Cloud Icons*.
 - **Export PNG:** downloads a 2× PNG cropped to the bounding box of all elements.
 - **Export SVG:** downloads a clean SVG cropped to the bounding box.
 - **Export HTML:** downloads a standalone `.html` file with the canvas embedded as an image.
@@ -317,6 +377,8 @@ Switch between **Dark**, **Light**, and **System** themes from the Settings pane
 | `P` / `6` | Pen |
 | `T` / `7` | Text |
 | `N` | Sticky note |
+| `S` | Flowchart shape (last picked symbol) |
+| `I` | Open / close the Library |
 | `0` | Eraser |
 | `?` | Open keyboard shortcuts help dialog |
 | `Escape` | Back to Select / exit group / deselect |

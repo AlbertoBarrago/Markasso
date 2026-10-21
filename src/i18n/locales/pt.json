@@ -230,5 +230,6 @@
   "libraryImportError": "Falha na importação.",
   "libraryDeletePack": "Excluir pacote",
   "libraryDeletePackConfirm": "Excluir o pacote “{name}” deste navegador? Diagramas que já usam seus ícones os mantêm.",
-  "libraryStorageError": "Não é possível salvar pacotes de ícones neste navegador."
+  "libraryStorageError": "Não é possível salvar pacotes de ícones neste navegador.",
+  "libraryDownloadFrom": "Baixar:"
 }

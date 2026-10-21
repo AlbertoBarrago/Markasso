@@ -55,6 +55,15 @@ const OPEN_KEY = 'markasso-library-open';
 const SECTION_KEY_PREFIX = 'markasso-library-section-';
 const RECENT_KEY = 'markasso-library-recent';
 const MAX_RECENT = 8;
+/** Where users download the official packs (not redistributable by us). */
+const VENDOR_PACK_PAGES = [
+  { name: 'AWS', url: 'https://aws.amazon.com/architecture/icons/' },
+  {
+    name: 'Azure',
+    url: 'https://learn.microsoft.com/azure/architecture/icons/',
+  },
+  { name: 'Google Cloud', url: 'https://cloud.google.com/icons' },
+] as const;
 /** MIME type of library drags, so foreign drops (files, text) are ignored. */
 const DRAG_TYPE = 'application/x-markasso-library-item';
 
@@ -311,6 +320,23 @@ export function initLibraryPanel(
     render();
   }
 
+  /** Official download pages of the vendor packs users can import. */
+  function downloadLinks(): HTMLElement {
+    const links = document.createElement('p');
+    links.className = 'lib-credit lib-links';
+    links.append(`${t('libraryDownloadFrom')} `);
+    VENDOR_PACK_PAGES.forEach(({ name, url }, i) => {
+      if (i > 0) links.append(' · ');
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.textContent = name;
+      links.appendChild(a);
+    });
+    return links;
+  }
+
   /** Import button, privacy note and last import result. */
   function importArea(): HTMLElement {
     const area = document.createElement('div');
@@ -326,7 +352,7 @@ export function initLibraryPanel(
     const hint = document.createElement('p');
     hint.className = 'lib-credit';
     hint.textContent = t('libraryImportHint');
-    area.append(button, hint);
+    area.append(button, hint, downloadLinks());
     if (importStatus) {
       const status = document.createElement('p');
       status.className = importStatus.error

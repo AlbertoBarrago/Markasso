@@ -234,3 +234,10 @@ body.library-open #minimap {
 .lib-status-error {
   color: var(--alert);
 }
+.lib-links a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.lib-links a:hover {
+  text-decoration: underline;
+}
