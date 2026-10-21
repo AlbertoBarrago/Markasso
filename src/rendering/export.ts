@@ -16,7 +16,13 @@ import type {
 import { SHAPE_DEFINITIONS, shapeCommandsToPathData } from '../elements/shapes';
 import { ICON_GRID } from '../elements/stencils/generic';
 import { getBundledIcon } from '../elements/stencils/packs';
-import { getGenericIcon } from '../elements/stencils/registry';
+import {
+  DEFAULT_STENCIL_LABEL_FONT_SIZE,
+  getGenericIcon,
+  getStencilLabelHeight,
+  getStencilLabelWidth,
+  STENCIL_LABEL_GAP,
+} from '../elements/stencils/registry';
 import {
   type ArrowHeadShape,
   getArrowHeadShape,
@@ -24,12 +30,7 @@ import {
   getRoutePointAt,
   type RoutePoint,
 } from './connector_geometry';
-import {
-  drawElement,
-  getIconStrokeWidth,
-  getStencilLabelWidth,
-  STENCIL_LABEL_GAP,
-} from './draw_element';
+import { drawElement, getIconStrokeWidth } from './draw_element';
 import { getElementBounds, resolveConnectorRoute } from './draw_selection';
 import { getShapeTextBox } from './shape_geometry';
 
@@ -182,7 +183,7 @@ function computeBounds(elements: ReadonlyArray<Element>): {
         minX = Math.min(minX, x + w / 2 - labelW / 2);
         minY = Math.min(minY, y);
         maxX = Math.max(maxX, x + w / 2 + labelW / 2);
-        maxY = Math.max(maxY, y + h + stencilLabelHeight(el));
+        maxY = Math.max(maxY, y + h + getStencilLabelHeight(el));
         break;
       }
       case 'rectangle':
@@ -438,12 +439,6 @@ function rhombusToSVG(el: RhombusElement, ox: number, oy: number): string {
   return `<polygon points="${pts}" ${shapeProps(el)}${rotateAttr(el, ox, oy)}/>`;
 }
 
-function stencilLabelHeight(el: StencilElement): number {
-  if (!el.label) return 0;
-  const lines = el.label.split('\n').length;
-  return STENCIL_LABEL_GAP + lines * (el.labelFontSize ?? 14) * 1.2;
-}
-
 function stencilToSVG(el: StencilElement, ox: number, oy: number): string {
   const x = (el.width < 0 ? el.x + el.width : el.x) + ox;
   const y = (el.height < 0 ? el.y + el.height : el.y) + oy;
@@ -487,12 +482,13 @@ function stencilToSVG(el: StencilElement, ox: number, oy: number): string {
   }
 
   if (el.label) {
-    const fontSize = el.labelFontSize ?? 14;
-    const lines = el.label.split('\n').length;
+    const fontSize = el.labelFontSize ?? DEFAULT_STENCIL_LABEL_FONT_SIZE;
+    // Center the text block in the label area below the icon.
+    const labelH = getStencilLabelHeight(el) - STENCIL_LABEL_GAP;
     parts.push(
       shapeLabelToSVG(
         x + w / 2,
-        y + h + STENCIL_LABEL_GAP + (lines * fontSize * 1.2) / 2,
+        y + h + STENCIL_LABEL_GAP + labelH / 2,
         el.label,
         fontSize,
         el.labelFontFamily ?? 'Arial, sans-serif',

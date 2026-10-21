@@ -222,5 +222,14 @@
   "libraryRecent": "Zuletzt verwendet",
   "libraryNoResults": "Keine passenden Formen oder Symbole",
   "close": "Schließen",
-  "libraryLoading": "Wird geladen…"
+  "libraryLoading": "Wird geladen…",
+  "libraryImportZip": "Symbolpaket importieren (ZIP)",
+  "libraryImporting": "Wird importiert…",
+  "libraryImportHint": "AWS, Azure, Google Cloud: offizielles ZIP herunterladen und hier importieren. Die Symbole bleiben in diesem Browser; nutze sie gemäß den Bedingungen des Anbieters.",
+  "libraryImportDone": "{count} Symbole in „{name}“ importiert.",
+  "libraryImportSkipped": "{count} Dateien übersprungen.",
+  "libraryImportError": "Import fehlgeschlagen.",
+  "libraryDeletePack": "Paket löschen",
+  "libraryDeletePackConfirm": "Paket „{name}“ aus diesem Browser löschen? Diagramme, die seine Symbole bereits nutzen, behalten sie.",
+  "libraryStorageError": "Symbolpakete können in diesem Browser nicht gespeichert werden."
 }

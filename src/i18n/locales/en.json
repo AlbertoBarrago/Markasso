@@ -228,5 +228,14 @@
   "libraryRecent": "Recent",
   "libraryNoResults": "No matching shapes or icons",
   "close": "Close",
-  "libraryLoading": "Loading…"
+  "libraryLoading": "Loading…",
+  "libraryImportZip": "Import icon pack (ZIP)",
+  "libraryImporting": "Importing…",
+  "libraryImportHint": "AWS, Azure, Google Cloud: download the official ZIP and import it here. Icons stay in this browser; use them under the vendor's terms.",
+  "libraryImportDone": "Imported {count} icons into “{name}”.",
+  "libraryImportSkipped": "{count} files skipped.",
+  "libraryImportError": "Import failed.",
+  "libraryDeletePack": "Delete pack",
+  "libraryDeletePackConfirm": "Delete the “{name}” icon pack from this browser? Diagrams that already use its icons keep them.",
+  "libraryStorageError": "Icon packs can't be stored in this browser."
 }

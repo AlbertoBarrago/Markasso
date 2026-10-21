@@ -222,5 +222,14 @@
   "libraryRecent": "Recentes",
   "libraryNoResults": "Nenhuma forma ou ícone encontrado",
   "close": "Fechar",
-  "libraryLoading": "Carregando…"
+  "libraryLoading": "Carregando…",
+  "libraryImportZip": "Importar pacote de ícones (ZIP)",
+  "libraryImporting": "Importando…",
+  "libraryImportHint": "AWS, Azure, Google Cloud: baixe o ZIP oficial e importe-o aqui. Os ícones ficam neste navegador; use-os conforme os termos do fornecedor.",
+  "libraryImportDone": "{count} ícones importados em “{name}”.",
+  "libraryImportSkipped": "{count} arquivos ignorados.",
+  "libraryImportError": "Falha na importação.",
+  "libraryDeletePack": "Excluir pacote",
+  "libraryDeletePackConfirm": "Excluir o pacote “{name}” deste navegador? Diagramas que já usam seus ícones os mantêm.",
+  "libraryStorageError": "Não é possível salvar pacotes de ícones neste navegador."
 }

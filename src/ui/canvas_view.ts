@@ -13,6 +13,11 @@ import type {
   TextElement,
 } from '../elements/element';
 import { onBundledPackLoad } from '../elements/stencils/packs';
+import {
+  DEFAULT_STENCIL_LABEL_FONT_SIZE,
+  getStencilLabelWidth,
+  STENCIL_LABEL_GAP,
+} from '../elements/stencils/registry';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import {
@@ -21,12 +26,7 @@ import {
   subscribeCursors,
 } from '../io/presence';
 import { distToRoute, getRoutePointAt } from '../rendering/connector_geometry';
-import {
-  contrastColor,
-  drawElement,
-  getStencilLabelWidth,
-  STENCIL_LABEL_GAP,
-} from '../rendering/draw_element';
+import { contrastColor, drawElement } from '../rendering/draw_element';
 import {
   drawAlignGuides,
   drawHoverHighlight,
@@ -1074,7 +1074,7 @@ function openShapeLabelEditor(
             x: (bw - stencilLabelW) / 2,
             y: bh + STENCIL_LABEL_GAP,
             w: stencilLabelW,
-            h: (el.labelFontSize ?? 14) * 1.2,
+            h: (el.labelFontSize ?? DEFAULT_STENCIL_LABEL_FONT_SIZE) * 1.2,
           }
         : { x: 0, y: 0, w: bw, h: bh };
   const cx = bx + textBox.x + textBox.w / 2;
@@ -1084,7 +1084,10 @@ function openShapeLabelEditor(
   const canvasRect = canvas.getBoundingClientRect();
 
   const fontSize =
-    el.labelFontSize ?? (el.type === 'stencil' ? 14 : appState.fontSize);
+    el.labelFontSize ??
+    (el.type === 'stencil'
+      ? DEFAULT_STENCIL_LABEL_FONT_SIZE
+      : appState.fontSize);
   const fontFamily = el.labelFontFamily ?? appState.fontFamily;
   const shapeW = textBox.w * viewport.zoom;
 

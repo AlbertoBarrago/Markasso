@@ -16,6 +16,8 @@ import {
 } from '../elements/stencils/packs';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
+import type { ImportedIcon, ImportedPack } from '../io/icon_pack';
+import { deleteIconPack, listIconPacks } from '../io/icon_pack_store';
 import { insertShape, insertStencil } from './library_insert';
 import { SHAPE_KIND_LABEL_KEYS, shapeKindIcon } from './shape_icons';
 import { GENERIC_ICON_LABEL_KEYS, genericIconSvg } from './stencil_icons';
@@ -31,6 +33,8 @@ interface LibraryItem {
   readonly key: string;
   readonly label: string;
   readonly icon: string;
+  /** Sub-heading inside large packs (vendor categories). */
+  readonly category?: string;
   insert(history: History, at?: { x: number; y: number }): void;
 }
 
@@ -42,6 +46,8 @@ interface LibrarySection {
   readonly defaultOpen: boolean;
   /** Set for bundled packs, which load on demand. */
   readonly pack?: BundledPack;
+  /** Set for packs the user imported (deletable, grouped by category). */
+  readonly imported?: ImportedPack;
 }
 
 const OPEN_KEY = 'markasso-library-open';
@@ -112,8 +118,27 @@ function bundledIconItem(pack: BundledPack, icon: BundledIcon): LibraryItem {
   };
 }
 
+function importedIconItem(pack: ImportedPack, icon: ImportedIcon): LibraryItem {
+  return {
+    key: `icon:imported/${pack.id}/${icon.id}`,
+    label: icon.name,
+    category: icon.category,
+    // `src` was sanitized and is a strict base64 data URL (see icon_pack).
+    icon: `<img src="${icon.src}" width="24" height="24" alt="" draggable="false" />`,
+    insert: (history, at) =>
+      insertStencil(
+        history,
+        { kind: 'embedded', src: icon.src, pack: pack.name, name: icon.name },
+        icon.name,
+        at,
+      ),
+  };
+}
+
 /** Sections in display order; pack sections are empty until loaded. */
-function buildSections(): LibrarySection[] {
+function buildSections(
+  importedPacks: ReadonlyArray<ImportedPack>,
+): LibrarySection[] {
   return [
     {
       id: 'flowchart',
@@ -135,6 +160,13 @@ function buildSections(): LibrarySection[] {
       ),
       defaultOpen: false,
       pack,
+    })),
+    ...importedPacks.map((pack) => ({
+      id: `imported-${pack.id}`,
+      title: pack.name,
+      items: pack.icons.map((icon) => importedIconItem(pack, icon)),
+      defaultOpen: false,
+      imported: pack,
     })),
   ];
 }
@@ -177,6 +209,8 @@ function isKnownKey(key: string): boolean {
     return (SHAPE_KINDS as readonly string[]).includes(rest);
   if (kind === 'icon') {
     const [pack = '', id = ''] = rest.split('/');
+    // Imported packs are checked at render time (they load asynchronously).
+    if (pack === 'imported') return true;
     return pack === 'generic' ? isGenericIconId(id) : isBundledPack(pack);
   }
   return false;
@@ -206,6 +240,106 @@ export function initLibraryPanel(
   const search = panel.querySelector<HTMLInputElement>('.lib-search')!;
   let itemsByKey = new Map<string, LibraryItem>();
   let recent = readRecent().filter(isKnownKey);
+  let importedPacks: ImportedPack[] = [];
+  let importStatus: { text: string; error: boolean } | null = null;
+  let importing = false;
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.zip,application/zip';
+  fileInput.hidden = true;
+  panel.appendChild(fileInput);
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files?.[0];
+    fileInput.value = '';
+    if (file) void runImport(file);
+  });
+
+  async function runImport(file: File): Promise<void> {
+    importing = true;
+    importStatus = { text: t('libraryImporting'), error: false };
+    render();
+    try {
+      // ZIP reading and SVG sanitizing only load when importing.
+      const { importIconPack } = await import('./icon_pack_import');
+      const { pack, skipped } = await importIconPack(
+        file,
+        importedPacks.map((p) => p.name),
+      );
+      importedPacks = [...importedPacks, pack];
+      // Open the new pack so the result is visible right away.
+      writeStorage(`markasso-library-section-imported-${pack.id}`, 'open');
+      importStatus = {
+        text: t('libraryImportDone')
+          .replace('{count}', String(pack.icons.length))
+          .replace('{name}', pack.name)
+          .concat(
+            skipped > 0
+              ? ` ${t('libraryImportSkipped').replace('{count}', String(skipped))}`
+              : '',
+          ),
+        error: false,
+      };
+    } catch (error) {
+      console.error('[library] Icon pack import failed', error);
+      importStatus = {
+        text: `${t('libraryImportError')} ${error instanceof Error ? error.message : ''}`.trim(),
+        error: true,
+      };
+    } finally {
+      importing = false;
+      render();
+    }
+  }
+
+  async function removePack(pack: ImportedPack): Promise<void> {
+    if (
+      !window.confirm(
+        t('libraryDeletePackConfirm').replace('{name}', pack.name),
+      )
+    ) {
+      return;
+    }
+    try {
+      await deleteIconPack(pack.id);
+      importedPacks = importedPacks.filter((p) => p.id !== pack.id);
+      recent = recent.filter((k) => !k.startsWith(`icon:imported/${pack.id}/`));
+      writeStorage(RECENT_KEY, JSON.stringify(recent));
+      importStatus = null;
+    } catch (error) {
+      console.error('[library] Icon pack deletion failed', error);
+      importStatus = { text: t('libraryStorageError'), error: true };
+    }
+    render();
+  }
+
+  /** Import button, privacy note and last import result. */
+  function importArea(): HTMLElement {
+    const area = document.createElement('div');
+    area.className = 'lib-import';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'lib-import-btn';
+    button.textContent = importing
+      ? t('libraryImporting')
+      : t('libraryImportZip');
+    button.disabled = importing;
+    button.addEventListener('click', () => fileInput.click());
+    const hint = document.createElement('p');
+    hint.className = 'lib-credit';
+    hint.textContent = t('libraryImportHint');
+    area.append(button, hint);
+    if (importStatus) {
+      const status = document.createElement('p');
+      status.className = importStatus.error
+        ? 'lib-status lib-status-error'
+        : 'lib-status';
+      status.setAttribute('role', 'status');
+      status.textContent = importStatus.text;
+      area.appendChild(status);
+    }
+    return area;
+  }
 
   /** Loads a pack, then re-renders (the load listener below does that). */
   function ensurePack(pack: BundledPack): void {
@@ -247,10 +381,14 @@ export function initLibraryPanel(
   }
 
   function sectionEl(
-    section: Pick<LibrarySection, 'id' | 'title' | 'defaultOpen' | 'pack'>,
+    section: Pick<
+      LibrarySection,
+      'id' | 'title' | 'defaultOpen' | 'pack' | 'imported'
+    >,
     items: ReadonlyArray<LibraryItem>,
+    grouped = false,
   ): HTMLElement {
-    const { id, pack } = section;
+    const { id, pack, imported } = section;
     const details = document.createElement('details');
     details.className = 'lib-section';
     details.dataset.section = id;
@@ -264,7 +402,26 @@ export function initLibraryPanel(
       if (details.open && pack) ensurePack(pack);
     });
     const summary = document.createElement('summary');
-    summary.textContent = section.title;
+    const title = document.createElement('span');
+    title.textContent = section.title;
+    summary.appendChild(title);
+    if (imported) {
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'lib-pack-delete';
+      remove.title = t('libraryDeletePack');
+      remove.setAttribute(
+        'aria-label',
+        `${t('libraryDeletePack')}: ${imported.name}`,
+      );
+      remove.textContent = '✕';
+      remove.addEventListener('click', (e) => {
+        // Keep the click from toggling the section.
+        e.preventDefault();
+        void removePack(imported);
+      });
+      summary.appendChild(remove);
+    }
     details.appendChild(summary);
 
     if (pack && !getLoadedPack(pack.id)) {
@@ -275,10 +432,24 @@ export function initLibraryPanel(
       if (details.open) ensurePack(pack);
       return details;
     }
-    const grid = document.createElement('div');
-    grid.className = 'lib-grid';
-    for (const item of items) grid.appendChild(itemButton(item));
-    details.appendChild(grid);
+    // Large vendor packs read better split by their own categories.
+    const groups = new Map<string, LibraryItem[]>();
+    for (const item of items) {
+      const key = grouped ? (item.category ?? '') : '';
+      groups.set(key, [...(groups.get(key) ?? []), item]);
+    }
+    for (const [category, groupItems] of groups) {
+      if (category) {
+        const heading = document.createElement('p');
+        heading.className = 'lib-category';
+        heading.textContent = category;
+        details.appendChild(heading);
+      }
+      const grid = document.createElement('div');
+      grid.className = 'lib-grid';
+      for (const item of groupItems) grid.appendChild(itemButton(item));
+      details.appendChild(grid);
+    }
     if (pack) {
       const credit = document.createElement('p');
       credit.className = 'lib-credit';
@@ -295,7 +466,7 @@ export function initLibraryPanel(
       item.label.toLowerCase().includes(query) ||
       item.key.toLowerCase().includes(query);
     body.replaceChildren();
-    const sections = buildSections();
+    const sections = buildSections(importedPacks);
     itemsByKey = new Map(
       sections.flatMap((s) => s.items.map((i) => [i.key, i] as const)),
     );
@@ -325,7 +496,9 @@ export function initLibraryPanel(
       const unloadedPack =
         section.pack !== undefined && !getLoadedPack(section.pack.id);
       if (items.length > 0 || (unloadedPack && !query)) {
-        body.appendChild(sectionEl(section, items));
+        body.appendChild(
+          sectionEl(section, items, section.imported !== undefined && !query),
+        );
       }
     }
     if (shown === 0) {
@@ -334,6 +507,7 @@ export function initLibraryPanel(
       empty.textContent = t('libraryNoResults');
       body.appendChild(empty);
     }
+    if (!query) body.appendChild(importArea());
   }
 
   function setOpen(open: boolean): void {
@@ -383,6 +557,17 @@ export function initLibraryPanel(
   });
 
   onBundledPackLoad(render);
+  listIconPacks().then(
+    (packs) => {
+      importedPacks = packs;
+      render();
+    },
+    (error: unknown) => {
+      console.error('[library] Could not load imported icon packs', error);
+      importStatus = { text: t('libraryStorageError'), error: true };
+      render();
+    },
+  );
   render();
   setOpen(readStorage(OPEN_KEY) === '1');
 }

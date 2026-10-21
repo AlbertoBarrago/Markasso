@@ -222,5 +222,14 @@
   "libraryRecent": "Récents",
   "libraryNoResults": "Aucune forme ni icône trouvée",
   "close": "Fermer",
-  "libraryLoading": "Chargement…"
+  "libraryLoading": "Chargement…",
+  "libraryImportZip": "Importer un pack d'icônes (ZIP)",
+  "libraryImporting": "Importation…",
+  "libraryImportHint": "AWS, Azure, Google Cloud : téléchargez le ZIP officiel et importez-le ici. Les icônes restent dans ce navigateur ; utilisez-les selon les conditions du fournisseur.",
+  "libraryImportDone": "{count} icônes importées dans « {name} ».",
+  "libraryImportSkipped": "{count} fichiers ignorés.",
+  "libraryImportError": "Échec de l'importation.",
+  "libraryDeletePack": "Supprimer le pack",
+  "libraryDeletePackConfirm": "Supprimer le pack « {name} » de ce navigateur ? Les diagrammes qui utilisent déjà ses icônes les conservent.",
+  "libraryStorageError": "Impossible d'enregistrer des packs d'icônes dans ce navigateur."
 }

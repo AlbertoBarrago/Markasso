@@ -228,5 +228,14 @@
   "libraryRecent": "Recenti",
   "libraryNoResults": "Nessuna forma o icona trovata",
   "close": "Chiudi",
-  "libraryLoading": "Caricamento…"
+  "libraryLoading": "Caricamento…",
+  "libraryImportZip": "Importa pacchetto di icone (ZIP)",
+  "libraryImporting": "Importazione…",
+  "libraryImportHint": "AWS, Azure, Google Cloud: scarica lo ZIP ufficiale e importalo qui. Le icone restano in questo browser; usale nel rispetto dei termini del fornitore.",
+  "libraryImportDone": "Importate {count} icone in “{name}”.",
+  "libraryImportSkipped": "{count} file scartati.",
+  "libraryImportError": "Importazione non riuscita.",
+  "libraryDeletePack": "Elimina pacchetto",
+  "libraryDeletePackConfirm": "Eliminare il pacchetto “{name}” da questo browser? I diagrammi che usano già le sue icone le mantengono.",
+  "libraryStorageError": "Non è possibile salvare i pacchetti di icone in questo browser."
 }

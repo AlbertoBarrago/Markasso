@@ -6,7 +6,10 @@ import type {
   Element,
   LineElement,
 } from '../elements/element';
-import { isRotatableStencil } from '../elements/stencils/registry';
+import {
+  getStencilLabelHeight,
+  isRotatableStencil,
+} from '../elements/stencils/registry';
 import {
   computeElbowRoute,
   getQuadraticBounds,
@@ -60,6 +63,23 @@ export function distToShapeBoundary(
     return Math.hypot(Math.max(0, -insideX), Math.max(0, -insideY));
   }
   return Math.min(insideX, insideY);
+}
+
+/**
+ * Labeled stencils hang their label below the icon box: a point on the
+ * box's bottom edge moves below the label, so connectors entering from
+ * below stop under the text instead of crossing it. Sides and top are
+ * unaffected. Rotated stencils keep the plain box.
+ */
+function belowStencilLabel(
+  el: Element,
+  b: { y: number; h: number },
+  localY: number,
+): number {
+  if (el.type !== 'stencil' || el.rotation) return localY;
+  return Math.abs(localY - (b.y + b.h)) < 0.5
+    ? localY + getStencilLabelHeight(el)
+    : localY;
 }
 
 /**
@@ -119,6 +139,8 @@ export function getElementBorderPoint(
     lx = dx * t;
     ly = dy * t;
   }
+
+  ly = belowStencilLabel(el, { y: -b.h / 2, h: b.h }, ly);
 
   // Rotate result back to world space
   if (rot) {
@@ -232,6 +254,7 @@ export function getNearestElementBorderPoint(
   } else {
     localPoint = nearestRectBorderPoint(b, localPx, localPy);
   }
+  localPoint = [localPoint[0], belowStencilLabel(el, b, localPoint[1])];
 
   return rotation
     ? rotatePoint(localPoint[0], localPoint[1], cx, cy, rotation)

@@ -19,6 +19,7 @@ import {
 import { reducer } from '../src/engine/reducer';
 import { validateElements } from '../src/io/element_validation';
 import {
+  getElementBorderPoint,
   getElementPorts,
   getRotationHandleScreen,
 } from '../src/rendering/draw_selection';
@@ -163,17 +164,21 @@ describe('stencil reducer rules', () => {
     expect(rotated.elements[0]).toMatchObject({ rotation: 1 });
   });
 
-  it('restyles generic icons but only the label of vendor icons', () => {
+  it('restyles generic icons; vendor icons only take label color and opacity', () => {
     const next = reducer(scene(), {
       type: 'APPLY_STYLE',
       ids: ['s1', 'e1'],
       strokeColor: '#ff0000',
+      fillColor: '#0000ff',
       labelColor: '#00ff00',
+      opacity: 0.5,
     });
     expect(next.elements[0]).toMatchObject({ strokeColor: '#ff0000' });
     expect(next.elements[1]).toMatchObject({
       strokeColor: '#000',
+      fillColor: 'transparent',
       labelColor: '#00ff00',
+      opacity: 0.5,
     });
   });
 
@@ -197,14 +202,37 @@ describe('stencil reducer rules', () => {
 });
 
 describe('stencil selection geometry', () => {
-  it('exposes ports on the icon box', () => {
+  // Label "Users DB": 6px gap + one 14px line at 1.2 line height.
+  const LABEL_H = 6 + 14 * 1.2;
+
+  it('exposes ports on the icon box, the bottom one below the label', () => {
     const ports = getElementPorts(builtin());
-    expect(ports.map((p) => [p.worldX, p.worldY])).toEqual([
+    const points = ports.map((p) => [p.worldX, p.worldY]);
+    expect(points.slice(0, 2)).toEqual([
       [100, 68],
       [132, 100],
-      [100, 132],
-      [68, 100],
     ]);
+    expect(points[2]![0]).toBe(100);
+    expect(points[2]![1]).toBeCloseTo(132 + LABEL_H);
+    expect(points[3]).toEqual([68, 100]);
+  });
+
+  it('keeps the bottom port on the box when there is no label', () => {
+    const { label: _label, ...unlabeled } = builtin();
+    const bottom = getElementPorts(unlabeled as StencilElement)[2]!;
+    expect(bottom.worldY).toBe(132);
+  });
+
+  it('stops arrows coming from below under the label', () => {
+    const [x, y] = getElementBorderPoint(builtin(), 100, 400);
+    expect(x).toBeCloseTo(100);
+    expect(y).toBeCloseTo(132 + LABEL_H);
+  });
+
+  it('does not offset rotated stencils', () => {
+    const rotated = { ...builtin(), rotation: Math.PI };
+    const [, y] = getElementBorderPoint(rotated, 100, 400);
+    expect(y).toBeCloseTo(132);
   });
 
   it('hides the rotation handle when a vendor icon is selected', () => {

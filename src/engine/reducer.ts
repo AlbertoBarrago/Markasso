@@ -602,9 +602,14 @@ export function reducer(
           : { ...scene.appState, ...statePatch },
         elements: scene.elements.map((el) => {
           if (!targetIds.includes(el.id) && el.id !== fallbackId) return el;
-          // Vendor icons keep their artwork: only their label can be styled.
+          // Vendor icons keep their artwork (no recoloring): only their
+          // label color and the element's opacity can change.
           if (el.type === 'stencil' && !isRestylableStencil(el)) {
-            return labelColor !== undefined ? { ...el, labelColor } : el;
+            return {
+              ...el,
+              ...(labelColor !== undefined && { labelColor }),
+              ...(opacity !== undefined && { opacity }),
+            };
           }
           const next = { ...el, ...patch } as Element;
           // `kind`, `routing` and head styles only exist on shapes and

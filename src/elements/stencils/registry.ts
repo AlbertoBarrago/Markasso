@@ -18,6 +18,29 @@ export const MAX_EMBEDDED_SVG_CHARS = 64 * 1024;
 /** Default box of a newly inserted icon. */
 export const DEFAULT_STENCIL_SIZE = 64;
 
+/** Gap between a stencil's box and the first line of its label. */
+export const STENCIL_LABEL_GAP = 6;
+export const DEFAULT_STENCIL_LABEL_FONT_SIZE = 14;
+
+/**
+ * Width available to a stencil label: icons are small, so labels may run
+ * wider than the icon itself, as in other diagram editors.
+ */
+export function getStencilLabelWidth(boxWidth: number): number {
+  return Math.max(boxWidth * 2, 120);
+}
+
+/**
+ * Height the label hangs below the icon box (0 without a label). Counts
+ * explicit lines only: automatic wrapping needs a canvas to measure text.
+ */
+export function getStencilLabelHeight(el: StencilElement): number {
+  if (!el.label) return 0;
+  const lines = el.label.split('\n').length;
+  const fontSize = el.labelFontSize ?? DEFAULT_STENCIL_LABEL_FONT_SIZE;
+  return STENCIL_LABEL_GAP + lines * fontSize * 1.2;
+}
+
 export function isValidStencilRef(ref: string): boolean {
   return STENCIL_REF_PATTERN.test(ref);
 }

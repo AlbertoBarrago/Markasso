@@ -9,7 +9,12 @@ import type {
 import { SHAPE_DEFINITIONS, type ShapeCommand } from '../elements/shapes';
 import { type GenericIcon, ICON_GRID } from '../elements/stencils/generic';
 import { getBundledIcon } from '../elements/stencils/packs';
-import { getGenericIcon } from '../elements/stencils/registry';
+import {
+  DEFAULT_STENCIL_LABEL_FONT_SIZE,
+  getGenericIcon,
+  getStencilLabelWidth,
+  STENCIL_LABEL_GAP,
+} from '../elements/stencils/registry';
 import {
   type ArrowHeadShape,
   type ConnectorEndpoints,
@@ -984,17 +989,6 @@ function drawElbowConnector(
   }
 }
 
-/** Gap between a stencil's box and the first line of its label. */
-export const STENCIL_LABEL_GAP = 6;
-
-/**
- * Width available to a stencil label: icons are small, so labels may run
- * wider than the icon itself, as in other diagram editors.
- */
-export function getStencilLabelWidth(boxWidth: number): number {
-  return Math.max(boxWidth * 2, 120);
-}
-
 function drawStencil(
   ctx: CanvasRenderingContext2D,
   el: StencilElement,
@@ -1022,7 +1016,7 @@ function drawStencil(
   }
 
   if (el.label && editingShapeLabelId !== el.id) {
-    const fontSize = el.labelFontSize ?? 14;
+    const fontSize = el.labelFontSize ?? DEFAULT_STENCIL_LABEL_FONT_SIZE;
     ctx.save();
     ctx.setLineDash([]);
     ctx.font = `${fontSize}px ${el.labelFontFamily ?? 'Arial, sans-serif'}`;
