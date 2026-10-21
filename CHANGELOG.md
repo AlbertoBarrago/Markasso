@@ -4,7 +4,7 @@ All notable changes to this project will be documented here.
 
 ---
 
-## [Unreleased]
+## [1.12.1] - 2026-10-21
 
 ### Added
 - **Connector routing and arrowhead styles on mobile.** The touch style sheet now offers the same routing (straight / elbow) and start/end head styles as the desktop panel.
