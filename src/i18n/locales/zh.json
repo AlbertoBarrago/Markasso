@@ -235,5 +235,17 @@
   "liveName": "你的名字",
   "livePeers": "实时在线 · {{count}}",
   "liveDisconnected": "实时会话已断开 — 正在重新连接…",
-  "liveReconnected": "实时会话已重新连接"
+  "liveReconnected": "实时会话已重新连接",
+  "whatsNewAria": "Markasso 新功能",
+  "whatsNewTitle": "新功能",
+  "whatsNewDesc": "Markasso 正在发展为架构图和流程图绘制工具。现在，AI 智能体也能与你一起绘图。",
+  "whatsNewMcpTitle": "让 AI 智能体为你绘图。",
+  "whatsNewMcp": "通过全新的 MCP 服务器，Claude、Codex、Gemini 和本地模型可以创建和编辑图表，还能在共享白板上实时操作。",
+  "whatsNewFlowchartTitle": "流程图与连接线。",
+  "whatsNewFlowchart": "支持标准流程图符号、连接端口、直角连接线和 UML 箭头样式。",
+  "whatsNewIconsTitle": "图标素材库。",
+  "whatsNewIcons": "素材库 (I) 提供架构和 Kubernetes 图标；还可导入 AWS、Azure 和 Google Cloud 的官方图标包。",
+  "whatsNewTextTitle": "更智能的文本操作。",
+  "whatsNewText": "拖动边框角点可同时缩放文本和文本框，拖动侧边可调整文本换行。",
+  "whatsNewDetails": "版本说明"
 }

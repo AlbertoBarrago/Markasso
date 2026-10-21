@@ -237,5 +237,17 @@
   "libraryDeletePack": "Elimina pacchetto",
   "libraryDeletePackConfirm": "Eliminare il pacchetto “{name}” da questo browser? I diagrammi che usano già le sue icone le mantengono.",
   "libraryStorageError": "Non è possibile salvare i pacchetti di icone in questo browser.",
-  "libraryDownloadFrom": "Scarica:"
+  "libraryDownloadFrom": "Scarica:",
+  "whatsNewAria": "Novità di Markasso",
+  "whatsNewTitle": "Novità",
+  "whatsNewDesc": "Markasso diventa uno strumento per diagrammi di architettura e di processo, e ora gli agenti AI possono disegnare con te.",
+  "whatsNewMcpTitle": "Gli agenti AI disegnano per te.",
+  "whatsNewMcp": "Con il nuovo server MCP, Claude, Codex, Gemini e i modelli locali creano e modificano diagrammi, anche dal vivo su una lavagna condivisa.",
+  "whatsNewFlowchartTitle": "Flowchart e connettori.",
+  "whatsNewFlowchart": "Simboli standard dei diagrammi di flusso, porte di connessione, linee a gomito e punte UML.",
+  "whatsNewIconsTitle": "Libreria di icone.",
+  "whatsNewIcons": "Icone di architettura e Kubernetes nella Libreria (I); importa i pacchetti ufficiali AWS, Azure e Google Cloud.",
+  "whatsNewTextTitle": "Testo più intelligente.",
+  "whatsNewText": "Trascina un angolo per scalare il testo con il suo riquadro, un lato per mandarlo a capo.",
+  "whatsNewDetails": "Note di rilascio"
 }

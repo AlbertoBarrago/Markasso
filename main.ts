@@ -24,6 +24,7 @@ import { initShortcutsHelp } from './src/ui/shortcuts_help';
 import { initStarCta } from './src/ui/star_cta';
 import { initToolbar } from './src/ui/toolbar';
 import { initWelcome } from './src/ui/welcome';
+import { initWhatsNew } from './src/ui/whats_new';
 
 function printConsoleGreeting(): void {
   const reset = 'color: inherit; font-size: 13px;';
@@ -125,7 +126,11 @@ async function bootstrap(): Promise<void> {
   initShortcutsHelp(appEl);
   initHintBar(appEl, hist);
   initSession(hist);
-  if (!session && !sharedElements) initWelcome(appEl, hist);
+  // People arriving through a shared or live link see the board first; the
+  // notice stays unseen and shows on their next plain visit.
+  const invited = sharedElements !== null || getLiveRoomId() !== null;
+  const showedWhatsNew = !invited && initWhatsNew(appEl);
+  if (!showedWhatsNew && !session && !sharedElements) initWelcome(appEl, hist);
 
   // Join a live session if the URL points to one (…?live=roomId)
   if (getLiveRoomId()) {

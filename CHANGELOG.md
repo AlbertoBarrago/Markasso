@@ -4,6 +4,16 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [Unreleased]
+
+### Added
+- **What's new notice.** Visitors see the highlights of the release once (AI agents via MCP, flowcharts and connectors, icon library, text resize), with a link to the release notes. It is skipped when arriving from a shared or live link, so invited people see the board first.
+
+### Changed
+- **The interface follows the browser language.** Without a language picked in Settings, Markasso uses the first supported language of the browser and falls back to English (it used to default to Italian). The page `lang` attribute follows it.
+
+---
+
 ## [1.13.0] - 2026-10-21
 
 ### Added

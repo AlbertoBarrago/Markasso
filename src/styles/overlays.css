@@ -235,6 +235,11 @@
   color: var(--text);
 }
 
+.wn-list strong {
+  color: var(--false-white);
+  font-weight: 600;
+}
+
 .wn-list li::before {
   content: "";
   position: absolute;
