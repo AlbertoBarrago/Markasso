@@ -221,5 +221,6 @@
   "librarySearch": "Formen und Symbole suchen",
   "libraryRecent": "Zuletzt verwendet",
   "libraryNoResults": "Keine passenden Formen oder Symbole",
-  "close": "Schließen"
+  "close": "Schließen",
+  "libraryLoading": "Wird geladen…"
 }

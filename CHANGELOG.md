@@ -20,6 +20,7 @@ All notable changes to this project will be documented here.
   - Icons from vendor packs imported by the user (coming next) are embedded in the diagram and are never recolored or rotated, as the vendors' terms require.
 
 - **Library sidebar.** Shapes and icons live in a searchable sidebar on the right, modeled on Excalidraw's library: toggle it with `I` or the library button in the top-right toolbar. Click an item to insert it at the center of the view, or drag it onto the canvas; recently used items are listed first. On touch devices it opens as a bottom sheet from the tools menu. Icons are also reachable from the command palette (`Ctrl/Cmd+K`, "Icon: ...").
+- **Kubernetes icons.** The official Kubernetes icon set (39 icons: control plane, nodes, workloads, networking, storage, config and access control) is available in the Library. It loads on demand in a separate chunk the first time its section is opened or searched, so the initial bundle is unchanged. Bundled under Apache-2.0, see `THIRD_PARTY_NOTICES.md`.
 
 ### Fixed
 - **Images redraw as soon as they finish loading** instead of keeping their placeholder until the next interaction.

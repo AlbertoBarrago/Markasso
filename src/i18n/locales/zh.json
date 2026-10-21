@@ -221,5 +221,6 @@
   "librarySearch": "搜索形状和图标",
   "libraryRecent": "最近使用",
   "libraryNoResults": "没有匹配的形状或图标",
-  "close": "关闭"
+  "close": "关闭",
+  "libraryLoading": "加载中…"
 }

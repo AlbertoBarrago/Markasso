@@ -12,6 +12,7 @@ import type {
   StencilElement,
   TextElement,
 } from '../elements/element';
+import { onBundledPackLoad } from '../elements/stencils/packs';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import {
@@ -89,6 +90,9 @@ export function initCanvasView(
   };
 
   onImageLoad(() => {
+    needsRender = true;
+  });
+  onBundledPackLoad(() => {
     needsRender = true;
   });
 

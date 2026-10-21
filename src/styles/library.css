@@ -4,7 +4,9 @@
   top: 72px;
   right: 16px;
   bottom: 76px;
-  width: 280px;
+  /* Wide enough that shapes and generic icons fit without scrolling;
+     bundled packs start collapsed for the same reason. */
+  width: min(440px, calc(100vw - 32px));
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -99,17 +101,23 @@ body.library-open #minimap {
 
 .lib-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  padding: 4px 0 6px;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 4px;
+  padding: 2px 0 4px;
+}
+
+.lib-item img {
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
 }
 
 .lib-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px 4px 6px;
+  gap: 3px;
+  padding: 6px 2px 4px;
   border: 1px solid transparent;
   border-radius: var(--radius);
   background: var(--bg-hover);
@@ -137,6 +145,12 @@ body.library-open #minimap {
   white-space: nowrap;
 }
 
+.lib-credit {
+  padding: 0 2px 6px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
 .lib-empty {
   padding: 16px 4px;
   font-size: 12px;
@@ -159,6 +173,6 @@ body.library-open #minimap {
     transform: translateY(0);
   }
   .lib-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
   }
 }

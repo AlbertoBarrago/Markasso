@@ -8,6 +8,7 @@ import type {
 } from '../elements/element';
 import { SHAPE_DEFINITIONS, type ShapeCommand } from '../elements/shapes';
 import { type GenericIcon, ICON_GRID } from '../elements/stencils/generic';
+import { getBundledIcon } from '../elements/stencils/packs';
 import { getGenericIcon } from '../elements/stencils/registry';
 import {
   type ArrowHeadShape,
@@ -1009,9 +1010,13 @@ function drawStencil(
     drawImageContained(ctx, el.source.src, bx, by, bw, bh);
   } else {
     const icon = getGenericIcon(el.source.ref);
+    const bundled = icon ? null : getBundledIcon(el.source.ref);
     if (icon) {
       drawGenericIcon(ctx, el, icon, bx, by, bw, bh);
+    } else if (bundled) {
+      drawImageContained(ctx, bundled.src, bx, by, bw, bh);
     } else {
+      // Unknown reference, or a bundled pack still loading.
       drawMissingStencil(ctx, bx, by, bw, bh);
     }
   }

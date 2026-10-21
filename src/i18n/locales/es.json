@@ -221,5 +221,6 @@
   "librarySearch": "Buscar formas e iconos",
   "libraryRecent": "Recientes",
   "libraryNoResults": "No se encontraron formas ni iconos",
-  "close": "Cerrar"
+  "close": "Cerrar",
+  "libraryLoading": "Cargando…"
 }

@@ -1,5 +1,6 @@
 import type { Element, StencilElement } from '../elements/element';
 import { isGenericIconId } from '../elements/stencils/generic';
+import { getBundledIcon } from '../elements/stencils/packs';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { getElementBounds } from '../rendering/draw_selection';
@@ -23,7 +24,10 @@ function getTypeName(el: Element): string {
   if (el.type === 'stencil') {
     if (el.source.kind === 'embedded') return el.source.name;
     const id = el.source.ref.split('/')[1] ?? '';
-    return isGenericIconId(id) ? t(GENERIC_ICON_LABEL_KEYS[id]) : t('stencil');
+    if (isGenericIconId(id) && el.source.ref.startsWith('generic/')) {
+      return t(GENERIC_ICON_LABEL_KEYS[id]);
+    }
+    return getBundledIcon(el.source.ref)?.label ?? t('stencil');
   }
   return t(el.type) || el.type;
 }

@@ -5,6 +5,15 @@ import {
   type GenericIconId,
   isGenericIconId,
 } from '../elements/stencils/generic';
+import {
+  BUNDLED_PACKS,
+  type BundledIcon,
+  type BundledPack,
+  getLoadedPack,
+  isBundledPack,
+  loadBundledPack,
+  onBundledPackLoad,
+} from '../elements/stencils/packs';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { insertShape, insertStencil } from './library_insert';
@@ -29,6 +38,10 @@ interface LibrarySection {
   readonly id: string;
   readonly title: string;
   readonly items: ReadonlyArray<LibraryItem>;
+  /** Bundled packs start collapsed so the default view needs no scrolling. */
+  readonly defaultOpen: boolean;
+  /** Set for bundled packs, which load on demand. */
+  readonly pack?: BundledPack;
 }
 
 const OPEN_KEY = 'markasso-library-open';
@@ -62,7 +75,7 @@ function shapeItem(kind: ShapeKind): LibraryItem {
   return {
     key: `shape:${kind}`,
     label: t(SHAPE_KIND_LABEL_KEYS[kind]),
-    icon: shapeKindIcon(kind, 28),
+    icon: shapeKindIcon(kind, 24),
     insert: (history, at) => insertShape(history, kind, at),
   };
 }
@@ -72,7 +85,7 @@ function genericIconItem(id: GenericIconId): LibraryItem {
   return {
     key: `icon:generic/${id}`,
     label,
-    icon: genericIconSvg(id, 28),
+    icon: genericIconSvg(id, 24),
     insert: (history, at) =>
       insertStencil(
         history,
@@ -83,18 +96,46 @@ function genericIconItem(id: GenericIconId): LibraryItem {
   };
 }
 
+function bundledIconItem(pack: BundledPack, icon: BundledIcon): LibraryItem {
+  return {
+    key: `icon:${pack.id}/${icon.id}`,
+    label: icon.label,
+    // Bundled artwork is ours (generated at build time), safe as an <img>.
+    icon: `<img src="${icon.src}" width="24" height="24" alt="" draggable="false" />`,
+    insert: (history, at) =>
+      insertStencil(
+        history,
+        { kind: 'builtin', ref: `${pack.id}/${icon.id}` },
+        icon.label,
+        at,
+      ),
+  };
+}
+
+/** Sections in display order; pack sections are empty until loaded. */
 function buildSections(): LibrarySection[] {
   return [
     {
       id: 'flowchart',
       title: t('shapes'),
       items: SHAPE_KINDS.map(shapeItem),
+      defaultOpen: true,
     },
     {
       id: 'generic',
       title: t('libraryIcons'),
       items: GENERIC_ICON_IDS.map(genericIconItem),
+      defaultOpen: true,
     },
+    ...BUNDLED_PACKS.map((pack) => ({
+      id: `pack-${pack.id}`,
+      title: pack.title,
+      items: (getLoadedPack(pack.id) ?? []).map((icon) =>
+        bundledIconItem(pack, icon),
+      ),
+      defaultOpen: false,
+      pack,
+    })),
   ];
 }
 
@@ -135,8 +176,8 @@ function isKnownKey(key: string): boolean {
   if (kind === 'shape')
     return (SHAPE_KINDS as readonly string[]).includes(rest);
   if (kind === 'icon') {
-    const [pack, id = ''] = rest.split('/');
-    return pack === 'generic' && isGenericIconId(id);
+    const [pack = '', id = ''] = rest.split('/');
+    return pack === 'generic' ? isGenericIconId(id) : isBundledPack(pack);
   }
   return false;
 }
@@ -163,11 +204,16 @@ export function initLibraryPanel(
 
   const body = panel.querySelector<HTMLElement>('.lib-body')!;
   const search = panel.querySelector<HTMLInputElement>('.lib-search')!;
-  const sections = buildSections();
-  const itemsByKey = new Map(
-    sections.flatMap((s) => s.items.map((i) => [i.key, i] as const)),
-  );
+  let itemsByKey = new Map<string, LibraryItem>();
   let recent = readRecent().filter(isKnownKey);
+
+  /** Loads a pack, then re-renders (the load listener below does that). */
+  function ensurePack(pack: BundledPack): void {
+    if (getLoadedPack(pack.id)) return;
+    loadBundledPack(pack.id).catch((error: unknown) => {
+      console.error(`[library] Failed to load "${pack.id}"`, error);
+    });
+  }
 
   function remember(key: string): void {
     recent = [key, ...recent.filter((k) => k !== key)].slice(0, MAX_RECENT);
@@ -201,26 +247,44 @@ export function initLibraryPanel(
   }
 
   function sectionEl(
-    id: string,
-    title: string,
-    items: LibraryItem[],
+    section: Pick<LibrarySection, 'id' | 'title' | 'defaultOpen' | 'pack'>,
+    items: ReadonlyArray<LibraryItem>,
   ): HTMLElement {
+    const { id, pack } = section;
     const details = document.createElement('details');
     details.className = 'lib-section';
     details.dataset.section = id;
-    details.open = readStorage(`markasso-library-section-${id}`) !== 'closed';
+    const stored = readStorage(`markasso-library-section-${id}`);
+    details.open = stored === null ? section.defaultOpen : stored === 'open';
     details.addEventListener('toggle', () => {
       writeStorage(
         `markasso-library-section-${id}`,
         details.open ? 'open' : 'closed',
       );
+      if (details.open && pack) ensurePack(pack);
     });
     const summary = document.createElement('summary');
-    summary.textContent = title;
+    summary.textContent = section.title;
+    details.appendChild(summary);
+
+    if (pack && !getLoadedPack(pack.id)) {
+      const loading = document.createElement('p');
+      loading.className = 'lib-empty';
+      loading.textContent = t('libraryLoading');
+      details.appendChild(loading);
+      if (details.open) ensurePack(pack);
+      return details;
+    }
     const grid = document.createElement('div');
     grid.className = 'lib-grid';
     for (const item of items) grid.appendChild(itemButton(item));
-    details.append(summary, grid);
+    details.appendChild(grid);
+    if (pack) {
+      const credit = document.createElement('p');
+      credit.className = 'lib-credit';
+      credit.textContent = pack.attribution;
+      details.appendChild(credit);
+    }
     return details;
   }
 
@@ -231,19 +295,37 @@ export function initLibraryPanel(
       item.label.toLowerCase().includes(query) ||
       item.key.toLowerCase().includes(query);
     body.replaceChildren();
+    const sections = buildSections();
+    itemsByKey = new Map(
+      sections.flatMap((s) => s.items.map((i) => [i.key, i] as const)),
+    );
+    // Searching or showing a recent icon needs its pack's artwork.
+    for (const section of sections) {
+      const needed =
+        query || recent.some((k) => k.startsWith(`icon:${section.pack?.id}/`));
+      if (section.pack && needed) ensurePack(section.pack);
+    }
 
     const recentItems = recent
       .map((k) => itemsByKey.get(k))
       .filter((i): i is LibraryItem => i !== undefined && matches(i));
     if (!query && recentItems.length > 0) {
-      body.appendChild(sectionEl('recent', t('libraryRecent'), recentItems));
+      body.appendChild(
+        sectionEl(
+          { id: 'recent', title: t('libraryRecent'), defaultOpen: true },
+          recentItems,
+        ),
+      );
     }
     let shown = 0;
     for (const section of sections) {
       const items = section.items.filter(matches);
       shown += items.length;
-      if (items.length > 0) {
-        body.appendChild(sectionEl(section.id, section.title, [...items]));
+      // Unloaded packs stay listed (collapsed) so they can be opened.
+      const unloadedPack =
+        section.pack !== undefined && !getLoadedPack(section.pack.id);
+      if (items.length > 0 || (unloadedPack && !query)) {
+        body.appendChild(sectionEl(section, items));
       }
     }
     if (shown === 0) {
@@ -300,6 +382,7 @@ export function initLibraryPanel(
     use(item, { x, y });
   });
 
+  onBundledPackLoad(render);
   render();
   setOpen(readStorage(OPEN_KEY) === '1');
 }

@@ -227,5 +227,6 @@
   "librarySearch": "Search shapes and icons",
   "libraryRecent": "Recent",
   "libraryNoResults": "No matching shapes or icons",
-  "close": "Close"
+  "close": "Close",
+  "libraryLoading": "Loading…"
 }

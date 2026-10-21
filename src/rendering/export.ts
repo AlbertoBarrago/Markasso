@@ -15,6 +15,7 @@ import type {
 } from '../elements/element';
 import { SHAPE_DEFINITIONS, shapeCommandsToPathData } from '../elements/shapes';
 import { ICON_GRID } from '../elements/stencils/generic';
+import { getBundledIcon } from '../elements/stencils/packs';
 import { getGenericIcon } from '../elements/stencils/registry';
 import {
   type ArrowHeadShape,
@@ -450,12 +451,15 @@ function stencilToSVG(el: StencilElement, ox: number, oy: number): string {
   const h = Math.abs(el.height);
   const parts: string[] = [];
 
-  if (el.source.kind === 'embedded') {
+  const { source } = el;
+  const imageSrc =
+    source.kind === 'embedded' ? source.src : getBundledIcon(source.ref)?.src;
+  if (imageSrc) {
     parts.push(
-      `<image href="${escapeXml(el.source.src)}" x="${round(x)}" y="${round(y)}" width="${round(w)}" height="${round(h)}" opacity="${el.opacity}" preserveAspectRatio="xMidYMid meet"/>`,
+      `<image href="${escapeXml(imageSrc)}" x="${round(x)}" y="${round(y)}" width="${round(w)}" height="${round(h)}" opacity="${el.opacity}" preserveAspectRatio="xMidYMid meet"/>`,
     );
   } else {
-    const icon = getGenericIcon(el.source.ref);
+    const icon = source.kind === 'builtin' ? getGenericIcon(source.ref) : null;
     const size = Math.min(w, h);
     if (icon && size > 0) {
       const scale = size / ICON_GRID;
