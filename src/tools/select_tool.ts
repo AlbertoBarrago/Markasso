@@ -1,3 +1,4 @@
+import { normalizeRect } from '../core/geometry';
 import { worldToScreen } from '../core/viewport';
 import { cloneElementsWithOffset } from '../elements/clone';
 import type { ConnectorAnchor, Element } from '../elements/element';
@@ -1140,10 +1141,7 @@ function hitTestElement(
     case 'stencil':
     case 'text':
     case 'image': {
-      const x = el.width < 0 ? el.x + el.width : el.x;
-      const y = el.height < 0 ? el.y + el.height : el.y;
-      const w = Math.abs(el.width);
-      const h = Math.abs(el.height);
+      const { x, y, w, h } = normalizeRect(el);
       return (
         lx >= x - PAD && lx <= x + w + PAD && ly >= y - PAD && ly <= y + h + PAD
       );
@@ -1156,10 +1154,7 @@ function hitTestElement(
       return ((lx - cx) / rx) ** 2 + ((ly - cy) / ry) ** 2 <= 1;
     }
     case 'rhombus': {
-      const x = el.width < 0 ? el.x + el.width : el.x;
-      const y = el.height < 0 ? el.y + el.height : el.y;
-      const w = Math.abs(el.width);
-      const h = Math.abs(el.height);
+      const { x, y, w, h } = normalizeRect(el);
       const cx = x + w / 2;
       const cy = y + h / 2;
       // Normalized diamond: |nx| + |ny| <= 1

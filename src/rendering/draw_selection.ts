@@ -1,3 +1,4 @@
+import { normalizeRect } from '../core/geometry';
 import type { Viewport } from '../core/viewport';
 import { worldToScreen } from '../core/viewport';
 import type {
@@ -671,9 +672,7 @@ export function getElementBounds(
     case 'stencil':
     case 'text':
     case 'image': {
-      const x = el.width < 0 ? el.x + el.width : el.x;
-      const y = el.height < 0 ? el.y + el.height : el.y;
-      return { x, y, w: Math.abs(el.width), h: Math.abs(el.height) };
+      return normalizeRect(el);
     }
     case 'line':
     case 'arrow': {

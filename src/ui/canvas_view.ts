@@ -1,4 +1,5 @@
 import type { ActiveTool } from '../core/app_state';
+import { normalizeRect } from '../core/geometry';
 import { screenToWorld, worldToScreen } from '../core/viewport';
 import { cloneElementsWithOffset } from '../elements/clone';
 import type {
@@ -232,10 +233,7 @@ export function initCanvasView(
         el.type === 'shape' ||
         el.type === 'stencil'
       ) {
-        const bx = el.width < 0 ? el.x + el.width : el.x;
-        const by = el.height < 0 ? el.y + el.height : el.y;
-        const bw = Math.abs(el.width);
-        const bh = Math.abs(el.height);
+        const { x: bx, y: by, w: bw, h: bh } = normalizeRect(el);
         if (
           wx >= bx - 4 &&
           wx <= bx + bw + 4 &&
@@ -1068,10 +1066,7 @@ function openShapeLabelEditor(
   onEditingChange: (id: string | null) => void,
 ): void {
   const { viewport, appState } = history.present;
-  const bx = el.width < 0 ? el.x + el.width : el.x;
-  const by = el.height < 0 ? el.y + el.height : el.y;
-  const bw = Math.abs(el.width);
-  const bh = Math.abs(el.height);
+  const { x: bx, y: by, w: bw, h: bh } = normalizeRect(el);
   // Flowchart shapes lay their label out in a dedicated text box; stencil
   // labels hang below the icon.
   const stencilLabelW = getStencilLabelWidth(bw);

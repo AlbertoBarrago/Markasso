@@ -1,3 +1,4 @@
+import { normalizeRect } from '../core/geometry';
 import type {
   ArrowElement,
   Element,
@@ -133,10 +134,7 @@ export function drawElement(
         el.cornerRadius ?? 0,
       );
       if (el.label && editingShapeLabelId !== el.id) {
-        const rx = el.width < 0 ? el.x + el.width : el.x;
-        const ry = el.height < 0 ? el.y + el.height : el.y;
-        const rw = Math.abs(el.width);
-        const rh = Math.abs(el.height);
+        const { x: rx, y: ry, w: rw, h: rh } = normalizeRect(el);
         ctx.save();
         ctx.setLineDash([]);
         ctx.beginPath();
@@ -170,10 +168,7 @@ export function drawElement(
         el.cornerRadius ?? 0,
       );
       if (el.label && editingShapeLabelId !== el.id) {
-        const rx = el.width < 0 ? el.x + el.width : el.x;
-        const ry = el.height < 0 ? el.y + el.height : el.y;
-        const rw = Math.abs(el.width);
-        const rh = Math.abs(el.height);
+        const { x: rx, y: ry, w: rw, h: rh } = normalizeRect(el);
         const cx = rx + rw / 2;
         const cy = ry + rh / 2;
         ctx.save();
@@ -202,10 +197,7 @@ export function drawElement(
     case 'shape': {
       drawShape(ctx, el, el.roughness ?? 0, hashId(el.id));
       if (el.label && editingShapeLabelId !== el.id) {
-        const bx = el.width < 0 ? el.x + el.width : el.x;
-        const by = el.height < 0 ? el.y + el.height : el.y;
-        const bw = Math.abs(el.width);
-        const bh = Math.abs(el.height);
+        const { x: bx, y: by, w: bw, h: bh } = normalizeRect(el);
         const box = getShapeTextBox(el.kind, bw, bh);
         ctx.save();
         ctx.setLineDash([]);
@@ -587,10 +579,7 @@ function drawRectangle(
   seed: number,
   cornerRadius = 0,
 ): void {
-  const rx = width < 0 ? x + width : x;
-  const ry = height < 0 ? y + height : y;
-  const rw = Math.abs(width);
-  const rh = Math.abs(height);
+  const { x: rx, y: ry, w: rw, h: rh } = normalizeRect({ x, y, width, height });
   const cr = cornerRadius > 0 ? Math.min(cornerRadius, rw / 2, rh / 2) : 0;
 
   if (roughness < 0.05) {
@@ -737,10 +726,7 @@ function drawRhombus(
   seed: number,
   cornerRadius = 0,
 ): void {
-  const rx = width < 0 ? x + width : x;
-  const ry = height < 0 ? y + height : y;
-  const rw = Math.abs(width);
-  const rh = Math.abs(height);
+  const { x: rx, y: ry, w: rw, h: rh } = normalizeRect({ x, y, width, height });
   const cr = cornerRadius > 0 ? Math.min(cornerRadius, rw / 4, rh / 4) : 0;
 
   // Fill with clean diamond (supports corner radius)
@@ -882,10 +868,7 @@ function drawShape(
   roughness: number,
   seed: number,
 ): void {
-  const bx = el.width < 0 ? el.x + el.width : el.x;
-  const by = el.height < 0 ? el.y + el.height : el.y;
-  const bw = Math.abs(el.width);
-  const bh = Math.abs(el.height);
+  const { x: bx, y: by, w: bw, h: bh } = normalizeRect(el);
   const def = SHAPE_DEFINITIONS[el.kind];
   const outline = def.outline(bw, bh);
   const details = def.details?.(bw, bh);
@@ -993,10 +976,7 @@ function drawStencil(
   strokeColor: string,
   editingShapeLabelId: string | null | undefined,
 ): void {
-  const bx = el.width < 0 ? el.x + el.width : el.x;
-  const by = el.height < 0 ? el.y + el.height : el.y;
-  const bw = Math.abs(el.width);
-  const bh = Math.abs(el.height);
+  const { x: bx, y: by, w: bw, h: bh } = normalizeRect(el);
 
   if (el.source.kind === 'embedded') {
     drawImageContained(ctx, el.source.src, bx, by, bw, bh);

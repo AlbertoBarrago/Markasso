@@ -1,3 +1,4 @@
+import { normalizeRect } from '../core/geometry';
 import type { Scene } from '../core/scene';
 import type {
   ArrowElement,
@@ -188,10 +189,7 @@ function computeBounds(elements: ReadonlyArray<Element>): {
     switch (el.type) {
       case 'stencil': {
         // Include the label, which hangs below the icon box.
-        const x = el.width < 0 ? el.x + el.width : el.x;
-        const y = el.height < 0 ? el.y + el.height : el.y;
-        const w = Math.abs(el.width);
-        const h = Math.abs(el.height);
+        const { x, y, w, h } = normalizeRect(el);
         const labelW = el.label ? getStencilLabelWidth(w) : w;
         minX = Math.min(minX, x + w / 2 - labelW / 2);
         minY = Math.min(minY, y);
@@ -204,12 +202,11 @@ function computeBounds(elements: ReadonlyArray<Element>): {
       case 'rhombus':
       case 'shape':
       case 'text': {
-        const x = el.width < 0 ? el.x + el.width : el.x;
-        const y = el.height < 0 ? el.y + el.height : el.y;
+        const { x, y, w, h } = normalizeRect(el);
         minX = Math.min(minX, x);
         minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x + Math.abs(el.width));
-        maxY = Math.max(maxY, y + Math.abs(el.height));
+        maxX = Math.max(maxX, x + w);
+        maxY = Math.max(maxY, y + h);
         break;
       }
       case 'line':
@@ -260,12 +257,11 @@ function computeBounds(elements: ReadonlyArray<Element>): {
         maxY = Math.max(maxY, el.y, el.y2, el.cy);
         break;
       case 'image': {
-        const ix = el.width < 0 ? el.x + el.width : el.x;
-        const iy = el.height < 0 ? el.y + el.height : el.y;
+        const { x: ix, y: iy, w, h } = normalizeRect(el);
         minX = Math.min(minX, ix);
         minY = Math.min(minY, iy);
-        maxX = Math.max(maxX, ix + Math.abs(el.width));
-        maxY = Math.max(maxY, iy + Math.abs(el.height));
+        maxX = Math.max(maxX, ix + w);
+        maxY = Math.max(maxY, iy + h);
         break;
       }
     }
@@ -379,10 +375,9 @@ function rotateAttr(el: Element, ox: number, oy: number): string {
 }
 
 function rectToSVG(el: RectangleElement, ox: number, oy: number): string {
-  const x = (el.width < 0 ? el.x + el.width : el.x) + ox;
-  const y = (el.height < 0 ? el.y + el.height : el.y) + oy;
-  const w = Math.abs(el.width);
-  const h = Math.abs(el.height);
+  const { x: left, y: top, w, h } = normalizeRect(el);
+  const x = left + ox;
+  const y = top + oy;
   let svg = `<rect x="${round(x)}" y="${round(y)}" width="${round(w)}" height="${round(h)}" ${shapeProps(el)}${rotateAttr(el, ox, oy)}/>`;
   if (el.label) {
     svg +=
@@ -423,10 +418,9 @@ function ellipseToSVG(el: EllipseElement, ox: number, oy: number): string {
 }
 
 function rhombusToSVG(el: RhombusElement, ox: number, oy: number): string {
-  const x = (el.width < 0 ? el.x + el.width : el.x) + ox;
-  const y = (el.height < 0 ? el.y + el.height : el.y) + oy;
-  const w = Math.abs(el.width);
-  const h = Math.abs(el.height);
+  const { x: left, y: top, w, h } = normalizeRect(el);
+  const x = left + ox;
+  const y = top + oy;
   const pts = [
     `${round(x + w / 2)},${round(y)}`,
     `${round(x + w)},${round(y + h / 2)}`,
@@ -437,10 +431,9 @@ function rhombusToSVG(el: RhombusElement, ox: number, oy: number): string {
 }
 
 function stencilToSVG(el: StencilElement, ox: number, oy: number): string {
-  const x = (el.width < 0 ? el.x + el.width : el.x) + ox;
-  const y = (el.height < 0 ? el.y + el.height : el.y) + oy;
-  const w = Math.abs(el.width);
-  const h = Math.abs(el.height);
+  const { x: left, y: top, w, h } = normalizeRect(el);
+  const x = left + ox;
+  const y = top + oy;
   const parts: string[] = [];
 
   const { source } = el;
@@ -499,10 +492,9 @@ function stencilToSVG(el: StencilElement, ox: number, oy: number): string {
 }
 
 function shapeToSVG(el: ShapeElement, ox: number, oy: number): string {
-  const x = (el.width < 0 ? el.x + el.width : el.x) + ox;
-  const y = (el.height < 0 ? el.y + el.height : el.y) + oy;
-  const w = Math.abs(el.width);
-  const h = Math.abs(el.height);
+  const { x: left, y: top, w, h } = normalizeRect(el);
+  const x = left + ox;
+  const y = top + oy;
   const def = SHAPE_DEFINITIONS[el.kind];
   const parts = [
     `<path d="${shapeCommandsToPathData(def.outline(w, h), x, y)}" ${shapeProps(el)}/>`,
@@ -778,10 +770,9 @@ function shapeLabelToSVG(
 }
 
 function imageToSVG(el: ImageElement, ox: number, oy: number): string {
-  const x = (el.width < 0 ? el.x + el.width : el.x) + ox;
-  const y = (el.height < 0 ? el.y + el.height : el.y) + oy;
-  const w = Math.abs(el.width);
-  const h = Math.abs(el.height);
+  const { x: left, y: top, w, h } = normalizeRect(el);
+  const x = left + ox;
+  const y = top + oy;
   return `<image href="${escapeXml(el.src)}" x="${round(x)}" y="${round(y)}" width="${round(w)}" height="${round(h)}" opacity="${el.opacity}"${rotateAttr(el, ox, oy)} preserveAspectRatio="none"/>`;
 }
 

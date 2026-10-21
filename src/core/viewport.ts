@@ -1,4 +1,5 @@
 import type { Element } from '../elements/element';
+import { normalizeRect } from './geometry';
 
 export interface Viewport {
   readonly offsetX: number;
@@ -81,14 +82,11 @@ export function fitToElements(
       el.type === 'stencil' ||
       el.type === 'image'
     ) {
-      const x1 = Math.min(el.x, el.x + el.width);
-      const y1 = Math.min(el.y, el.y + el.height);
-      const x2 = Math.max(el.x, el.x + el.width);
-      const y2 = Math.max(el.y, el.y + el.height);
-      left = Math.min(left, x1);
-      top = Math.min(top, y1);
-      right = Math.max(right, x2);
-      bottom = Math.max(bottom, y2);
+      const { x, y, w, h } = normalizeRect(el);
+      left = Math.min(left, x);
+      top = Math.min(top, y);
+      right = Math.max(right, x + w);
+      bottom = Math.max(bottom, y + h);
     } else if (el.type === 'line' || el.type === 'arrow') {
       left = Math.min(left, el.x, el.x2);
       top = Math.min(top, el.y, el.y2);
