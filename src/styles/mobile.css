@@ -355,3 +355,23 @@
   background: var(--accent-light);
   color: var(--accent);
 }
+
+@media (pointer: coarse) {
+  #mobile-style-sheet .cp-btn-row {
+    flex-wrap: wrap;
+  }
+
+  #mobile-style-sheet .cp-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  #mss-routing-presets .cp-btn {
+    width: auto;
+    padding-inline: 12px;
+  }
+
+  #mobile-style-sheet [hidden] {
+    display: none;
+  }
+}

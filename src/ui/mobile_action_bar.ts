@@ -1,4 +1,9 @@
 import type { Element } from '../elements/element';
+import {
+  ARROW_HEAD_STYLES,
+  type ArrowElement,
+  type LineElement,
+} from '../elements/element';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import {
@@ -10,6 +15,11 @@ import {
   setStoredName,
 } from '../io/realtime';
 import { buildShareUrl } from '../io/share';
+import { hasEndHead, hasStartHead } from '../rendering/connector_geometry';
+import {
+  ARROW_HEAD_STYLE_LABEL_KEYS,
+  arrowHeadStyleIcon,
+} from './arrow_head_icons';
 import {
   bindUndoTransaction,
   createColorPicker,
@@ -82,6 +92,26 @@ export function initMobileActionBar(
     <div class="cp-section">
       <div class="cp-label">${t('strokeStyle')}</div>
       <div class="cp-btn-row" id="mss-style-presets"></div>
+    </div>
+
+    <div class="cp-section" id="mss-arrowhead-section">
+      <div class="cp-label">${t('arrowHead')}</div>
+      <div class="cp-btn-row" id="mss-arrowhead-presets" role="group" aria-label="${t('arrowHead')}"></div>
+    </div>
+
+    <div class="cp-section" id="mss-routing-section">
+      <div class="cp-label">${t('routing')}</div>
+      <div class="cp-btn-row" id="mss-routing-presets" role="group" aria-label="${t('routing')}"></div>
+    </div>
+
+    <div class="cp-section" id="mss-start-head-section">
+      <div class="cp-label">${t('startHead')}</div>
+      <div class="cp-btn-row" id="mss-start-head-presets" role="group" aria-label="${t('startHead')}"></div>
+    </div>
+
+    <div class="cp-section" id="mss-end-head-section">
+      <div class="cp-label">${t('endHead')}</div>
+      <div class="cp-btn-row" id="mss-end-head-presets" role="group" aria-label="${t('endHead')}"></div>
     </div>
 
     <div class="cp-section">
@@ -325,6 +355,73 @@ export function initMobileActionBar(
     styleEl.appendChild(btn);
   }
 
+  for (const [value, key, symbol] of [
+    ['none', 'arrowNone', '―'],
+    ['end', 'arrowEnd', '→'],
+    ['start', 'arrowStart', '←'],
+    ['both', 'arrowBoth', '↔'],
+  ] as const) {
+    const btn = document.createElement('button');
+    btn.className = 'cp-btn';
+    btn.dataset.value = value;
+    btn.title = t(key);
+    btn.setAttribute('aria-label', t(key));
+    btn.textContent = symbol;
+    btn.addEventListener('click', () => {
+      history.dispatch({ type: 'APPLY_STYLE', arrowHead: value });
+    });
+    sheet.querySelector('#mss-arrowhead-presets')!.appendChild(btn);
+  }
+
+  for (const [value, key] of [
+    ['straight', 'routingStraight'],
+    ['elbow', 'routingElbow'],
+  ] as const) {
+    const btn = document.createElement('button');
+    btn.className = 'cp-btn';
+    btn.dataset.value = value;
+    btn.textContent = t(key);
+    btn.addEventListener('click', () => {
+      history.dispatch({ type: 'APPLY_STYLE', routing: value });
+    });
+    sheet.querySelector('#mss-routing-presets')!.appendChild(btn);
+  }
+
+  for (const placement of ['start', 'end'] as const) {
+    const row = sheet.querySelector(`#mss-${placement}-head-presets`)!;
+    for (const style of ARROW_HEAD_STYLES) {
+      const btn = document.createElement('button');
+      btn.className = 'cp-btn';
+      btn.dataset.value = style;
+      btn.title = t(ARROW_HEAD_STYLE_LABEL_KEYS[style]);
+      btn.setAttribute('aria-label', btn.title);
+      btn.innerHTML = arrowHeadStyleIcon(style, placement);
+      btn.addEventListener('click', () => {
+        history.dispatch(
+          placement === 'start'
+            ? { type: 'APPLY_STYLE', startHeadStyle: style }
+            : { type: 'APPLY_STYLE', endHeadStyle: style },
+        );
+      });
+      row.appendChild(btn);
+    }
+  }
+
+  function syncConnectorRow(
+    name: string,
+    visible: boolean,
+    value: string,
+  ): void {
+    sheet.querySelector<HTMLElement>(`#mss-${name}-section`)!.hidden = !visible;
+    sheet
+      .querySelectorAll<HTMLButtonElement>(`#mss-${name}-presets button`)
+      .forEach((btn) => {
+        const active = btn.dataset.value === value;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', String(active));
+      });
+  }
+
   // ── Roughness presets ──────────────────────────────────────────────────────
   const roughnessEl = sheet.querySelector('#mss-roughness-presets')!;
   for (const r of [{ value: 0 }, { value: 0.5 }, { value: 1 }]) {
@@ -492,6 +589,44 @@ export function initMobileActionBar(
       .map((id) => scene.elements.find((el) => el.id === id))
       .filter((el): el is Element => el !== undefined);
     const hasSelection = selected.length > 0;
+    const connectors = selected.filter(
+      (el): el is LineElement | ArrowElement =>
+        el.type === 'line' || el.type === 'arrow',
+    );
+    const firstLine = connectors.find((el) => el.type === 'line');
+    const withStartHead = connectors.find(hasStartHead);
+    const withEndHead = connectors.find(hasEndHead);
+    const lastElement = scene.elements.find(
+      (el) => el.id === scene.appState.lastCreatedId,
+    );
+    const lineTool = !hasSelection && scene.appState.activeTool === 'line';
+    syncConnectorRow(
+      'arrowhead',
+      firstLine !== undefined || lineTool,
+      firstLine?.arrowHead ??
+        (lineTool && lastElement?.type === 'line'
+          ? lastElement.arrowHead
+          : undefined) ??
+        'none',
+    );
+    syncConnectorRow(
+      'routing',
+      connectors.length > 0 || lineTool,
+      connectors[0]?.routing ??
+        (lineTool ? scene.appState.lineRouting : 'straight'),
+    );
+    syncConnectorRow(
+      'start-head',
+      withStartHead !== undefined,
+      (withStartHead?.type === 'line'
+        ? withStartHead.startHeadStyle
+        : undefined) ?? 'open',
+    );
+    syncConnectorRow(
+      'end-head',
+      withEndHead !== undefined,
+      withEndHead?.endHeadStyle ?? 'open',
+    );
 
     if (prevHasSelection && !hasSelection) {
       sheet.classList.remove('open');
