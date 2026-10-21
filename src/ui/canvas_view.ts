@@ -51,6 +51,7 @@ import { ShapeTool } from '../tools/shape_tool';
 import { StickyTool } from '../tools/sticky_tool';
 import { TextTool } from '../tools/text_tool';
 import type { Tool, ToolContext } from '../tools/tool';
+import { toolAfterLabelEdit } from './label_edit_tool';
 
 const textTool = new TextTool();
 const stickyTool = new StickyTool();
@@ -150,8 +151,20 @@ export function initCanvasView(
   ro.observe(canvas);
   resizeCanvas();
 
+  /**
+   * Commits an open label editor before a canvas press is handled. The
+   * editor would only close on blur, which fires after the press reached
+   * the temporary text tool (creating stray text); touch presses don't blur
+   * it at all since touchstart prevents the default.
+   */
+  function closeLabelEditor(): void {
+    if (editingShapeLabelId === null) return;
+    (document.activeElement as HTMLElement | null)?.blur();
+  }
+
   // Event listeners
   canvas.addEventListener('mousedown', (e) => {
+    closeLabelEditor();
     if (e.button === 1 || (e.button === 0 && e.altKey)) {
       // Middle click or Alt+click = pan
       isPanning = true;
@@ -240,13 +253,14 @@ export function initCanvasView(
           wy >= by - 4 &&
           wy <= by + bh + 4
         ) {
+          const previousTool = history.present.appState.activeTool;
           history.dispatch({ type: 'SELECT_ELEMENTS', ids: [el.id] });
           history.dispatch({
             type: 'SET_TOOL',
             tool: 'text',
             keepSelection: true,
           });
-          openShapeLabelEditor(el, history, canvas, (id) => {
+          openShapeLabelEditor(el, history, canvas, previousTool, (id) => {
             editingShapeLabelId = id;
             needsRender = true;
           });
@@ -268,13 +282,14 @@ export function initCanvasView(
             : distPointToSegment(wx, wy, line.x, line.y, line.x2, line.y2)) <
           line.strokeWidth / 2 + 8;
         if (hitLabel || hitShaft) {
+          const previousTool = history.present.appState.activeTool;
           history.dispatch({ type: 'SELECT_ELEMENTS', ids: [line.id] });
           history.dispatch({
             type: 'SET_TOOL',
             tool: 'text',
             keepSelection: true,
           });
-          openArrowLabelEditor(line, history, canvas, (id) => {
+          openArrowLabelEditor(line, history, canvas, previousTool, (id) => {
             editingShapeLabelId = id;
             needsRender = true;
           });
@@ -440,6 +455,7 @@ export function initCanvasView(
     'touchstart',
     (e) => {
       preventIfCancelable(e);
+      closeLabelEditor();
       cancelAnimationFrame(inertiaRafId);
       if (e.touches.length === 1) {
         const t = e.touches.item(0)!;
@@ -1035,6 +1051,18 @@ function drawSlashTrail(
 
 // ── Shape label editor ─────────────────────────────────────────────────────────
 
+/** Brings back the tool that was active before a label editor opened. */
+function restoreToolAfterLabelEdit(
+  history: History,
+  previousTool: ActiveTool,
+): void {
+  const tool = toolAfterLabelEdit(
+    previousTool,
+    history.present.appState.activeTool,
+  );
+  if (tool) history.dispatch({ type: 'SET_TOOL', tool, keepSelection: true });
+}
+
 /**
  * Text color while editing a label, matching how it is drawn: inside the
  * fill (contrast with it) for shapes, below the icon (stroke color) for
@@ -1063,6 +1091,7 @@ function openShapeLabelEditor(
     | StencilElement,
   history: History,
   canvas: HTMLCanvasElement,
+  previousTool: ActiveTool,
   onEditingChange: (id: string | null) => void,
 ): void {
   const { viewport, appState } = history.present;
@@ -1156,6 +1185,7 @@ function openShapeLabelEditor(
         labelFontFamily: fontFamily,
       });
     }
+    restoreToolAfterLabelEdit(history, previousTool);
   };
 
   ta.addEventListener('blur', doCommit, { once: true });
@@ -1232,6 +1262,7 @@ function openArrowLabelEditor(
   el: LineElement,
   history: History,
   canvas: HTMLCanvasElement,
+  previousTool: ActiveTool,
   onEditingChange?: (id: string | null) => void,
 ): void {
   const { viewport, appState, elements } = history.present;
@@ -1296,6 +1327,7 @@ function openArrowLabelEditor(
         labelFontFamily: fontFamily,
       });
     }
+    restoreToolAfterLabelEdit(history, previousTool);
   };
 
   ta.addEventListener('blur', doCommit, { once: true });
@@ -1307,6 +1339,7 @@ function openArrowLabelEditor(
       unsubscribe();
       onEditingChange?.(null);
       ta.remove();
+      restoreToolAfterLabelEdit(history, previousTool);
       return;
     }
     if (e.key === 'Enter' && !e.shiftKey) {
