@@ -1,6 +1,5 @@
 import type {
   ArrowElement,
-  ArrowHeadStyle,
   Element,
   LineElement,
   ShapeElement,
@@ -17,13 +16,16 @@ import {
 } from '../elements/stencils/registry';
 import {
   type ArrowHeadShape,
-  type ConnectorEndpoints,
+  CLIP_EXTENT,
+  type ConnectorHead,
   getArrowHeadShape,
   getArrowHeadVector,
+  getConnectorHeads,
   getQuadraticLength,
   getQuadraticPoint,
   getQuadraticSegment,
   getQuadraticTangent,
+  getRouteHeadVector,
   getRoutePointAt,
   type RoutePoint,
 } from './connector_geometry';
@@ -275,7 +277,9 @@ export function drawElement(
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
       const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
-      const heads = getConnectorHeads(el, pts, null);
+      const heads = getConnectorHeads(el, (p) =>
+        getArrowHeadVector(pts, el.type === 'line' ? el : {}, p),
+      );
       const headClip = clipOutClosedHeads(ctx, heads, el.strokeWidth);
 
       if (el.label && editingShapeLabelId !== el.id) {
@@ -421,7 +425,9 @@ export function drawElement(
       const roughness = el.roughness ?? 0;
       const seed = hashId(el.id);
       const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
-      const heads = getConnectorHeads(el, pts, null);
+      const heads = getConnectorHeads(el, (p) =>
+        getArrowHeadVector(pts, {}, p),
+      );
       const headClip = clipOutClosedHeads(ctx, heads, el.strokeWidth);
       if (el.label && editingShapeLabelId !== el.id) {
         const fontSize = el.labelFontSize ?? 12;
@@ -938,21 +944,13 @@ function drawElbowConnector(
     const labelW =
       Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2;
     const labelH = lines.length * fontSize * 1.2 + pad * 2;
-    const xs = route.map((p) => p[0]);
-    const ys = route.map((p) => p[1]);
-    const margin = el.strokeWidth * 8 + 32;
     ctx.beginPath();
-    ctx.rect(
-      Math.min(...xs) - margin,
-      Math.min(...ys) - margin,
-      Math.max(...xs) - Math.min(...xs) + margin * 2,
-      Math.max(...ys) - Math.min(...ys) + margin * 2,
-    );
+    ctx.rect(-CLIP_EXTENT, -CLIP_EXTENT, CLIP_EXTENT * 2, CLIP_EXTENT * 2);
     ctx.rect(mx - labelW / 2, my - labelH / 2, labelW, labelH);
     ctx.clip('evenodd');
   }
 
-  const heads = getConnectorHeads(el, null, route);
+  const heads = getConnectorHeads(el, (p) => getRouteHeadVector(route, p));
   const headClip = clipOutClosedHeads(ctx, heads, el.strokeWidth);
   if (roughness < 0.05) {
     ctx.beginPath();
@@ -1184,49 +1182,6 @@ function drawQuadraticSegment(
   ctx.stroke();
 }
 
-interface ConnectorHead {
-  readonly style: ArrowHeadStyle;
-  readonly fromX: number;
-  readonly fromY: number;
-  readonly tipX: number;
-  readonly tipY: number;
-}
-
-/**
- * Heads a connector shows, oriented along its last drawn segment: the
- * route's end segments for elbow connectors, the quadratic tangent for
- * curved lines, the straight segment otherwise. Arrows always have an end
- * head; lines follow `arrowHead`.
- */
-function getConnectorHeads(
-  el: LineElement | ArrowElement,
-  pts: ConnectorEndpoints | null,
-  route: ReadonlyArray<RoutePoint> | null,
-): ConnectorHead[] {
-  const hasEnd =
-    el.type === 'arrow' || el.arrowHead === 'end' || el.arrowHead === 'both';
-  const hasStart =
-    el.type === 'line' && (el.arrowHead === 'start' || el.arrowHead === 'both');
-  const control = el.type === 'line' ? el : {};
-  const vectorFor = (placement: 'start' | 'end') => {
-    if (route && route.length >= 2) {
-      const n = route.length;
-      const [fromX, fromY] = placement === 'end' ? route[n - 2]! : route[1]!;
-      const [tipX, tipY] = placement === 'end' ? route[n - 1]! : route[0]!;
-      return { fromX, fromY, tipX, tipY };
-    }
-    return getArrowHeadVector(pts ?? el, control, placement);
-  };
-  const heads: ConnectorHead[] = [];
-  if (hasEnd) {
-    heads.push({ style: el.endHeadStyle ?? 'open', ...vectorFor('end') });
-  }
-  if (hasStart) {
-    heads.push({ style: el.startHeadStyle ?? 'open', ...vectorFor('start') });
-  }
-  return heads;
-}
-
 function traceHeadShape(
   ctx: CanvasRenderingContext2D,
   shape: ArrowHeadShape,
@@ -1258,7 +1213,7 @@ function clipOutClosedHeads(
   if (closed.length === 0) return false;
   ctx.save();
   ctx.beginPath();
-  ctx.rect(-1e7, -1e7, 2e7, 2e7);
+  ctx.rect(-CLIP_EXTENT, -CLIP_EXTENT, CLIP_EXTENT * 2, CLIP_EXTENT * 2);
   for (const h of closed) {
     traceHeadShape(
       ctx,

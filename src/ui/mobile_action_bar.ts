@@ -24,7 +24,7 @@ import {
   showLiveStatusToast,
   showShareToast,
 } from './share_actions';
-import { styleTypeOf } from './style_type';
+import { hasFillStyle, hasStrokeStyle, styleTypeOf } from './style_type';
 
 const STROKE_PRESETS = [
   '#000000',
@@ -692,29 +692,8 @@ export function initMobileActionBar(
     opacityVal.textContent = String(pct);
 
     // Hide sections based on selected element types (mirrors desktop context panel logic)
-    const FILL_TYPES = new Set([
-      'rectangle',
-      'ellipse',
-      'rhombus',
-      'shape',
-      'stencil',
-      'text',
-    ]);
-    const STYLE_TYPES = new Set([
-      'rectangle',
-      'ellipse',
-      'rhombus',
-      'shape',
-      'stencil',
-      'line',
-      'arrow',
-    ]);
-    const hasFill =
-      !allImage && selected.some((el) => FILL_TYPES.has(styleTypeOf(el)));
-    const hasStyle =
-      !allImage &&
-      !allText &&
-      selected.some((el) => STYLE_TYPES.has(styleTypeOf(el)));
+    const hasFill = !allImage && selected.some(hasFillStyle);
+    const hasStyle = !allImage && !allText && selected.some(hasStrokeStyle);
     const hasWidth = !allText && !allImage;
     (
       sheet

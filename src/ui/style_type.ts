@@ -11,3 +11,33 @@ export function styleTypeOf(el: Element): string {
     return isRestylableStencil(el) ? 'stencil' : 'image';
   return el.type;
 }
+
+/** Types that show the fill section. */
+const FILL_TYPES: ReadonlySet<string> = new Set([
+  'rectangle',
+  'ellipse',
+  'rhombus',
+  'shape',
+  'stencil',
+  'text',
+]);
+
+/** Types that show the stroke style and roughness sections. */
+const STROKE_STYLE_TYPES: ReadonlySet<string> = new Set([
+  'rectangle',
+  'ellipse',
+  'rhombus',
+  'shape',
+  'stencil',
+  'line',
+  'arrow',
+]);
+
+/** Shared by the desktop context panel and the mobile style sheet. */
+export function hasFillStyle(el: Element): boolean {
+  return FILL_TYPES.has(styleTypeOf(el));
+}
+
+export function hasStrokeStyle(el: Element): boolean {
+  return STROKE_STYLE_TYPES.has(styleTypeOf(el));
+}

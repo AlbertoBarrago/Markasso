@@ -30,7 +30,7 @@ export interface IconPackFile {
 
 export interface IconPackResult {
   readonly icons: ImportedIcon[];
-  /** Files dropped because they were too large or failed sanitization. */
+  /** Icons dropped: rejected by the sanitizer, over the size cap, or over the pack cap. */
   readonly skipped: number;
 }
 
@@ -160,19 +160,24 @@ export function buildIconPack(
   files: ReadonlyArray<IconPackFile>,
   sanitize: (svg: string) => string | null,
 ): IconPackResult {
-  const best = new Map<string, { file: IconPackFile; size: number }>();
+  const best = new Map<
+    string,
+    { file: IconPackFile; size: number; name: string; category: string }
+  >();
   for (const file of files) {
     if (!isIconSvgPath(file.path)) continue;
     const { name, category } = describeIconPath(file.path);
     const key = `${category}\u0000${name}`.toLowerCase();
     const size = variantSize(file.path);
     const current = best.get(key);
-    if (!current || size > current.size) best.set(key, { file, size });
+    if (!current || size > current.size) {
+      best.set(key, { file, size, name, category });
+    }
   }
 
   const icons: ImportedIcon[] = [];
   let skipped = 0;
-  for (const { file } of best.values()) {
+  for (const { file, name, category } of best.values()) {
     if (icons.length >= MAX_ICONS_PER_PACK) {
       skipped++;
       continue;
@@ -183,7 +188,6 @@ export function buildIconPack(
       skipped++;
       continue;
     }
-    const { name, category } = describeIconPath(file.path);
     icons.push({ id: String(icons.length), name, category, src });
   }
   icons.sort(

@@ -396,7 +396,7 @@ export function findNearestElementSnapTarget(
 ): ElementSnapTarget | null {
   let best: ElementSnapTarget | null = null;
   for (const el of elements) {
-    if (el.id === ignoreId) continue;
+    if (el.id === ignoreId || el.visible === false) continue;
     if (el.type === 'line' || el.type === 'arrow') continue;
     const [worldX, worldY] = getNearestElementBorderPoint(el, px, py);
     const distance = Math.hypot(px - worldX, py - worldY);

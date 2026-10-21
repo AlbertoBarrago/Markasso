@@ -1,5 +1,10 @@
 import type { StencilElement, StencilSource } from '../element';
-import { GENERIC_ICONS, type GenericIcon, isGenericIconId } from './generic';
+import {
+  GENERIC_ICONS,
+  type GenericIcon,
+  type GenericIconId,
+  isGenericIconId,
+} from './generic';
 
 /** `<pack>/<id>`, e.g. `generic/database` or `k8s/pod`. */
 const STENCIL_REF_PATTERN = /^[a-z0-9]+\/[A-Za-z0-9_-]{1,64}$/;
@@ -49,12 +54,18 @@ export function isValidEmbeddedSvg(src: string): boolean {
   return src.length <= MAX_EMBEDDED_SVG_CHARS && EMBEDDED_SVG_PATTERN.test(src);
 }
 
+/** Id of a `generic/<id>` reference, or null for any other pack. */
+export function genericIconIdOf(ref: string): GenericIconId | null {
+  const [pack, id] = ref.split('/');
+  return pack === 'generic' && id !== undefined && isGenericIconId(id)
+    ? id
+    : null;
+}
+
 /** Built-in generic icon for a `generic/<id>` reference, if it exists. */
 export function getGenericIcon(ref: string): GenericIcon | null {
-  const [pack, id] = ref.split('/');
-  if (pack !== 'generic' || id === undefined || !isGenericIconId(id))
-    return null;
-  return GENERIC_ICONS[id];
+  const id = genericIconIdOf(ref);
+  return id ? GENERIC_ICONS[id] : null;
 }
 
 /**

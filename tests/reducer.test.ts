@@ -1638,4 +1638,31 @@ describe('APPLY_STYLE routing', () => {
     expect(next.elements[0]).not.toHaveProperty('startHeadStyle');
     expect(next.elements[1]).not.toHaveProperty('endHeadStyle');
   });
+
+  it('sets start head styles on lines only (arrows have no start head)', () => {
+    const arrow: ArrowElement = {
+      id: 'arrow-1',
+      type: 'arrow',
+      x: 0,
+      y: 0,
+      x2: 10,
+      y2: 10,
+      strokeColor: '#000',
+      fillColor: 'transparent',
+      strokeWidth: 1,
+      opacity: 1,
+      roughness: 0,
+    };
+    const line: LineElement = { ...arrow, id: 'line-1', type: 'line' };
+    const next = reducer(
+      { ...createScene(), elements: [arrow, line] },
+      {
+        type: 'APPLY_STYLE',
+        ids: ['arrow-1', 'line-1'],
+        startHeadStyle: 'circle',
+      },
+    );
+    expect(next.elements[0]).not.toHaveProperty('startHeadStyle');
+    expect(next.elements[1]).toMatchObject({ startHeadStyle: 'circle' });
+  });
 });

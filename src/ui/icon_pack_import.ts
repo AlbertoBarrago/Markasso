@@ -5,7 +5,11 @@ import {
   isIconSvgPath,
 } from '../io/icon_pack';
 import { saveIconPack } from '../io/icon_pack_store';
-import { listZipEntries, readZipEntries } from '../io/zip_reader';
+import {
+  DEFAULT_ZIP_LIMITS,
+  listZipEntries,
+  readZipEntries,
+} from '../io/zip_reader';
 import { sanitizeSvg } from './svg_sanitize';
 
 /** Largest ZIP accepted; official vendor packs are 1-20 MB. */
@@ -36,7 +40,16 @@ export async function importIconPack(
   }
   const bytes = new Uint8Array(await file.arrayBuffer());
   const names = listZipEntries(bytes);
-  const entries = await readZipEntries(bytes, isIconSvgPath);
+  // Oversized SVGs are skipped rather than failing the whole import.
+  let tooLarge = 0;
+  const entries = await readZipEntries(bytes, (name, size) => {
+    if (!isIconSvgPath(name)) return false;
+    if (size > DEFAULT_ZIP_LIMITS.maxEntryBytes) {
+      tooLarge++;
+      return false;
+    }
+    return true;
+  });
   const decoder = new TextDecoder();
   const { icons, skipped } = buildIconPack(
     entries.map((e) => ({ path: e.name, svg: decoder.decode(e.data) })),
@@ -52,5 +65,5 @@ export async function importIconPack(
     icons,
   };
   await saveIconPack(pack);
-  return { pack, skipped };
+  return { pack, skipped: skipped + tooLarge };
 }

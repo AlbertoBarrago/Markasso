@@ -72,6 +72,7 @@ export function insertShape(
     width: SHAPE_INSERT_WIDTH,
     height: SHAPE_INSERT_HEIGHT,
     ...currentStyle(history),
+    strokeStyle: history.present.appState.strokeStyle,
   };
   history.dispatch({ type: 'CREATE_ELEMENT', element });
 }

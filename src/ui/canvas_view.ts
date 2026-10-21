@@ -248,20 +248,10 @@ export function initCanvasView(
             tool: 'text',
             keepSelection: true,
           });
-          openShapeLabelEditor(
-            el as
-              | RectangleElement
-              | EllipseElement
-              | RhombusElement
-              | ShapeElement
-              | StencilElement,
-            history,
-            canvas,
-            (id) => {
-              editingShapeLabelId = id;
-              needsRender = true;
-            },
-          );
+          openShapeLabelEditor(el, history, canvas, (id) => {
+            editingShapeLabelId = id;
+            needsRender = true;
+          });
           needsRender = true;
           return;
         }
@@ -1047,6 +1037,25 @@ function drawSlashTrail(
 
 // ── Shape label editor ─────────────────────────────────────────────────────────
 
+/**
+ * Text color while editing a label, matching how it is drawn: inside the
+ * fill (contrast with it) for shapes, below the icon (stroke color) for
+ * stencils.
+ */
+function labelEditorColor(
+  el:
+    | RectangleElement
+    | EllipseElement
+    | RhombusElement
+    | ShapeElement
+    | StencilElement,
+): string {
+  if (el.labelColor) return el.labelColor;
+  return el.type === 'stencil'
+    ? el.strokeColor
+    : contrastColor(el.fillColor, el.strokeColor);
+}
+
 function openShapeLabelEditor(
   el:
     | RectangleElement
@@ -1101,7 +1110,7 @@ function openShapeLabelEditor(
   ta.style.width = `${shapeW}px`;
   ta.style.minHeight = `${fontSize * viewport.zoom * 1.2}px`;
   ta.style.font = `${fontSize * viewport.zoom}px ${fontFamily}`;
-  ta.style.color = el.labelColor ?? contrastColor(el.fillColor, el.strokeColor);
+  ta.style.color = labelEditorColor(el);
   ta.style.caretColor = 'var(--accent, #7c63d4)';
   ta.style.textAlign = 'center';
   ta.style.lineHeight = '1.2';
@@ -1134,9 +1143,7 @@ function openShapeLabelEditor(
       latest?.type === 'shape' ||
       latest?.type === 'stencil'
     ) {
-      ta.style.color =
-        latest.labelColor ??
-        contrastColor(latest.fillColor, latest.strokeColor);
+      ta.style.color = labelEditorColor(latest);
     }
   });
 

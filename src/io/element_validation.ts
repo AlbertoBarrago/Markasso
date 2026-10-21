@@ -1,6 +1,7 @@
 import type { Viewport } from '../core/viewport';
 import {
   ARROW_HEAD_STYLES,
+  CONNECTOR_ROUTINGS,
   type Element,
   type ElementType,
   SHAPE_KINDS,
@@ -32,7 +33,7 @@ const LINE_JOINS = new Set(['round', 'miter', 'bevel']);
 const TEXT_ALIGNS = new Set(['left', 'center', 'right']);
 const ARROW_HEADS = new Set(['none', 'start', 'end', 'both']);
 const SHAPE_KIND_SET: ReadonlySet<string> = new Set(SHAPE_KINDS);
-const ROUTINGS = new Set(['straight', 'elbow']);
+const ROUTINGS: ReadonlySet<string> = new Set(CONNECTOR_ROUTINGS);
 const HEAD_STYLES: ReadonlySet<string> = new Set(ARROW_HEAD_STYLES);
 
 export const MAX_ELEMENTS = 5_000;
@@ -184,7 +185,6 @@ function hasConnectorFields(el: Record<string, unknown>): boolean {
     isOptionalAnchor(el.startAnchor) &&
     isOptionalAnchor(el.endAnchor) &&
     isOptionalEnum(el.routing, ROUTINGS) &&
-    isOptionalEnum(el.startHeadStyle, HEAD_STYLES) &&
     isOptionalEnum(el.endHeadStyle, HEAD_STYLES) &&
     hasShapeLabelFields(el)
   );
@@ -247,7 +247,8 @@ export function isValidElement(value: unknown): value is Element {
         hasConnectorFields(value) &&
         isOptionalFiniteNumber(value.cx) &&
         isOptionalFiniteNumber(value.cy) &&
-        isOptionalEnum(value.arrowHead, ARROW_HEADS)
+        isOptionalEnum(value.arrowHead, ARROW_HEADS) &&
+        isOptionalEnum(value.startHeadStyle, HEAD_STYLES)
       );
 
     case 'arrow':

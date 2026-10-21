@@ -1,6 +1,6 @@
 import type { Element, StencilElement } from '../elements/element';
-import { isGenericIconId } from '../elements/stencils/generic';
 import { getBundledIcon } from '../elements/stencils/packs';
+import { genericIconIdOf } from '../elements/stencils/registry';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { getElementBounds } from '../rendering/draw_selection';
@@ -23,10 +23,8 @@ function getTypeName(el: Element): string {
   if (el.type === 'shape') return t(SHAPE_KIND_LABEL_KEYS[el.kind]);
   if (el.type === 'stencil') {
     if (el.source.kind === 'embedded') return el.source.name;
-    const id = el.source.ref.split('/')[1] ?? '';
-    if (isGenericIconId(id) && el.source.ref.startsWith('generic/')) {
-      return t(GENERIC_ICON_LABEL_KEYS[id]);
-    }
+    const id = genericIconIdOf(el.source.ref);
+    if (id) return t(GENERIC_ICON_LABEL_KEYS[id]);
     return getBundledIcon(el.source.ref)?.label ?? t('stencil');
   }
   return t(el.type) || el.type;
@@ -37,10 +35,8 @@ function getTypeName(el: Element): string {
  * rather than injecting their (scene-supplied) SVG into the results list.
  */
 function stencilSearchIcon(el: StencilElement): string {
-  if (el.source.kind === 'builtin') {
-    const id = el.source.ref.split('/')[1] ?? '';
-    if (isGenericIconId(id)) return genericIconSvg(id, 13);
-  }
+  const id = el.source.kind === 'builtin' && genericIconIdOf(el.source.ref);
+  if (id) return genericIconSvg(id, 13);
   return TYPE_ICONS.image ?? '';
 }
 

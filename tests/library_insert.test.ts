@@ -38,6 +38,15 @@ describe('library insertion', () => {
     });
   });
 
+  it('applies the default stroke style to inserted shapes', () => {
+    const history = new History();
+    history.dispatch({ type: 'SET_STROKE_STYLE', style: 'dashed' });
+    insertShape(history, 'document', { x: 0, y: 0 });
+    expect(history.present.elements[0]).toMatchObject({
+      strokeStyle: 'dashed',
+    });
+  });
+
   it('is a single undo step', () => {
     const history = new History();
     insertShape(history, 'terminator', { x: 0, y: 0 });

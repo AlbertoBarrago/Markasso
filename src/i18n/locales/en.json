@@ -177,7 +177,6 @@
   "reportSuccessDesc": "Thanks, we opened a public issue on GitHub:",
   "reportClose": "Close",
   "guideSearchPlaceholder": "Search the guide…",
-  "shape": "Flowchart shape",
   "shapes": "Flowchart shapes",
   "shapeKind": "Shape",
   "hintShape": "Drag to draw the selected flowchart shape. Pick another one in the Library [[I]]",

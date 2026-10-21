@@ -1,4 +1,4 @@
-import type { ShapeCommand } from '../shapes';
+import { CUBIC_CIRCLE_K, type ShapeCommand } from '../shapes';
 
 /**
  * Markasso's own architecture icon set. Icons are drawn on a 24x24 grid as
@@ -14,8 +14,7 @@ export interface GenericIcon {
 
 export const ICON_GRID = 24;
 
-/** Cubic constant for quarter circles. */
-const K = 0.5523;
+const K = CUBIC_CIRCLE_K;
 
 function rect(
   x: number,

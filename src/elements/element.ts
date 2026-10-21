@@ -162,7 +162,9 @@ export const ARROW_HEAD_STYLES = [
 export type ArrowHeadStyle = (typeof ARROW_HEAD_STYLES)[number];
 
 /** `elbow` draws an orthogonal route, recomputed from the two ends. */
-export type ConnectorRouting = 'straight' | 'elbow';
+export const CONNECTOR_ROUTINGS = ['straight', 'elbow'] as const;
+
+export type ConnectorRouting = (typeof CONNECTOR_ROUTINGS)[number];
 
 export interface LineElement extends BaseElement {
   readonly type: 'line';
@@ -196,8 +198,7 @@ export interface ArrowElement extends BaseElement {
   readonly startAnchor?: ConnectorAnchor;
   readonly endAnchor?: ConnectorAnchor;
   readonly routing?: ConnectorRouting;
-  /** Head drawn at each end; `open` when omitted. */
-  readonly startHeadStyle?: ArrowHeadStyle;
+  /** Arrows only have an end head; `open` when omitted. */
   readonly endHeadStyle?: ArrowHeadStyle;
   readonly label?: string;
   readonly labelFontSize?: number;

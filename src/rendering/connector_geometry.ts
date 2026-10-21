@@ -1,4 +1,8 @@
-import type { ArrowHeadStyle } from '../elements/element';
+import type {
+  ArrowElement,
+  ArrowHeadStyle,
+  LineElement,
+} from '../elements/element';
 
 export interface ConnectorEndpoints {
   readonly x: number;
@@ -243,7 +247,7 @@ export interface RouteDirection {
 }
 
 /** Length of the straight stub that clears the shape before the first turn. */
-export const ELBOW_STUB = 16;
+const ELBOW_STUB = 16;
 
 function sign(n: number): -1 | 0 | 1 {
   return n > 0 ? 1 : n < 0 ? -1 : 0;
@@ -277,19 +281,21 @@ export function simplifyRoute(points: ReadonlyArray<RoutePoint>): RoutePoint[] {
  * connector leaves its start shape, `endDir` the outward normal of the side
  * it enters the end shape by; null means the end is free (not attached).
  *
- * Attached ends get a stub of `stub` length so the first/last turn never
+ * Attached ends get an `ELBOW_STUB` long stub so the first/last turn never
  * hugs the shape. Perpendicular stubs are joined with an L (the mirrored L
  * when the direct one would double back); parallel stubs with a Z through
- * the midpoint, or a detour when they face away from each other. No obstacle avoidance: the route is a pure function of the two
- * ends, which keeps it deterministic across live-session peers.
+ * the midpoint, or a detour when they face away from each other.
+ *
+ * No obstacle avoidance: the route is a pure function of the two ends,
+ * which keeps it deterministic across live-session peers.
  */
 export function computeElbowRoute(
   start: RoutePoint,
   startDir: RouteDirection | null,
   end: RoutePoint,
   endDir: RouteDirection | null,
-  stub = ELBOW_STUB,
 ): RoutePoint[] {
+  const stub = ELBOW_STUB;
   const p1: RoutePoint = startDir
     ? [start[0] + startDir.dx * stub, start[1] + startDir.dy * stub]
     : start;
@@ -494,4 +500,66 @@ export function getArrowHeadShape(
       return { kind: 'circle', cx: tipX - ux * r, cy: tipY - uy * r, r };
     }
   }
+}
+
+// ── Connector heads ───────────────────────────────────────────────────────────
+
+/**
+ * Half-size of a rectangle covering any drawable area. Clips and masks that
+ * mean "everything except this head/label" start from it.
+ */
+export const CLIP_EXTENT = 1e7;
+
+type HeadedConnector = LineElement | ArrowElement;
+
+/** Arrows always end with a head; lines follow `arrowHead`. */
+export function hasEndHead(el: HeadedConnector): boolean {
+  return (
+    el.type === 'arrow' || el.arrowHead === 'end' || el.arrowHead === 'both'
+  );
+}
+
+/** Only lines can have a start head. */
+export function hasStartHead(el: HeadedConnector): boolean {
+  return (
+    el.type === 'line' && (el.arrowHead === 'start' || el.arrowHead === 'both')
+  );
+}
+
+/** Head orientation from the first or last segment of a route. */
+export function getRouteHeadVector(
+  route: ReadonlyArray<RoutePoint>,
+  placement: 'start' | 'end',
+): ArrowHeadVector {
+  const n = route.length;
+  const [fromX, fromY] = (placement === 'end' ? route[n - 2] : route[1]) ?? [
+    0, 0,
+  ];
+  const [tipX, tipY] = (placement === 'end' ? route[n - 1] : route[0]) ?? [
+    0, 0,
+  ];
+  return { fromX, fromY, tipX, tipY };
+}
+
+export interface ConnectorHead extends ArrowHeadVector {
+  readonly style: ArrowHeadStyle;
+}
+
+/**
+ * Heads a connector shows, with their style. `vectorFor` orients each one
+ * along the connector as drawn (route end segment, quadratic tangent or
+ * straight segment), so canvas and SVG export share the same rules.
+ */
+export function getConnectorHeads(
+  el: HeadedConnector,
+  vectorFor: (placement: 'start' | 'end') => ArrowHeadVector,
+): ConnectorHead[] {
+  const heads: ConnectorHead[] = [];
+  if (hasEndHead(el)) {
+    heads.push({ style: el.endHeadStyle ?? 'open', ...vectorFor('end') });
+  }
+  if (el.type === 'line' && hasStartHead(el)) {
+    heads.push({ style: el.startHeadStyle ?? 'open', ...vectorFor('start') });
+  }
+  return heads;
 }

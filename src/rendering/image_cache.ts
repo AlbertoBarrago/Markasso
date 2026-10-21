@@ -31,8 +31,3 @@ export function getCachedImage(src: string): HTMLImageElement | null {
   }
   return img;
 }
-
-export function clearImageCache(): void {
-  cache.clear();
-  failed.clear();
-}

@@ -82,6 +82,23 @@ describe('zip reader', () => {
     expect(decode(entries[1]!.data)).toBe('<svg>'.repeat(200));
   });
 
+  it('passes the declared size to the selector', async () => {
+    const zip = await makeZip([
+      { name: 'small.svg', text: 'x' },
+      { name: 'large.svg', text: 'y'.repeat(5_000), deflate: true },
+    ]);
+    const seen: Array<[string, number]> = [];
+    const entries = await readZipEntries(zip, (name, size) => {
+      seen.push([name, size]);
+      return size < 1_000;
+    });
+    expect(seen).toEqual([
+      ['small.svg', 1],
+      ['large.svg', 5_000],
+    ]);
+    expect(entries.map((e) => e.name)).toEqual(['small.svg']);
+  });
+
   it('rejects data that is not a ZIP', () => {
     expect(() => listZipEntries(new TextEncoder().encode('not a zip'))).toThrow(
       ZipError,

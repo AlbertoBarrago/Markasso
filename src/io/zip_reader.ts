@@ -140,20 +140,23 @@ export function listZipEntries(
 }
 
 /**
- * Decompresses the entries whose name passes `select` (directories are
- * always skipped). Oversized entries throw; the caller decides whether a
- * partial import is acceptable by filtering before.
+ * Decompresses the entries passing `select`, which gets each name and
+ * declared (uncompressed) size; directories are always skipped. A selected
+ * entry over the limits throws: callers that prefer to skip large files
+ * filter them out in `select` using the declared size.
  */
 export async function readZipEntries(
   bytes: Uint8Array,
-  select: (name: string) => boolean,
+  select: (name: string, size: number) => boolean,
   limits: ZipLimits = DEFAULT_ZIP_LIMITS,
 ): Promise<ZipEntry[]> {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const entries: ZipEntry[] = [];
   let total = 0;
   for (const record of readCentralDirectory(bytes, limits)) {
-    if (record.name.endsWith('/') || !select(record.name)) continue;
+    if (record.name.endsWith('/') || !select(record.name, record.size)) {
+      continue;
+    }
     if (record.encrypted) throw new ZipError(`Encrypted entry: ${record.name}`);
     if (record.size > limits.maxEntryBytes) {
       throw new ZipError(`Entry too large: ${record.name}`);

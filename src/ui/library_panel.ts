@@ -51,6 +51,8 @@ interface LibrarySection {
 }
 
 const OPEN_KEY = 'markasso-library-open';
+/** Per-section open/closed state, keyed by section id. */
+const SECTION_KEY_PREFIX = 'markasso-library-section-';
 const RECENT_KEY = 'markasso-library-recent';
 const MAX_RECENT = 8;
 /** MIME type of library drags, so foreign drops (files, text) are ignored. */
@@ -63,10 +65,6 @@ let currentlyOpen = false;
 /** Opens, closes or (without argument) toggles the library sidebar. */
 export function toggleLibrary(open?: boolean): void {
   toggleImpl?.(open);
-}
-
-export function isLibraryOpen(): boolean {
-  return currentlyOpen;
 }
 
 /** Subscribes to open/close changes (e.g. to sync a toolbar button). */
@@ -268,7 +266,7 @@ export function initLibraryPanel(
       );
       importedPacks = [...importedPacks, pack];
       // Open the new pack so the result is visible right away.
-      writeStorage(`markasso-library-section-imported-${pack.id}`, 'open');
+      writeStorage(`${SECTION_KEY_PREFIX}imported-${pack.id}`, 'open');
       importStatus = {
         text: t('libraryImportDone')
           .replace('{count}', String(pack.icons.length))
@@ -392,11 +390,11 @@ export function initLibraryPanel(
     const details = document.createElement('details');
     details.className = 'lib-section';
     details.dataset.section = id;
-    const stored = readStorage(`markasso-library-section-${id}`);
+    const stored = readStorage(`${SECTION_KEY_PREFIX}${id}`);
     details.open = stored === null ? section.defaultOpen : stored === 'open';
     details.addEventListener('toggle', () => {
       writeStorage(
-        `markasso-library-section-${id}`,
+        `${SECTION_KEY_PREFIX}${id}`,
         details.open ? 'open' : 'closed',
       );
       if (details.open && pack) ensurePack(pack);
@@ -471,10 +469,11 @@ export function initLibraryPanel(
       sections.flatMap((s) => s.items.map((i) => [i.key, i] as const)),
     );
     // Searching or showing a recent icon needs its pack's artwork.
-    for (const section of sections) {
-      const needed =
-        query || recent.some((k) => k.startsWith(`icon:${section.pack?.id}/`));
-      if (section.pack && needed) ensurePack(section.pack);
+    for (const { pack } of sections) {
+      if (!pack) continue;
+      if (query || recent.some((k) => k.startsWith(`icon:${pack.id}/`))) {
+        ensurePack(pack);
+      }
     }
 
     const recentItems = recent

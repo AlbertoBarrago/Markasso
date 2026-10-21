@@ -11,6 +11,7 @@ import {
 } from '../src/elements/stencils/generic';
 import {
   createStencil,
+  genericIconIdOf,
   getGenericIcon,
   isValidEmbeddedSvg,
   isValidStencilRef,
@@ -77,6 +78,13 @@ describe('generic icon set', () => {
       expect(GENERIC_ICON_LABEL_KEYS[id]).toMatch(/^icon/);
     });
   }
+
+  it('maps references to generic ids without confusing other packs', () => {
+    expect(genericIconIdOf('generic/api')).toBe('api');
+    // k8s also has an "api" icon: it must not resolve to the generic one.
+    expect(genericIconIdOf('k8s/api')).toBeNull();
+    expect(genericIconIdOf('generic/nope')).toBeNull();
+  });
 
   it('resolves generic references only', () => {
     expect(getGenericIcon('generic/server')).toBe(GENERIC_ICONS.server);

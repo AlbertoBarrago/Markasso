@@ -1,7 +1,6 @@
 import type { Scene } from '../core/scene';
 import type {
   ArrowElement,
-  ArrowHeadStyle,
   Element,
   EllipseElement,
   FreehandElement,
@@ -25,8 +24,13 @@ import {
 } from '../elements/stencils/registry';
 import {
   type ArrowHeadShape,
+  type ArrowHeadVector,
+  CLIP_EXTENT,
+  type ConnectorHead,
   getArrowHeadShape,
   getArrowHeadVector,
+  getConnectorHeads,
+  getRouteHeadVector,
   getRoutePointAt,
   type RoutePoint,
 } from './connector_geometry';
@@ -172,6 +176,15 @@ function computeBounds(elements: ReadonlyArray<Element>): {
     maxY = -Infinity;
 
   for (const el of elements) {
+    // Elbow routes depend on the elements they connect.
+    if ((el.type === 'line' || el.type === 'arrow') && el.routing === 'elbow') {
+      const b = getElementBounds(el, elements);
+      minX = Math.min(minX, b.x);
+      minY = Math.min(minY, b.y);
+      maxX = Math.max(maxX, b.x + b.w);
+      maxY = Math.max(maxY, b.y + b.h);
+      continue;
+    }
     switch (el.type) {
       case 'stencil': {
         // Include the label, which hangs below the icon box.
@@ -200,14 +213,6 @@ function computeBounds(elements: ReadonlyArray<Element>): {
         break;
       }
       case 'line':
-        if (el.routing === 'elbow') {
-          const b = getElementBounds(el, elements);
-          minX = Math.min(minX, b.x);
-          minY = Math.min(minY, b.y);
-          maxX = Math.max(maxX, b.x + b.w);
-          maxY = Math.max(maxY, b.y + b.h);
-          break;
-        }
         minX = Math.min(
           minX,
           el.x,
@@ -234,14 +239,6 @@ function computeBounds(elements: ReadonlyArray<Element>): {
         );
         break;
       case 'arrow':
-        if (el.routing === 'elbow') {
-          const b = getElementBounds(el, elements);
-          minX = Math.min(minX, b.x);
-          minY = Math.min(minY, b.y);
-          maxX = Math.max(maxX, b.x + b.w);
-          maxY = Math.max(maxY, b.y + b.h);
-          break;
-        }
         minX = Math.min(minX, el.x, el.x2);
         minY = Math.min(minY, el.y, el.y2);
         maxX = Math.max(maxX, el.x, el.x2);
@@ -472,7 +469,7 @@ function stencilToSVG(el: StencilElement, ox: number, oy: number): string {
         `<path d="${shapeCommandsToPathData(icon.strokes, 0, 0)}" fill="none" stroke="${stroke}" stroke-width="${getIconStrokeWidth(el.strokeWidth)}" stroke-linecap="round" stroke-linejoin="round"/>`,
       );
       parts.push(
-        `<g opacity="${el.opacity}"${rotateAttr(el, ox, oy)}><g transform="translate(${round(tx)} ${round(ty)}) scale(${round(scale)})">${inner.join('')}</g></g>`,
+        `<g opacity="${el.opacity}" transform="translate(${round(tx)} ${round(ty)}) scale(${round(scale)})">${inner.join('')}</g>`,
       );
     } else {
       parts.push(
@@ -497,7 +494,8 @@ function stencilToSVG(el: StencilElement, ox: number, oy: number): string {
       ),
     );
   }
-  return parts.join('\n');
+  // Group so rotation applies to the artwork and its label together.
+  return `<g${rotateAttr(el, ox, oy)}>${parts.join('')}</g>`;
 }
 
 function shapeToSVG(el: ShapeElement, ox: number, oy: number): string {
@@ -533,37 +531,22 @@ function shapeToSVG(el: ShapeElement, ox: number, oy: number): string {
   return `<g${rotateAttr(el, ox, oy)}>${parts.join('')}</g>`;
 }
 
-interface SVGHead {
-  readonly style: ArrowHeadStyle;
-  readonly fromX: number;
-  readonly fromY: number;
-  readonly tipX: number;
-  readonly tipY: number;
+/** Shifts a head vector into export coordinates. */
+function offsetVector(
+  v: ArrowHeadVector,
+  ox: number,
+  oy: number,
+): ArrowHeadVector {
+  return {
+    fromX: v.fromX + ox,
+    fromY: v.fromY + oy,
+    tipX: v.tipX + ox,
+    tipY: v.tipY + oy,
+  };
 }
 
-/** Heads of a connector, in export coordinates (already offset). */
-function connectorHeadsForSVG(
-  el: LineElement | ArrowElement,
-  vectorFor: (placement: 'start' | 'end') => {
-    fromX: number;
-    fromY: number;
-    tipX: number;
-    tipY: number;
-  },
-): SVGHead[] {
-  const hasEnd =
-    el.type === 'arrow' || el.arrowHead === 'end' || el.arrowHead === 'both';
-  const hasStart =
-    el.type === 'line' && (el.arrowHead === 'start' || el.arrowHead === 'both');
-  const heads: SVGHead[] = [];
-  if (hasEnd) {
-    heads.push({ style: el.endHeadStyle ?? 'open', ...vectorFor('end') });
-  }
-  if (hasStart) {
-    heads.push({ style: el.startHeadStyle ?? 'open', ...vectorFor('start') });
-  }
-  return heads;
-}
+/** SVG box attributes covering any drawable area (see CLIP_EXTENT). */
+const EVERYTHING_BOX = `x="${-CLIP_EXTENT}" y="${-CLIP_EXTENT}" width="${CLIP_EXTENT * 2}" height="${CLIP_EXTENT * 2}"`;
 
 function headShapeToSVG(shape: ArrowHeadShape, attrs: string): string {
   if (shape.kind === 'circle') {
@@ -585,7 +568,7 @@ function headShapeToSVG(shape: ArrowHeadShape, attrs: string): string {
 function connectorToSVG(
   el: LineElement | ArrowElement,
   shaft: string,
-  heads: ReadonlyArray<SVGHead>,
+  heads: ReadonlyArray<ConnectorHead>,
   rot: string,
 ): string {
   const color = escapeXml(el.strokeColor);
@@ -609,7 +592,7 @@ function connectorToSVG(
       .map(({ shape }) => headShapeToSVG(shape, 'fill="black"'))
       .join('');
     parts.push(
-      `<mask id="${id}" maskUnits="userSpaceOnUse" x="-1000000" y="-1000000" width="2000000" height="2000000"><rect x="-1000000" y="-1000000" width="2000000" height="2000000" fill="white"/>${cutouts}</mask>`,
+      `<mask id="${id}" maskUnits="userSpaceOnUse" ${EVERYTHING_BOX}><rect ${EVERYTHING_BOX} fill="white"/>${cutouts}</mask>`,
       `<g mask="url(#${id})">${shaft}</g>`,
     );
   } else {
@@ -633,15 +616,9 @@ function lineToSVG(el: LineElement, ox: number, oy: number): string {
     el.cx !== undefined && el.cy !== undefined
       ? `<path d="M ${round(x1)} ${round(y1)} Q ${round(el.cx + ox)} ${round(el.cy + oy)} ${round(x2)} ${round(y2)}" ${sp}${rot}/>`
       : `<line x1="${round(x1)}" y1="${round(y1)}" x2="${round(x2)}" y2="${round(y2)}" ${sp}${rot}/>`;
-  const heads = connectorHeadsForSVG(el, (placement) => {
-    const v = getArrowHeadVector(el, el, placement);
-    return {
-      fromX: v.fromX + ox,
-      fromY: v.fromY + oy,
-      tipX: v.tipX + ox,
-      tipY: v.tipY + oy,
-    };
-  });
+  const heads = getConnectorHeads(el, (placement) =>
+    offsetVector(getArrowHeadVector(el, el, placement), ox, oy),
+  );
   return connectorToSVG(el, shaft, heads, rot);
 }
 
@@ -657,12 +634,10 @@ function elbowToSVG(
   const points = route
     .map(([x, y]) => `${round(x + ox)},${round(y + oy)}`)
     .join(' ');
-  const n = route.length;
-  const heads = connectorHeadsForSVG(el, (placement) => {
-    const [fx, fy] = placement === 'end' ? route[n - 2]! : route[1]!;
-    const [tx, ty] = placement === 'end' ? route[n - 1]! : route[0]!;
-    return { fromX: fx + ox, fromY: fy + oy, tipX: tx + ox, tipY: ty + oy };
-  });
+  const _n = route.length;
+  const heads = getConnectorHeads(el, (placement) =>
+    offsetVector(getRouteHeadVector(route, placement), ox, oy),
+  );
   const parts = [
     connectorToSVG(el, `<polyline points="${points}" ${sp}/>`, heads, ''),
   ];
@@ -702,7 +677,7 @@ function arrowToSVG(el: ArrowElement, ox: number, oy: number): string {
   const sp = `stroke="${escapeXml(el.strokeColor)}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"`;
   const rot = rotateAttr(el, ox, oy);
   const shaft = `<line x1="${round(x1)}" y1="${round(y1)}" x2="${round(x2)}" y2="${round(y2)}" ${sp}${rot}/>`;
-  const heads = connectorHeadsForSVG(el, () => ({
+  const heads = getConnectorHeads(el, () => ({
     fromX: x1,
     fromY: y1,
     tipX: x2,

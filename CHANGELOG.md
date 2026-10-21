@@ -25,6 +25,8 @@ All notable changes to this project will be documented here.
 - **Connectors stop under icon labels.** An arrow attached to the bottom of a labeled icon now ends below the label instead of crossing it.
 
 ### Fixed
+- **Hidden elements no longer catch connector snaps.**
+- **Arrows from Mermaid import and presets show the stroke style and roughness options** in the desktop context panel, as they already did on mobile.
 - **Images redraw as soon as they finish loading** instead of keeping their placeholder until the next interaction.
 - **SVG export centers shape labels vertically**, matching the canvas.
 - **Hover highlight follows connected lines.** Hovering a line or arrow bound to shapes highlighted its stored endpoints instead of the drawn ones; it now traces the actual path, including elbow routes.
