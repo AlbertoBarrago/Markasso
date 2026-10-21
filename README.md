@@ -22,9 +22,38 @@
 
 <br/>
 
-[User Manual](./MANUAL.md) · [Guide](./GUIDA.md) · [Contributing](./CONTRIBUTORS.md) · [Report an Issue](https://github.com/AlbertoBarrago/Markasso/issues)
+[User Manual](./MANUAL.md) · [Guide](./GUIDA.md) · [MCP for AI agents](./mcp/README.md) · [Contributing](./CONTRIBUTORS.md) · [Report an Issue](https://github.com/AlbertoBarrago/Markasso/issues)
 
 </div>
+
+---
+
+## Draw with AI agents (MCP)
+
+Markasso ships an [MCP](https://modelcontextprotocol.io) server: Claude, Codex, Gemini and local models (e.g. Gemma in LM Studio) can create, read and edit diagrams, and even draw live on a shared board.
+
+**1. Build the server** (Node 22+ and pnpm):
+
+```bash
+git clone https://github.com/AlbertoBarrago/Markasso.git
+cd Markasso
+pnpm install
+pnpm mcp:build        # → mcp/dist/markasso-mcp.js
+```
+
+**2. Connect your agent** (use the absolute path of your clone):
+
+```bash
+# Claude Code
+claude mcp add markasso -- node /absolute/path/to/Markasso/mcp/dist/markasso-mcp.js
+
+# Codex CLI
+codex mcp add markasso -- node /absolute/path/to/Markasso/mcp/dist/markasso-mcp.js
+```
+
+Claude Desktop, Gemini CLI and LM Studio use the same `node .../markasso-mcp.js` command in their `mcpServers` config: see [`mcp/README.md`](mcp/README.md) for every client, the tool list and the security notes.
+
+**3. Ask for a diagram**, for example: *"Draw the architecture of a checkout service with icons, lay it out left to right and give me a share link"*. For live mode, open **Share → Share live session** in Markasso and ask the agent to join that link.
 
 ---
 
