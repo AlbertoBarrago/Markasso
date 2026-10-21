@@ -8,17 +8,21 @@ import type {
 } from '../src/elements/element';
 import type { Handle } from '../src/rendering/draw_selection';
 import {
+  anchorToWorld,
   distToShapeBoundary,
+  findConnectorSnapTarget,
   findNearestElementSnapTarget,
   getElementBorderPoint,
   getElementBounds,
   getElementCenter,
+  getElementPorts,
   getNearestElementBorderPoint,
   getRotationHandleScreen,
   getSelectionHandles,
   hitTestEndpoint,
   hitTestHandle,
   resolveArrowEndpoints,
+  worldToAnchor,
 } from '../src/rendering/draw_selection';
 
 function makeRect(
@@ -568,5 +572,93 @@ describe('flowchart shape snapping', () => {
     const pts = resolveArrowEndpoints(arrow, [shape, arrow]);
     expect(pts.x).toBeCloseTo(200);
     expect(pts.y).toBeCloseTo(50);
+  });
+});
+
+describe('connector anchors', () => {
+  it('exposes four cardinal ports on the outline', () => {
+    const ports = getElementPorts(makeRect('r1', 0, 0, 100, 60));
+    const expected = [
+      [50, 0],
+      [100, 30],
+      [50, 60],
+      [0, 30],
+    ];
+    ports.forEach((p, i) => {
+      expect(p.worldX).toBeCloseTo(expected[i]![0]!);
+      expect(p.worldY).toBeCloseTo(expected[i]![1]!);
+    });
+    expect(ports[1]!.anchor.x).toBeCloseTo(1);
+    expect(ports[1]!.anchor.y).toBeCloseTo(0.5);
+  });
+
+  it('has no ports on connectors', () => {
+    expect(getElementPorts(makeLine())).toEqual([]);
+  });
+
+  it('rotates ports with the element', () => {
+    const rotated: RectangleElement = {
+      ...makeRect('r1', 0, 0, 100, 60),
+      rotation: Math.PI / 2,
+    };
+    const [north] = getElementPorts(rotated);
+    // Local north of a 90deg-rotated box points to world east.
+    expect(north!.worldX).toBeCloseTo(80);
+    expect(north!.worldY).toBeCloseTo(30);
+    expect(north!.anchor.x).toBeCloseTo(0.5);
+    expect(north!.anchor.y).toBeCloseTo(0);
+  });
+
+  it('round-trips world points through anchors', () => {
+    const rect = makeRect('r1', 10, 20, 100, 60);
+    const anchor = worldToAnchor(rect, 110, 35);
+    expect(anchor).toEqual({ x: 1, y: 0.25 });
+    expect(anchorToWorld(rect, anchor)).toEqual([110, 35]);
+  });
+
+  it('prefers a port over the plain border inside the port radius', () => {
+    const rect = makeRect('r1', 0, 0, 100, 60);
+    const port = findConnectorSnapTarget([rect], 103, 28, 20, 10);
+    expect(port).toMatchObject({ worldX: 100, worldY: 30 });
+    expect(port?.anchor).toEqual({ x: 1, y: 0.5 });
+
+    const border = findConnectorSnapTarget([rect], 103, 10, 20, 10);
+    expect(border).toMatchObject({ worldX: 100, worldY: 10 });
+    expect(border?.anchor).toBeUndefined();
+  });
+
+  it('keeps a pinned end on its port after the element moves', () => {
+    const moved = makeRect('r1', 300, 300, 100, 60);
+    const other = makeRect('r2', 0, 0, 100, 60);
+    const line = makeLine({
+      x: 50,
+      y: 0,
+      x2: 500,
+      y2: 500,
+      startElementId: 'r1',
+      startAnchor: { x: 0.5, y: 0 },
+      endElementId: 'r2',
+    });
+    const pts = resolveArrowEndpoints(line, [moved, other, line]);
+    expect([pts.x, pts.y]).toEqual([350, 300]);
+    // The floating end faces the pinned point, not the other center.
+    const [ex, ey] = getElementBorderPoint(other, 350, 300);
+    expect(pts.x2).toBeCloseTo(ex);
+    expect(pts.y2).toBeCloseTo(ey);
+  });
+
+  it('keeps a pinned end on the outline after a resize', () => {
+    const data = makeShape({ kind: 'data', width: 400, height: 100 });
+    const line = makeLine({
+      startElementId: 's1',
+      startAnchor: { x: 0.9, y: 0.5 },
+    });
+    const pts = resolveArrowEndpoints(line, [data, line]);
+    // skew = 50: (360, 50) projects onto the slanted side (400,0)→(350,100)
+    expect(pts.x).toBeCloseTo(372);
+    expect(pts.y).toBeCloseTo(56);
+    expect(
+      distToShapeBoundary(data, getElementBounds(data), pts.x, pts.y),
+    ).toBeCloseTo(0);
   });
 });

@@ -143,10 +143,21 @@ function hasEndpointFields(el: Record<string, unknown>): boolean {
   );
 }
 
+function isOptionalAnchor(value: unknown): boolean {
+  return (
+    value === undefined ||
+    (isRecord(value) &&
+      isFiniteNumberInRange(value.x, 0, 1) &&
+      isFiniteNumberInRange(value.y, 0, 1))
+  );
+}
+
 function hasConnectorFields(el: Record<string, unknown>): boolean {
   return (
     isOptionalString(el.startElementId, 128) &&
     isOptionalString(el.endElementId, 128) &&
+    isOptionalAnchor(el.startAnchor) &&
+    isOptionalAnchor(el.endAnchor) &&
     hasShapeLabelFields(el)
   );
 }

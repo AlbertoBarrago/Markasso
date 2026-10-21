@@ -100,12 +100,25 @@ export interface ShapeElement extends BaseElement {
   readonly labelColor?: string;
 }
 
+/**
+ * Fixed attachment point of a connector end on its bound element, as a
+ * fraction (0-1) of the element's un-rotated bounding box. When present the
+ * end stays pinned to that point through moves, resizes and rotations;
+ * when absent the end floats along the border to face the other end.
+ */
+export interface ConnectorAnchor {
+  readonly x: number;
+  readonly y: number;
+}
+
 export interface LineElement extends BaseElement {
   readonly type: 'line';
   readonly x2: number;
   readonly y2: number;
   readonly startElementId?: string;
   readonly endElementId?: string;
+  readonly startAnchor?: ConnectorAnchor;
+  readonly endAnchor?: ConnectorAnchor;
   /** Optional quadratic bezier control point — when set the line renders as a curve */
   readonly cx?: number;
   readonly cy?: number;
@@ -123,6 +136,8 @@ export interface ArrowElement extends BaseElement {
   readonly y2: number;
   readonly startElementId?: string;
   readonly endElementId?: string;
+  readonly startAnchor?: ConnectorAnchor;
+  readonly endAnchor?: ConnectorAnchor;
   readonly label?: string;
   readonly labelFontSize?: number;
   readonly labelFontFamily?: string;

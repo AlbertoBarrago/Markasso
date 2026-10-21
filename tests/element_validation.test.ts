@@ -185,3 +185,32 @@ describe('shape element validation', () => {
     expect(validateElements([base])).toBeNull();
   });
 });
+
+describe('connector anchor validation', () => {
+  const line = {
+    id: 'line-1',
+    type: 'line',
+    x: 0,
+    y: 0,
+    x2: 10,
+    y2: 0,
+    strokeColor: '#000',
+    fillColor: 'transparent',
+    strokeWidth: 1,
+    opacity: 1,
+    roughness: 0,
+    startElementId: 'a',
+  };
+
+  it('accepts anchors inside the unit box', () => {
+    const el = { ...line, startAnchor: { x: 0, y: 1 } };
+    expect(validateElements([el])).toEqual([el]);
+  });
+
+  it('rejects anchors outside the unit box or malformed', () => {
+    expect(
+      validateElements([{ ...line, startAnchor: { x: 1.5, y: 0 } }]),
+    ).toBeNull();
+    expect(validateElements([{ ...line, endAnchor: [0, 1] }])).toBeNull();
+  });
+});

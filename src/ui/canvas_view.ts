@@ -2,6 +2,7 @@ import type { ActiveTool } from '../core/app_state';
 import { screenToWorld, worldToScreen } from '../core/viewport';
 import { cloneElementsWithOffset } from '../elements/clone';
 import type {
+  ConnectorAnchor,
   EllipseElement,
   LineElement,
   RectangleElement,
@@ -21,6 +22,7 @@ import {
   drawAlignGuides,
   drawHoverHighlight,
   drawMarquee,
+  drawPortIndicators,
   drawSnapIndicator,
 } from '../rendering/draw_selection';
 import { render } from '../rendering/renderer';
@@ -813,7 +815,15 @@ export function initCanvasView(
       const snapEl = scene.elements.find(
         (el) => el.id === selectTool.endpointSnapElementId,
       );
-      if (snapEl) drawHoverHighlight(ctx2d, snapEl, scene.viewport);
+      if (snapEl) {
+        drawHoverHighlight(ctx2d, snapEl, scene.viewport);
+        drawPortIndicators(
+          ctx2d,
+          snapEl,
+          scene.viewport,
+          selectTool.endpointSnapAnchor ?? undefined,
+        );
+      }
     }
 
     // Draw hover highlight when using select tool (unselected elements only)
@@ -826,11 +836,21 @@ export function initCanvasView(
 
     // Draw hover highlight for arrow/line tool snap target (magnetic connection point)
     if ('snapElementId' in activeTool) {
-      const snapElId = (activeTool as { snapElementId: string | null })
-        .snapElementId;
+      const { snapElementId: snapElId, snapAnchor } = activeTool as {
+        snapElementId: string | null;
+        snapAnchor?: ConnectorAnchor | null;
+      };
       if (snapElId) {
         const snapEl = scene.elements.find((el) => el.id === snapElId);
-        if (snapEl) drawHoverHighlight(ctx2d, snapEl, scene.viewport);
+        if (snapEl) {
+          drawHoverHighlight(ctx2d, snapEl, scene.viewport);
+          drawPortIndicators(
+            ctx2d,
+            snapEl,
+            scene.viewport,
+            snapAnchor ?? undefined,
+          );
+        }
       }
     }
 

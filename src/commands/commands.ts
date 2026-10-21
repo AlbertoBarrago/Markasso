@@ -1,6 +1,6 @@
 import type { ActiveTool, GridType } from '../core/app_state';
 import type { Viewport } from '../core/viewport';
-import type { Element, ShapeKind } from '../elements/element';
+import type { ConnectorAnchor, Element, ShapeKind } from '../elements/element';
 
 export type Command =
   | { type: 'CREATE_ELEMENT'; element: Element; select?: boolean }
@@ -23,6 +23,9 @@ export type Command =
       points?: ReadonlyArray<readonly [number, number]>;
       startElementId?: string | null;
       endElementId?: string | null;
+      /** `null` unpins the end so it floats along the border again. */
+      startAnchor?: ConnectorAnchor | null;
+      endAnchor?: ConnectorAnchor | null;
     }
   | { type: 'DELETE_ELEMENTS'; ids: string[] }
   | { type: 'EDIT_TEXT'; id: string; content: string }

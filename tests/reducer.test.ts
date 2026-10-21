@@ -1524,3 +1524,66 @@ describe('flowchart shapes', () => {
     expect(next.appState.shapeKind).toBe('data');
   });
 });
+
+describe('connector anchors in RESIZE_ELEMENT', () => {
+  const line: LineElement = {
+    id: 'line-1',
+    type: 'line',
+    x: 0,
+    y: 0,
+    x2: 100,
+    y2: 0,
+    strokeColor: '#000',
+    fillColor: 'transparent',
+    strokeWidth: 2,
+    opacity: 1,
+    roughness: 0,
+  };
+
+  it('sets and removes anchors', () => {
+    const scene = { ...createScene(), elements: [line] };
+    const pinned = reducer(scene, {
+      type: 'RESIZE_ELEMENT',
+      id: 'line-1',
+      startElementId: 'rect-1',
+      startAnchor: { x: 1, y: 0.5 },
+    });
+    expect(pinned.elements[0]).toMatchObject({
+      startElementId: 'rect-1',
+      startAnchor: { x: 1, y: 0.5 },
+    });
+
+    const floating = reducer(pinned, {
+      type: 'RESIZE_ELEMENT',
+      id: 'line-1',
+      x: 5,
+      startAnchor: null,
+    });
+    expect(floating.elements[0]).toMatchObject({
+      x: 5,
+      startElementId: 'rect-1',
+    });
+    expect(floating.elements[0]).not.toHaveProperty('startAnchor');
+  });
+
+  it('removes connection and anchor together when disconnecting', () => {
+    const scene = {
+      ...createScene(),
+      elements: [
+        {
+          ...line,
+          endElementId: 'rect-1',
+          endAnchor: { x: 0, y: 0.5 },
+        },
+      ],
+    };
+    const next = reducer(scene, {
+      type: 'RESIZE_ELEMENT',
+      id: 'line-1',
+      endElementId: null,
+      endAnchor: null,
+    });
+    expect(next.elements[0]).not.toHaveProperty('endElementId');
+    expect(next.elements[0]).not.toHaveProperty('endAnchor');
+  });
+});

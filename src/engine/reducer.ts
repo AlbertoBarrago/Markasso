@@ -152,42 +152,26 @@ export function reducer(
             return { ...el, ...patch } as Element;
           }
           if (el.type === 'line' || el.type === 'arrow') {
-            const { startElementId, endElementId } = command;
             // Build patch carefully to avoid exactOptionalPropertyTypes issues
-            const patch: Record<string, unknown> = {};
+            const patch: Record<string, unknown> = { ...el };
             if (x !== undefined) patch.x = x;
             if (y !== undefined) patch.y = y;
             if (x2 !== undefined) patch.x2 = x2;
             if (y2 !== undefined) patch.y2 = y2;
             if (cx !== undefined) patch.cx = cx;
             if (cy !== undefined) patch.cy = cy;
-            if (startElementId !== undefined) {
-              if (startElementId === null) {
-                delete (patch as { startElementId?: string }).startElementId;
-              } else {
-                patch.startElementId = startElementId;
-              }
+            // Connection fields: undefined = keep, null = remove the property.
+            for (const key of [
+              'startElementId',
+              'endElementId',
+              'startAnchor',
+              'endAnchor',
+            ] as const) {
+              const value = command[key];
+              if (value === null) delete patch[key];
+              else if (value !== undefined) patch[key] = value;
             }
-            if (endElementId !== undefined) {
-              if (endElementId === null) {
-                delete (patch as { endElementId?: string }).endElementId;
-              } else {
-                patch.endElementId = endElementId;
-              }
-            }
-            // When disconnecting (null), explicitly remove optional properties.
-            let base = { ...el, ...patch } as Element;
-            if (startElementId === null) {
-              const { startElementId: _s, ...rest } = base as typeof el;
-              void _s;
-              base = rest as Element;
-            }
-            if (endElementId === null) {
-              const { endElementId: _e, ...rest } = base as typeof el;
-              void _e;
-              base = rest as Element;
-            }
-            return base;
+            return patch as unknown as Element;
           }
           if (el.type === 'freehand' || el.type === 'polygon') {
             return {

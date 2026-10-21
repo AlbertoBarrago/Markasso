@@ -12,6 +12,7 @@ All notable changes to this project will be documented here.
   - Shapes support labels, fill, stroke styles, hand-drawn roughness, rotation, PNG/SVG export and live sessions.
   - Connectors snap to the real outline of each symbol (the slanted side of a data block, the wavy edge of a document, the cylinder caps of a database).
   - Every symbol is defined once as a parametric outline; bounds, snapping, rendering, export and toolbar icons are all derived from it.
+- **Connection ports.** While drawing or dragging a connector end, shapes show four ports (top, right, bottom, left). Dropping the end on a port pins it there: it stays on that point when the shape is moved, resized or rotated. Dropping anywhere else on the border keeps the floating behavior, where the end slides along the border to face the other side.
 
 ---
 
