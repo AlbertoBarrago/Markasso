@@ -508,3 +508,8 @@
 #cp-shape-kind-presets {
   flex-wrap: wrap;
 }
+
+/* 6 arrowhead styles wrap like the shape kinds */
+.cp-head-style-row {
+  flex-wrap: wrap;
+}

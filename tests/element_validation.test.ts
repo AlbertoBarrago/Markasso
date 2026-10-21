@@ -213,6 +213,12 @@ describe('connector anchor validation', () => {
     expect(validateElements([{ ...line, routing: 'spline' }])).toBeNull();
   });
 
+  it('accepts known head styles and rejects unknown ones', () => {
+    const el = { ...line, startHeadStyle: 'circle', endHeadStyle: 'triangle' };
+    expect(validateElements([el])).toEqual([el]);
+    expect(validateElements([{ ...line, endHeadStyle: 'star' }])).toBeNull();
+  });
+
   it('rejects anchors outside the unit box or malformed', () => {
     expect(
       validateElements([{ ...line, startAnchor: { x: 1.5, y: 0 } }]),

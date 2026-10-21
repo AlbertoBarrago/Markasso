@@ -185,5 +185,13 @@
   "shapeDelay": "遅延",
   "routing": "経路",
   "routingStraight": "直線",
-  "routingElbow": "カギ線"
+  "routingElbow": "カギ線",
+  "startHead": "始点の矢印",
+  "endHead": "終点の矢印",
+  "headOpen": "開いた矢印",
+  "headTriangle": "三角形",
+  "headTriangleFilled": "塗りつぶし三角形",
+  "headDiamond": "ひし形",
+  "headDiamondFilled": "塗りつぶしひし形",
+  "headCircle": "円"
 }

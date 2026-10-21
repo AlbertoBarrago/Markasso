@@ -185,5 +185,13 @@
   "shapeDelay": "延迟",
   "routing": "路径",
   "routingStraight": "直线",
-  "routingElbow": "折线"
+  "routingElbow": "折线",
+  "startHead": "起点箭头",
+  "endHead": "终点箭头",
+  "headOpen": "开放",
+  "headTriangle": "三角形",
+  "headTriangleFilled": "实心三角形",
+  "headDiamond": "菱形",
+  "headDiamondFilled": "实心菱形",
+  "headCircle": "圆形"
 }

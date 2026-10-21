@@ -1,3 +1,5 @@
+import type { ArrowHeadStyle } from '../elements/element';
+
 export interface ConnectorEndpoints {
   readonly x: number;
   readonly y: number;
@@ -413,4 +415,83 @@ export function distToRoute(
     min = Math.min(min, distToSegment(px, py, a[0], a[1], b[0], b[1]));
   }
   return min;
+}
+
+// ── Arrowheads ────────────────────────────────────────────────────────────────
+
+export type ArrowHeadShape =
+  | { readonly kind: 'polyline'; readonly points: RoutePoint[] }
+  | {
+      readonly kind: 'polygon';
+      readonly points: RoutePoint[];
+      readonly filled: boolean;
+    }
+  | {
+      readonly kind: 'circle';
+      readonly cx: number;
+      readonly cy: number;
+      readonly r: number;
+    };
+
+/** Head size, shared by every style so switching styles keeps the scale. */
+export function getArrowHeadLength(strokeWidth: number): number {
+  return Math.max(12, strokeWidth * 4);
+}
+
+/**
+ * Geometry of an arrowhead whose tip sits at (tipX, tipY), pointing away
+ * from (fromX, fromY). Closed styles extend backward over the connector, so
+ * renderers mask the shaft out of their area instead of shortening it.
+ */
+export function getArrowHeadShape(
+  style: ArrowHeadStyle,
+  fromX: number,
+  fromY: number,
+  tipX: number,
+  tipY: number,
+  strokeWidth: number,
+): ArrowHeadShape {
+  const len = getArrowHeadLength(strokeWidth);
+  const angle = Math.atan2(tipY - fromY, tipX - fromX);
+  const ux = Math.cos(angle);
+  const uy = Math.sin(angle);
+  const back = (d: number, side: number): RoutePoint => [
+    tipX - ux * d - uy * side,
+    tipY - uy * d + ux * side,
+  ];
+  const tip: RoutePoint = [tipX, tipY];
+  // ±30° wings, as in the original open head.
+  const wingBack = len * Math.cos(Math.PI / 6);
+  const wingSide = len * Math.sin(Math.PI / 6);
+
+  switch (style) {
+    case 'open':
+      return {
+        kind: 'polyline',
+        points: [back(wingBack, wingSide), tip, back(wingBack, -wingSide)],
+      };
+    case 'triangle':
+    case 'triangleFilled':
+      return {
+        kind: 'polygon',
+        points: [tip, back(wingBack, wingSide), back(wingBack, -wingSide)],
+        filled: style === 'triangleFilled',
+      };
+    case 'diamond':
+    case 'diamondFilled':
+      return {
+        kind: 'polygon',
+        points: [
+          tip,
+          back(len * 0.6, len * 0.35),
+          back(len * 1.2, 0),
+          back(len * 0.6, -len * 0.35),
+        ],
+        filled: style === 'diamondFilled',
+      };
+    case 'circle': {
+      const r = len * 0.35;
+      return { kind: 'circle', cx: tipX - ux * r, cy: tipY - uy * r, r };
+    }
+  }
 }

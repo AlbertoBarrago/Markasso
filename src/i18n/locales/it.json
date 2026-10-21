@@ -191,5 +191,13 @@
   "shapeDelay": "Attesa",
   "routing": "Percorso",
   "routingStraight": "Dritto",
-  "routingElbow": "A gomito"
+  "routingElbow": "A gomito",
+  "startHead": "Punta iniziale",
+  "endHead": "Punta finale",
+  "headOpen": "Aperta",
+  "headTriangle": "Triangolo",
+  "headTriangleFilled": "Triangolo pieno",
+  "headDiamond": "Rombo",
+  "headDiamondFilled": "Rombo pieno",
+  "headCircle": "Cerchio"
 }

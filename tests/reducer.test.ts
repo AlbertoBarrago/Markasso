@@ -1613,4 +1613,29 @@ describe('APPLY_STYLE routing', () => {
     expect(next.elements[1]).not.toHaveProperty('routing');
     expect(next.appState.lineRouting).toBe('elbow');
   });
+
+  it('applies head styles to connectors only', () => {
+    const arrow: ArrowElement = {
+      id: 'arrow-1',
+      type: 'arrow',
+      x: 0,
+      y: 0,
+      x2: 10,
+      y2: 10,
+      strokeColor: '#000',
+      fillColor: 'transparent',
+      strokeWidth: 1,
+      opacity: 1,
+      roughness: 0,
+    };
+    const scene: Scene = { ...createScene(), elements: [arrow, makeRect()] };
+    const next = reducer(scene, {
+      type: 'APPLY_STYLE',
+      ids: ['arrow-1', 'rect-1'],
+      endHeadStyle: 'diamondFilled',
+    });
+    expect(next.elements[0]).toMatchObject({ endHeadStyle: 'diamondFilled' });
+    expect(next.elements[0]).not.toHaveProperty('startHeadStyle');
+    expect(next.elements[1]).not.toHaveProperty('endHeadStyle');
+  });
 });

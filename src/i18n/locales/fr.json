@@ -185,5 +185,13 @@
   "shapeDelay": "Attente",
   "routing": "Tracé",
   "routingStraight": "Droit",
-  "routingElbow": "En coude"
+  "routingElbow": "En coude",
+  "startHead": "Pointe de départ",
+  "endHead": "Pointe d'arrivée",
+  "headOpen": "Ouverte",
+  "headTriangle": "Triangle",
+  "headTriangleFilled": "Triangle plein",
+  "headDiamond": "Losange",
+  "headDiamondFilled": "Losange plein",
+  "headCircle": "Cercle"
 }

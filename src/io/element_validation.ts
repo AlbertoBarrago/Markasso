@@ -1,5 +1,6 @@
 import type { Viewport } from '../core/viewport';
 import {
+  ARROW_HEAD_STYLES,
   type Element,
   type ElementType,
   SHAPE_KINDS,
@@ -26,6 +27,7 @@ const TEXT_ALIGNS = new Set(['left', 'center', 'right']);
 const ARROW_HEADS = new Set(['none', 'start', 'end', 'both']);
 const SHAPE_KIND_SET: ReadonlySet<string> = new Set(SHAPE_KINDS);
 const ROUTINGS = new Set(['straight', 'elbow']);
+const HEAD_STYLES: ReadonlySet<string> = new Set(ARROW_HEAD_STYLES);
 
 export const MAX_ELEMENTS = 5_000;
 export const MAX_POINTS_PER_ELEMENT = 100_000;
@@ -160,6 +162,8 @@ function hasConnectorFields(el: Record<string, unknown>): boolean {
     isOptionalAnchor(el.startAnchor) &&
     isOptionalAnchor(el.endAnchor) &&
     isOptionalEnum(el.routing, ROUTINGS) &&
+    isOptionalEnum(el.startHeadStyle, HEAD_STYLES) &&
+    isOptionalEnum(el.endHeadStyle, HEAD_STYLES) &&
     hasShapeLabelFields(el)
   );
 }

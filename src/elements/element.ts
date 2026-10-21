@@ -111,6 +111,22 @@ export interface ConnectorAnchor {
   readonly y: number;
 }
 
+/**
+ * Arrowhead shapes. `open` is the classic two-stroke head; the others are
+ * closed outlines, either hollow or filled with the stroke color (UML-style
+ * inheritance, aggregation and composition heads, plus a hollow circle).
+ */
+export const ARROW_HEAD_STYLES = [
+  'open',
+  'triangle',
+  'triangleFilled',
+  'diamond',
+  'diamondFilled',
+  'circle',
+] as const;
+
+export type ArrowHeadStyle = (typeof ARROW_HEAD_STYLES)[number];
+
 /** `elbow` draws an orthogonal route, recomputed from the two ends. */
 export type ConnectorRouting = 'straight' | 'elbow';
 
@@ -123,6 +139,9 @@ export interface LineElement extends BaseElement {
   readonly startAnchor?: ConnectorAnchor;
   readonly endAnchor?: ConnectorAnchor;
   readonly routing?: ConnectorRouting;
+  /** Head drawn at each end; `open` when omitted. */
+  readonly startHeadStyle?: ArrowHeadStyle;
+  readonly endHeadStyle?: ArrowHeadStyle;
   /** Optional quadratic bezier control point — when set the line renders as a curve */
   readonly cx?: number;
   readonly cy?: number;
@@ -143,6 +162,9 @@ export interface ArrowElement extends BaseElement {
   readonly startAnchor?: ConnectorAnchor;
   readonly endAnchor?: ConnectorAnchor;
   readonly routing?: ConnectorRouting;
+  /** Head drawn at each end; `open` when omitted. */
+  readonly startHeadStyle?: ArrowHeadStyle;
+  readonly endHeadStyle?: ArrowHeadStyle;
   readonly label?: string;
   readonly labelFontSize?: number;
   readonly labelFontFamily?: string;

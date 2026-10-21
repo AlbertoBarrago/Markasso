@@ -185,5 +185,13 @@
   "shapeDelay": "Espera",
   "routing": "Traçado",
   "routingStraight": "Reto",
-  "routingElbow": "Em cotovelo"
+  "routingElbow": "Em cotovelo",
+  "startHead": "Ponta inicial",
+  "endHead": "Ponta final",
+  "headOpen": "Aberta",
+  "headTriangle": "Triângulo",
+  "headTriangleFilled": "Triângulo preenchido",
+  "headDiamond": "Losango",
+  "headDiamondFilled": "Losango preenchido",
+  "headCircle": "Círculo"
 }

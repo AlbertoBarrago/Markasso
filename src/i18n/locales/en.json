@@ -191,5 +191,13 @@
   "shapeDelay": "Delay",
   "routing": "Routing",
   "routingStraight": "Straight",
-  "routingElbow": "Elbow"
+  "routingElbow": "Elbow",
+  "startHead": "Start head",
+  "endHead": "End head",
+  "headOpen": "Open",
+  "headTriangle": "Triangle",
+  "headTriangleFilled": "Filled triangle",
+  "headDiamond": "Diamond",
+  "headDiamondFilled": "Filled diamond",
+  "headCircle": "Circle"
 }

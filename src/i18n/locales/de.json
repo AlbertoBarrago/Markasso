@@ -185,5 +185,13 @@
   "shapeDelay": "Verzögerung",
   "routing": "Verlauf",
   "routingStraight": "Gerade",
-  "routingElbow": "Gewinkelt"
+  "routingElbow": "Gewinkelt",
+  "startHead": "Anfangsspitze",
+  "endHead": "Endspitze",
+  "headOpen": "Offen",
+  "headTriangle": "Dreieck",
+  "headTriangleFilled": "Gefülltes Dreieck",
+  "headDiamond": "Raute",
+  "headDiamondFilled": "Gefüllte Raute",
+  "headCircle": "Kreis"
 }

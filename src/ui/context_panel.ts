@@ -1,6 +1,8 @@
 import { measureTextBounds } from '../core/text_measure';
 import { cloneElementsWithOffset } from '../elements/clone';
 import {
+  ARROW_HEAD_STYLES,
+  type ArrowHeadStyle,
   type ConnectorRouting,
   type Element,
   SHAPE_KINDS,
@@ -9,6 +11,10 @@ import {
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { getElementBounds } from '../rendering/draw_selection';
+import {
+  ARROW_HEAD_STYLE_LABEL_KEYS,
+  arrowHeadStyleIcon,
+} from './arrow_head_icons';
 import {
   bindUndoTransaction,
   createColorPicker,
@@ -90,6 +96,16 @@ export function initContextPanel(
     <div class="cp-section" id="cp-arrowhead-section">
       <div class="cp-label">${t('arrowHead')}</div>
       <div class="cp-btn-row" id="cp-arrowhead-presets" role="group" aria-label="${t('arrowHead')}"></div>
+    </div>
+
+    <div class="cp-section" id="cp-start-head-section">
+      <div class="cp-label">${t('startHead')}</div>
+      <div class="cp-btn-row cp-head-style-row" id="cp-start-head-presets" role="group" aria-label="${t('startHead')}"></div>
+    </div>
+
+    <div class="cp-section" id="cp-end-head-section">
+      <div class="cp-label">${t('endHead')}</div>
+      <div class="cp-btn-row cp-head-style-row" id="cp-end-head-presets" role="group" aria-label="${t('endHead')}"></div>
     </div>
 
     <div class="cp-section" id="cp-routing-section">
@@ -441,6 +457,46 @@ export function initContextPanel(
       history.dispatch({ type: 'APPLY_STYLE', arrowHead: ah.value });
     });
     arrowHeadPresets.appendChild(btn);
+  }
+
+  // ── Arrowhead styles (per end) ────────────────────────────────────────────
+  for (const placement of ['start', 'end'] as const) {
+    const row = panel.querySelector(`#cp-${placement}-head-presets`)!;
+    for (const style of ARROW_HEAD_STYLES) {
+      const label = t(ARROW_HEAD_STYLE_LABEL_KEYS[style]);
+      const btn = document.createElement('button');
+      btn.className = 'cp-btn cp-head-style-btn';
+      btn.title = label;
+      btn.setAttribute('aria-label', label);
+      btn.innerHTML = arrowHeadStyleIcon(style, placement);
+      btn.dataset.headStyle = style;
+      btn.addEventListener('click', () => {
+        history.dispatch(
+          placement === 'start'
+            ? { type: 'APPLY_STYLE', startHeadStyle: style }
+            : { type: 'APPLY_STYLE', endHeadStyle: style },
+        );
+      });
+      row.appendChild(btn);
+    }
+  }
+
+  /** Shows the head-style row of one end and marks the active style. */
+  function syncHeadStyle(
+    placement: 'start' | 'end',
+    visible: boolean,
+    style: ArrowHeadStyle,
+  ): void {
+    (
+      panel.querySelector(`#cp-${placement}-head-section`) as HTMLElement
+    ).style.display = visible ? '' : 'none';
+    const row = panel.querySelector<HTMLElement>(
+      `#cp-${placement}-head-presets`,
+    )!;
+    row.querySelectorAll<HTMLButtonElement>('.cp-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.headStyle === style);
+    });
+    syncAriaPressed(row, '.cp-btn');
   }
 
   // ── Connector routing ─────────────────────────────────────────────────────
@@ -1153,6 +1209,8 @@ export function initContextPanel(
         activeTool === 'rectangle' || activeTool === 'rombo' ? '' : 'none';
       syncShapeKind(activeTool === 'shape', scene.appState.shapeKind);
       syncRouting(activeTool === 'line', scene.appState.lineRouting);
+      syncHeadStyle('start', false, 'open');
+      syncHeadStyle('end', false, 'open');
 
       const textPropsSection =
         panel.querySelector<HTMLElement>('#cp-text-props')!;
@@ -1426,6 +1484,32 @@ export function initContextPanel(
       hasBorder ? '' : 'none';
     const firstConnector = selected.find(
       (el) => el.type === 'line' || el.type === 'arrow',
+    );
+    // A head row shows when a selected connector actually draws that head.
+    const withStartHead = selected.find(
+      (el) =>
+        el.type === 'line' &&
+        (el.arrowHead === 'start' || el.arrowHead === 'both'),
+    );
+    const withEndHead = selected.find(
+      (el) =>
+        el.type === 'arrow' ||
+        (el.type === 'line' &&
+          (el.arrowHead === 'end' || el.arrowHead === 'both')),
+    );
+    syncHeadStyle(
+      'start',
+      !labelColorMode && withStartHead !== undefined,
+      (withStartHead?.type === 'line'
+        ? withStartHead.startHeadStyle
+        : undefined) ?? 'open',
+    );
+    syncHeadStyle(
+      'end',
+      !labelColorMode && withEndHead !== undefined,
+      (withEndHead?.type === 'line' || withEndHead?.type === 'arrow'
+        ? withEndHead.endHeadStyle
+        : undefined) ?? 'open',
     );
     syncRouting(
       !labelColorMode && firstConnector !== undefined,

@@ -3,6 +3,8 @@ import {
   computeElbowRoute,
   distToQuadraticCurve,
   distToRoute,
+  getArrowHeadLength,
+  getArrowHeadShape,
   getArrowHeadVector,
   getQuadraticBounds,
   getQuadraticPoint,
@@ -224,5 +226,53 @@ describe('route helpers', () => {
 
   it('measures the distance to the closest segment', () => {
     expect(distToRoute(110, 50, route)).toBe(10);
+  });
+});
+
+describe('getArrowHeadShape', () => {
+  // Horizontal connector pointing right, tip at (100, 0); head length 12.
+  const shape = (style: Parameters<typeof getArrowHeadShape>[0]) =>
+    getArrowHeadShape(style, 0, 0, 100, 0, 2);
+
+  it('keeps the classic open head geometry', () => {
+    const open = shape('open');
+    expect(open.kind).toBe('polyline');
+    if (open.kind !== 'polyline') return;
+    const len = getArrowHeadLength(2);
+    expect(open.points[1]).toEqual([100, 0]);
+    expect(open.points[0]![0]).toBeCloseTo(100 - len * Math.cos(Math.PI / 6));
+    expect(open.points[0]![1]).toBeCloseTo(len * Math.sin(Math.PI / 6));
+    expect(open.points[2]![1]).toBeCloseTo(-len * Math.sin(Math.PI / 6));
+  });
+
+  it('closes triangles and fills only the filled variant', () => {
+    const hollow = shape('triangle');
+    const filled = shape('triangleFilled');
+    expect(hollow).toMatchObject({ kind: 'polygon', filled: false });
+    expect(filled).toMatchObject({ kind: 'polygon', filled: true });
+  });
+
+  it('builds a diamond that ends 1.2 head lengths behind the tip', () => {
+    const diamond = shape('diamondFilled');
+    expect(diamond.kind).toBe('polygon');
+    if (diamond.kind !== 'polygon') return;
+    const xs = diamond.points.map((p) => p[0]);
+    expect(Math.max(...xs)).toBeCloseTo(100);
+    expect(Math.min(...xs)).toBeCloseTo(100 - getArrowHeadLength(2) * 1.2);
+  });
+
+  it('places the circle so it touches the tip', () => {
+    const circle = shape('circle');
+    expect(circle.kind).toBe('circle');
+    if (circle.kind !== 'circle') return;
+    expect(circle.cx + circle.r).toBeCloseTo(100);
+    expect(circle.cy).toBeCloseTo(0);
+  });
+
+  it('follows the connector direction', () => {
+    const up = getArrowHeadShape('triangle', 0, 100, 0, 0, 2);
+    if (up.kind !== 'polygon') throw new Error('expected polygon');
+    // Pointing up: every back point sits below the tip.
+    for (const [, y] of up.points.slice(1)) expect(y).toBeGreaterThan(0);
   });
 });

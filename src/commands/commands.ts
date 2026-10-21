@@ -1,6 +1,7 @@
 import type { ActiveTool, GridType } from '../core/app_state';
 import type { Viewport } from '../core/viewport';
 import type {
+  ArrowHeadStyle,
   ConnectorAnchor,
   ConnectorRouting,
   Element,
@@ -110,4 +111,7 @@ export type Command =
       shapeKind?: ShapeKind;
       /** Applied to lines/arrows only; also becomes the line tool default. */
       routing?: ConnectorRouting;
+      /** Applied to lines/arrows only. */
+      startHeadStyle?: ArrowHeadStyle;
+      endHeadStyle?: ArrowHeadStyle;
     };

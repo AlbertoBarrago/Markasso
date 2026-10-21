@@ -541,6 +541,8 @@ export function reducer(
         arrowHead,
         shapeKind,
         routing,
+        startHeadStyle,
+        endHeadStyle,
       } = command;
       const patch: Record<string, unknown> = {};
       if (strokeColor !== undefined) patch.strokeColor = strokeColor;
@@ -592,16 +594,18 @@ export function reducer(
         elements: scene.elements.map((el) => {
           if (!targetIds.includes(el.id) && el.id !== fallbackId) return el;
           const next = { ...el, ...patch } as Element;
-          // `kind` and `routing` only exist on shapes and connectors: never
-          // leak them onto other types.
+          // `kind`, `routing` and head styles only exist on shapes and
+          // connectors: never leak them onto other types.
           if (shapeKind !== undefined && next.type === 'shape') {
             return { ...next, kind: shapeKind };
           }
-          if (
-            routing !== undefined &&
-            (next.type === 'line' || next.type === 'arrow')
-          ) {
-            return { ...next, routing };
+          if (next.type === 'line' || next.type === 'arrow') {
+            return {
+              ...next,
+              ...(routing !== undefined && { routing }),
+              ...(startHeadStyle !== undefined && { startHeadStyle }),
+              ...(endHeadStyle !== undefined && { endHeadStyle }),
+            };
           }
           return next;
         }),
