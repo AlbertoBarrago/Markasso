@@ -4,7 +4,7 @@ All notable changes to this project will be documented here.
 
 ---
 
-## [Unreleased]
+## [1.13.1] - 2026-10-21
 
 ### Added
 - **What's new notice.** Visitors see the highlights of the release once (AI agents via MCP, flowcharts and connectors, icon library, text resize), with a link to the release notes. It is skipped when arriving from a shared or live link, so invited people see the board first.
