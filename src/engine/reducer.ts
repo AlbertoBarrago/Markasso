@@ -57,6 +57,79 @@ function translateElement(
   return { ...element, x, y };
 }
 
+const PATCH_IDENTITY_FIELDS = new Set(['id', 'type']);
+
+/**
+ * Applies a PATCH_ELEMENTS command (undo/redo/cancelled drag, possibly from a
+ * peer). Order of operations: delete, update, create (at the recorded index),
+ * then reorder the listed ids within the slots they currently occupy, so ids
+ * the patch doesn't mention never move.
+ */
+function applyPatch(
+  scene: Scene,
+  command: Extract<Command, { type: 'PATCH_ELEMENTS' }>,
+): Scene {
+  const deleted = new Set(command.delete ?? []);
+  const updates = new Map((command.update ?? []).map((u) => [u.id, u]));
+  const creates = command.create ?? [];
+  const order = command.order ?? [];
+  if (
+    deleted.size === 0 &&
+    updates.size === 0 &&
+    creates.length === 0 &&
+    order.length === 0
+  ) {
+    return scene;
+  }
+
+  const elements: Element[] = scene.elements
+    .filter((el) => !deleted.has(el.id))
+    .map((el) => {
+      const patch = updates.get(el.id);
+      if (!patch) return el;
+      const next: Record<string, unknown> = { ...el };
+      for (const [key, value] of Object.entries(patch.set)) {
+        if (!PATCH_IDENTITY_FIELDS.has(key)) next[key] = value;
+      }
+      for (const key of patch.unset ?? []) {
+        if (!PATCH_IDENTITY_FIELDS.has(key)) delete next[key];
+      }
+      return next as unknown as Element;
+    });
+
+  for (const { element, index } of creates) {
+    if (elements.some((el) => el.id === element.id)) continue;
+    elements.splice(Math.max(0, Math.min(index, elements.length)), 0, element);
+  }
+
+  if (order.length > 0) {
+    const wanted = new Set(order);
+    const byId = new Map(elements.map((el) => [el.id, el]));
+    const queue = order.filter((id) => byId.has(id));
+    let next = 0;
+    elements.forEach((el, i) => {
+      if (!wanted.has(el.id)) return;
+      const id = queue[next++];
+      const target = id === undefined ? undefined : byId.get(id);
+      if (target) elements[i] = target;
+    });
+  }
+
+  const remaining = new Set(elements.map((el) => el.id));
+  const { lastCreatedId } = scene.appState;
+  return {
+    ...scene,
+    elements,
+    selectedIds: new Set(
+      [...scene.selectedIds].filter((id) => remaining.has(id)),
+    ),
+    ...(lastCreatedId &&
+      !remaining.has(lastCreatedId) && {
+        appState: { ...scene.appState, lastCreatedId: null },
+      }),
+  };
+}
+
 export function reducer(
   scene: Scene,
   command: Command,
@@ -224,6 +297,9 @@ export function reducer(
         ),
       };
     }
+
+    case 'PATCH_ELEMENTS':
+      return applyPatch(scene, command);
 
     case 'EDIT_TEXT':
       return {

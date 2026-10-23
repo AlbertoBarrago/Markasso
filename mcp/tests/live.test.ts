@@ -134,14 +134,26 @@ describe('LiveLink', () => {
     expect(diagram.elements.map((el) => el.id)).toContain('peer');
   });
 
-  it('does not echo a remote undo back to the room', async () => {
+  it('ignores a bare UNDO from an outdated client', async () => {
     const diagram = new Diagram();
     const { socket } = await join(diagram, []);
     await diagram.addNodes([{ key: 'api' }]);
     const sentBefore = socket.sent.length;
     socket.receive({ type: 'apply', from: 'p1', command: { type: 'UNDO' } });
-    expect(diagram.elements).toHaveLength(0);
+    expect(diagram.elements).toHaveLength(1);
     expect(socket.sent).toHaveLength(sentBefore);
+  });
+
+  it('forwards its own undo to the room as a patch', async () => {
+    const diagram = new Diagram();
+    const { socket } = await join(diagram, []);
+    await diagram.addNodes([{ key: 'api' }]);
+    diagram.history.undo();
+    expect(diagram.elements).toHaveLength(0);
+    expect(socket.sent.at(-1)).toMatchObject({
+      type: 'command',
+      command: { type: 'PATCH_ELEMENTS', delete: [expect.any(String)] },
+    });
   });
 
   it('stops forwarding after leaving', async () => {

@@ -1,12 +1,8 @@
 import type { Command } from '../commands/commands';
-
-import { randomAnimalName } from './animal_names';
-
-type UndoOp = { type: 'UNDO' | 'REDO' };
-
 import type { Element } from '../elements/element';
 import { isSessionCommand } from '../engine/ephemeral';
 import type { History } from '../engine/history';
+import { randomAnimalName } from './animal_names';
 import {
   clearCursors,
   setLocalCursorSender,
@@ -38,7 +34,7 @@ interface InitMsg {
 }
 interface ApplyMsg {
   type: 'apply';
-  command: Command | UndoOp;
+  command: Command;
   from: string;
 }
 interface CursorMsg {
@@ -172,8 +168,8 @@ export function setLiveName(name: string): void {
 /**
  * Connect the given History to a live session. Local persistent commands are
  * forwarded to the room; commands from other peers are applied via
- * `history.applyRemote` (no undo pollution, no echo). Undo/redo are per-client
- * (model A) and never shared.
+ * `history.applyRemote` (no undo pollution, no echo). Undo is per-user: it
+ * reaches peers as the PATCH_ELEMENTS it produces, like any other command.
  */
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 10000;
@@ -196,7 +192,6 @@ export function joinLiveSession(
   };
   let ws: WebSocket | null = null;
   let ready = false;
-  let applyingRemote = false;
   let reconnectAttempt = 0;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -220,7 +215,7 @@ export function joinLiveSession(
   });
 
   history.setOnCommand((command) => {
-    if (!ready || applyingRemote || !isSessionCommand(command)) return;
+    if (!ready || !isSessionCommand(command)) return;
     send({ type: 'command', command });
   });
 
@@ -230,25 +225,6 @@ export function joinLiveSession(
       if (peer.id !== self.id) peers.set(peer.id, peer);
     }
     emitPeers();
-  }
-
-  function isUndoOp(c: Command | UndoOp): c is UndoOp {
-    return c.type === 'UNDO' || c.type === 'REDO';
-  }
-
-  function applyRemoteOrUndo(command: Command | UndoOp): void {
-    if (isUndoOp(command)) {
-      // Apply remote undo/redo, but never re-broadcast it back (echo guard).
-      applyingRemote = true;
-      try {
-        if (command.type === 'UNDO') history.undo();
-        else history.redo();
-      } finally {
-        applyingRemote = false;
-      }
-      return;
-    }
-    history.applyRemote(command);
   }
 
   function scheduleReconnect(): void {
@@ -316,7 +292,8 @@ export function joinLiveSession(
 
         applyPeers(msg.peers);
       } else if (msg.type === 'apply') {
-        applyRemoteOrUndo(msg.command);
+        // Bare UNDO/REDO from an outdated client: see isSessionCommand.
+        if (isSessionCommand(msg.command)) history.applyRemote(msg.command);
       } else if (msg.type === 'cursor') {
         upsertRemoteCursor(msg.from, {
           x: msg.x,

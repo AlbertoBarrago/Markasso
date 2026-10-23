@@ -211,7 +211,8 @@ export class SessionRoom {
     const m = msg as Record<string, unknown>;
 
     if (m.type === 'command' && m.command) {
-      const command = m.command as WireCommand | { type: 'UNDO' | 'REDO' };
+      const command = m.command as WireCommand;
+      // Also drops bare UNDO/REDO from outdated clients (see isSessionCommand).
       if (!isSessionCommand(command)) return;
       if (!this.allowCommand(clientId)) return;
       this.touch();
@@ -219,10 +220,6 @@ export class SessionRoom {
         { type: 'apply', command, from: clientId },
         /* except */ clientId,
       );
-      // UNDO/REDO are order-sensitive and not replayed by late joiners, so
-      // they are relayed live but never persisted to the room log.
-      const isUndoOp = command.type === 'UNDO' || command.type === 'REDO';
-      if (isUndoOp) return;
       if (this.commands.length >= MAX_LOG_LENGTH) this.commands.shift();
       this.commands.push(command);
       this.schedulePersist();

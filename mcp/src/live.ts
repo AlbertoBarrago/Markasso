@@ -17,21 +17,15 @@ export interface PeerInfo {
   readonly color: string;
 }
 
-type UndoOp = { type: 'UNDO' | 'REDO' };
-
 type ServerMsg =
   | { type: 'init'; self: string; commands: Command[]; peers: PeerInfo[] }
-  | { type: 'apply'; command: Command | UndoOp; from: string }
+  | { type: 'apply'; command: Command; from: string }
   | { type: 'presence'; peers: PeerInfo[] }
   | { type: 'cursor' };
 
 const ROOM_ID = /^[a-zA-Z0-9_-]{3,64}$/;
 const AGENT_COLOR = '#c77dff';
 const JOIN_TIMEOUT_MS = 10_000;
-
-function isUndoOp(command: Command | UndoOp): command is UndoOp {
-  return command.type === 'UNDO' || command.type === 'REDO';
-}
 
 export class LiveError extends Error {
   override name = 'LiveError';
@@ -80,7 +74,6 @@ export class LiveLink {
   private selfId = '';
   private open = false;
   /** Set while replaying a remote undo/redo, which History re-emits. */
-  private applyingRemote = false;
 
   private constructor(
     private readonly diagram: Diagram,
@@ -165,30 +158,15 @@ export class LiveLink {
             seeded = true;
           }
           history.setOnCommand((command) => {
-            if (
-              this.open &&
-              !this.applyingRemote &&
-              isSessionCommand(command)
-            ) {
+            if (this.open && isSessionCommand(command)) {
               this.send({ type: 'command', command });
             }
           });
           this.open = true;
           resolve({ seeded, discarded });
         } else if (msg.type === 'apply') {
-          const command = msg.command;
-          if (isUndoOp(command)) {
-            // History emits the undo/redo again: don't echo it to the room.
-            this.applyingRemote = true;
-            try {
-              if (command.type === 'UNDO') history.undo();
-              else history.redo();
-            } finally {
-              this.applyingRemote = false;
-            }
-          } else {
-            history.applyRemote(command);
-          }
+          // Bare UNDO/REDO from an outdated client: see isSessionCommand.
+          if (isSessionCommand(msg.command)) history.applyRemote(msg.command);
         } else if (msg.type === 'presence') {
           this.peers = msg.peers;
         }

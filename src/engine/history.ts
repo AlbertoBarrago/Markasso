@@ -1,7 +1,16 @@
 import type { Command } from '../commands/commands';
+import type { AppState } from '../core/app_state';
 import { createScene, type Scene } from '../core/scene';
 import { isEphemeralCommand } from './ephemeral';
 import { reducer } from './reducer';
+import {
+  buildRevertPatch,
+  composeChange,
+  diffScenes,
+  emptyChange,
+  rebaseIndices,
+  type SceneChange,
+} from './scene_diff';
 
 /**
  * For APPLY_STYLE commands without explicit `ids`, resolve the target elements
@@ -24,18 +33,41 @@ function withApplyStyleTargets(scene: Scene, command: Command): Command {
 
 type Listener = (scene: Scene) => void;
 
+/** One undo step: the net local change plus the local appState around it. */
+interface UndoEntry {
+  readonly change: SceneChange;
+  readonly appStateBefore: AppState;
+  readonly appStateAfter: AppState;
+}
+
+/** A drag (move/resize/rotate) in progress, folded into a single undo step. */
+interface DragState {
+  readonly change: SceneChange;
+  readonly sceneBefore: Scene;
+  readonly appStateBefore: AppState;
+  readonly selectedIdsBefore: ReadonlySet<string>;
+  /** Redo stack set aside at drag start, restored if the drag changes nothing. */
+  readonly future: UndoEntry[];
+  touched: boolean;
+}
+
+/**
+ * Undo/redo stack plus the single entry point for state changes.
+ *
+ * Undo is per-user: steps record what THIS client changed (see scene_diff.ts)
+ * and undo/redo/cancel emit a PATCH_ELEMENTS command through `onCommand`, so in
+ * a live session peers apply the same patch and edits made by others survive.
+ */
 export class History {
-  private past: Scene[] = [];
+  private past: UndoEntry[] = [];
   private _present: Scene;
-  private future: Scene[] = [];
+  private future: UndoEntry[] = [];
   private listeners: Listener[] = [];
-  private _dragging = false;
-  private dragHasUndoableChanges = false;
-  private dragFuture: Scene[] | null = null;
+  private drag: DragState | null = null;
 
   constructor(
     initial: Scene = createScene(),
-    private onCommand?: (command: Command | { type: 'UNDO' | 'REDO' }) => void,
+    private onCommand?: (command: Command) => void,
   ) {
     this._present = initial;
   }
@@ -44,48 +76,58 @@ export class History {
     return this._present;
   }
 
-  /** Call at the start of a drag (move/resize/rotate). Records the pre-drag
-   *  state once so the entire drag undoes in a single Ctrl+Z step. */
+  /** Call at the start of a drag (move/resize/rotate). Every command until
+   *  endDrag folds into one undo step, so the drag undoes in a single Ctrl+Z. */
   beginDrag(): void {
-    if (this._dragging) return;
-    this.past.push(this._present);
-    this.dragFuture = this.future;
+    if (this.drag) return;
+    this.drag = {
+      change: emptyChange(),
+      sceneBefore: this._present,
+      appStateBefore: this._present.appState,
+      selectedIdsBefore: this._present.selectedIds,
+      future: this.future,
+      touched: false,
+    };
     this.future = [];
-    this._dragging = true;
-    this.dragHasUndoableChanges = false;
   }
 
-  /** Call at the end of a drag. Pops the undo entry if nothing actually changed. */
+  /** Call at the end of a drag. Records the undo step if anything changed. */
   endDrag(): void {
-    if (!this._dragging) return;
-    this._dragging = false;
-    if (!this.dragHasUndoableChanges) {
-      this.past.pop();
-      this.future = this.dragFuture ?? [];
+    const drag = this.drag;
+    if (!drag) return;
+    this.drag = null;
+    if (!drag.touched) {
+      this.future = drag.future;
+      return;
     }
-    this.dragHasUndoableChanges = false;
-    this.dragFuture = null;
+    rebaseIndices(drag.change, drag.sceneBefore, this._present);
+    this.past.push({
+      change: drag.change,
+      appStateBefore: drag.appStateBefore,
+      appStateAfter: this._present.appState,
+    });
   }
 
-  /** Cancel an in-progress drag and restore its pre-drag element state. */
+  /** Cancel an in-progress drag and revert what it changed. Edits peers made
+   *  during the drag are kept, and the revert is broadcast. */
   cancelDrag(): void {
-    if (!this._dragging) return;
-    const beforeDrag = this.past.pop();
-    this._dragging = false;
-    this.dragHasUndoableChanges = false;
-    this.future = this.dragFuture ?? [];
-    this.dragFuture = null;
-    if (!beforeDrag) return;
-    this._present = restoreSnapshot(beforeDrag, this._present, false);
-    this.notify();
+    const drag = this.drag;
+    if (!drag) return;
+    this.drag = null;
+    this.future = drag.future;
+    rebaseIndices(drag.change, drag.sceneBefore, this._present);
+    this.revert(
+      drag.change,
+      'undo',
+      drag.appStateBefore,
+      drag.selectedIdsBefore,
+    );
   }
 
   /** Set/replace the outbound hook used to forward local commands (e.g. to a
-   *  realtime session). Undo/redo notifications and ephemeral filtering are left
-   *  to the consumer. */
-  setOnCommand(
-    cb?: (command: Command | { type: 'UNDO' | 'REDO' }) => void,
-  ): void {
+   *  realtime session), including the patches undo/redo produce. Ephemeral
+   *  filtering is left to the consumer. */
+  setOnCommand(cb?: (command: Command) => void): void {
     this.onCommand = cb;
   }
 
@@ -109,8 +151,7 @@ export class History {
     const viewport = this._present.viewport;
     this.past = [];
     this.future = [];
-    this._dragging = false;
-    this.dragHasUndoableChanges = false;
+    this.drag = null;
     this._present = createScene();
     if (keepViewport) this._present = { ...this._present, viewport };
     for (const command of commands) this.applyRemote(command);
@@ -124,12 +165,19 @@ export class History {
     const next = reducer(this._present, resolved);
     if (next === this._present) return;
 
-    const isEphemeral = isEphemeralCommand(resolved.type);
-    if (this._dragging && !isEphemeral) {
-      this.dragHasUndoableChanges = true;
-    } else if (!this._dragging && !isEphemeral) {
-      this.past.push(this._present);
-      this.future = [];
+    if (!isEphemeralCommand(resolved.type)) {
+      const step = diffScenes(this._present, next);
+      if (this.drag) {
+        composeChange(this.drag.change, step);
+        this.drag.touched = true;
+      } else {
+        this.past.push({
+          change: step,
+          appStateBefore: this._present.appState,
+          appStateAfter: next.appState,
+        });
+        this.future = [];
+      }
     }
 
     this._present = next;
@@ -138,27 +186,25 @@ export class History {
   }
 
   undo(): void {
-    if (this._dragging) {
+    if (this.drag) {
       this.cancelDrag();
       return;
     }
-    if (this.past.length === 0) return;
-    this.future.push(this._present);
-    this._present = restoreSnapshot(this.past.pop()!, this._present);
-    this.onCommand?.({ type: 'UNDO' });
-    this.notify();
+    const entry = this.past.pop();
+    if (!entry) return;
+    this.future.push(entry);
+    this.revert(entry.change, 'undo', entry.appStateBefore);
   }
 
   redo(): void {
-    if (this._dragging) {
+    if (this.drag) {
       this.cancelDrag();
       return;
     }
-    if (this.future.length === 0) return;
-    this.past.push(this._present);
-    this._present = restoreSnapshot(this.future.pop()!, this._present);
-    this.onCommand?.({ type: 'REDO' });
-    this.notify();
+    const entry = this.future.pop();
+    if (!entry) return;
+    this.past.push(entry);
+    this.revert(entry.change, 'redo', entry.appStateAfter);
   }
 
   canUndo(): boolean {
@@ -178,33 +224,51 @@ export class History {
   private notify(): void {
     for (const l of this.listeners) l(this._present);
   }
+
+  /** Move the scene across `change` (see buildRevertPatch), restore the local
+   *  appState of that side, and broadcast the element patch. */
+  private revert(
+    change: SceneChange,
+    direction: 'undo' | 'redo',
+    appState: AppState,
+    selectedIds?: ReadonlySet<string>,
+  ): void {
+    const patch = buildRevertPatch(change, this._present, direction);
+    const patched = patch ? reducer(this._present, patch) : this._present;
+    this._present = restoreLocalState(patched, appState, selectedIds);
+    if (patch) this.onCommand?.(patch);
+    this.notify();
+  }
 }
 
-function restoreSnapshot(
-  snapshot: Scene,
-  current: Scene,
-  preserveSelection = true,
+/**
+ * Restore the per-user appState recorded with an undo step (e.g. the font size
+ * default a command changed), keeping view and tool state as they are now.
+ * The selection stays as-is unless `selectedIds` is given (cancelled drag);
+ * either way it is limited to elements that still exist.
+ */
+function restoreLocalState(
+  scene: Scene,
+  appState: AppState,
+  selectedIds: ReadonlySet<string> = scene.selectedIds,
 ): Scene {
-  const elementIds = new Set(snapshot.elements.map((element) => element.id));
-  const selectedIds = preserveSelection
-    ? new Set([...current.selectedIds].filter((id) => elementIds.has(id)))
-    : new Set(snapshot.selectedIds);
-  const currentLastCreatedId = current.appState.lastCreatedId;
+  const elementIds = new Set(scene.elements.map((element) => element.id));
+  const current = scene.appState;
+  const currentLastCreatedId = current.lastCreatedId;
 
   return {
-    ...snapshot,
-    selectedIds,
-    viewport: current.viewport,
+    ...scene,
+    selectedIds: new Set([...selectedIds].filter((id) => elementIds.has(id))),
     appState: {
-      ...snapshot.appState,
-      activeTool: current.appState.activeTool,
-      strokeColor: current.appState.strokeColor,
-      fillColor: current.appState.fillColor,
-      strokeWidth: current.appState.strokeWidth,
-      gridVisible: current.appState.gridVisible,
-      gridType: current.appState.gridType,
-      toolLocked: current.appState.toolLocked,
-      justCreatedText: current.appState.justCreatedText,
+      ...appState,
+      activeTool: current.activeTool,
+      strokeColor: current.strokeColor,
+      fillColor: current.fillColor,
+      strokeWidth: current.strokeWidth,
+      gridVisible: current.gridVisible,
+      gridType: current.gridType,
+      toolLocked: current.toolLocked,
+      justCreatedText: current.justCreatedText,
       lastCreatedId:
         currentLastCreatedId && elementIds.has(currentLastCreatedId)
           ? currentLastCreatedId

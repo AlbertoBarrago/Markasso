@@ -27,13 +27,21 @@ export function isEphemeralCommand(type: string): boolean {
   return EPHEMERAL_COMMANDS.has(type);
 }
 
+/** Legacy wire ops from clients that predate per-user undo (engine/scene_diff.ts). */
+const LEGACY_UNDO_OPS = new Set(['UNDO', 'REDO']);
+
 /**
  * Whether a command should be relayed to the realtime session. Ephemeral
  * commands change view only (viewport, selection, tool, colors) and are never
- * shared. UNDO/REDO ARE shared in model B so the server relays them in global
- * order for convergent undo.
+ * shared. Undo/redo travel as the PATCH_ELEMENTS they produce; a bare UNDO/REDO
+ * from an outdated client is dropped, since every peer would apply it to its
+ * own stack and diverge.
  */
 export function isSessionCommand(command: { type?: string }): boolean {
   const type = command?.type;
-  return type !== undefined && !isEphemeralCommand(type);
+  return (
+    type !== undefined &&
+    !isEphemeralCommand(type) &&
+    !LEGACY_UNDO_OPS.has(type)
+  );
 }
