@@ -108,6 +108,19 @@ body {
   z-index: 10;
 }
 
+/* Narrow desktop windows: tools on a second row, and what sits below them
+   moves down with them (see watchToolsRow in toolbar.ts). */
+.tools-wrapped .tb-island-tools {
+  top: 68px;
+}
+.tools-wrapped #shortcuts-hint {
+  top: 120px;
+}
+.tools-wrapped #context-panel {
+  top: 128px;
+  max-height: calc(100vh - 204px);
+}
+
 /* Top-right: export */
 .tb-island-topright {
   position: fixed;
