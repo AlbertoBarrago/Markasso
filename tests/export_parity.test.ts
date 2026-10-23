@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Element } from '../src/elements/element';
 import { createStencil } from '../src/elements/stencils/registry';
-import { drawElement } from '../src/rendering/draw_element';
+import {
+  drawConnectorLabels,
+  drawElement,
+} from '../src/rendering/draw_element';
 import { resolveArrowEndpoints } from '../src/rendering/draw_selection';
 import { sceneToSVG } from '../src/rendering/export';
 
@@ -211,6 +214,7 @@ describe('canvas and SVG parity', () => {
   it('draws the same text lines at the same positions', () => {
     const { ctx, lines } = recordingContext();
     for (const el of elements) drawElement(ctx, el, elements);
+    drawConnectorLabels(ctx, elements, '#080808');
     const canvas = [...lines].sort(byText);
     const exported = svgLines(svg, ox, oy).sort(byText);
 

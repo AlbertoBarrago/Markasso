@@ -1,6 +1,6 @@
 import { normalizeRect } from '../core/geometry';
 import type { Scene } from '../core/scene';
-import { measureTextBlock, wrapTextLines } from '../core/text_metrics';
+import { wrapTextLines } from '../core/text_metrics';
 import type {
   ArrowElement,
   Element,
@@ -33,12 +33,16 @@ import {
   getArrowHeadShape,
   getArrowHeadVector,
   getConnectorHeads,
-  getQuadraticPoint,
   getRouteHeadVector,
-  getRoutePointAt,
   type RoutePoint,
 } from './connector_geometry';
-import { contrastColor, drawElement, getIconStrokeWidth } from './draw_element';
+import { getConnectorLabelBoxes, type LabelBox } from './connector_labels';
+import {
+  contrastColor,
+  drawConnectorLabels,
+  drawElement,
+  getIconStrokeWidth,
+} from './draw_element';
 import {
   getElementBounds,
   resolveArrowEndpoints,
@@ -84,6 +88,7 @@ export function exportPNG(scene: Scene, withBackground = true): void {
   for (const el of elements) {
     drawElement(ctx, el, elements);
   }
+  drawConnectorLabels(ctx, elements, getCanvasBg());
 
   const url = canvas.toDataURL('image/png');
   triggerDownload(url, 'markasso-export.png');
@@ -110,6 +115,7 @@ export function exportHTML(scene: Scene): void {
   ctx.scale(scale, scale);
   ctx.translate(PAD - minX, PAD - minY);
   for (const el of elements) drawElement(ctx, el, elements);
+  drawConnectorLabels(ctx, elements, getCanvasBg());
 
   const dataUrl = offscreen.toDataURL('image/png');
   const title = 'Markasso export';
@@ -153,8 +159,8 @@ export function exportSVG(scene: Scene, withBackground = true): void {
 export interface SceneToSVGOptions {
   /**
    * Color of the canvas the diagram sits on. Fills the page when
-   * `withBackground` is set, and always masks connector lines under elbow
-   * labels, mirroring the gap the canvas renderer cuts.
+   * `withBackground` is set, and always fills the box behind connector
+   * labels, as on the canvas.
    */
   readonly canvasColor: string;
   readonly withBackground: boolean;
@@ -188,7 +194,14 @@ export function sceneToSVG(
     );
   }
   for (const el of elements) {
-    parts.push(elementToSVG(el, ox, oy, elements, canvasColor));
+    parts.push(elementToSVG(el, ox, oy, elements));
+  }
+  // Connector labels go last, above every stroke, as on the canvas.
+  const labels = getConnectorLabelBoxes(elements);
+  for (const el of elements) {
+    const box = labels.get(el.id);
+    if (box && (el.type === 'line' || el.type === 'arrow'))
+      parts.push(connectorLabelToSVG(el, box, ox, oy, canvasColor));
   }
   parts.push('</svg>');
   return parts.join('\n');
@@ -267,6 +280,13 @@ function computeBounds(elements: ReadonlyArray<Element>): {
     }
   }
 
+  for (const box of getConnectorLabelBoxes(elements).values()) {
+    minX = Math.min(minX, box.x - box.w / 2);
+    minY = Math.min(minY, box.y - box.h / 2);
+    maxX = Math.max(maxX, box.x + box.w / 2);
+    maxY = Math.max(maxY, box.y + box.h / 2);
+  }
+
   return { minX, minY, maxX, maxY };
 }
 
@@ -277,16 +297,9 @@ function elementToSVG(
   ox: number,
   oy: number,
   allElements: ReadonlyArray<Element>,
-  canvasColor: string,
 ): string {
   if ((el.type === 'line' || el.type === 'arrow') && el.routing === 'elbow') {
-    return elbowToSVG(
-      el,
-      resolveConnectorRoute(el, allElements),
-      ox,
-      oy,
-      canvasColor,
-    );
+    return elbowToSVG(el, resolveConnectorRoute(el, allElements), ox, oy);
   }
   switch (el.type) {
     case 'rectangle':
@@ -300,9 +313,9 @@ function elementToSVG(
     case 'stencil':
       return stencilToSVG(el, ox, oy);
     case 'line':
-      return lineToSVG(el, ox, oy, allElements, canvasColor);
+      return lineToSVG(el, ox, oy, allElements);
     case 'arrow':
-      return arrowToSVG(el, ox, oy, allElements, canvasColor);
+      return arrowToSVG(el, ox, oy, allElements);
     case 'freehand':
       return freehandToSVG(el, ox, oy);
     case 'text':
@@ -633,7 +646,6 @@ function lineToSVG(
   ox: number,
   oy: number,
   allElements: ReadonlyArray<Element>,
-  canvasColor: string,
 ): string {
   const pts = resolveArrowEndpoints(el, allElements);
   const x1 = pts.x + ox,
@@ -650,12 +662,6 @@ function lineToSVG(
     offsetVector(getArrowHeadVector(pts, el, placement), ox, oy),
   );
   const parts = [connectorToSVG(el, shaft, heads, rot)];
-  if (el.label) {
-    const mid = curved
-      ? getQuadraticPoint(pts.x, pts.y, el.cx!, el.cy!, pts.x2, pts.y2, 0.5)
-      : { x: (pts.x + pts.x2) / 2, y: (pts.y + pts.y2) / 2 };
-    parts.push(connectorLabelToSVG(el, mid.x + ox, mid.y + oy, canvasColor));
-  }
   return parts.join('\n');
 }
 
@@ -665,7 +671,6 @@ function elbowToSVG(
   route: ReadonlyArray<RoutePoint>,
   ox: number,
   oy: number,
-  canvasColor: string,
 ): string {
   if (route.length < 2) return '';
   const sp = `stroke="${escapeXml(el.strokeColor)}" stroke-width="${el.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="${el.opacity}"${strokeDashAttr(el)}`;
@@ -678,10 +683,6 @@ function elbowToSVG(
   const parts = [
     connectorToSVG(el, `<polyline points="${points}" ${sp}/>`, heads, ''),
   ];
-  if (el.label) {
-    const [mx, my] = getRoutePointAt(route, 0.5);
-    parts.push(connectorLabelToSVG(el, mx + ox, my + oy, canvasColor));
-  }
   return parts.join('\n');
 }
 
@@ -690,7 +691,6 @@ function arrowToSVG(
   ox: number,
   oy: number,
   allElements: ReadonlyArray<Element>,
-  canvasColor: string,
 ): string {
   const pts = resolveArrowEndpoints(el, allElements);
   const x1 = pts.x + ox,
@@ -704,16 +704,6 @@ function arrowToSVG(
     offsetVector(getArrowHeadVector(pts, {}, placement), ox, oy),
   );
   const parts = [connectorToSVG(el, shaft, heads, rot)];
-  if (el.label) {
-    parts.push(
-      connectorLabelToSVG(
-        el,
-        (pts.x + pts.x2) / 2 + ox,
-        (pts.y + pts.y2) / 2 + oy,
-        canvasColor,
-      ),
-    );
-  }
   return parts.join('\n');
 }
 
@@ -774,24 +764,21 @@ function textToSVG(el: TextElement, ox: number, oy: number): string {
   return `<text font-family="${escapeXml(el.fontFamily)}" font-size="${el.fontSize}"${weight}${style} fill="${escapeXml(el.strokeColor)}" opacity="${el.opacity}" text-anchor="${anchor}" dominant-baseline="text-before-edge"${rotateAttr(el, ox, oy)}>${tspans}</text>`;
 }
 
-/**
- * Connector label on a box of the canvas color, sized with the shared text
- * metrics exactly like the gap the canvas renderer cuts in the shaft.
- */
+/** Connector label on a box of the canvas color (see connector_labels.ts). */
 function connectorLabelToSVG(
   el: LineElement | ArrowElement,
-  cx: number,
-  cy: number,
+  box: LabelBox,
+  ox: number,
+  oy: number,
   canvasColor: string,
 ): string {
   if (!el.label) return '';
+  const cx = box.x + ox;
+  const cy = box.y + oy;
+  const { w, h } = box;
   const fontSize = el.labelFontSize ?? 12;
   const fontFamily = el.labelFontFamily ?? 'Arial, sans-serif';
   const lines = el.label.split('\n');
-  const pad = fontSize * 0.4;
-  const block = measureTextBlock(lines, fontSize, fontFamily);
-  const w = block.width + pad * 2;
-  const h = block.height + pad * 2;
   return [
     `<rect x="${round(cx - w / 2)}" y="${round(cy - h / 2)}" width="${round(w)}" height="${round(h)}" fill="${canvasColor}"/>`,
     shapeLabelToSVG(

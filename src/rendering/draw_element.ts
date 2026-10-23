@@ -1,5 +1,5 @@
 import { normalizeRect } from '../core/geometry';
-import { measureTextBlock, wrapTextLines } from '../core/text_metrics';
+import { wrapTextLines } from '../core/text_metrics';
 import type {
   ArrowElement,
   Element,
@@ -23,14 +23,10 @@ import {
   getArrowHeadShape,
   getArrowHeadVector,
   getConnectorHeads,
-  getQuadraticLength,
-  getQuadraticPoint,
-  getQuadraticSegment,
-  getQuadraticTangent,
   getRouteHeadVector,
-  getRoutePointAt,
   type RoutePoint,
 } from './connector_geometry';
+import { getConnectorLabelBoxes } from './connector_labels';
 import {
   getElementCenter,
   resolveArrowEndpoints,
@@ -256,14 +252,16 @@ export function drawElement(
       }
       break;
     }
-    case 'line': {
+    case 'line':
+    case 'arrow': {
+      // Labels are drawn afterwards by drawConnectorLabels, on top of every
+      // connector, so the shaft is always drawn whole here.
       if (el.routing === 'elbow') {
         drawElbowConnector(
           ctx,
           el,
           resolveConnectorRoute(el, allElements ?? [el]),
           strokeColor,
-          editingShapeLabelId,
         );
         break;
       }
@@ -274,209 +272,11 @@ export function drawElement(
         getArrowHeadVector(pts, el.type === 'line' ? el : {}, p),
       );
       const headClip = clipOutClosedHeads(ctx, heads, el.strokeWidth);
-
-      if (el.label && editingShapeLabelId !== el.id) {
-        const fontSize = el.labelFontSize ?? 12;
-        const fontFamily = el.labelFontFamily ?? 'Arial, sans-serif';
-        ctx.save();
-        ctx.setLineDash([]);
-        ctx.font = `${fontSize}px ${fontFamily}`;
-        const lines = el.label.split('\n');
-        const pad = fontSize * 0.4;
-        const labelW =
-          measureTextBlock(lines, fontSize, fontFamily).width + pad * 2;
-        const labelH = lines.length * fontSize * 1.2 + pad * 2;
-        ctx.restore();
-
-        let mx = (pts.x + pts.x2) / 2;
-        let my = (pts.y + pts.y2) / 2;
-        let totalLen = Math.hypot(pts.x2 - pts.x, pts.y2 - pts.y);
-        let dx = totalLen > 0 ? (pts.x2 - pts.x) / totalLen : 1;
-        let dy = totalLen > 0 ? (pts.y2 - pts.y) / totalLen : 0;
-
-        if (el.cx !== undefined && el.cy !== undefined) {
-          const midPoint = getQuadraticPoint(
-            pts.x,
-            pts.y,
-            el.cx,
-            el.cy,
-            pts.x2,
-            pts.y2,
-            0.5,
-          );
-          const tangent = getQuadraticTangent(
-            pts.x,
-            pts.y,
-            el.cx,
-            el.cy,
-            pts.x2,
-            pts.y2,
-            0.5,
-          );
-          const tangentLen = Math.hypot(tangent.x, tangent.y);
-          mx = midPoint.x;
-          my = midPoint.y;
-          totalLen = getQuadraticLength(
-            pts.x,
-            pts.y,
-            el.cx,
-            el.cy,
-            pts.x2,
-            pts.y2,
-          );
-          if (tangentLen > 0.001) {
-            dx = tangent.x / tangentLen;
-            dy = tangent.y / tangentLen;
-          }
-        }
-
-        const gapHalf =
-          (Math.abs(dx) * labelW) / 2 + (Math.abs(dy) * labelH) / 2;
-        const gapT = totalLen > 0 ? gapHalf / totalLen : 0;
-        const t1 = Math.max(0, 0.5 - gapT);
-        const t2 = Math.min(1, 0.5 + gapT);
-
-        if (el.cx !== undefined && el.cy !== undefined) {
-          drawQuadraticSegment(
-            ctx,
-            pts.x,
-            pts.y,
-            el.cx,
-            el.cy,
-            pts.x2,
-            pts.y2,
-            0,
-            t1,
-          );
-          drawQuadraticSegment(
-            ctx,
-            pts.x,
-            pts.y,
-            el.cx,
-            el.cy,
-            pts.x2,
-            pts.y2,
-            t2,
-            1,
-          );
-        } else {
-          drawLine(
-            ctx,
-            pts.x,
-            pts.y,
-            pts.x + (pts.x2 - pts.x) * t1,
-            pts.y + (pts.y2 - pts.y) * t1,
-            roughness,
-            seed,
-          );
-          drawLine(
-            ctx,
-            pts.x + (pts.x2 - pts.x) * t2,
-            pts.y + (pts.y2 - pts.y) * t2,
-            pts.x2,
-            pts.y2,
-            roughness,
-            seed,
-          );
-        }
-
-        ctx.save();
-        ctx.setLineDash([]);
-        drawArrowLabel(
-          ctx,
-          mx,
-          my,
-          el.label,
-          fontSize,
-          fontFamily,
-          el.labelColor ?? strokeColor,
-        );
-        ctx.restore();
-      } else if (el.cx !== undefined && el.cy !== undefined) {
+      if (el.type === 'line' && el.cx !== undefined && el.cy !== undefined) {
         ctx.beginPath();
         ctx.moveTo(pts.x, pts.y);
         ctx.quadraticCurveTo(el.cx, el.cy, pts.x2, pts.y2);
         ctx.stroke();
-      } else {
-        drawLine(ctx, pts.x, pts.y, pts.x2, pts.y2, roughness, seed);
-      }
-      if (headClip) ctx.restore();
-      drawConnectorHeads(ctx, heads, el.strokeWidth, strokeColor);
-      break;
-    }
-    case 'arrow': {
-      if (el.routing === 'elbow') {
-        drawElbowConnector(
-          ctx,
-          el,
-          resolveConnectorRoute(el, allElements ?? [el]),
-          strokeColor,
-          editingShapeLabelId,
-        );
-        break;
-      }
-      const roughness = el.roughness ?? 0;
-      const seed = hashId(el.id);
-      const pts = allElements ? resolveArrowEndpoints(el, allElements) : el;
-      const heads = getConnectorHeads(el, (p) =>
-        getArrowHeadVector(pts, {}, p),
-      );
-      const headClip = clipOutClosedHeads(ctx, heads, el.strokeWidth);
-      if (el.label && editingShapeLabelId !== el.id) {
-        const fontSize = el.labelFontSize ?? 12;
-        const fontFamily = el.labelFontFamily ?? 'Arial, sans-serif';
-        const mx = (pts.x + pts.x2) / 2;
-        const my = (pts.y + pts.y2) / 2;
-        // Measure label box to compute the gap along the arrow
-        ctx.save();
-        ctx.setLineDash([]);
-        ctx.font = `${fontSize}px ${fontFamily}`;
-        const lines = el.label.split('\n');
-        const pad = fontSize * 0.4;
-        const labelW =
-          measureTextBlock(lines, fontSize, fontFamily).width + pad * 2;
-        const labelH = lines.length * fontSize * 1.2 + pad * 2;
-        ctx.restore();
-        const totalLen = Math.hypot(pts.x2 - pts.x, pts.y2 - pts.y);
-        const dx = totalLen > 0 ? (pts.x2 - pts.x) / totalLen : 1;
-        const dy = totalLen > 0 ? (pts.y2 - pts.y) / totalLen : 0;
-        // Half-extent of the label box projected onto the arrow direction
-        const gapHalf =
-          (Math.abs(dx) * labelW) / 2 + (Math.abs(dy) * labelH) / 2;
-        const gapT = totalLen > 0 ? gapHalf / totalLen : 0;
-        const t1 = Math.max(0, 0.5 - gapT);
-        const t2 = Math.min(1, 0.5 + gapT);
-        // Draw shaft in two segments, skipping the label gap
-        drawLine(
-          ctx,
-          pts.x,
-          pts.y,
-          pts.x + (pts.x2 - pts.x) * t1,
-          pts.y + (pts.y2 - pts.y) * t1,
-          roughness,
-          seed,
-        );
-        drawLine(
-          ctx,
-          pts.x + (pts.x2 - pts.x) * t2,
-          pts.y + (pts.y2 - pts.y) * t2,
-          pts.x2,
-          pts.y2,
-          roughness,
-          seed,
-        );
-        ctx.save();
-        ctx.setLineDash([]);
-        drawArrowLabel(
-          ctx,
-          mx,
-          my,
-          el.label,
-          fontSize,
-          fontFamily,
-          el.labelColor ?? strokeColor,
-        );
-        ctx.restore();
       } else {
         drawLine(ctx, pts.x, pts.y, pts.x2, pts.y2, roughness, seed);
       }
@@ -900,40 +700,16 @@ function drawShape(
   }
 }
 
-/**
- * Orthogonal connector. The label gap is cut with an even-odd clip around
- * the label box instead of splitting segments, which works for any number
- * of turns.
- */
+/** Orthogonal connector: one polyline plus heads on the end segments. */
 function drawElbowConnector(
   ctx: CanvasRenderingContext2D,
   el: LineElement | ArrowElement,
   route: ReadonlyArray<RoutePoint>,
   strokeColor: string,
-  editingShapeLabelId: string | null | undefined,
 ): void {
   if (route.length < 2) return;
   const roughness = el.roughness ?? 0;
   const seed = hashId(el.id);
-  const showLabel = !!el.label && editingShapeLabelId !== el.id;
-  const fontSize = el.labelFontSize ?? 12;
-  const fontFamily = el.labelFontFamily ?? 'Arial, sans-serif';
-  const [mx, my] = getRoutePointAt(route, 0.5);
-
-  ctx.save();
-  if (showLabel && el.label) {
-    ctx.font = `${fontSize}px ${fontFamily}`;
-    const lines = el.label.split('\n');
-    const pad = fontSize * 0.4;
-    const labelW =
-      measureTextBlock(lines, fontSize, fontFamily).width + pad * 2;
-    const labelH = lines.length * fontSize * 1.2 + pad * 2;
-    ctx.beginPath();
-    ctx.rect(-CLIP_EXTENT, -CLIP_EXTENT, CLIP_EXTENT * 2, CLIP_EXTENT * 2);
-    ctx.rect(mx - labelW / 2, my - labelH / 2, labelW, labelH);
-    ctx.clip('evenodd');
-  }
-
   const heads = getConnectorHeads(el, (p) => getRouteHeadVector(route, p));
   const headClip = clipOutClosedHeads(ctx, heads, el.strokeWidth);
   if (roughness < 0.05) {
@@ -951,21 +727,39 @@ function drawElbowConnector(
     }
   }
   if (headClip) ctx.restore();
-  ctx.restore();
-
   drawConnectorHeads(ctx, heads, el.strokeWidth, strokeColor);
+}
 
-  if (showLabel && el.label) {
+/**
+ * Connector labels, drawn after every element so no stroke crosses them:
+ * each sits on a box of the canvas color at the spot connector_labels.ts
+ * picked for it.
+ */
+export function drawConnectorLabels(
+  ctx: CanvasRenderingContext2D,
+  elements: ReadonlyArray<Element>,
+  canvasColor: string,
+  editingShapeLabelId?: string | null,
+): void {
+  const boxes = getConnectorLabelBoxes(elements);
+  if (boxes.size === 0) return;
+  for (const el of elements) {
+    if (el.type !== 'line' && el.type !== 'arrow') continue;
+    const box = boxes.get(el.id);
+    if (!box || !el.label || el.id === editingShapeLabelId) continue;
     ctx.save();
+    ctx.globalAlpha = el.opacity;
     ctx.setLineDash([]);
+    ctx.fillStyle = canvasColor;
+    ctx.fillRect(box.x - box.w / 2, box.y - box.h / 2, box.w, box.h);
     drawArrowLabel(
       ctx,
-      mx,
-      my,
+      box.x,
+      box.y,
       el.label,
-      fontSize,
-      fontFamily,
-      el.labelColor ?? strokeColor,
+      el.labelFontSize ?? 12,
+      el.labelFontFamily ?? 'Arial, sans-serif',
+      el.labelColor ?? resolveStrokeColorForTheme(el.strokeColor),
     );
     ctx.restore();
   }
@@ -1140,25 +934,6 @@ function drawLine(
       y1 + (y2 - y1) * tEnd,
     );
   }
-  ctx.stroke();
-}
-
-function drawQuadraticSegment(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  cx: number,
-  cy: number,
-  x2: number,
-  y2: number,
-  tStart: number,
-  tEnd: number,
-): void {
-  const seg = getQuadraticSegment(x, y, cx, cy, x2, y2, tStart, tEnd);
-  if (!seg) return;
-  ctx.beginPath();
-  ctx.moveTo(seg.x, seg.y);
-  ctx.quadraticCurveTo(seg.cx, seg.cy, seg.x2, seg.y2);
   ctx.stroke();
 }
 

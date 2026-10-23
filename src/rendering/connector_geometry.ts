@@ -23,16 +23,7 @@ export interface ArrowHeadVector {
   readonly tipY: number;
 }
 
-export interface QuadraticSegment {
-  readonly x: number;
-  readonly y: number;
-  readonly cx: number;
-  readonly cy: number;
-  readonly x2: number;
-  readonly y2: number;
-}
-
-function lerp(a: number, b: number, t: number): number {
+function _lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
@@ -41,28 +32,6 @@ function quadraticExtremum(p0: number, p1: number, p2: number): number | null {
   if (Math.abs(denom) < 0.000001) return null;
   const t = (p0 - p1) / denom;
   return t > 0 && t < 1 ? t : null;
-}
-
-function splitQuadraticAt(
-  x: number,
-  y: number,
-  cx: number,
-  cy: number,
-  x2: number,
-  y2: number,
-  t: number,
-): { left: QuadraticSegment; right: QuadraticSegment } {
-  const p01x = lerp(x, cx, t);
-  const p01y = lerp(y, cy, t);
-  const p12x = lerp(cx, x2, t);
-  const p12y = lerp(cy, y2, t);
-  const p012x = lerp(p01x, p12x, t);
-  const p012y = lerp(p01y, p12y, t);
-
-  return {
-    left: { x, y, cx: p01x, cy: p01y, x2: p012x, y2: p012y },
-    right: { x: p012x, y: p012y, cx: p12x, cy: p12y, x2, y2 },
-  };
 }
 
 export function getArrowHeadVector(
@@ -103,40 +72,6 @@ export function getQuadraticPoint(
     x: mt * mt * x + 2 * mt * t * cx + t * t * x2,
     y: mt * mt * y + 2 * mt * t * cy + t * t * y2,
   };
-}
-
-export function getQuadraticTangent(
-  x: number,
-  y: number,
-  cx: number,
-  cy: number,
-  x2: number,
-  y2: number,
-  t: number,
-): { x: number; y: number } {
-  return {
-    x: 2 * (1 - t) * (cx - x) + 2 * t * (x2 - cx),
-    y: 2 * (1 - t) * (cy - y) + 2 * t * (y2 - cy),
-  };
-}
-
-export function getQuadraticLength(
-  x: number,
-  y: number,
-  cx: number,
-  cy: number,
-  x2: number,
-  y2: number,
-  steps = 24,
-): number {
-  let length = 0;
-  let prev = { x, y };
-  for (let i = 1; i <= steps; i++) {
-    const point = getQuadraticPoint(x, y, cx, cy, x2, y2, i / steps);
-    length += Math.hypot(point.x - prev.x, point.y - prev.y);
-    prev = point;
-  }
-  return length;
 }
 
 export function getQuadraticBounds(
@@ -201,39 +136,6 @@ function distToSegment(
   const qx = x1 + t * dx;
   const qy = y1 + t * dy;
   return Math.hypot(px - qx, py - qy);
-}
-
-export function getQuadraticSegment(
-  x: number,
-  y: number,
-  cx: number,
-  cy: number,
-  x2: number,
-  y2: number,
-  tStart: number,
-  tEnd: number,
-): QuadraticSegment | null {
-  if (tEnd <= tStart) return null;
-  if (tStart <= 0 && tEnd >= 1) return { x, y, cx, cy, x2, y2 };
-
-  const clampedStart = Math.max(0, Math.min(1, tStart));
-  const clampedEnd = Math.max(0, Math.min(1, tEnd));
-  if (clampedEnd <= clampedStart) return null;
-
-  const { left } = splitQuadraticAt(x, y, cx, cy, x2, y2, clampedEnd);
-  if (clampedStart <= 0) return left;
-
-  const localT = clampedStart / clampedEnd;
-  const { right } = splitQuadraticAt(
-    left.x,
-    left.y,
-    left.cx,
-    left.cy,
-    left.x2,
-    left.y2,
-    localT,
-  );
-  return right;
 }
 
 // ── Orthogonal (elbow) routing ────────────────────────────────────────────────

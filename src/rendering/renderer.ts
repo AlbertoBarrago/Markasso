@@ -1,7 +1,7 @@
 import type { Scene } from '../core/scene';
 import { getSelectedElements } from '../core/scene';
 import type { Element } from '../elements/element';
-import { drawElement } from './draw_element';
+import { drawConnectorLabels, drawElement } from './draw_element';
 import { drawGrid } from './draw_grid';
 import { drawSelection, getElementBounds } from './draw_selection';
 import { getCanvasBg } from './theme_cache';
@@ -129,6 +129,7 @@ export function render(
       continue;
     drawElement(ctx, el, scene.elements, editingShapeLabelId);
   }
+  drawConnectorLabels(ctx, scene.elements, getCanvasBg(), editingShapeLabelId);
 
   const selected = getSelectedElements(scene);
   if (selected.length > 0) {
