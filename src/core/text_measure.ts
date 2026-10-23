@@ -1,21 +1,23 @@
+import { measureTextBlock } from './text_metrics';
+
+/**
+ * Natural size of a text element's content, measured with the same metrics
+ * the renderer wraps with so the stored width never triggers a wrap.
+ */
 export function measureTextBounds(
   content: string,
   fontSize: number,
   fontFamily: string,
   bold?: boolean,
-  italic?: boolean,
 ): { width: number; height: number } {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d')!;
-  ctx.font = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${fontSize}px ${fontFamily}`;
-  const lineHeight = fontSize * 1.2;
-  const rawLines = content.split('\n');
-  let maxWidth = 0;
-  for (const line of rawLines) {
-    maxWidth = Math.max(maxWidth, ctx.measureText(line).width);
-  }
+  const { width, height } = measureTextBlock(
+    content.split('\n'),
+    fontSize,
+    fontFamily,
+    bold,
+  );
   return {
-    width: Math.max(maxWidth, fontSize),
-    height: Math.max(rawLines.length * lineHeight, fontSize),
+    width: Math.max(Math.ceil(width), fontSize),
+    height: Math.max(height, fontSize),
   };
 }

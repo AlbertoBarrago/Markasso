@@ -78,16 +78,19 @@ Bump `version` in `mcp/package.json`, add the entry to `mcp/CHANGELOG.md`, merge
 |---|---|
 | `diagram_new` | Start an empty diagram |
 | `diagram_open` | Open a `.markasso` file or a markasso.it share link |
-| `diagram_read` | Describe nodes (key, kind, label, position, size) and connections |
-| `diagram_add_nodes` | Add nodes by key: rectangle, ellipse, rhombus, text, flowchart symbols, icons |
+| `diagram_read` | Describe nodes (key, kind, label, position, size) and connections (with their ids) |
+| `diagram_add_nodes` | Add nodes by key: rectangle, ellipse, rhombus, text, flowchart symbols, icons. Nodes without a size fit their label |
 | `diagram_connect` | Connect nodes by key: label, straight/elbow routing, arrowhead styles, dashed |
 | `diagram_update` | Change a node's label, color, position or size |
+| `diagram_update_edge` | Change a connection's label, routing, heads, dash or color |
+| `diagram_disconnect` | Remove connections (by id or by from/to), keeping the nodes |
 | `diagram_remove` | Remove nodes and their connections |
 | `diagram_layout` | Arrange nodes in layers (top-to-bottom or left-to-right) |
 | `icons_search` | Find generic architecture icons and Kubernetes icons |
 | `diagram_save` | Save as `.markasso` |
 | `diagram_export_svg` | Export an SVG image |
-| `diagram_share` | Publish and return a markasso.it link |
+| `diagram_export_png` | Render a PNG the agent can look at (optionally saved to a file) |
+| `diagram_share` | Publish and return a markasso.it link, with its expiry date |
 | `live_join` / `live_leave` | Draw on a live board in real time (link from Share → Share live session) |
 
 Vendor icon packs (AWS, Azure, Google Cloud) are not available to agents: they can't be redistributed, and in the app they are imported by each user into their own browser.
@@ -109,4 +112,4 @@ Vendor icon packs (AWS, Azure, Google Cloud) are not available to agents: they c
 - **Board content is data.** On a live board, labels are typed by other people. The tool descriptions tell models to treat them as data, not instructions, but keep the usual prompt-injection caution when an agent with other powerful tools reads shared boards.
 - **Live links grant edit access.** Anyone with the link can edit the room; the agent gets the same rights as any participant.
 - **Limits.** The app's server limits apply: 200 commands per 5 seconds per peer, 512 KB per message, share link uploads are rate limited. Tools batch changes into single commands to stay well within them.
-- Share links are stored on markasso.it for a limited time; `diagram_share` publishes the diagram's content.
+- Share links are stored on markasso.it for 90 days (`diagram_share` reports the date); publishing sends the diagram's content.

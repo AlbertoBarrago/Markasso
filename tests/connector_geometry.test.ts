@@ -8,8 +8,6 @@ import {
   getArrowHeadVector,
   getQuadraticBounds,
   getQuadraticPoint,
-  getQuadraticSegment,
-  getQuadraticTangent,
   getRouteLength,
   getRoutePointAt,
   type RouteDirection,
@@ -52,21 +50,6 @@ describe('getArrowHeadVector', () => {
     const point = getQuadraticPoint(0, 0, 50, 100, 100, 0, 0.5);
     expect(point.x).toBe(50);
     expect(point.y).toBe(50);
-  });
-
-  it('computes the tangent on a quadratic curve', () => {
-    const tangent = getQuadraticTangent(0, 0, 50, 100, 100, 0, 0.5);
-    expect(tangent.x).toBe(100);
-    expect(tangent.y).toBe(0);
-  });
-
-  it('extracts a quadratic sub-segment without leaving the source curve', () => {
-    const seg = getQuadraticSegment(0, 0, 50, 100, 100, 0, 0.25, 0.75);
-    expect(seg).not.toBeNull();
-    expect(seg?.x).toBe(25);
-    expect(seg?.y).toBeCloseTo(37.5, 5);
-    expect(seg?.x2).toBe(75);
-    expect(seg?.y2).toBeCloseTo(37.5, 5);
   });
 
   it('computes tight quadratic bounds', () => {

@@ -1,4 +1,5 @@
 import type { Command } from '../../src/commands/commands';
+import { type LayoutDirection, layeredLayout } from '../../src/core/layout';
 import type {
   ArrowHeadStyle,
   ConnectorRouting,
@@ -20,7 +21,12 @@ import {
 } from '../../src/elements/stencils/registry';
 import { History } from '../../src/engine/history';
 import { validateElements } from '../../src/io/element_validation';
-import { getElementBounds } from '../../src/rendering/draw_selection';
+import {
+  getConnectorBox,
+  getElementBounds,
+} from '../../src/rendering/draw_selection';
+
+import { type Size, sizeForLabel, sizeForText } from './sizing';
 
 /**
  * Agent-facing model of one Markasso diagram. Agents address nodes by short
@@ -85,6 +91,33 @@ export interface EdgeSpec {
   readonly color?: NodeColor;
 }
 
+/**
+ * A connection, by the short id diagram_read shows, or by its two node keys
+ * (plus its label when several connections join the same nodes).
+ */
+export interface EdgeRef {
+  readonly id?: string;
+  readonly from?: string;
+  readonly to?: string;
+  readonly label?: string;
+}
+
+export interface EdgePatch {
+  /** Empty string removes the label. */
+  readonly label?: string;
+  readonly routing?: ConnectorRouting;
+  readonly arrow?: 'none' | 'start' | 'end' | 'both';
+  readonly startHead?: ArrowHeadStyle;
+  readonly endHead?: ArrowHeadStyle;
+  readonly dashed?: boolean;
+  readonly color?: NodeColor;
+}
+
+/** Short id of a connection, as shown by diagram_read. */
+export function edgeShortId(el: Element): string {
+  return el.id.slice(0, 8);
+}
+
 export interface NodePatch {
   readonly label?: string;
   readonly color?: NodeColor;
@@ -143,6 +176,8 @@ export class Diagram {
   readonly history: History;
   /** Keys given by the agent; other elements get derived keys on read. */
   private readonly keys = new Map<string, string>();
+  /** Nodes created without width/height: they follow their label's size. */
+  private readonly autoSized = new Set<string>();
 
   constructor(elements: ReadonlyArray<Element> = []) {
     this.history = new History();
@@ -205,7 +240,7 @@ export class Diagram {
     let minX = Infinity;
     let maxY = -Infinity;
     for (const el of nodes) {
-      const b = getElementBounds(el);
+      const b = getConnectorBox(el);
       minX = Math.min(minX, b.x);
       maxY = Math.max(maxY, b.y + b.h);
     }
@@ -231,7 +266,7 @@ export class Diagram {
     for (const spec of specs) {
       const key = slugify(spec.key) || spec.key;
       const el = await this.buildNode(spec, cursorX, origin.y);
-      const b = getElementBounds(el);
+      const b = getConnectorBox(el);
       cursorX = b.x + b.w + PLACEMENT_GAP;
       created.push(el);
       keys.push(key);
@@ -245,6 +280,9 @@ export class Diagram {
     this.dispatch({ type: 'CREATE_ELEMENTS', elements: created });
     created.forEach((el, i) => {
       this.keys.set(keys[i]!, el.id);
+      const spec = specs[i]!;
+      if (spec.width === undefined && spec.height === undefined)
+        this.autoSized.add(el.id);
     });
     return keys;
   }
@@ -283,6 +321,7 @@ export class Diagram {
     }
 
     if (kind === 'text') {
+      const size = sizeForText(label, TEXT_FONT_SIZE);
       return {
         ...style,
         id,
@@ -292,16 +331,16 @@ export class Diagram {
         content: label,
         fontSize: TEXT_FONT_SIZE,
         fontFamily: 'Arial, sans-serif',
-        // No canvas to measure text here: estimate, the app reflows on edit.
-        width: spec.width ?? Math.max(40, label.length * TEXT_FONT_SIZE * 0.55),
-        height: spec.height ?? TEXT_FONT_SIZE * 1.3,
+        width: spec.width ?? size.w,
+        height: spec.height ?? size.h,
       };
     }
 
     const sizeKey = (SHAPE_KINDS as readonly string[]).includes(kind)
       ? 'shape'
       : kind;
-    const size = DEFAULT_SIZES[sizeKey] ?? DEFAULT_SIZES.rectangle!;
+    const defaults = DEFAULT_SIZES[sizeKey] ?? DEFAULT_SIZES.rectangle!;
+    const size = labelSize(kind, label, defaults);
     const box = {
       x,
       y,
@@ -367,6 +406,20 @@ export class Diagram {
           ? { type: 'EDIT_TEXT', id, content: patch.label }
           : { type: 'UPDATE_ELEMENT', id, props: { label: patch.label } },
       );
+      // Auto-sized nodes follow their new label unless a size is given.
+      const size =
+        this.autoSized.has(id) &&
+        patch.width === undefined &&
+        patch.height === undefined
+          ? autoSizeOf(el, patch.label)
+          : null;
+      if (size)
+        this.dispatch({
+          type: 'RESIZE_ELEMENT',
+          id,
+          width: size.w,
+          height: size.h,
+        });
     }
     if (patch.color !== undefined) {
       const palette = NODE_COLORS[patch.color];
@@ -387,6 +440,7 @@ export class Diagram {
       });
     }
     if (patch.width !== undefined || patch.height !== undefined) {
+      this.autoSized.delete(id);
       this.dispatch({
         type: 'RESIZE_ELEMENT',
         id,
@@ -394,6 +448,83 @@ export class Diagram {
         ...(patch.height !== undefined && { height: patch.height }),
       });
     }
+  }
+
+  /** Connector matching the reference; throws when none or several match. */
+  private edgeOf(
+    ref: EdgeRef,
+  ): LineElement | Extract<Element, { type: 'arrow' }> {
+    const connectors = this.elements.filter(isConnector);
+    let matches: typeof connectors;
+    if (ref.id) {
+      matches = connectors.filter((el) => el.id.startsWith(ref.id!));
+    } else if (ref.from && ref.to) {
+      const fromId = this.idOf(ref.from);
+      const toId = this.idOf(ref.to);
+      matches = connectors.filter(
+        (el) =>
+          el.startElementId === fromId &&
+          el.endElementId === toId &&
+          (ref.label === undefined || (el.label ?? '') === ref.label),
+      );
+    } else {
+      throw new DiagramError('Give a connection id, or both from and to.');
+    }
+    const what = ref.id ?? `${ref.from} -> ${ref.to}`;
+    if (matches.length === 0)
+      throw new DiagramError(
+        `No connection ${what}. Call diagram_read to see them.`,
+      );
+    if (matches.length > 1)
+      throw new DiagramError(
+        `Several connections match ${what}: use their ids (${matches.map(edgeShortId).join(', ')}).`,
+      );
+    return matches[0]!;
+  }
+
+  /** Removes connections in one undoable step. */
+  disconnect(refs: ReadonlyArray<EdgeRef>): number {
+    const ids = [...new Set(refs.map((ref) => this.edgeOf(ref).id))];
+    if (ids.length > 0) this.dispatch({ type: 'DELETE_ELEMENTS', ids });
+    return ids.length;
+  }
+
+  /** Changes a connection's label, routing, heads, dash or color in one step. */
+  updateEdge(ref: EdgeRef, patch: EdgePatch): void {
+    const el = this.edgeOf(ref);
+    const set: Record<string, unknown> = {};
+    const unset: string[] = [];
+    if (patch.label !== undefined) {
+      if (patch.label) set.label = patch.label;
+      else unset.push('label');
+    }
+    if (patch.routing !== undefined) set.routing = patch.routing;
+    if (patch.dashed !== undefined) {
+      if (patch.dashed) set.strokeStyle = 'dashed';
+      else unset.push('strokeStyle');
+    }
+    if (patch.color !== undefined)
+      set.strokeColor = NODE_COLORS[patch.color].stroke;
+    if (patch.startHead !== undefined) set.startHeadStyle = patch.startHead;
+    if (patch.endHead !== undefined) set.endHeadStyle = patch.endHead;
+    if (patch.arrow !== undefined) {
+      if (el.type !== 'line')
+        throw new DiagramError(
+          'This connection is a plain arrow: its heads are fixed.',
+        );
+      set.arrowHead = patch.arrow;
+    }
+    if (Object.keys(set).length === 0 && unset.length === 0) return;
+    this.dispatch({
+      type: 'PATCH_ELEMENTS',
+      update: [
+        {
+          id: el.id,
+          set: set as Partial<Element>,
+          ...(unset.length > 0 && { unset }),
+        },
+      ],
+    });
   }
 
   /** Removes nodes; their connectors go with them. */
@@ -409,11 +540,51 @@ export class Diagram {
   moveNodes(positions: ReadonlyMap<string, { x: number; y: number }>): void {
     const moves = [...positions].map(([id, p]) => {
       const el = this.elements.find((e) => e.id === id)!;
-      const b = getElementBounds(el);
-      // ALIGN_ELEMENTS sets el.x/el.y; convert from the normalized box.
+      const b = getConnectorBox(el);
+      // ALIGN_ELEMENTS sets el.x/el.y; convert from the box layout used
+      // (icon labels included).
       return { id, x: el.x + (p.x - b.x), y: el.y + (p.y - b.y) };
     });
     if (moves.length > 0) this.dispatch({ type: 'ALIGN_ELEMENTS', moves });
+  }
+
+  /**
+   * Arranges nodes in layers following their connections (all nodes, or
+   * only `keys`) in one undoable step. Returns how many nodes moved.
+   */
+  layout(direction: LayoutDirection, keys?: ReadonlyArray<string>): number {
+    const nodeKeys = this.nodeKeys();
+    const wanted = keys ? new Set(keys) : null;
+    const nodes = this.elements.filter((el) => {
+      const key = nodeKeys.get(el.id);
+      return key !== undefined && (!wanted || wanted.has(key));
+    });
+    if (nodes.length === 0) return 0;
+    const ids = new Set(nodes.map((el) => el.id));
+    const boxes = new Map(nodes.map((el) => [el.id, getConnectorBox(el)]));
+    const edges = this.elements.flatMap((el) =>
+      isConnector(el) &&
+      el.startElementId &&
+      el.endElementId &&
+      ids.has(el.startElementId) &&
+      ids.has(el.endElementId)
+        ? [{ from: el.startElementId, to: el.endElementId }]
+        : [],
+    );
+    const origin = {
+      x: Math.min(...[...boxes.values()].map((b) => b.x)),
+      y: Math.min(...[...boxes.values()].map((b) => b.y)),
+    };
+    const positions = layeredLayout(
+      nodes.map((el) => {
+        const b = boxes.get(el.id)!;
+        return { id: el.id, width: b.w, height: b.h };
+      }),
+      edges,
+      { direction, origin },
+    );
+    this.moveNodes(positions);
+    return positions.size;
   }
 
   /** Bundled icon packs used by the scene, loaded so export can embed them. */
@@ -426,6 +597,28 @@ export class Diagram {
       }
     }
     await Promise.all([...packs].map((p) => loadBundledPack(p)));
+  }
+}
+
+/** Size a labeled node of this kind takes when created without one. */
+function labelSize(kind: NodeKind, label: string, defaults: Size): Size {
+  if (kind === 'text' || kind === 'icon') return defaults;
+  return label ? sizeForLabel(kind, label, defaults) : defaults;
+}
+
+/** New auto size of an existing node after its label changes. */
+function autoSizeOf(el: Element, label: string): Size | null {
+  switch (el.type) {
+    case 'text':
+      return sizeForText(label, el.fontSize);
+    case 'rectangle':
+    case 'ellipse':
+    case 'rhombus':
+      return labelSize(el.type, label, DEFAULT_SIZES[el.type]!);
+    case 'shape':
+      return labelSize(el.kind, label, DEFAULT_SIZES.shape!);
+    default:
+      return null;
   }
 }
 

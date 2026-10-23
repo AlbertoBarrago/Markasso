@@ -1,10 +1,11 @@
 import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Element } from '../../src/elements/element';
 import { encodeScene } from '../../src/io/share';
 import {
+  createShareLink,
   loadMarkassoFile,
   loadShareLink,
   saveMarkassoFile,
@@ -45,5 +46,32 @@ describe('storage', () => {
     await expect(loadShareLink('https://markasso.it/')).rejects.toThrow(
       'Not a Markasso share link',
     );
+  });
+});
+
+describe('createShareLink', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const respond = (body: unknown) =>
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify(body), { status: 200 })),
+    );
+
+  it('returns the link and its expiry', async () => {
+    respond({
+      url: 'https://markasso.it/#s=abcd1234',
+      expiresAt: '2027-01-21T10:00:00.000Z',
+    });
+    const link = await createShareLink([rect]);
+    expect(link.url).toBe('https://markasso.it/#s=abcd1234');
+    expect(link.expiresAt?.toISOString()).toBe('2027-01-21T10:00:00.000Z');
+  });
+
+  it('tolerates servers that do not report an expiry', async () => {
+    respond({ url: 'https://markasso.it/#s=abcd1234' });
+    expect((await createShareLink([rect])).expiresAt).toBeNull();
   });
 });

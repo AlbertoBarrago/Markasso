@@ -27,6 +27,7 @@ import {
   subscribeCursors,
 } from '../io/presence';
 import { distToRoute, getRoutePointAt } from '../rendering/connector_geometry';
+import { getConnectorLabelBoxes } from '../rendering/connector_labels';
 import { contrastColor, drawElement } from '../rendering/draw_element';
 import {
   drawAlignGuides,
@@ -1206,39 +1207,31 @@ function openShapeLabelEditor(
 }
 
 /**
- * Where a connector label sits: the midpoint of the elbow route, or of the
- * stored segment for straight/curved connectors.
+ * Where a connector label sits: the spot the renderer placed it on, or the
+ * middle of the drawn route for a connector that has no label yet.
  */
 function connectorLabelCenter(
   el: LineElement,
   allElements: ReadonlyArray<DrawableElement>,
 ): [number, number] {
-  if (el.routing === 'elbow') {
-    const [x, y] = getRoutePointAt(resolveConnectorRoute(el, allElements), 0.5);
-    return [x, y];
-  }
-  return [(el.x + el.x2) / 2, (el.y + el.y2) / 2];
+  const box = getConnectorLabelBoxes(allElements).get(el.id);
+  if (box) return [box.x, box.y];
+  const [x, y] = getRoutePointAt(resolveConnectorRoute(el, allElements), 0.5);
+  return [x, y];
 }
 
+/** True when the point falls on the connector's drawn label box. */
 function isPointInArrowLabel(
   wx: number,
   wy: number,
   el: LineElement,
   allElements: ReadonlyArray<DrawableElement>,
 ): boolean {
-  if (!el.label) return false;
-  const [mx, my] = connectorLabelCenter(el, allElements);
-  const fontSize = el.labelFontSize ?? 12;
-  const lines = el.label.split('\n');
-  const maxLen = Math.max(...lines.map((l) => l.length));
-  const pad = fontSize * 0.8;
-  const labelW = maxLen * fontSize * 0.6 + pad;
-  const labelH = lines.length * fontSize * 1.2 + pad;
+  const box = el.label ? getConnectorLabelBoxes(allElements).get(el.id) : null;
   return (
-    wx >= mx - labelW / 2 &&
-    wx <= mx + labelW / 2 &&
-    wy >= my - labelH / 2 &&
-    wy <= my + labelH / 2
+    !!box &&
+    Math.abs(wx - box.x) <= box.w / 2 &&
+    Math.abs(wy - box.y) <= box.h / 2
   );
 }
 

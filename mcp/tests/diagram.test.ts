@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import type { Element } from '../../src/elements/element';
+import {
+  getConnectorBox,
+  getElementBounds,
+} from '../../src/rendering/draw_selection';
+import { sceneToSVG } from '../../src/rendering/export';
 import { describeDiagram } from '../src/describe';
-import { Diagram, DiagramError, resolveIconRef, slugify } from '../src/diagram';
+import {
+  Diagram,
+  DiagramError,
+  edgeShortId,
+  resolveIconRef,
+  slugify,
+} from '../src/diagram';
+import { svgToPng } from '../src/png';
 
 async function sample(): Promise<Diagram> {
   const d = new Diagram();
@@ -135,6 +147,159 @@ describe('Diagram', () => {
     const id = d.elements[1]!.id;
     d.moveNodes(new Map([[id, { x: 1000, y: 500 }]]));
     expect(d.elements[1]).toMatchObject({ x: 1000, y: 500 });
+  });
+});
+
+describe('connectors follow moved nodes', () => {
+  /** Straight connector ends in the exported SVG, in scene coordinates. */
+  function exportedLine(d: Diagram): number[] {
+    const svg = sceneToSVG(d.elements, {
+      canvasColor: '#080808',
+      withBackground: false,
+    })!;
+    const first = d.elements.find((el) => el.type !== 'line')!;
+    const b = getElementBounds(first);
+    // Offset of the export: locate the first node's own <rect>.
+    const [, rx, ry] = svg.match(/<rect x="([-\d.]+)" y="([-\d.]+)"/)!;
+    const ox = Number(rx) - b.x;
+    const oy = Number(ry) - b.y;
+    const m = svg.match(
+      /<line x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)"/,
+    )!;
+    return [
+      Number(m[1]) - ox,
+      Number(m[2]) - oy,
+      Number(m[3]) - ox,
+      Number(m[4]) - oy,
+    ];
+  }
+
+  async function chain(): Promise<Diagram> {
+    const d = new Diagram();
+    await d.addNodes([
+      { key: 'a', label: 'A' },
+      { key: 'b', label: 'B' },
+    ]);
+    d.connect([{ from: 'a', to: 'b' }]);
+    return d;
+  }
+
+  it('after diagram_layout', async () => {
+    const d = await chain();
+    d.layout('TB');
+    const [a, b] = d.elements.filter((el) => el.type === 'rectangle');
+    const [, y1, , y2] = exportedLine(d);
+    // TB puts b under a: the line runs from a's bottom to b's top.
+    expect(y1).toBeCloseTo(getElementBounds(a!).y + getElementBounds(a!).h, 0);
+    expect(y2).toBeCloseTo(getElementBounds(b!).y, 0);
+  });
+
+  it('after diagram_update moves and resizes a node', async () => {
+    const d = await chain();
+    d.layout('TB');
+    d.update('b', { x: 600, y: 400, width: 200, height: 100 });
+    const [x1, , x2, y2] = exportedLine(d);
+    const a = getElementBounds(d.elements[0]!);
+    expect(x1).toBeGreaterThanOrEqual(a.x);
+    expect(x1).toBeLessThanOrEqual(a.x + a.w);
+    // Ends on b's border, not where b was when connected.
+    expect(x2).toBeGreaterThanOrEqual(600);
+    expect(x2).toBeLessThanOrEqual(800);
+    expect(y2).toBeGreaterThanOrEqual(400 - 0.5);
+    expect(y2).toBeLessThanOrEqual(500);
+  });
+});
+
+describe('icon labels in layout', () => {
+  it('reserves room for a long icon label in TB layout', async () => {
+    const d = new Diagram();
+    await d.addNodes([
+      {
+        key: 'llm',
+        kind: 'icon',
+        icon: 'server',
+        label:
+          'Modello linguistico\nlocale: gemma3:12b (Ollama)\nproduzione: GPT 4.1, AI Factory Azure',
+      },
+      { key: 'app', label: 'App' },
+    ]);
+    d.connect([{ from: 'llm', to: 'app', routing: 'elbow' }]);
+    d.layout('TB');
+    const [icon, rect] = d.elements;
+    const iconBox = getConnectorBox(icon!);
+    expect(iconBox.h).toBeGreaterThan(64 + 4 * 14);
+    expect(getElementBounds(rect!).y).toBeGreaterThan(iconBox.y + iconBox.h);
+  });
+});
+
+describe('editing connections', () => {
+  const lines = (d: Diagram) => d.elements.filter((el) => el.type === 'line');
+
+  it('removes a connection by from/to and keeps the nodes', async () => {
+    const d = await sample();
+    expect(d.disconnect([{ from: 'user', to: 'api' }])).toBe(1);
+    expect(lines(d)).toHaveLength(1);
+    expect(d.elements.filter((el) => el.type !== 'line')).toHaveLength(3);
+  });
+
+  it('removes a connection by the id diagram_read shows', async () => {
+    const d = await sample();
+    const id = edgeShortId(lines(d)[1]!);
+    expect(describeDiagram(d)).toContain(`(id ${id})`);
+    d.disconnect([{ id }]);
+    expect(lines(d).map((el) => el.label)).toEqual(['HTTPS']);
+  });
+
+  it('asks for an id when several connections join the same nodes', async () => {
+    const d = await sample();
+    d.connect([{ from: 'user', to: 'api', label: 'WebSocket' }]);
+    expect(() => d.disconnect([{ from: 'user', to: 'api' }])).toThrow(
+      /Several connections/,
+    );
+    d.disconnect([{ from: 'user', to: 'api', label: 'WebSocket' }]);
+    expect(lines(d)).toHaveLength(2);
+  });
+
+  it('updates label, routing, dash and color in one undoable step', async () => {
+    const d = await sample();
+    d.updateEdge(
+      { from: 'user', to: 'api' },
+      { label: 'gRPC', routing: 'elbow', dashed: true, color: 'red' },
+    );
+    expect(lines(d)[0]).toMatchObject({
+      label: 'gRPC',
+      routing: 'elbow',
+      strokeStyle: 'dashed',
+      strokeColor: '#ff6b6b',
+    });
+    d.updateEdge({ from: 'user', to: 'api' }, { label: '', dashed: false });
+    expect(lines(d)[0]).not.toHaveProperty('label');
+    expect(lines(d)[0]).not.toHaveProperty('strokeStyle');
+    d.history.undo();
+    expect(lines(d)[0]).toMatchObject({ label: 'gRPC' });
+  });
+
+  it('reports unknown connections', async () => {
+    const d = await sample();
+    expect(() => d.updateEdge({ from: 'api', to: 'user' }, {})).toThrow(
+      DiagramError,
+    );
+  });
+});
+
+describe('PNG export', () => {
+  it('renders the exported SVG to a PNG image', async () => {
+    const d = await sample();
+    await d.loadUsedIconPacks();
+    const svg = sceneToSVG(d.elements, {
+      canvasColor: '#080808',
+      withBackground: true,
+    })!;
+    const png = svgToPng(svg);
+    expect(png.subarray(1, 4).toString('ascii')).toBe('PNG');
+    // Twice the SVG width, from the IHDR chunk.
+    const width = Number(svg.match(/width="([\d.]+)"/)![1]);
+    expect(png.readUInt32BE(16)).toBe(Math.round(width * 2));
   });
 });
 
