@@ -689,6 +689,15 @@ export function resolveConnectorRoute(
       )
     : null;
 
+  if (s && e && startEl && endEl && !el.startAnchor && !el.endAnchor) {
+    const shared = sharedOffset(startEl, s.dir, endEl, e.dir);
+    if (shared !== null) {
+      const vertical = s.dir.dx === 0;
+      s.point = vertical ? [shared, s.point[1]] : [s.point[0], shared];
+      e.point = vertical ? [shared, e.point[1]] : [e.point[0], shared];
+    }
+  }
+
   return computeElbowRoute(
     s?.point ?? start,
     s?.dir ?? null,
@@ -697,6 +706,64 @@ export function resolveConnectorRoute(
     s?.stub,
     e?.stub,
   );
+}
+
+/**
+ * Extent of the flat side a connector leaves `el` by, along that side (x for
+ * top/bottom, y for left/right), inset from rounded corners; null for shapes
+ * whose sides aren't flat (ellipse, rhombus, flowchart symbols) or rotated.
+ */
+function flatSideRange(
+  el: Element,
+  dir: RouteDirection,
+): readonly [number, number] | null {
+  if (el.rotation) return null;
+  if (
+    el.type !== 'rectangle' &&
+    el.type !== 'stencil' &&
+    el.type !== 'text' &&
+    el.type !== 'image'
+  )
+    return null;
+  const b = getElementBounds(el);
+  // A stencil's bottom side is the bottom of its label.
+  const side =
+    el.type === 'stencil' && dir.dy === 1 ? (getStencilLabelBox(el) ?? b) : b;
+  const inset = el.type === 'rectangle' ? (el.cornerRadius ?? 0) : 0;
+  const [lo, hi] =
+    dir.dx === 0 ? [side.x, side.x + side.w] : [side.y, side.y + side.h];
+  return hi - lo > inset * 2 ? [lo + inset, hi - inset] : null;
+}
+
+/**
+ * Common coordinate for two floating elbow ends leaving facing flat sides
+ * whose extents overlap, so the connector runs straight instead of making a
+ * small step between two nearly aligned nodes (draw.io does the same). The
+ * start's center wins when it lies on the end's side, then the end's
+ * center, then the middle of the overlap. Null when the sides don't face
+ * each other or don't overlap.
+ */
+function sharedOffset(
+  startEl: Element,
+  startDir: RouteDirection,
+  endEl: Element,
+  endDir: RouteDirection,
+): number | null {
+  if (startDir.dx !== -endDir.dx || startDir.dy !== -endDir.dy) return null;
+  const a = flatSideRange(startEl, startDir);
+  const b = flatSideRange(endEl, endDir);
+  if (!a || !b) return null;
+  const lo = Math.max(a[0], b[0]);
+  const hi = Math.min(a[1], b[1]);
+  if (hi - lo < 1) return null;
+  const vertical = startDir.dx === 0;
+  const center = (el: Element) => getElementCenter(el)[vertical ? 0 : 1];
+  const within = (v: number) => v >= lo && v <= hi;
+  const startCenter = center(startEl);
+  if (within(startCenter)) return startCenter;
+  const endCenter = center(endEl);
+  if (within(endCenter)) return endCenter;
+  return (lo + hi) / 2;
 }
 
 /**
