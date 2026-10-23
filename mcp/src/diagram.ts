@@ -26,6 +26,8 @@ import {
   getElementBounds,
 } from '../../src/rendering/draw_selection';
 
+import { type Size, sizeForLabel, sizeForText } from './sizing';
+
 /**
  * Agent-facing model of one Markasso diagram. Agents address nodes by short
  * readable keys ("api", "orders-db") instead of ids and coordinates; every
@@ -147,6 +149,8 @@ export class Diagram {
   readonly history: History;
   /** Keys given by the agent; other elements get derived keys on read. */
   private readonly keys = new Map<string, string>();
+  /** Nodes created without width/height: they follow their label's size. */
+  private readonly autoSized = new Set<string>();
 
   constructor(elements: ReadonlyArray<Element> = []) {
     this.history = new History();
@@ -249,6 +253,9 @@ export class Diagram {
     this.dispatch({ type: 'CREATE_ELEMENTS', elements: created });
     created.forEach((el, i) => {
       this.keys.set(keys[i]!, el.id);
+      const spec = specs[i]!;
+      if (spec.width === undefined && spec.height === undefined)
+        this.autoSized.add(el.id);
     });
     return keys;
   }
@@ -287,6 +294,7 @@ export class Diagram {
     }
 
     if (kind === 'text') {
+      const size = sizeForText(label, TEXT_FONT_SIZE);
       return {
         ...style,
         id,
@@ -296,16 +304,16 @@ export class Diagram {
         content: label,
         fontSize: TEXT_FONT_SIZE,
         fontFamily: 'Arial, sans-serif',
-        // No canvas to measure text here: estimate, the app reflows on edit.
-        width: spec.width ?? Math.max(40, label.length * TEXT_FONT_SIZE * 0.55),
-        height: spec.height ?? TEXT_FONT_SIZE * 1.3,
+        width: spec.width ?? size.w,
+        height: spec.height ?? size.h,
       };
     }
 
     const sizeKey = (SHAPE_KINDS as readonly string[]).includes(kind)
       ? 'shape'
       : kind;
-    const size = DEFAULT_SIZES[sizeKey] ?? DEFAULT_SIZES.rectangle!;
+    const defaults = DEFAULT_SIZES[sizeKey] ?? DEFAULT_SIZES.rectangle!;
+    const size = labelSize(kind, label, defaults);
     const box = {
       x,
       y,
@@ -371,6 +379,20 @@ export class Diagram {
           ? { type: 'EDIT_TEXT', id, content: patch.label }
           : { type: 'UPDATE_ELEMENT', id, props: { label: patch.label } },
       );
+      // Auto-sized nodes follow their new label unless a size is given.
+      const size =
+        this.autoSized.has(id) &&
+        patch.width === undefined &&
+        patch.height === undefined
+          ? autoSizeOf(el, patch.label)
+          : null;
+      if (size)
+        this.dispatch({
+          type: 'RESIZE_ELEMENT',
+          id,
+          width: size.w,
+          height: size.h,
+        });
     }
     if (patch.color !== undefined) {
       const palette = NODE_COLORS[patch.color];
@@ -391,6 +413,7 @@ export class Diagram {
       });
     }
     if (patch.width !== undefined || patch.height !== undefined) {
+      this.autoSized.delete(id);
       this.dispatch({
         type: 'RESIZE_ELEMENT',
         id,
@@ -470,6 +493,28 @@ export class Diagram {
       }
     }
     await Promise.all([...packs].map((p) => loadBundledPack(p)));
+  }
+}
+
+/** Size a labeled node of this kind takes when created without one. */
+function labelSize(kind: NodeKind, label: string, defaults: Size): Size {
+  if (kind === 'text' || kind === 'icon') return defaults;
+  return label ? sizeForLabel(kind, label, defaults) : defaults;
+}
+
+/** New auto size of an existing node after its label changes. */
+function autoSizeOf(el: Element, label: string): Size | null {
+  switch (el.type) {
+    case 'text':
+      return sizeForText(label, el.fontSize);
+    case 'rectangle':
+    case 'ellipse':
+    case 'rhombus':
+      return labelSize(el.type, label, DEFAULT_SIZES[el.type]!);
+    case 'shape':
+      return labelSize(el.kind, label, DEFAULT_SIZES.shape!);
+    default:
+      return null;
   }
 }
 
