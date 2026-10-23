@@ -9,6 +9,7 @@ import { GENERIC_ICON_IDS } from '../../src/elements/stencils/generic';
 import { loadBundledPack } from '../../src/elements/stencils/packs';
 import { getElementBounds } from '../../src/rendering/draw_selection';
 import { sceneToSVG } from '../../src/rendering/export';
+import { version } from '../package.json';
 import { describeDiagram } from './describe';
 import { Diagram, NODE_COLORS, NODE_KINDS } from './diagram';
 import { LiveLink } from './live';
@@ -129,7 +130,7 @@ function pointAtKeys(keys: ReadonlyArray<string>): void {
 }
 
 const server = new McpServer(
-  { name: 'markasso', version: '0.1.0' },
+  { name: 'markasso', version },
   { instructions: SERVER_INSTRUCTIONS },
 );
 

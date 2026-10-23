@@ -7,25 +7,16 @@ An [MCP](https://modelcontextprotocol.io) server that lets AI agents (Claude, Co
 
 Everything goes through Markasso's own reducer and validation, so the result is exactly what the app would produce (and undo works).
 
-## Build
+## Install
 
-From the repository root:
-
-```bash
-pnpm install
-pnpm --filter @markasso/mcp build   # → mcp/dist/markasso-mcp.js
-```
-
-The server speaks MCP over stdio: `node /absolute/path/to/Markasso/mcp/dist/markasso-mcp.js`.
+Published on npm as [`@markasso/mcp`](https://www.npmjs.com/package/@markasso/mcp) (Node 22+). The server speaks MCP over stdio; `@latest` makes clients pick up new versions on restart. Pin a version (e.g. `@markasso/mcp@0.2.0`) for reproducible setups. Release notes: [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Connect an agent
-
-Replace `/absolute/path/to/Markasso` with your checkout.
 
 **Claude Code**
 
 ```bash
-claude mcp add markasso -- node /absolute/path/to/Markasso/mcp/dist/markasso-mcp.js
+claude mcp add markasso -- npx -y @markasso/mcp@latest
 ```
 
 **Claude Desktop** (`claude_desktop_config.json`)
@@ -34,8 +25,8 @@ claude mcp add markasso -- node /absolute/path/to/Markasso/mcp/dist/markasso-mcp
 {
   "mcpServers": {
     "markasso": {
-      "command": "node",
-      "args": ["/absolute/path/to/Markasso/mcp/dist/markasso-mcp.js"]
+      "command": "npx",
+      "args": ["-y", "@markasso/mcp@latest"]
     }
   }
 }
@@ -45,8 +36,8 @@ claude mcp add markasso -- node /absolute/path/to/Markasso/mcp/dist/markasso-mcp
 
 ```toml
 [mcp_servers.markasso]
-command = "node"
-args = ["/absolute/path/to/Markasso/mcp/dist/markasso-mcp.js"]
+command = "npx"
+args = ["-y", "@markasso/mcp@latest"]
 ```
 
 **Gemini CLI** (`~/.gemini/settings.json`)
@@ -55,8 +46,8 @@ args = ["/absolute/path/to/Markasso/mcp/dist/markasso-mcp.js"]
 {
   "mcpServers": {
     "markasso": {
-      "command": "node",
-      "args": ["/absolute/path/to/Markasso/mcp/dist/markasso-mcp.js"]
+      "command": "npx",
+      "args": ["-y", "@markasso/mcp@latest"]
     }
   }
 }
@@ -65,6 +56,21 @@ args = ["/absolute/path/to/Markasso/mcp/dist/markasso-mcp.js"]
 **Local models (e.g. Gemma in LM Studio):** add the same `mcpServers` entry to LM Studio's `mcp.json`. The tools take short keys and named colors and never require coordinates, so small models handle them well.
 
 **Another Markasso instance:** set `MARKASSO_URL` (default `https://markasso.it`) in the server's environment.
+
+## Build from source
+
+For development, from the repository root:
+
+```bash
+pnpm install
+pnpm mcp:build   # → mcp/dist/markasso-mcp.js
+```
+
+Then use `node /absolute/path/to/Markasso/mcp/dist/markasso-mcp.js` as the command in any of the configs above.
+
+## Releasing
+
+Bump `version` in `mcp/package.json`, add the entry to `mcp/CHANGELOG.md`, merge, then push a `mcp-v<version>` tag: the `MCP Release` workflow tests, builds and publishes to npm (trusted publishing, with provenance) and creates a GitHub release.
 
 ## Tools
 

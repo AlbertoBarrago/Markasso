@@ -1,0 +1,91 @@
+name: MCP Release
+
+# Publishes @markasso/mcp to npm on tags like mcp-v0.2.0. Independent from the
+# app release (tags v*.*.*): the MCP server has its own semver.
+# Auth uses npm trusted publishing (OIDC), so no NPM_TOKEN secret is needed.
+
+on:
+  push:
+    tags:
+      - "mcp-v*.*.*"
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check tag matches package version
+        run: |
+          tag_version="${GITHUB_REF_NAME#mcp-v}"
+          pkg_version="$(node -p "require('./mcp/package.json').version")"
+          if [ "$tag_version" != "$pkg_version" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match mcp/package.json version $pkg_version" >&2
+            exit 1
+          fi
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm vitest run
+
+      - name: Build
+        run: pnpm mcp:build
+
+      - name: Extract changelog section
+        run: |
+          version="${GITHUB_REF_NAME#mcp-v}"
+          awk -v ver="$version" '
+            $0 ~ "^## \\[" ver "\\]" { flag=1; next }
+            /^## \[/ { flag=0 }
+            flag && !/^---$/ { print }
+          ' mcp/CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "No mcp/CHANGELOG.md entry found for version $version" >&2
+            exit 1
+          fi
+
+      - name: Publish to npm
+        working-directory: mcp
+        run: |
+          version="${GITHUB_REF_NAME#mcp-v}"
+          # Re-running the workflow (or a version published by hand) must not fail.
+          if npm view "@markasso/mcp@$version" version >/dev/null 2>&1; then
+            echo "@markasso/mcp@$version is already on npm, skipping publish"
+          else
+            npm publish --ignore-scripts
+          fi
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Markasso MCP ${GITHUB_REF_NAME#mcp-v}"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --title "$title" --notes-file release-notes.md
+          else
+            # --latest=false keeps the app release as the repo's "Latest".
+            gh release create "$GITHUB_REF_NAME" --title "$title" \
+              --notes-file release-notes.md --latest=false
+          fi
