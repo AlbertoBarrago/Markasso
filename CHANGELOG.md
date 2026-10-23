@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.13.2] - 2026-10-23
+
+### Fixed
+- **Undo is per-user and stays in sync in live sessions.** Undo, redo and a cancelled drag revert only your own changes and reach everyone in the room, so a peer's (or an AI agent's) edits made in the meantime are kept. Before, they could be wiped on your screen, another participant's undo reverted your last action instead of theirs, and people joining later saw undone changes come back. If someone changed the same property after you, their change wins.
+
+---
+
 ## [1.13.1] - 2026-10-21
 
 ### Added
