@@ -1,6 +1,6 @@
 import type { Element } from '../../src/elements/element';
 import { getElementBounds } from '../../src/rendering/draw_selection';
-import { type Diagram, elementLabel } from './diagram';
+import { type Diagram, edgeShortId, elementLabel } from './diagram';
 
 /**
  * Compact, model-friendly text of a diagram: one line per node and per
@@ -47,6 +47,7 @@ export function describeDiagram(diagram: Diagram): string {
       if (el.type === 'line' && el.arrowHead !== 'end') {
         parts.push(`arrow:${el.arrowHead ?? 'none'}`);
       }
+      parts.push(`(id ${edgeShortId(el)})`);
       edges.push(`- ${parts.join(' ')}`);
       continue;
     }

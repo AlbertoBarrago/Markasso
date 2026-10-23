@@ -6,7 +6,14 @@ import {
 } from '../../src/rendering/draw_selection';
 import { sceneToSVG } from '../../src/rendering/export';
 import { describeDiagram } from '../src/describe';
-import { Diagram, DiagramError, resolveIconRef, slugify } from '../src/diagram';
+import {
+  Diagram,
+  DiagramError,
+  edgeShortId,
+  resolveIconRef,
+  slugify,
+} from '../src/diagram';
+import { svgToPng } from '../src/png';
 
 async function sample(): Promise<Diagram> {
   const d = new Diagram();
@@ -222,6 +229,77 @@ describe('icon labels in layout', () => {
     const iconBox = getConnectorBox(icon!);
     expect(iconBox.h).toBeGreaterThan(64 + 4 * 14);
     expect(getElementBounds(rect!).y).toBeGreaterThan(iconBox.y + iconBox.h);
+  });
+});
+
+describe('editing connections', () => {
+  const lines = (d: Diagram) => d.elements.filter((el) => el.type === 'line');
+
+  it('removes a connection by from/to and keeps the nodes', async () => {
+    const d = await sample();
+    expect(d.disconnect([{ from: 'user', to: 'api' }])).toBe(1);
+    expect(lines(d)).toHaveLength(1);
+    expect(d.elements.filter((el) => el.type !== 'line')).toHaveLength(3);
+  });
+
+  it('removes a connection by the id diagram_read shows', async () => {
+    const d = await sample();
+    const id = edgeShortId(lines(d)[1]!);
+    expect(describeDiagram(d)).toContain(`(id ${id})`);
+    d.disconnect([{ id }]);
+    expect(lines(d).map((el) => el.label)).toEqual(['HTTPS']);
+  });
+
+  it('asks for an id when several connections join the same nodes', async () => {
+    const d = await sample();
+    d.connect([{ from: 'user', to: 'api', label: 'WebSocket' }]);
+    expect(() => d.disconnect([{ from: 'user', to: 'api' }])).toThrow(
+      /Several connections/,
+    );
+    d.disconnect([{ from: 'user', to: 'api', label: 'WebSocket' }]);
+    expect(lines(d)).toHaveLength(2);
+  });
+
+  it('updates label, routing, dash and color in one undoable step', async () => {
+    const d = await sample();
+    d.updateEdge(
+      { from: 'user', to: 'api' },
+      { label: 'gRPC', routing: 'elbow', dashed: true, color: 'red' },
+    );
+    expect(lines(d)[0]).toMatchObject({
+      label: 'gRPC',
+      routing: 'elbow',
+      strokeStyle: 'dashed',
+      strokeColor: '#ff6b6b',
+    });
+    d.updateEdge({ from: 'user', to: 'api' }, { label: '', dashed: false });
+    expect(lines(d)[0]).not.toHaveProperty('label');
+    expect(lines(d)[0]).not.toHaveProperty('strokeStyle');
+    d.history.undo();
+    expect(lines(d)[0]).toMatchObject({ label: 'gRPC' });
+  });
+
+  it('reports unknown connections', async () => {
+    const d = await sample();
+    expect(() => d.updateEdge({ from: 'api', to: 'user' }, {})).toThrow(
+      DiagramError,
+    );
+  });
+});
+
+describe('PNG export', () => {
+  it('renders the exported SVG to a PNG image', async () => {
+    const d = await sample();
+    await d.loadUsedIconPacks();
+    const svg = sceneToSVG(d.elements, {
+      canvasColor: '#080808',
+      withBackground: true,
+    })!;
+    const png = svgToPng(svg);
+    expect(png.subarray(1, 4).toString('ascii')).toBe('PNG');
+    // Twice the SVG width, from the IHDR chunk.
+    const width = Number(svg.match(/width="([\d.]+)"/)![1]);
+    expect(png.readUInt32BE(16)).toBe(Math.round(width * 2));
   });
 });
 

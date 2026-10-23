@@ -91,6 +91,33 @@ export interface EdgeSpec {
   readonly color?: NodeColor;
 }
 
+/**
+ * A connection, by the short id diagram_read shows, or by its two node keys
+ * (plus its label when several connections join the same nodes).
+ */
+export interface EdgeRef {
+  readonly id?: string;
+  readonly from?: string;
+  readonly to?: string;
+  readonly label?: string;
+}
+
+export interface EdgePatch {
+  /** Empty string removes the label. */
+  readonly label?: string;
+  readonly routing?: ConnectorRouting;
+  readonly arrow?: 'none' | 'start' | 'end' | 'both';
+  readonly startHead?: ArrowHeadStyle;
+  readonly endHead?: ArrowHeadStyle;
+  readonly dashed?: boolean;
+  readonly color?: NodeColor;
+}
+
+/** Short id of a connection, as shown by diagram_read. */
+export function edgeShortId(el: Element): string {
+  return el.id.slice(0, 8);
+}
+
 export interface NodePatch {
   readonly label?: string;
   readonly color?: NodeColor;
@@ -421,6 +448,83 @@ export class Diagram {
         ...(patch.height !== undefined && { height: patch.height }),
       });
     }
+  }
+
+  /** Connector matching the reference; throws when none or several match. */
+  private edgeOf(
+    ref: EdgeRef,
+  ): LineElement | Extract<Element, { type: 'arrow' }> {
+    const connectors = this.elements.filter(isConnector);
+    let matches: typeof connectors;
+    if (ref.id) {
+      matches = connectors.filter((el) => el.id.startsWith(ref.id!));
+    } else if (ref.from && ref.to) {
+      const fromId = this.idOf(ref.from);
+      const toId = this.idOf(ref.to);
+      matches = connectors.filter(
+        (el) =>
+          el.startElementId === fromId &&
+          el.endElementId === toId &&
+          (ref.label === undefined || (el.label ?? '') === ref.label),
+      );
+    } else {
+      throw new DiagramError('Give a connection id, or both from and to.');
+    }
+    const what = ref.id ?? `${ref.from} -> ${ref.to}`;
+    if (matches.length === 0)
+      throw new DiagramError(
+        `No connection ${what}. Call diagram_read to see them.`,
+      );
+    if (matches.length > 1)
+      throw new DiagramError(
+        `Several connections match ${what}: use their ids (${matches.map(edgeShortId).join(', ')}).`,
+      );
+    return matches[0]!;
+  }
+
+  /** Removes connections in one undoable step. */
+  disconnect(refs: ReadonlyArray<EdgeRef>): number {
+    const ids = [...new Set(refs.map((ref) => this.edgeOf(ref).id))];
+    if (ids.length > 0) this.dispatch({ type: 'DELETE_ELEMENTS', ids });
+    return ids.length;
+  }
+
+  /** Changes a connection's label, routing, heads, dash or color in one step. */
+  updateEdge(ref: EdgeRef, patch: EdgePatch): void {
+    const el = this.edgeOf(ref);
+    const set: Record<string, unknown> = {};
+    const unset: string[] = [];
+    if (patch.label !== undefined) {
+      if (patch.label) set.label = patch.label;
+      else unset.push('label');
+    }
+    if (patch.routing !== undefined) set.routing = patch.routing;
+    if (patch.dashed !== undefined) {
+      if (patch.dashed) set.strokeStyle = 'dashed';
+      else unset.push('strokeStyle');
+    }
+    if (patch.color !== undefined)
+      set.strokeColor = NODE_COLORS[patch.color].stroke;
+    if (patch.startHead !== undefined) set.startHeadStyle = patch.startHead;
+    if (patch.endHead !== undefined) set.endHeadStyle = patch.endHead;
+    if (patch.arrow !== undefined) {
+      if (el.type !== 'line')
+        throw new DiagramError(
+          'This connection is a plain arrow: its heads are fixed.',
+        );
+      set.arrowHead = patch.arrow;
+    }
+    if (Object.keys(set).length === 0 && unset.length === 0) return;
+    this.dispatch({
+      type: 'PATCH_ELEMENTS',
+      update: [
+        {
+          id: el.id,
+          set: set as Partial<Element>,
+          ...(unset.length > 0 && { unset }),
+        },
+      ],
+    });
   }
 
   /** Removes nodes; their connectors go with them. */

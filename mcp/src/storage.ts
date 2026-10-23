@@ -16,10 +16,16 @@ export class StorageError extends Error {
 
 const SHORT_ID = /^[a-zA-Z0-9]{8}$/;
 
+export interface ShareLink {
+  readonly url: string;
+  /** When the server drops the link; null if it didn't say (older servers). */
+  readonly expiresAt: Date | null;
+}
+
 /** Uploads elements through the app's share API and returns the link. */
 export async function createShareLink(
   elements: ReadonlyArray<Element>,
-): Promise<string> {
+): Promise<ShareLink> {
   const res = await fetch(`${markassoBaseUrl()}/api/share`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -31,10 +37,17 @@ export async function createShareLink(
   if (!res.ok) {
     throw new StorageError(`Share failed (HTTP ${res.status}).`);
   }
-  const { url } = (await res.json()) as { url?: unknown };
+  const { url, expiresAt } = (await res.json()) as {
+    url?: unknown;
+    expiresAt?: unknown;
+  };
   if (typeof url !== 'string')
     throw new StorageError('Share failed: no URL returned.');
-  return url;
+  const expiry = typeof expiresAt === 'string' ? new Date(expiresAt) : null;
+  return {
+    url,
+    expiresAt: expiry && !Number.isNaN(expiry.getTime()) ? expiry : null,
+  };
 }
 
 async function gunzip(bytes: Uint8Array<ArrayBuffer>): Promise<string> {

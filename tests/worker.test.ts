@@ -82,9 +82,17 @@ describe('share worker', () => {
 
     expect(response.status).toBe(200);
     expect(env.SHARE_LINKS.put).toHaveBeenCalledOnce();
-    const payload = (await response.json()) as { id: string; url: string };
+    const payload = (await response.json()) as {
+      id: string;
+      url: string;
+      expiresAt: string;
+    };
     expect(payload.id).toMatch(/^[a-zA-Z0-9]{8}$/);
     expect(payload.url).toBe(`https://markasso.example/#s=${payload.id}`);
+    // The link lives 90 days, matching the KV expiration.
+    const days = (Date.parse(payload.expiresAt) - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(89.9);
+    expect(days).toBeLessThanOrEqual(90);
   });
 
   it('rejects cross-origin writes before rate limiting', async () => {

@@ -468,7 +468,11 @@ const worker = {
       await env.SHARE_LINKS.put(id, JSON.stringify(elements), {
         expirationTtl: TTL_SECONDS,
       });
-      return jsonResponse(request, url, { id, url: `${url.origin}/#s=${id}` });
+      return jsonResponse(request, url, {
+        id,
+        url: `${url.origin}/#s=${id}`,
+        expiresAt: new Date(Date.now() + TTL_SECONDS * 1000).toISOString(),
+      });
     }
 
     if (request.method === 'POST' && url.pathname === '/api/report') {
