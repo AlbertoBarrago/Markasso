@@ -1,9 +1,26 @@
 {
   "name": "@markasso/mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server that lets AI agents create, read and edit Markasso diagrams, offline or live on a shared board",
-  "private": true,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlbertoBarrago/Markasso.git",
+    "directory": "mcp"
+  },
+  "homepage": "https://github.com/AlbertoBarrago/Markasso/tree/main/mcp#readme",
+  "bugs": "https://github.com/AlbertoBarrago/Markasso/issues",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "markasso",
+    "diagram",
+    "whiteboard"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "bin": {
     "markasso-mcp": "dist/markasso-mcp.js"
   },
@@ -13,6 +30,7 @@
   "scripts": {
     "build": "vite build --config vite.config.ts",
     "start": "node dist/markasso-mcp.js",
+    "prepublishOnly": "pnpm run build",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
