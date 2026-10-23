@@ -914,6 +914,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   topLeft.append(tbLeft);
 
   container.append(centerPill, bottomLeft, bottomRight, topRight, topLeft);
+  watchToolsRow(centerPill, [topLeft, topRight]);
 
   // ── Mobile: tools FAB + popup ─────────────────────────────────────────────
   const toolsFab = document.createElement('button');
@@ -1069,6 +1070,35 @@ export function initToolbar(container: HTMLElement, history: History): void {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+/**
+ * On narrow desktop windows the centered tools would run under the side
+ * islands: drop them to a second row instead (`tools-wrapped` on the root,
+ * see base.css). The room left depends on the locale and on the live people
+ * list, so it is measured rather than tied to a breakpoint. Touch layouts
+ * hide the tools, which keeps the class off.
+ */
+function watchToolsRow(
+  tools: HTMLElement,
+  sides: ReadonlyArray<HTMLElement>,
+): void {
+  const GAP = 12;
+  const root = document.documentElement;
+  const update = (): void => {
+    root.classList.remove('tools-wrapped');
+    const t = tools.getBoundingClientRect();
+    if (t.width === 0) return;
+    const collides = sides.some((side) => {
+      const r = side.getBoundingClientRect();
+      return r.width > 0 && r.left < t.right + GAP && r.right > t.left - GAP;
+    });
+    root.classList.toggle('tools-wrapped', collides);
+  };
+  window.addEventListener('resize', update);
+  const observer = new ResizeObserver(update);
+  for (const el of [tools, ...sides]) observer.observe(el);
+  update();
+}
+
 function div(cls: string): HTMLElement {
   const e = document.createElement('div');
   e.className = cls;
