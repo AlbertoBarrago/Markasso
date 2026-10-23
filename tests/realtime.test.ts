@@ -33,9 +33,10 @@ describe('isSessionCommand', () => {
     expect(isSessionCommand({ type: 'SET_TOOL' })).toBe(false);
   });
 
-  it('shares UNDO/REDO (convergent undo, model B)', () => {
-    expect(isSessionCommand({ type: 'UNDO' })).toBe(true);
-    expect(isSessionCommand({ type: 'REDO' })).toBe(true);
+  it('drops bare UNDO/REDO (undo travels as PATCH_ELEMENTS)', () => {
+    expect(isSessionCommand({ type: 'UNDO' })).toBe(false);
+    expect(isSessionCommand({ type: 'REDO' })).toBe(false);
+    expect(isSessionCommand({ type: 'PATCH_ELEMENTS' })).toBe(true);
   });
 });
 

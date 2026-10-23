@@ -34,6 +34,16 @@ export type Command =
       endAnchor?: ConnectorAnchor | null;
     }
   | { type: 'DELETE_ELEMENTS'; ids: string[] }
+  /** Field-level patch emitted by undo/redo/cancelled drag (see
+   *  engine/scene_diff.ts). Relayed like any other command so peers converge.
+   *  `order` lists ids in the z-order they take within the slots they occupy. */
+  | {
+      type: 'PATCH_ELEMENTS';
+      create?: Array<{ element: Element; index: number }>;
+      update?: Array<{ id: string; set: Partial<Element>; unset?: string[] }>;
+      delete?: string[];
+      order?: string[];
+    }
   | { type: 'EDIT_TEXT'; id: string; content: string }
   | {
       type: 'SET_SHAPE_LABEL';
