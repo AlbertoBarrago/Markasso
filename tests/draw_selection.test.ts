@@ -668,6 +668,59 @@ describe('resolveConnectorRoute', () => {
   const r1 = makeRect('r1', 0, 0, 100, 60);
   const r2 = makeRect('r2', 300, 200, 100, 60);
 
+  const elbow = (extra: Partial<Parameters<typeof makeLine>[0]> = {}) =>
+    makeLine({
+      x: 50,
+      y: 30,
+      x2: 60,
+      y2: 230,
+      routing: 'elbow',
+      startElementId: 'top',
+      endElementId: 'bottom',
+      ...extra,
+    });
+
+  it('runs straight between nearly aligned shapes instead of stepping', () => {
+    const top = makeRect('top', 0, 0, 160, 70);
+    const bottom = makeRect('bottom', 10, 200, 160, 70);
+    const line = elbow();
+    const route = resolveConnectorRoute(line, [top, bottom, line]);
+    // The start's center (x = 80) lies on the bottom shape's top side.
+    expect(route).toEqual([
+      [80, 70],
+      [80, 200],
+    ]);
+  });
+
+  it('meets in the overlap when neither center fits the other side', () => {
+    const top = makeRect('top', 0, 0, 100, 70);
+    const bottom = makeRect('bottom', 80, 200, 100, 70);
+    const line = elbow();
+    const route = resolveConnectorRoute(line, [top, bottom, line]);
+    expect(route).toEqual([
+      [90, 70],
+      [90, 200],
+    ]);
+  });
+
+  it('keeps the stepped route when the sides do not overlap', () => {
+    const top = makeRect('top', 0, 0, 100, 70);
+    const bottom = makeRect('bottom', 140, 300, 100, 70);
+    const line = elbow();
+    const route = resolveConnectorRoute(line, [top, bottom, line]);
+    expect(route.length).toBe(4);
+    expect(route[0]).toEqual([50, 70]);
+  });
+
+  it('leaves pinned ends where they are', () => {
+    const top = makeRect('top', 0, 0, 160, 70);
+    const bottom = makeRect('bottom', 10, 200, 160, 70);
+    const line = elbow({ startAnchor: { x: 0.5, y: 1 } });
+    const route = resolveConnectorRoute(line, [top, bottom, line]);
+    expect(route[0]).toEqual([80, 70]);
+    expect(route[route.length - 1]).toEqual([90, 200]);
+  });
+
   it('returns the two ends for straight connectors', () => {
     const line = makeLine({ x: 0, y: 0, x2: 50, y2: 50 });
     expect(resolveConnectorRoute(line, [line])).toEqual([
@@ -732,7 +785,8 @@ describe('resolveConnectorRoute', () => {
     });
     const route = resolveConnectorRoute(line, [top, below, line]);
     expect(route[0]).toEqual([80, 60]);
-    expect(route[route.length - 1]).toEqual([100, 200]);
+    // Enters through the top side, straight below the start (no step).
+    expect(route[route.length - 1]).toEqual([80, 200]);
   });
 
   it('leaves a pinned elbow end by the side of its anchor', () => {
