@@ -4,7 +4,7 @@ All notable changes to `@markasso/mcp` are documented here. The MCP server is ve
 
 ---
 
-## [Unreleased]
+## [0.3.0] - 2026-10-23
 
 ### Added
 - **`diagram_export_png`.** Renders the diagram (same geometry as the app) and returns the image, so an agent can check its work; it can also save the file.
@@ -19,6 +19,7 @@ All notable changes to `@markasso/mcp` are documented here. The MCP server is ve
 - **Connectors follow nodes moved by `diagram_layout` or `diagram_update` in exported SVGs.** Straight connectors were drawn from where the nodes were when they were connected.
 - **The SVG export matches the app:** straight connector labels and rhombus text are no longer missing, straight connectors stop at the node border, and labels wrap like on the canvas.
 - **Connector labels no longer sit on other connectors**, and have a solid background.
+- **Elbow connectors between nearly aligned nodes run straight** instead of making a small step.
 
 ---
 

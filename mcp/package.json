@@ -1,6 +1,6 @@
 {
   "name": "@markasso/mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "MCP server that lets AI agents create, read and edit Markasso diagrams, offline or live on a shared board",
   "type": "module",
   "repository": {

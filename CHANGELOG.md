@@ -4,6 +4,20 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.13.3] - 2026-10-23
+
+### Added
+- **GitHub link in the menu.**
+
+### Fixed
+- **Connector labels stay readable.** Each label sits on a stretch of its own connector, away from other connectors, other labels and shapes, and is drawn on top with a solid background.
+- **Connectors respect icon labels.** Arrows attach below or around an icon's label (wrapped lines included) instead of crossing the text, and elbow routes turn clear of it.
+- **Elbow connectors run straight between nearly aligned shapes**, instead of making a small step.
+- **SVG export matches the canvas.** Straight connectors stop at the shape border and follow moved shapes, straight connector labels and rhombus text are exported, labels wrap like on the canvas, rectangle corners are rounded.
+- **Top bar on small screens.** On phones the top islands no longer overlap; on narrow desktop windows the tools move to a second row.
+
+---
+
 ## [1.13.2] - 2026-10-23
 
 ### Fixed
