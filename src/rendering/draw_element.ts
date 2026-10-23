@@ -1,4 +1,5 @@
 import { normalizeRect } from '../core/geometry';
+import { measureTextBlock, wrapTextLines } from '../core/text_metrics';
 import type {
   ArrowElement,
   Element,
@@ -283,7 +284,7 @@ export function drawElement(
         const lines = el.label.split('\n');
         const pad = fontSize * 0.4;
         const labelW =
-          Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2;
+          measureTextBlock(lines, fontSize, fontFamily).width + pad * 2;
         const labelH = lines.length * fontSize * 1.2 + pad * 2;
         ctx.restore();
 
@@ -433,7 +434,7 @@ export function drawElement(
         const lines = el.label.split('\n');
         const pad = fontSize * 0.4;
         const labelW =
-          Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2;
+          measureTextBlock(lines, fontSize, fontFamily).width + pad * 2;
         const labelH = lines.length * fontSize * 1.2 + pad * 2;
         ctx.restore();
         const totalLen = Math.hypot(pts.x2 - pts.x, pts.y2 - pts.y);
@@ -925,7 +926,7 @@ function drawElbowConnector(
     const lines = el.label.split('\n');
     const pad = fontSize * 0.4;
     const labelW =
-      Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2;
+      measureTextBlock(lines, fontSize, fontFamily).width + pad * 2;
     const labelH = lines.length * fontSize * 1.2 + pad * 2;
     ctx.beginPath();
     ctx.rect(-CLIP_EXTENT, -CLIP_EXTENT, CLIP_EXTENT * 2, CLIP_EXTENT * 2);
@@ -997,13 +998,17 @@ function drawStencil(
     const fontSize = el.labelFontSize ?? DEFAULT_STENCIL_LABEL_FONT_SIZE;
     ctx.save();
     ctx.setLineDash([]);
-    ctx.font = `${fontSize}px ${el.labelFontFamily ?? 'Arial, sans-serif'}`;
+    const fontFamily = el.labelFontFamily ?? 'Arial, sans-serif';
+    ctx.font = `${fontSize}px ${fontFamily}`;
     ctx.fillStyle = el.labelColor ?? strokeColor;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    const lines = el.label
-      .split('\n')
-      .flatMap((l) => buildWrappedLines(ctx, l, getStencilLabelWidth(bw)));
+    const lines = wrapTextLines(
+      el.label,
+      getStencilLabelWidth(bw),
+      fontSize,
+      fontFamily,
+    );
     lines.forEach((l, i) => {
       ctx.fillText(
         l,
@@ -1259,33 +1264,6 @@ function drawFreehand(
   ctx.restore();
 }
 
-export function buildWrappedLines(
-  ctx: CanvasRenderingContext2D,
-  content: string,
-  maxWidth: number,
-): string[] {
-  const result: string[] = [];
-  for (const line of content.split('\n')) {
-    if (!line || ctx.measureText(line).width <= maxWidth) {
-      result.push(line);
-      continue;
-    }
-    const words = line.split(' ');
-    let current = '';
-    for (const word of words) {
-      const candidate = current ? `${current} ${word}` : word;
-      if (current && ctx.measureText(candidate).width > maxWidth) {
-        result.push(current);
-        current = word;
-      } else {
-        current = candidate;
-      }
-    }
-    if (current) result.push(current);
-  }
-  return result;
-}
-
 function drawText(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -1319,7 +1297,7 @@ function drawText(
         ? x + elWidth
         : x;
   const lineHeight = fontSize * 1.2;
-  const lines = buildWrappedLines(ctx, content, elWidth);
+  const lines = wrapTextLines(content, elWidth, fontSize, fontFamily, bold);
   for (let i = 0; i < lines.length; i++) {
     const lineY = y + i * lineHeight;
     ctx.fillText(lines[i] ?? '', drawX, lineY);
@@ -1410,9 +1388,7 @@ function drawShapeLabel(
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const maxWidth = Math.max(shapeWidth - 16, fontSize);
-  const lines = label
-    .split('\n')
-    .flatMap((line) => buildWrappedLines(ctx, line, maxWidth));
+  const lines = wrapTextLines(label, maxWidth, fontSize, fontFamily);
   const lineHeight = fontSize * 1.2;
   const totalHeight = lines.length * lineHeight;
   for (let i = 0; i < lines.length; i++) {

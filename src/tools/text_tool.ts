@@ -1,3 +1,4 @@
+import { measureTextWidth } from '../core/text_metrics';
 import { worldToScreen } from '../core/viewport';
 import type { TextElement } from '../elements/element';
 import type { Tool, ToolContext } from './tool';
@@ -290,7 +291,13 @@ export class TextTool implements Tool {
       let maxWidth = 0;
       for (const line of lines) {
         mirror.textContent = line || ' ';
-        maxWidth = Math.max(maxWidth, mirror.offsetWidth);
+        // The renderer wraps with the shared metrics, which ignore kerning:
+        // never commit a width narrower than they measure.
+        maxWidth = Math.max(
+          maxWidth,
+          mirror.offsetWidth,
+          Math.ceil(measureTextWidth(line, scaledFont, appState.fontFamily)),
+        );
       }
       ta.style.width = `${maxWidth + 4}px`;
       ta.style.height = `${scaledFont * 1.2 * lines.length}px`;
@@ -574,7 +581,13 @@ export class TextTool implements Tool {
         let maxWidth = 0;
         for (const line of lines) {
           mirror.textContent = line || ' ';
-          maxWidth = Math.max(maxWidth, mirror.offsetWidth);
+          maxWidth = Math.max(
+            maxWidth,
+            mirror.offsetWidth,
+            Math.ceil(
+              measureTextWidth(line, scaledFont, el.fontFamily, el.bold),
+            ),
+          );
         }
         ta.style.width = `${maxWidth + 4}px`;
         ta.style.height = `${scaledFont * 1.2 * lines.length}px`;
