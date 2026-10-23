@@ -1,6 +1,15 @@
 packages:
   - mcp
 
+# Dependency install scripts stay off (pnpm 11+ fails install on undecided
+# ones). Build, tests, dev server and the worker run without them: esbuild and
+# workerd ship prebuilt binaries as optional deps; sharp only backs miniflare's
+# Images binding, which this project doesn't use.
+allowBuilds:
+  esbuild: false
+  sharp: false
+  workerd: false
+
 # @excalidraw/mermaid-to-excalidraw 2.2.2 looks up subgraph and class nodes by
 # bare SVG id, but newer mermaid releases (verified on 11.17.2) prefix every id
 # with the render id, so the converter falls back to a flat image. 11.13.0 was
