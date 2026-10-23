@@ -3,7 +3,6 @@ import { writeFile } from 'node:fs/promises';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { layeredLayout } from '../../src/core/layout';
 import { ARROW_HEAD_STYLES } from '../../src/elements/element';
 import { GENERIC_ICON_IDS } from '../../src/elements/stencils/generic';
 import { loadBundledPack } from '../../src/elements/stencils/packs';
@@ -279,38 +278,9 @@ server.registerTool(
       direction?: 'TB' | 'LR' | undefined;
       keys?: string[] | undefined;
     }) => {
-      const nodeKeys = diagram.nodeKeys();
-      const wanted = keys ? new Set(keys) : null;
-      const nodes = diagram.elements.filter((el) => {
-        const key = nodeKeys.get(el.id);
-        return key !== undefined && (!wanted || wanted.has(key));
-      });
-      if (nodes.length === 0) return 'Nothing to lay out.';
-      const ids = new Set(nodes.map((el) => el.id));
-      const boxes = new Map(nodes.map((el) => [el.id, getElementBounds(el)]));
-      const edges = diagram.elements.flatMap((el) =>
-        (el.type === 'line' || el.type === 'arrow') &&
-        el.startElementId &&
-        el.endElementId &&
-        ids.has(el.startElementId) &&
-        ids.has(el.endElementId)
-          ? [{ from: el.startElementId, to: el.endElementId }]
-          : [],
-      );
-      const origin = {
-        x: Math.min(...[...boxes.values()].map((b) => b.x)),
-        y: Math.min(...[...boxes.values()].map((b) => b.y)),
-      };
-      const positions = layeredLayout(
-        nodes.map((el) => {
-          const b = boxes.get(el.id)!;
-          return { id: el.id, width: b.w, height: b.h };
-        }),
-        edges,
-        { direction: direction ?? 'TB', origin },
-      );
-      diagram.moveNodes(positions);
-      return `Arranged ${positions.size} nodes (${direction ?? 'TB'}).${liveSuffix()}`;
+      const count = diagram.layout(direction ?? 'TB', keys);
+      if (count === 0) return 'Nothing to lay out.';
+      return `Arranged ${count} nodes (${direction ?? 'TB'}).${liveSuffix()}`;
     },
   ),
 );

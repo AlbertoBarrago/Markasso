@@ -1,3 +1,4 @@
+import { LINE_HEIGHT_RATIO, wrapTextLines } from '../../core/text_metrics';
 import type { StencilElement, StencilSource } from '../element';
 import {
   GENERIC_ICONS,
@@ -35,15 +36,23 @@ export function getStencilLabelWidth(boxWidth: number): number {
   return Math.max(boxWidth * 2, 120);
 }
 
-/**
- * Height the label hangs below the icon box (0 without a label). Counts
- * explicit lines only: automatic wrapping needs a canvas to measure text.
- */
+/** Lines the label is drawn on, wrapped to the label column. */
+export function getStencilLabelLines(el: StencilElement): string[] {
+  if (!el.label) return [];
+  return wrapTextLines(
+    el.label,
+    getStencilLabelWidth(Math.abs(el.width)),
+    el.labelFontSize ?? DEFAULT_STENCIL_LABEL_FONT_SIZE,
+    el.labelFontFamily ?? 'Arial, sans-serif',
+  );
+}
+
+/** Height the label hangs below the icon box (0 without a label). */
 export function getStencilLabelHeight(el: StencilElement): number {
-  if (!el.label) return 0;
-  const lines = el.label.split('\n').length;
+  const lines = getStencilLabelLines(el).length;
+  if (lines === 0) return 0;
   const fontSize = el.labelFontSize ?? DEFAULT_STENCIL_LABEL_FONT_SIZE;
-  return STENCIL_LABEL_GAP + lines * fontSize * 1.2;
+  return STENCIL_LABEL_GAP + lines * fontSize * LINE_HEIGHT_RATIO;
 }
 
 export function isValidStencilRef(ref: string): boolean {

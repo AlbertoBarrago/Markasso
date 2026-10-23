@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Element } from '../../src/elements/element';
+import { getElementBounds } from '../../src/rendering/draw_selection';
+import { sceneToSVG } from '../../src/rendering/export';
 import { describeDiagram } from '../src/describe';
 import { Diagram, DiagramError, resolveIconRef, slugify } from '../src/diagram';
 
@@ -135,6 +137,66 @@ describe('Diagram', () => {
     const id = d.elements[1]!.id;
     d.moveNodes(new Map([[id, { x: 1000, y: 500 }]]));
     expect(d.elements[1]).toMatchObject({ x: 1000, y: 500 });
+  });
+});
+
+describe('connectors follow moved nodes', () => {
+  /** Straight connector ends in the exported SVG, in scene coordinates. */
+  function exportedLine(d: Diagram): number[] {
+    const svg = sceneToSVG(d.elements, {
+      canvasColor: '#080808',
+      withBackground: false,
+    })!;
+    const first = d.elements.find((el) => el.type !== 'line')!;
+    const b = getElementBounds(first);
+    // Offset of the export: locate the first node's own <rect>.
+    const [, rx, ry] = svg.match(/<rect x="([-\d.]+)" y="([-\d.]+)"/)!;
+    const ox = Number(rx) - b.x;
+    const oy = Number(ry) - b.y;
+    const m = svg.match(
+      /<line x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)"/,
+    )!;
+    return [
+      Number(m[1]) - ox,
+      Number(m[2]) - oy,
+      Number(m[3]) - ox,
+      Number(m[4]) - oy,
+    ];
+  }
+
+  async function chain(): Promise<Diagram> {
+    const d = new Diagram();
+    await d.addNodes([
+      { key: 'a', label: 'A' },
+      { key: 'b', label: 'B' },
+    ]);
+    d.connect([{ from: 'a', to: 'b' }]);
+    return d;
+  }
+
+  it('after diagram_layout', async () => {
+    const d = await chain();
+    d.layout('TB');
+    const [a, b] = d.elements.filter((el) => el.type === 'rectangle');
+    const [, y1, , y2] = exportedLine(d);
+    // TB puts b under a: the line runs from a's bottom to b's top.
+    expect(y1).toBeCloseTo(getElementBounds(a!).y + getElementBounds(a!).h, 0);
+    expect(y2).toBeCloseTo(getElementBounds(b!).y, 0);
+  });
+
+  it('after diagram_update moves and resizes a node', async () => {
+    const d = await chain();
+    d.layout('TB');
+    d.update('b', { x: 600, y: 400, width: 200, height: 100 });
+    const [x1, , x2, y2] = exportedLine(d);
+    const a = getElementBounds(d.elements[0]!);
+    expect(x1).toBeGreaterThanOrEqual(a.x);
+    expect(x1).toBeLessThanOrEqual(a.x + a.w);
+    // Ends on b's border, not where b was when connected.
+    expect(x2).toBeGreaterThanOrEqual(600);
+    expect(x2).toBeLessThanOrEqual(800);
+    expect(y2).toBeGreaterThanOrEqual(400 - 0.5);
+    expect(y2).toBeLessThanOrEqual(500);
   });
 });
 

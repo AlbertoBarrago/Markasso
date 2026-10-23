@@ -91,7 +91,18 @@ describe('sceneToSVG', () => {
 
   it('escapes label text', () => {
     const svg = sceneToSVG(diagram(), OPTIONS)!;
-    expect(svg).toContain('API &lt;gateway&gt; &amp; &quot;edge&quot;');
+    // The label wraps inside the 120px box, as on the canvas.
+    expect(svg).toContain('&lt;gateway&gt; &amp;');
+    expect(svg).toContain('&quot;edge&quot;');
     expect(svg).not.toContain('<gateway>');
+  });
+
+  it('rounds rectangle corners like the canvas', () => {
+    const [rect] = diagram();
+    const svg = sceneToSVG(
+      [{ ...rect!, cornerRadius: 8 } as Element],
+      OPTIONS,
+    )!;
+    expect(svg).toContain('rx="8"');
   });
 });

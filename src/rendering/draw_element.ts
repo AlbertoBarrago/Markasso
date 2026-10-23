@@ -13,7 +13,7 @@ import { getBundledIcon } from '../elements/stencils/packs';
 import {
   DEFAULT_STENCIL_LABEL_FONT_SIZE,
   getGenericIcon,
-  getStencilLabelWidth,
+  getStencilLabelLines,
   STENCIL_LABEL_GAP,
 } from '../elements/stencils/registry';
 import {
@@ -1003,12 +1003,7 @@ function drawStencil(
     ctx.fillStyle = el.labelColor ?? strokeColor;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    const lines = wrapTextLines(
-      el.label,
-      getStencilLabelWidth(bw),
-      fontSize,
-      fontFamily,
-    );
+    const lines = getStencilLabelLines(el);
     lines.forEach((l, i) => {
       ctx.fillText(
         l,

@@ -1,4 +1,5 @@
 import type { Command } from '../../src/commands/commands';
+import { type LayoutDirection, layeredLayout } from '../../src/core/layout';
 import type {
   ArrowHeadStyle,
   ConnectorRouting,
@@ -414,6 +415,45 @@ export class Diagram {
       return { id, x: el.x + (p.x - b.x), y: el.y + (p.y - b.y) };
     });
     if (moves.length > 0) this.dispatch({ type: 'ALIGN_ELEMENTS', moves });
+  }
+
+  /**
+   * Arranges nodes in layers following their connections (all nodes, or
+   * only `keys`) in one undoable step. Returns how many nodes moved.
+   */
+  layout(direction: LayoutDirection, keys?: ReadonlyArray<string>): number {
+    const nodeKeys = this.nodeKeys();
+    const wanted = keys ? new Set(keys) : null;
+    const nodes = this.elements.filter((el) => {
+      const key = nodeKeys.get(el.id);
+      return key !== undefined && (!wanted || wanted.has(key));
+    });
+    if (nodes.length === 0) return 0;
+    const ids = new Set(nodes.map((el) => el.id));
+    const boxes = new Map(nodes.map((el) => [el.id, getElementBounds(el)]));
+    const edges = this.elements.flatMap((el) =>
+      isConnector(el) &&
+      el.startElementId &&
+      el.endElementId &&
+      ids.has(el.startElementId) &&
+      ids.has(el.endElementId)
+        ? [{ from: el.startElementId, to: el.endElementId }]
+        : [],
+    );
+    const origin = {
+      x: Math.min(...[...boxes.values()].map((b) => b.x)),
+      y: Math.min(...[...boxes.values()].map((b) => b.y)),
+    };
+    const positions = layeredLayout(
+      nodes.map((el) => {
+        const b = boxes.get(el.id)!;
+        return { id: el.id, width: b.w, height: b.h };
+      }),
+      edges,
+      { direction, origin },
+    );
+    this.moveNodes(positions);
+    return positions.size;
   }
 
   /** Bundled icon packs used by the scene, loaded so export can embed them. */
