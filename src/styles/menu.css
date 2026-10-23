@@ -36,6 +36,7 @@
 }
 
 .menu-item {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -49,6 +50,7 @@
   font-family: inherit;
   cursor: pointer;
   text-align: left;
+  text-decoration: none;
   transition: background 0.1s;
 }
 .menu-item:hover:not(:disabled) {
@@ -241,6 +243,13 @@
   outline-offset: 2px;
 }
 
+@media (pointer: coarse) and (max-width: 359px) {
+  /* Narrowest phones: the coffee button is the last one that doesn't fit. */
+  .tb-coffee-btn {
+    display: none;
+  }
+}
+
 @media (pointer: coarse) {
   /* Hide keyboard shortcut badges — useless on touch */
   .tb-btn-key {
@@ -268,6 +277,13 @@
   .tb-island-topleft {
     top: 12px;
     left: 12px;
+  }
+
+  /* Share and people live in the bottom action bar's share sheet on touch;
+     dropping the duplicates keeps the top islands from overlapping. */
+  .tb-share-island,
+  .tb-people-island {
+    display: none !important;
   }
 
   /* Hide separator on mobile */

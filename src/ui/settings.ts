@@ -122,6 +122,8 @@ const ICONS = {
       'M10 3v3M6 4l1.5 2M14 4l-1.5 2M4 12a6 6 0 0112 0M5 9h10M4 12v2a1 1 0 001 1h10a1 1 0 001-1v-2M8 17h4',
     ),
   ),
+  // Outline mark on a 24-unit grid, matching the stroke style of the others.
+  github: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>`,
   about: svg(
     p(
       'M3 4a1 1 0 011-1h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1zM10 9v5M10 6.5h.01',
@@ -223,6 +225,9 @@ export function initSettings(
       <button class="menu-item" id="menu-report">
         ${ICONS.report}<span class="menu-item-label">${t('reportProblem')}</span>
       </button>
+      <a class="menu-item" id="menu-github" href="https://github.com/AlbertoBarrago/Markasso" target="_blank" rel="noopener noreferrer">
+        ${ICONS.github}<span class="menu-item-label">GitHub</span>
+      </a>
 
       <div class="menu-divider"></div>
 
