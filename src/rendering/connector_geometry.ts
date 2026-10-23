@@ -247,7 +247,7 @@ export interface RouteDirection {
 }
 
 /** Length of the straight stub that clears the shape before the first turn. */
-const ELBOW_STUB = 16;
+export const ELBOW_STUB = 16;
 
 function sign(n: number): -1 | 0 | 1 {
   return n > 0 ? 1 : n < 0 ? -1 : 0;
@@ -281,7 +281,8 @@ export function simplifyRoute(points: ReadonlyArray<RoutePoint>): RoutePoint[] {
  * connector leaves its start shape, `endDir` the outward normal of the side
  * it enters the end shape by; null means the end is free (not attached).
  *
- * Attached ends get an `ELBOW_STUB` long stub so the first/last turn never
+ * Attached ends get a stub (`ELBOW_STUB` unless the caller needs a longer
+ * one to clear something, like an icon label) so the first/last turn never
  * hugs the shape. Perpendicular stubs are joined with an L (the mirrored L
  * when the direct one would double back); parallel stubs with a Z through
  * the midpoint, or a detour when they face away from each other.
@@ -294,13 +295,15 @@ export function computeElbowRoute(
   startDir: RouteDirection | null,
   end: RoutePoint,
   endDir: RouteDirection | null,
+  startStub = ELBOW_STUB,
+  endStub = ELBOW_STUB,
 ): RoutePoint[] {
   const stub = ELBOW_STUB;
   const p1: RoutePoint = startDir
-    ? [start[0] + startDir.dx * stub, start[1] + startDir.dy * stub]
+    ? [start[0] + startDir.dx * startStub, start[1] + startDir.dy * startStub]
     : start;
   const p2: RoutePoint = endDir
-    ? [end[0] + endDir.dx * stub, end[1] + endDir.dy * stub]
+    ? [end[0] + endDir.dx * endStub, end[1] + endDir.dy * endStub]
     : end;
   const dx = p2[0] - p1[0];
   const dy = p2[1] - p1[1];

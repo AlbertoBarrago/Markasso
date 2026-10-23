@@ -21,7 +21,10 @@ import {
 } from '../../src/elements/stencils/registry';
 import { History } from '../../src/engine/history';
 import { validateElements } from '../../src/io/element_validation';
-import { getElementBounds } from '../../src/rendering/draw_selection';
+import {
+  getConnectorBox,
+  getElementBounds,
+} from '../../src/rendering/draw_selection';
 
 /**
  * Agent-facing model of one Markasso diagram. Agents address nodes by short
@@ -206,7 +209,7 @@ export class Diagram {
     let minX = Infinity;
     let maxY = -Infinity;
     for (const el of nodes) {
-      const b = getElementBounds(el);
+      const b = getConnectorBox(el);
       minX = Math.min(minX, b.x);
       maxY = Math.max(maxY, b.y + b.h);
     }
@@ -232,7 +235,7 @@ export class Diagram {
     for (const spec of specs) {
       const key = slugify(spec.key) || spec.key;
       const el = await this.buildNode(spec, cursorX, origin.y);
-      const b = getElementBounds(el);
+      const b = getConnectorBox(el);
       cursorX = b.x + b.w + PLACEMENT_GAP;
       created.push(el);
       keys.push(key);
@@ -410,8 +413,9 @@ export class Diagram {
   moveNodes(positions: ReadonlyMap<string, { x: number; y: number }>): void {
     const moves = [...positions].map(([id, p]) => {
       const el = this.elements.find((e) => e.id === id)!;
-      const b = getElementBounds(el);
-      // ALIGN_ELEMENTS sets el.x/el.y; convert from the normalized box.
+      const b = getConnectorBox(el);
+      // ALIGN_ELEMENTS sets el.x/el.y; convert from the box layout used
+      // (icon labels included).
       return { id, x: el.x + (p.x - b.x), y: el.y + (p.y - b.y) };
     });
     if (moves.length > 0) this.dispatch({ type: 'ALIGN_ELEMENTS', moves });
@@ -430,7 +434,7 @@ export class Diagram {
     });
     if (nodes.length === 0) return 0;
     const ids = new Set(nodes.map((el) => el.id));
-    const boxes = new Map(nodes.map((el) => [el.id, getElementBounds(el)]));
+    const boxes = new Map(nodes.map((el) => [el.id, getConnectorBox(el)]));
     const edges = this.elements.flatMap((el) =>
       isConnector(el) &&
       el.startElementId &&

@@ -1,4 +1,8 @@
-import { LINE_HEIGHT_RATIO, wrapTextLines } from '../../core/text_metrics';
+import {
+  LINE_HEIGHT_RATIO,
+  measureTextBlock,
+  wrapTextLines,
+} from '../../core/text_metrics';
 import type { StencilElement, StencilSource } from '../element';
 import {
   GENERIC_ICONS,
@@ -33,7 +37,7 @@ export const DEFAULT_STENCIL_LABEL_FONT_SIZE = 14;
  * wider than the icon itself, as in other diagram editors.
  */
 export function getStencilLabelWidth(boxWidth: number): number {
-  return Math.max(boxWidth * 2, 120);
+  return Math.max(boxWidth * 2, 180);
 }
 
 /** Lines the label is drawn on, wrapped to the label column. */
@@ -53,6 +57,33 @@ export function getStencilLabelHeight(el: StencilElement): number {
   if (lines === 0) return 0;
   const fontSize = el.labelFontSize ?? DEFAULT_STENCIL_LABEL_FONT_SIZE;
   return STENCIL_LABEL_GAP + lines * fontSize * LINE_HEIGHT_RATIO;
+}
+
+/**
+ * Box the label occupies below the icon, gap included, as wide as its
+ * widest line (never narrower than the icon); null without a label.
+ */
+export function getStencilLabelBox(
+  el: StencilElement,
+): { x: number; y: number; w: number; h: number } | null {
+  const lines = getStencilLabelLines(el);
+  if (lines.length === 0) return null;
+  const fontSize = el.labelFontSize ?? DEFAULT_STENCIL_LABEL_FONT_SIZE;
+  const { width } = measureTextBlock(
+    lines,
+    fontSize,
+    el.labelFontFamily ?? 'Arial, sans-serif',
+  );
+  const iconW = Math.abs(el.width);
+  const w = Math.max(width, iconW);
+  const left = Math.min(el.x, el.x + el.width);
+  const top = Math.min(el.y, el.y + el.height);
+  return {
+    x: left + iconW / 2 - w / 2,
+    y: top + Math.abs(el.height),
+    w,
+    h: getStencilLabelHeight(el),
+  };
 }
 
 export function isValidStencilRef(ref: string): boolean {

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Element } from '../../src/elements/element';
-import { getElementBounds } from '../../src/rendering/draw_selection';
+import {
+  getConnectorBox,
+  getElementBounds,
+} from '../../src/rendering/draw_selection';
 import { sceneToSVG } from '../../src/rendering/export';
 import { describeDiagram } from '../src/describe';
 import { Diagram, DiagramError, resolveIconRef, slugify } from '../src/diagram';
@@ -197,6 +200,28 @@ describe('connectors follow moved nodes', () => {
     expect(x2).toBeLessThanOrEqual(800);
     expect(y2).toBeGreaterThanOrEqual(400 - 0.5);
     expect(y2).toBeLessThanOrEqual(500);
+  });
+});
+
+describe('icon labels in layout', () => {
+  it('reserves room for a long icon label in TB layout', async () => {
+    const d = new Diagram();
+    await d.addNodes([
+      {
+        key: 'llm',
+        kind: 'icon',
+        icon: 'server',
+        label:
+          'Modello linguistico\nlocale: gemma3:12b (Ollama)\nproduzione: GPT 4.1, AI Factory Azure',
+      },
+      { key: 'app', label: 'App' },
+    ]);
+    d.connect([{ from: 'llm', to: 'app', routing: 'elbow' }]);
+    d.layout('TB');
+    const [icon, rect] = d.elements;
+    const iconBox = getConnectorBox(icon!);
+    expect(iconBox.h).toBeGreaterThan(64 + 4 * 14);
+    expect(getElementBounds(rect!).y).toBeGreaterThan(iconBox.y + iconBox.h);
   });
 });
 

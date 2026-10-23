@@ -8,11 +8,13 @@ import type {
   LineElement,
 } from '../elements/element';
 import {
+  getStencilLabelBox,
   getStencilLabelHeight,
   isRotatableStencil,
 } from '../elements/stencils/registry';
 import {
   computeElbowRoute,
+  ELBOW_STUB,
   getQuadraticBounds,
   type RouteDirection,
   type RoutePoint,
@@ -84,6 +86,53 @@ function belowStencilLabel(
 }
 
 /**
+ * Parameter t at which the ray center + t * (dx, dy) leaves `rect` (given
+ * relative to the ray origin), or null when the ray misses it.
+ */
+function rayExitRect(
+  dx: number,
+  dy: number,
+  rect: { x: number; y: number; w: number; h: number },
+): number | null {
+  let tMin = 0;
+  let tMax = Infinity;
+  for (const [d, lo, hi] of [
+    [dx, rect.x, rect.x + rect.w],
+    [dy, rect.y, rect.y + rect.h],
+  ] as const) {
+    if (Math.abs(d) < 1e-9) {
+      if (lo > 0 || hi < 0) return null;
+      continue;
+    }
+    const t1 = lo / d;
+    const t2 = hi / d;
+    tMin = Math.max(tMin, Math.min(t1, t2));
+    tMax = Math.min(tMax, Math.max(t1, t2));
+  }
+  return tMax >= tMin && tMax < Infinity ? tMax : null;
+}
+
+/**
+ * Box connectors treat as the element: its bounds, plus the label hanging
+ * below an unrotated stencil, so arrows attach around the text, route clear
+ * of it and auto layout reserves room for it.
+ */
+export function getConnectorBox(el: Element): {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+} {
+  const b = getElementBounds(el);
+  if (el.type !== 'stencil' || el.rotation) return b;
+  const label = getStencilLabelBox(el);
+  if (!label) return b;
+  const x = Math.min(b.x, label.x);
+  const right = Math.max(b.x + b.w, label.x + label.w);
+  return { x, y: b.y, w: right - x, h: label.y + label.h - b.y };
+}
+
+/**
  * Returns the point on the border of an element in the direction from its center toward (targetX, targetY).
  * For ellipses uses the true ellipse boundary; for all others uses the bounding rectangle.
  */
@@ -141,7 +190,23 @@ export function getElementBorderPoint(
     ly = dy * t;
   }
 
-  ly = belowStencilLabel(el, { y: -b.h / 2, h: b.h }, ly);
+  // A ray that crosses an unrotated stencil's label leaves on the far side
+  // of the label, so the connector never runs over the text.
+  if (el.type === 'stencil' && !rot) {
+    const label = getStencilLabelBox(el);
+    const t = label
+      ? rayExitRect(dx, dy, {
+          x: label.x - cx,
+          y: label.y - cy,
+          w: label.w,
+          h: label.h,
+        })
+      : null;
+    if (t !== null && Math.hypot(dx * t, dy * t) > Math.hypot(lx, ly)) {
+      lx = dx * t;
+      ly = dy * t;
+    }
+  }
 
   // Rotate result back to world space
   if (rot) {
@@ -532,25 +597,33 @@ function elbowEnd(
   pinned: RoutePoint,
   target: RoutePoint,
   targetBox?: { x: number; y: number; w: number; h: number },
-): { point: RoutePoint; dir: RouteDirection } {
+): { point: RoutePoint; dir: RouteDirection; stub: number } {
   const b = getElementBounds(el);
+  const box = getConnectorBox(el);
   const cx = b.x + b.w / 2;
   const cy = b.y + b.h / 2;
+  // Leaving sideways from an icon whose label is wider than the icon, the
+  // stub runs past the label so the next turn doesn't cut through it.
+  const stubFor = (dir: RouteDirection) =>
+    dir.dx !== 0 ? ELBOW_STUB + (box.w - b.w) / 2 : ELBOW_STUB;
   if (anchor) {
     const side = sideFacing(anchor.x - 0.5, anchor.y - 0.5, 0.5, 0.5);
-    return { point: pinned, dir: sideDirection(el, side) };
+    const dir = sideDirection(el, side);
+    return { point: pinned, dir, stub: stubFor(dir) };
   }
   const [lx, ly] = el.rotation
     ? rotatePoint(target[0], target[1], cx, cy, -el.rotation)
     : target;
   const side =
     targetBox && !el.rotation
-      ? sideTowardBox(b, targetBox)
+      ? sideTowardBox(box, targetBox)
       : sideFacing(lx - cx, ly - cy, b.w / 2, b.h / 2);
   const port = getElementPorts(el)[side];
+  const dir = sideDirection(el, side);
   return {
     point: port ? [port.worldX, port.worldY] : pinned,
-    dir: sideDirection(el, side),
+    dir,
+    stub: stubFor(dir),
   };
 }
 
@@ -594,7 +667,7 @@ export function resolveConnectorRoute(
     otherAnchor: ConnectorAnchor | undefined,
   ) =>
     other && !otherAnchor && !other.rotation
-      ? getElementBounds(other)
+      ? getConnectorBox(other)
       : undefined;
 
   const s = startEl
@@ -621,6 +694,8 @@ export function resolveConnectorRoute(
     s?.dir ?? null,
     e?.point ?? end,
     e?.dir ?? null,
+    s?.stub,
+    e?.stub,
   );
 }
 
