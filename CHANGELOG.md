@@ -12,7 +12,7 @@ All notable changes to this project will be documented here.
 - **Zoom and minimap in a panel.** A magnifier button after the eraser opens a panel with the minimap and the zoom controls (fit, zoom out, reset, zoom in). It stays open while you pan and zoom; the button or Escape closes it.
 - **Undo and redo in the toolbar**, after the zoom button.
 - **Accessible toolbar tooltips.** Toolbar buttons show their name and shortcut in a tooltip on hover and on keyboard focus, instead of the browser's native one. Escape dismisses it, it stays open while the pointer moves onto it, and screen readers announce it as the button's description.
-- **Actions menu in the top-left island.** A gear button between the menu and the coffee button opens a menu with open .markasso, import Mermaid, presets, library, export and share, each with its label. Presets, export and share open their submenu to the side, one at a time. The top-right corner now only shows your live name and the people in a live session.
+- **Actions menu in the top-left island.** A gear button between the menu and the coffee button opens a menu with open .markasso, import Mermaid, presets, library, export and share, each with its label. Presets, export and share open their submenu to the side, one at a time, with a white background and black text in the light theme and no shadow. The top-right corner now only shows your live name and the people in a live session.
 - **The library sidebar reaches the top of the screen**, now that the top-right corner is free.
 - **Shadows in the light theme.** Islands, panels and menus keep their shadows in the light theme too.
 
