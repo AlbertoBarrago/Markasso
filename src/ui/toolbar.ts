@@ -25,6 +25,7 @@ import {
   showLiveStatusToast,
   showShareToast,
 } from './share_actions';
+import { initTooltips } from './tooltip';
 
 // ── SVG icons ──────────────────────────────────────────────────────────────────
 const IC = {
@@ -246,6 +247,8 @@ export function initToolbar(container: HTMLElement, history: History): void {
   lockedSep.style.display = 'none';
   const lockedIndicator = document.createElement('button');
   lockedIndicator.className = 'tb-btn tb-locked-indicator';
+  lockedIndicator.title = t('unlockElements');
+  lockedIndicator.setAttribute('aria-label', t('unlockElements'));
   lockedIndicator.innerHTML = IC.elemLocked;
   lockedIndicator.style.display = 'none';
   lockedIndicator.addEventListener('click', () => {
@@ -1018,6 +1021,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   topLeft.append(tbLeft);
 
   container.append(centerPill, topRight, topLeft);
+  initTooltips(centerPill);
 
   // ── Mobile: tools FAB + popup ─────────────────────────────────────────────
   const toolsFab = document.createElement('button');
@@ -1150,14 +1154,6 @@ export function initToolbar(container: HTMLElement, history: History): void {
       );
     lockedSep.style.display = hasLockedSelected ? '' : 'none';
     lockedIndicator.style.display = hasLockedSelected ? '' : 'none';
-    if (hasLockedSelected) {
-      const allLocked = [...scene.selectedIds].every(
-        (id) => scene.elements.find((el) => el.id === id)?.locked,
-      );
-      lockedIndicator.title = allLocked
-        ? t('unlockElements')
-        : t('unlockElements');
-    }
   }
 
   history.subscribe(sync);
@@ -1175,6 +1171,7 @@ function mkBtn(icon: string, title: string): HTMLButtonElement {
   const b = document.createElement('button');
   b.className = 'tb-btn';
   b.title = title;
+  b.setAttribute('aria-label', title);
   b.innerHTML = icon;
   return b;
 }

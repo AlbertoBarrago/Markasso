@@ -4,6 +4,21 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [Unreleased]
+
+### Changed
+- **One toolbar at the bottom.** The tools bar moved from the top to the bottom center of the screen and now holds the controls that used to sit in the bottom corners.
+- **Shapes share one button.** Rectangle, rhombus, ellipse and line are grouped into a split button: the last used shape stays on the toolbar, and the chevron next to it opens the others. Their shortcuts (2–5) still work and update the button.
+- **Zoom and minimap in a panel.** A magnifier button after the eraser opens a panel with the minimap and the zoom controls (fit, zoom out, reset, zoom in). It stays open while you pan and zoom; the button or Escape closes it.
+- **Undo and redo in the toolbar**, after the zoom button.
+- **Shadows in the light theme.** Islands, panels and menus keep their shadows in the light theme too.
+
+### Removed
+- **The once/continuous label next to the tool lock button**, on desktop and mobile: the lock button already shows the mode.
+- **The second toolbar row on narrow desktop windows**, no longer needed with nothing else at the bottom of the screen.
+
+---
+
 ## [1.13.3] - 2026-10-23
 
 ### Added

@@ -232,6 +232,31 @@ body {
   display: flex;
 }
 
+/* Toolbar tooltip (role="tooltip", see ui/tooltip.ts) */
+.tb-tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  display: none;
+  max-width: 240px;
+  padding: 5px 8px;
+  border: 1px solid var(--island-border);
+  border-radius: 6px;
+  background: var(--bg-island);
+  box-shadow: var(--island-shadow);
+  color: var(--text);
+  font:
+    500 12px / 1.3 system-ui,
+    -apple-system,
+    sans-serif;
+  white-space: normal;
+  pointer-events: auto;
+}
+.tb-tooltip.visible {
+  display: block;
+}
+
 /* Zoom panel: minimap above the zoom controls, aligned to the toolbar's
    right end */
 .tb-zoom-panel {
