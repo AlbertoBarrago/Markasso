@@ -168,7 +168,7 @@ export function initSettings(
   menuBtn.title = 'Menu';
   menuBtn.innerHTML = ICONS.hamburger;
   const leftSection = toolbarEl.querySelector<HTMLElement>('.tb-left');
-  (leftSection ?? toolbarEl).appendChild(menuBtn);
+  (leftSection ?? toolbarEl).prepend(menuBtn);
 
   // ── File input (hidden) ─────────────────────────────────────────────────
   const fileInput = document.createElement('input');
