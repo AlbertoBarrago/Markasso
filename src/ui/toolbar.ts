@@ -566,22 +566,19 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const exportTrigger = mkBtn(IC.export, t('export'));
   exportTrigger.setAttribute('aria-expanded', 'false');
   const exportPanel = document.createElement('div');
+  exportPanel.className = 'tb-submenu';
   exportPanel.setAttribute('role', 'menu');
   exportPanel.style.cssText = [
     'position:absolute',
     'left:calc(100% + 10px)',
     'top:-4px',
-    'background:rgba(26,26,40,0.98)',
-    'border:1px solid rgba(255,255,255,0.1)',
     'border-radius:10px',
     'padding:4px',
     'display:none',
     'flex-direction:column',
     'gap:2px',
     'min-width:148px',
-    'box-shadow:0 4px 24px rgba(0,0,0,0.6)',
     'z-index:1000',
-    'backdrop-filter:blur(16px)',
   ].join(';');
 
   const askBackground = (): boolean => confirm('Include white background?');
@@ -712,22 +709,19 @@ export function initToolbar(container: HTMLElement, history: History): void {
   });
 
   const sharePanel = document.createElement('div');
+  sharePanel.className = 'tb-submenu';
   sharePanel.setAttribute('role', 'menu');
   sharePanel.style.cssText = [
     'position:absolute',
     'left:calc(100% + 10px)',
     'top:-4px',
-    'background:rgba(26,26,40,0.98)',
-    'border:1px solid rgba(255,255,255,0.1)',
     'border-radius:10px',
     'padding:4px',
     'display:none',
     'flex-direction:column',
     'gap:2px',
     'min-width:196px',
-    'box-shadow:0 4px 24px rgba(0,0,0,0.6)',
     'z-index:1000',
-    'backdrop-filter:blur(16px)',
   ].join(';');
 
   const shareCopyLinkItem = menuItem(
@@ -747,11 +741,9 @@ export function initToolbar(container: HTMLElement, history: History): void {
   nameInput.placeholder = t('liveName');
   nameInput.setAttribute('aria-label', t('liveName'));
   nameInput.value = getStoredName();
+  nameInput.className = 'tb-submenu-input';
   nameInput.style.cssText = [
-    'background:rgba(255,255,255,0.06)',
-    'border:1px solid rgba(255,255,255,0.15)',
     'border-radius:6px',
-    'color:#e7e7f2',
     'padding:6px 8px',
     'font-size:13px',
     'font-family:inherit',
@@ -759,8 +751,8 @@ export function initToolbar(container: HTMLElement, history: History): void {
   ].join(';');
   nameInput.addEventListener('input', () => setStoredName(nameInput.value));
   const divider = document.createElement('div');
-  divider.style.cssText =
-    'height:1px;background:rgba(255,255,255,0.1);margin:3px 4px;';
+  divider.className = 'tb-submenu-divider';
+  divider.style.cssText = 'height:1px;margin:3px 4px;';
   let livePeers = 0;
   const shareGoLiveItem = menuItem(t('shareGoLive'), IC_SHARE, async () => {
     const roomId = generateRoomId();
@@ -918,27 +910,25 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const presetsTrigger = mkBtn(IC.toolbox, t('presets'));
   presetsTrigger.setAttribute('aria-expanded', 'false');
   const presetsPanel = document.createElement('div');
+  presetsPanel.className = 'tb-submenu';
   presetsPanel.setAttribute('role', 'menu');
   presetsPanel.style.cssText = [
     'position:absolute',
     'left:calc(100% + 10px)',
     'top:-4px',
-    'background:rgba(26,26,40,0.98)',
-    'border:1px solid rgba(255,255,255,0.1)',
     'border-radius:10px',
     'padding:8px',
     'display:none',
     'grid-template-columns:1fr 1fr',
     'gap:6px',
     'min-width:260px',
-    'box-shadow:0 4px 24px rgba(0,0,0,0.6)',
     'z-index:1000',
-    'backdrop-filter:blur(16px)',
   ].join(';');
 
   for (const def of PRESETS) {
     const card = document.createElement('button');
     card.setAttribute('role', 'menuitem');
+    card.className = 'tb-preset-card';
     card.style.cssText = [
       'display:flex',
       'flex-direction:column',
@@ -947,8 +937,6 @@ export function initToolbar(container: HTMLElement, history: History): void {
       'padding:10px 8px',
       'border-radius:8px',
       'cursor:pointer',
-      'background:rgba(255,255,255,0.04)',
-      'border:1px solid rgba(255,255,255,0.08)',
       'color:inherit',
       'font:11px/1.2 inherit',
       'text-align:center',
@@ -956,14 +944,6 @@ export function initToolbar(container: HTMLElement, history: History): void {
       'white-space:nowrap',
     ].join(';');
     card.innerHTML = `${def.icon}<span>${t(def.labelKey)}</span>`;
-    card.addEventListener('mouseenter', () => {
-      card.style.background = 'rgba(255,255,255,0.09)';
-      card.style.borderColor = 'var(--accent, #c42059)';
-    });
-    card.addEventListener('mouseleave', () => {
-      card.style.background = 'rgba(255,255,255,0.04)';
-      card.style.borderColor = 'rgba(255,255,255,0.08)';
-    });
     card.addEventListener('click', () => {
       const vp = history.present.viewport;
       const cx = (window.innerWidth / 2 - vp.offsetX) / vp.zoom;
@@ -1285,13 +1265,13 @@ function menuItem(
 ): HTMLButtonElement {
   const item = document.createElement('button');
   item.setAttribute('role', 'menuitem');
+  item.className = 'tb-submenu-item';
   item.style.cssText = [
     'display:flex',
     'align-items:center',
     'gap:8px',
-    'background:none',
     'border:none',
-    'color:#d4d4e8',
+    'color:inherit',
     'cursor:pointer',
     'padding:7px 10px',
     'border-radius:6px',
@@ -1301,12 +1281,6 @@ function menuItem(
     'white-space:nowrap',
   ].join(';');
   item.innerHTML = `${iconSvg}<span>${label}</span>`;
-  item.addEventListener('mouseenter', () => {
-    item.style.background = 'rgba(255,255,255,0.07)';
-  });
-  item.addEventListener('mouseleave', () => {
-    item.style.background = 'none';
-  });
   item.addEventListener('click', () => {
     item.closest('div')!.style.display = 'none';
     onClick();
