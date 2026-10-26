@@ -261,14 +261,6 @@
     display: none;
   }
 
-  /* Hide undo/redo/zoom islands — handled by mobile-actions bar */
-  .tb-island-bottomleft {
-    display: none;
-  }
-  .tb-island-bottomright {
-    display: none;
-  }
-
   .tb-island-topright {
     top: 12px;
     right: 12px;

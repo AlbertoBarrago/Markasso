@@ -565,10 +565,10 @@
   white-space: nowrap;
 }
 
-/* Canvas hint — subtle bottom-center text below toolbar islands */
+/* Canvas hint — subtle bottom-center text above the tools island */
 #shortcuts-hint {
   position: fixed;
-  top: 64px;
+  bottom: 68px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 200;
@@ -624,14 +624,10 @@
 
 /* ── Minimap ───────────────────────────────────────────────────────────────── */
 #minimap {
-  position: fixed;
-  bottom: 76px;
-  right: 16px;
-  z-index: 10;
+  display: flex;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
   cursor: crosshair;
   pointer-events: all;
   opacity: 0.85;
@@ -643,7 +639,6 @@
 
 [data-theme="light"] #minimap {
   border-color: rgba(0, 0, 0, 0.12);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
 
 @media (pointer: coarse), (max-width: 600px) {
@@ -1093,7 +1088,7 @@
 /* ── Hint bar ──────────────────────────────────────────────────────────────── */
 #hint-bar {
   position: fixed;
-  top: 64px;
+  bottom: 68px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 200;
@@ -1147,7 +1142,7 @@
 /* ── Quota warning toast ───────────────────────────────────────────────────── */
 .quota-toast {
   position: fixed;
-  bottom: 24px;
+  bottom: 76px;
   left: 50%;
   transform: translateX(-50%) translateY(12px);
   display: flex;

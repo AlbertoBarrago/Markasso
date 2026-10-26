@@ -99,26 +99,19 @@ body {
   user-select: none;
 }
 
-/* Center-top: tools */
+/* Center-bottom: tools */
 .tb-island-tools {
   position: fixed;
-  top: 12px;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
 }
 
-/* Narrow desktop windows: tools on a second row, and what sits below them
-   moves down with them (see watchToolsRow in toolbar.ts). */
-.tools-wrapped .tb-island-tools {
-  top: 68px;
-}
-.tools-wrapped #shortcuts-hint {
-  top: 120px;
-}
-.tools-wrapped #context-panel {
-  top: 128px;
-  max-height: calc(100vh - 204px);
+/* The hints sit where the toolbar panels open */
+:root:has(.tb-tool-group-panel.open) #shortcuts-hint,
+:root:has(.tb-tool-group-panel.open) #hint-bar {
+  display: none;
 }
 
 /* Top-right: export */
@@ -139,30 +132,6 @@ body {
   top: 12px;
   left: 16px;
   z-index: 10;
-  pointer-events: all;
-}
-
-/* Bottom-left: undo/redo */
-.tb-island-bottomleft {
-  position: fixed;
-  bottom: 16px;
-  left: 16px;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  pointer-events: all;
-}
-
-/* Bottom-right: zoom */
-.tb-island-bottomright {
-  position: fixed;
-  bottom: 16px;
-  right: 16px;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 8px;
   pointer-events: all;
 }
 
@@ -221,6 +190,62 @@ body {
 }
 .tb-btn svg {
   pointer-events: none;
+}
+
+/* Split button: current shape tool + chevron opening the other shapes */
+.tb-tool-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.tb-tool-group-chevron {
+  width: 16px;
+}
+.tb-tool-group-chevron svg {
+  transition: transform 0.12s;
+}
+.tb-tool-group-chevron.open,
+.tb-tool-group > .tb-btn.open {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+.tb-tool-group-chevron.open svg {
+  transform: rotate(180deg);
+}
+.tb-tool-group-panel {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  display: none;
+  gap: 2px;
+  padding: 4px;
+  background: var(--bg-island);
+  border: 1px solid var(--island-border);
+  border-radius: var(--island-radius);
+  box-shadow: var(--island-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 20;
+}
+.tb-tool-group-panel.open {
+  display: flex;
+}
+
+/* Zoom panel: minimap above the zoom controls, aligned to the toolbar's
+   right end */
+.tb-zoom-panel {
+  left: auto;
+  right: -4px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.tb-zoom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
 }
 
 .tb-name-chip {
@@ -313,35 +338,6 @@ body {
   border-top: 1px solid var(--island-border);
   margin-top: 6px;
   padding-top: 6px;
-}
-
-.tb-tool-mode-label {
-  height: 28px;
-  padding: 0 8px;
-  margin-left: 4px;
-  border: 1px solid var(--island-border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-muted);
-  cursor: pointer;
-  font:
-    600 10px / 1 system-ui,
-    -apple-system,
-    sans-serif;
-  white-space: nowrap;
-  transition:
-    background 0.12s,
-    border-color 0.12s,
-    color 0.12s;
-}
-.tb-tool-mode-label:hover {
-  background: var(--bg-hover);
-  color: var(--text);
-}
-.tb-tool-mode-label.active {
-  background: var(--accent-light);
-  border-color: var(--accent);
-  color: var(--accent);
 }
 
 .tb-locked-indicator {

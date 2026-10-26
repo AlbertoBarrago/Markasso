@@ -5,14 +5,14 @@ const MM_W = 168; // minimap canvas logical width
 const MM_H = 100; // minimap canvas logical height
 const PADDING = 20; // world-space padding around the scene bounds
 
-export function initMinimap(workspace: HTMLElement, history: History): void {
+export function initMinimap(parent: HTMLElement, history: History): void {
   // Hide on touch devices
   if (window.matchMedia('(pointer: coarse)').matches) return;
 
   // ── DOM ──────────────────────────────────────────────────────────────────
   const container = document.createElement('div');
   container.id = 'minimap';
-  workspace.appendChild(container);
+  parent.prepend(container);
 
   const mmCanvas = document.createElement('canvas');
   mmCanvas.style.width = `${MM_W}px`;

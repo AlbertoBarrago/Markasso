@@ -18,6 +18,7 @@ import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 import { onLibraryVisibilityChange, toggleLibrary } from './library_panel';
 import { onLiveHide, onLiveReveal, setLiveUI } from './live_name';
+import { initMinimap } from './minimap';
 import { initPeopleList } from './people_list';
 import {
   copyToClipboard,
@@ -57,6 +58,8 @@ const IC = {
   close: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="2" y1="2" x2="14" y2="14"/><line x1="14" y1="2" x2="2" y2="14"/></svg>`,
   sticky: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h12a1 1 0 011 1v9l-4 4H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M13 13v3.5L17 13h-4z" fill="currentColor" stroke="none"/><line x1="6" y1="7" x2="14" y2="7"/><line x1="6" y1="10" x2="11" y2="10"/></svg>`,
   curve: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 16 Q10 2 17 16"/></svg>`,
+  magnify: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="12.6" y1="12.6" x2="17" y2="17"/></svg>`,
+  chevronDown: `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5l3 3 3-3"/></svg>`,
   polygon: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l7 6.5-2.5 7h-9L3 9.5z"/></svg>`,
 };
 
@@ -111,10 +114,19 @@ const TOOLS: ToolDef[] = [
   { tool: 'eraser', icon: IC.eraser, label: t('eraser'), key: '0', num: '0' },
 ];
 
+// Shape tools collapsed into one split button: the last used one stays on the
+// toolbar, the chevron opens a panel with the others.
+const SHAPE_GROUP: ReadonlyArray<ActiveTool> = [
+  'rectangle',
+  'rombo',
+  'ellipse',
+  'line',
+];
+
 export function initToolbar(container: HTMLElement, history: History): void {
   container.innerHTML = '';
 
-  // ── Center-top: tool buttons pill ─────────────────────────────────────────
+  // ── Center-bottom: tool buttons pill ──────────────────────────────────────
   const centerPill = div('tb-island tb-island-tools');
   centerPill.setAttribute('role', 'toolbar');
   centerPill.setAttribute('aria-label', 'Drawing tools');
@@ -134,30 +146,93 @@ export function initToolbar(container: HTMLElement, history: History): void {
   lockBtn.addEventListener('click', toggleToolLock);
   centerPill.appendChild(lockBtn);
 
-  const lockModeBtn = document.createElement('button');
-  lockModeBtn.className = 'tb-tool-mode-label';
-  lockModeBtn.type = 'button';
-  lockModeBtn.title = t('lockTool');
-  lockModeBtn.addEventListener('click', toggleToolLock);
-  centerPill.appendChild(lockModeBtn);
-
   // Separator after lock
   const lockSep = document.createElement('span');
   lockSep.className = 'tb-separator';
   centerPill.appendChild(lockSep);
 
+  const toolBtnHTML = (toolDef: ToolDef): string =>
+    `${toolDef.icon}${toolDef.num ? `<span class="tb-btn-key">${toolDef.num}</span>` : ''}`;
+
+  // Shape group split button
+  const shapeDefs = TOOLS.filter((d) => SHAPE_GROUP.includes(d.tool));
+  let shapeCurrent: ToolDef = shapeDefs[0]!;
+  const shapeGroup = div('tb-tool-group');
+  const shapeMainBtn = document.createElement('button');
+  shapeMainBtn.className = 'tb-btn';
+  shapeMainBtn.setAttribute('aria-pressed', 'false');
+  shapeMainBtn.addEventListener('click', () =>
+    history.dispatch({ type: 'SET_TOOL', tool: shapeCurrent.tool }),
+  );
+  const shapeChevron = document.createElement('button');
+  shapeChevron.className = 'tb-btn tb-tool-group-chevron';
+  shapeChevron.title = t('moreShapes');
+  shapeChevron.setAttribute('aria-label', t('moreShapes'));
+  shapeChevron.setAttribute('aria-expanded', 'false');
+  shapeChevron.innerHTML = IC.chevronDown;
+  const shapePanel = div('tb-tool-group-panel');
+  shapePanel.id = 'tb-shape-panel';
+  shapeChevron.setAttribute('aria-controls', shapePanel.id);
+  shapePanel.setAttribute('role', 'group');
+  shapePanel.setAttribute('aria-label', t('moreShapes'));
+  const shapePanelBtns = new Map<ActiveTool, HTMLButtonElement>();
+  for (const toolDef of shapeDefs) {
+    const b = document.createElement('button');
+    b.className = 'tb-btn';
+    b.title = `${toolDef.label} (${toolDef.key})`;
+    b.setAttribute('aria-label', toolDef.label);
+    b.innerHTML = toolBtnHTML(toolDef);
+    b.addEventListener('click', () => {
+      setShapeOpen(false);
+      history.dispatch({ type: 'SET_TOOL', tool: toolDef.tool });
+    });
+    shapePanelBtns.set(toolDef.tool, b);
+    shapePanel.appendChild(b);
+  }
+  const setShapeOpen = (open: boolean): void => {
+    shapePanel.classList.toggle('open', open);
+    shapeChevron.classList.toggle('open', open);
+    shapeChevron.setAttribute('aria-expanded', String(open));
+  };
+  const renderShapeGroup = (): void => {
+    shapeMainBtn.title = `${shapeCurrent.label} (${shapeCurrent.key})`;
+    shapeMainBtn.setAttribute('aria-label', shapeCurrent.label);
+    shapeMainBtn.innerHTML = toolBtnHTML(shapeCurrent);
+    for (const [toolName, b] of shapePanelBtns) {
+      b.style.display = toolName === shapeCurrent.tool ? 'none' : '';
+    }
+  };
+  shapeChevron.addEventListener('click', () =>
+    setShapeOpen(!shapePanel.classList.contains('open')),
+  );
+  shapeGroup.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && shapePanel.classList.contains('open')) {
+      e.stopPropagation();
+      setShapeOpen(false);
+      shapeChevron.focus();
+    }
+  });
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (!shapeGroup.contains(e.target as Node)) setShapeOpen(false);
+    },
+    { capture: true },
+  );
+  renderShapeGroup();
+  shapeGroup.append(shapeMainBtn, shapeChevron, shapePanel);
+
   TOOLS.forEach((toolDef) => {
-    if (toolDef.tool === 'eraser') {
-      const sep = document.createElement('span');
-      sep.className = 'tb-separator';
-      centerPill.appendChild(sep);
+    if (SHAPE_GROUP.includes(toolDef.tool)) {
+      if (toolDef === shapeDefs[0]) centerPill.appendChild(shapeGroup);
+      return;
     }
     const b = document.createElement('button');
     b.className = 'tb-btn';
     b.title = `${toolDef.label} (${toolDef.key})`;
     b.setAttribute('aria-label', toolDef.label);
     b.setAttribute('aria-pressed', 'false');
-    b.innerHTML = `${toolDef.icon}${toolDef.num ? `<span class="tb-btn-key">${toolDef.num}</span>` : ''}`;
+    b.innerHTML = toolBtnHTML(toolDef);
     b.addEventListener('click', () =>
       history.dispatch({ type: 'SET_TOOL', tool: toolDef.tool }),
     );
@@ -183,10 +258,10 @@ export function initToolbar(container: HTMLElement, history: History): void {
   centerPill.appendChild(lockedSep);
   centerPill.appendChild(lockedIndicator);
 
-  // ── Bottom-left: undo/redo ─────────────────────────────────────────────────
-  const bottomLeft = div('tb-island-bottomleft');
-
-  const undoPill = div('tb-island tb-island-undo');
+  // ── Undo/redo: in the toolbar, after the zoom button ──────────────────────
+  const undoSep = document.createElement('span');
+  undoSep.className = 'tb-separator';
+  const undoPill = div('tb-tool-group');
   undoPill.setAttribute('role', 'group');
   undoPill.setAttribute('aria-label', 'History');
   const undoBtn = mkBtn(IC.undo, t('undo'));
@@ -194,15 +269,35 @@ export function initToolbar(container: HTMLElement, history: History): void {
   undoBtn.addEventListener('click', () => history.undo());
   redoBtn.addEventListener('click', () => history.redo());
   undoPill.append(undoBtn, redoBtn);
-  bottomLeft.append(undoPill);
 
-  // ── Bottom-right: zoom ─────────────────────────────────────────────────────
-  const bottomRight = div('tb-island-bottomright');
-
-  // Zoom
-  const zoomPill = div('tb-island tb-island-zoom');
-  zoomPill.setAttribute('role', 'group');
-  zoomPill.setAttribute('aria-label', 'Zoom');
+  // ── Zoom: last toolbar button, opens a panel with the minimap and controls ─
+  const zoomGroup = div('tb-tool-group');
+  const zoomToggle = mkBtn(IC.magnify, t('zoomPanel'));
+  zoomToggle.setAttribute('aria-label', t('zoomPanel'));
+  zoomToggle.setAttribute('aria-expanded', 'false');
+  const zoomPanel = div('tb-tool-group-panel tb-zoom-panel');
+  zoomPanel.id = 'tb-zoom-panel';
+  zoomPanel.setAttribute('role', 'group');
+  zoomPanel.setAttribute('aria-label', t('zoomPanel'));
+  zoomToggle.setAttribute('aria-controls', zoomPanel.id);
+  // Stays open while panning and zooming the canvas; only the toggle or
+  // Escape closes it.
+  const setZoomOpen = (open: boolean): void => {
+    zoomPanel.classList.toggle('open', open);
+    zoomToggle.classList.toggle('open', open);
+    zoomToggle.setAttribute('aria-expanded', String(open));
+  };
+  zoomToggle.addEventListener('click', () =>
+    setZoomOpen(!zoomPanel.classList.contains('open')),
+  );
+  zoomGroup.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && zoomPanel.classList.contains('open')) {
+      e.stopPropagation();
+      setZoomOpen(false);
+      zoomToggle.focus();
+    }
+  });
+  const zoomPill = div('tb-zoom-row');
   const fitBtn = mkBtn(IC.fit, t('fitContent'));
   const minusBtn = mkBtn('−', t('zoomOut'));
   const plusBtn = mkBtn('+', t('zoomIn'));
@@ -252,9 +347,18 @@ export function initToolbar(container: HTMLElement, history: History): void {
       offsetY: h / 2 - worldCY,
     });
   });
+
   zoomPill.append(fitBtn, minusBtn, zoomLabel, plusBtn);
 
-  bottomRight.append(zoomPill);
+  zoomPanel.append(zoomPill);
+  initMinimap(zoomPanel, history);
+  zoomGroup.append(zoomToggle, zoomPanel);
+  const zoomSep = document.createElement('span');
+  zoomSep.className = 'tb-separator';
+  centerPill.insertBefore(zoomSep, lockedSep);
+  centerPill.insertBefore(zoomGroup, lockedSep);
+  centerPill.insertBefore(undoSep, lockedSep);
+  centerPill.insertBefore(undoPill, lockedSep);
 
   // ── Top-right: import + export dropdown ───────────────────────────────────
   const topRight = div('tb-island-topright');
@@ -913,8 +1017,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const tbLeft = div('tb-island tb-left');
   topLeft.append(tbLeft);
 
-  container.append(centerPill, bottomLeft, bottomRight, topRight, topLeft);
-  watchToolsRow(centerPill, [topLeft, topRight]);
+  container.append(centerPill, topRight, topLeft);
 
   // ── Mobile: tools FAB + popup ─────────────────────────────────────────────
   const toolsFab = document.createElement('button');
@@ -962,21 +1065,13 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const mobileLockBtn = document.createElement('button');
   mobileLockBtn.className = 'mobile-tools-popup-btn';
   mobileLockBtn.title = t('lockTool');
+  mobileLockBtn.setAttribute('aria-label', t('lockTool'));
   mobileLockBtn.innerHTML = IC.lockOpen;
   mobileLockBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     toggleToolLock();
   });
   lockRowEl.appendChild(mobileLockBtn);
-  const mobileLockLabel = document.createElement('button');
-  mobileLockLabel.className = 'mobile-tools-popup-lock-label';
-  mobileLockLabel.type = 'button';
-  mobileLockLabel.title = t('lockTool');
-  mobileLockLabel.addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggleToolLock();
-  });
-  lockRowEl.appendChild(mobileLockLabel);
   toolsPopup.appendChild(lockRowSep);
   toolsPopup.appendChild(lockRowEl);
 
@@ -1010,16 +1105,21 @@ export function initToolbar(container: HTMLElement, history: History): void {
     lockBtn.classList.toggle('active', toolLocked);
     lockBtn.setAttribute('aria-pressed', String(toolLocked));
     lockBtn.innerHTML = toolLocked ? IC.lock : IC.lockOpen;
-    lockModeBtn.textContent = toolLocked
-      ? t('toolModeContinuous')
-      : t('toolModeOnce');
-    lockModeBtn.classList.toggle('active', toolLocked);
-    lockModeBtn.setAttribute('aria-pressed', String(toolLocked));
     for (const [toolName, b] of toolBtns) {
       const isActive = toolName === activeTool;
       b.classList.toggle('active', isActive);
       b.setAttribute('aria-pressed', String(isActive));
     }
+    const activeShape = shapeDefs.find((d) => d.tool === activeTool);
+    if (activeShape && activeShape !== shapeCurrent) {
+      shapeCurrent = activeShape;
+      renderShapeGroup();
+    }
+    shapeMainBtn.classList.toggle('active', activeShape !== undefined);
+    shapeMainBtn.setAttribute(
+      'aria-pressed',
+      String(activeShape !== undefined),
+    );
     toolsPopup
       .querySelectorAll<HTMLButtonElement>('.mobile-tools-popup-btn[data-tool]')
       .forEach((btn) => {
@@ -1028,11 +1128,6 @@ export function initToolbar(container: HTMLElement, history: History): void {
     mobileLockBtn.innerHTML = toolLocked ? IC.lock : IC.lockOpen;
     mobileLockBtn.classList.toggle('active', toolLocked);
     mobileLockBtn.setAttribute('aria-pressed', String(toolLocked));
-    mobileLockLabel.textContent = toolLocked
-      ? t('toolModeContinuous')
-      : t('toolModeOnce');
-    mobileLockLabel.classList.toggle('active', toolLocked);
-    mobileLockLabel.setAttribute('aria-pressed', String(toolLocked));
     toolsFab.dataset.tool = activeTool;
     undoBtn.disabled = !history.canUndo();
     redoBtn.disabled = !history.canRedo();
@@ -1070,35 +1165,6 @@ export function initToolbar(container: HTMLElement, history: History): void {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-/**
- * On narrow desktop windows the centered tools would run under the side
- * islands: drop them to a second row instead (`tools-wrapped` on the root,
- * see base.css). The room left depends on the locale and on the live people
- * list, so it is measured rather than tied to a breakpoint. Touch layouts
- * hide the tools, which keeps the class off.
- */
-function watchToolsRow(
-  tools: HTMLElement,
-  sides: ReadonlyArray<HTMLElement>,
-): void {
-  const GAP = 12;
-  const root = document.documentElement;
-  const update = (): void => {
-    root.classList.remove('tools-wrapped');
-    const t = tools.getBoundingClientRect();
-    if (t.width === 0) return;
-    const collides = sides.some((side) => {
-      const r = side.getBoundingClientRect();
-      return r.width > 0 && r.left < t.right + GAP && r.right > t.left - GAP;
-    });
-    root.classList.toggle('tools-wrapped', collides);
-  };
-  window.addEventListener('resize', update);
-  const observer = new ResizeObserver(update);
-  for (const el of [tools, ...sides]) observer.observe(el);
-  update();
-}
-
 function div(cls: string): HTMLElement {
   const e = document.createElement('div');
   e.className = cls;

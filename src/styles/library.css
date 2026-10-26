@@ -31,11 +31,6 @@
   pointer-events: all;
   transform: translateX(0);
 }
-/* The minimap shares the right edge: hide it while the library is open. */
-body.library-open #minimap {
-  display: none;
-}
-
 .lib-header {
   display: flex;
   align-items: center;
