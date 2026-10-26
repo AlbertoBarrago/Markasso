@@ -62,14 +62,6 @@
   color: var(--accent);
 }
 
-[data-theme="light"],
-[data-theme="light"] *,
-[data-theme="light"] *::before,
-[data-theme="light"] *::after {
-  box-shadow: none !important;
-  text-shadow: none !important;
-}
-
 [data-theme="light"] .tb-island,
 [data-theme="light"] .settings-panel,
 [data-theme="light"] #context-panel,
