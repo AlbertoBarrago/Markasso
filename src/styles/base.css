@@ -142,7 +142,7 @@ body {
   pointer-events: all;
 }
 
-/* Bottom-left: zoom */
+/* Bottom-left: undo/redo */
 .tb-island-bottomleft {
   position: fixed;
   bottom: 16px;
@@ -154,7 +154,7 @@ body {
   pointer-events: all;
 }
 
-/* Bottom-right: undo/redo */
+/* Bottom-right: zoom */
 .tb-island-bottomright {
   position: fixed;
   bottom: 16px;

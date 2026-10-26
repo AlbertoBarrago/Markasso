@@ -183,8 +183,8 @@ export function initToolbar(container: HTMLElement, history: History): void {
   centerPill.appendChild(lockedSep);
   centerPill.appendChild(lockedIndicator);
 
-  // ── Bottom-right: undo/redo ────────────────────────────────────────────────
-  const bottomRight = div('tb-island-bottomright');
+  // ── Bottom-left: undo/redo ─────────────────────────────────────────────────
+  const bottomLeft = div('tb-island-bottomleft');
 
   const undoPill = div('tb-island tb-island-undo');
   undoPill.setAttribute('role', 'group');
@@ -194,10 +194,10 @@ export function initToolbar(container: HTMLElement, history: History): void {
   undoBtn.addEventListener('click', () => history.undo());
   redoBtn.addEventListener('click', () => history.redo());
   undoPill.append(undoBtn, redoBtn);
-  bottomRight.append(undoPill);
+  bottomLeft.append(undoPill);
 
-  // ── Bottom-left: zoom ──────────────────────────────────────────────────────
-  const bottomLeft = div('tb-island-bottomleft');
+  // ── Bottom-right: zoom ─────────────────────────────────────────────────────
+  const bottomRight = div('tb-island-bottomright');
 
   // Zoom
   const zoomPill = div('tb-island tb-island-zoom');
@@ -254,7 +254,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   });
   zoomPill.append(fitBtn, minusBtn, zoomLabel, plusBtn);
 
-  bottomLeft.append(zoomPill);
+  bottomRight.append(zoomPill);
 
   // ── Top-right: import + export dropdown ───────────────────────────────────
   const topRight = div('tb-island-topright');
