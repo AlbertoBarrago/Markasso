@@ -30,6 +30,7 @@
   opacity: 1;
   pointer-events: all;
   transform: translateX(0);
+  max-height: 690px;
 }
 .lib-header {
   display: flex;
