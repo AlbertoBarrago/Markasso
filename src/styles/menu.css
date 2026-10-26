@@ -6,7 +6,6 @@
   background: var(--bg-island);
   border: 1px solid var(--island-border);
   border-radius: var(--island-radius);
-  box-shadow: var(--island-shadow);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   opacity: 0;

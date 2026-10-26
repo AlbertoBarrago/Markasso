@@ -5,10 +5,11 @@
   --focus-ring: var(--accent);
   --alert: #fa0101;
 
-  --bg-island: rgba(13, 7, 7, 0.98);
+  --bg-island: rgb(21 21 21 / 0.98);
   --island-border: rgba(255, 255, 255, 0.18);
   --island-shadow:
-    0 2px 24px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.04);
+    inset 1px -1px 2px 0 rgba(0, 0, 0, 0.9),
+    inset -1px 1px 1px 0 rgba(255, 255, 255, 0.2);
   --island-radius: 12px;
   --input-border: rgba(89, 89, 89, 0.4);
 
@@ -284,6 +285,7 @@ body {
   flex-direction: column;
   align-items: stretch;
   gap: 0;
+  box-shadow: none;
 }
 .tb-actions-panel:not(.open) {
   display: none;
