@@ -279,6 +279,7 @@ export function isValidElement(value: unknown): value is Element {
       return (
         hasBoxFields(value) &&
         isString(value.content) &&
+        isOptionalFiniteNumber(value.padding, 0, 1_000) &&
         isFiniteNumberInRange(value.fontSize, 1, 1_000) &&
         isString(value.fontFamily, 256) &&
         isOptionalEnum(value.textAlign, TEXT_ALIGNS) &&

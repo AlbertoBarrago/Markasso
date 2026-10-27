@@ -614,6 +614,7 @@ export function initContextPanel(
               size,
               selectedText.fontFamily,
               selectedText.bold,
+              selectedText.padding,
             )
           : undefined;
       history.dispatch({

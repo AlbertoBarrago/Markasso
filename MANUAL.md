@@ -36,7 +36,7 @@ Press `Escape` to return to the Select tool at any time.
 
 ### Connector Editing
 
-The main numbered connector slot is **Line** (toolbar position `5`).
+The **Arrow / Line** connector has its own arrow button on the toolbar (`5`), outside the shapes menu.
 
 - `A`, `L`, and `5` all select the same connector tool.
 - Arrowheads are a style of line elements, configurable from the properties panel.
@@ -45,16 +45,22 @@ The main numbered connector slot is **Line** (toolbar position `5`).
 - **Routing:** switch a connector between **Straight** and **Elbow** (orthogonal) in the properties panel. See Smart Arrow Links below.
 - **Arrowhead styles:** each end can use an open head, a hollow or filled triangle, a hollow or filled diamond, or a circle.
 
+The toolbar is dedicated to drawing. On narrow windows, pen, text, sticky note and eraser progressively move into **⋯ More tools**; hand, select, basic shapes and the connector stay visible. The menu lists **Presets**, **Library**, **Import Mermaid**, **Insert image** and, in a separate group, **Start live session**. Presets insert a grouped diagram at the center of the viewport. Zoom and undo/redo remain in separate panels enabled from Preferences.
+
 ### Moving the Toolbar
 
-The toolbar starts at the bottom center of the screen. The **move handle** (six dots) at its left end lets you place it anywhere in the viewport:
+The toolbar starts at the bottom center. Its **move handle** (six dots) docks it in **six positions**: top or bottom, aligned left, center or right.
 
-- **Drag** the handle to move the toolbar.
-- **Click** the handle, then click where the toolbar should go (no dragging needed). Click the handle again or press `Escape` to cancel.
-- With the handle focused, the **arrow keys** move the toolbar (`Shift` for bigger steps).
-- **Double-click** the handle, or press `Home` while it is focused, to put the toolbar back at the bottom center.
+- **Drag** the handle toward a highlighted target: arrows and a preview show the dock before you release.
+- **Click** the handle, then the desired position to move it without dragging. Press `Escape` or click the handle again to cancel.
+- With the handle focused, **Left / Right** change alignment and **Up / Down** choose top or bottom.
+- **Double-click** the handle or press **Home** to reset to bottom-center.
 
-The position is remembered between sessions. When the toolbar sits in the upper half of the screen, its menus open below it. In its default position on narrow windows, it moves to the left edge so it does not cover the minimap; below 700px the minimap is hidden and the toolbar stays centered.
+The position is remembered between sessions and adapts to the space occupied by the menu, minimap, panels and visible controls. Hints follow the toolbar: above it when docked at the bottom, below it when docked at the top; tool menus open toward the inside of the screen.
+
+In **Menu → Preferences**, **Show zoom controls** and **Show undo/redo controls** independently enable the panels in the bottom corners. The zoom panel offers fit to content, zoom out, the current percentage (click to reset to 100%) and zoom in. Preferences are saved; enabling undo/redo moves the minimap upward to leave room.
+
+Open Preferences directly with **Cmd+,** on macOS or **Ctrl+,** on other systems, including while typing.
 
 ### Tool Lock
 
@@ -99,6 +105,10 @@ Click anywhere to place a text box and start typing. Press `Enter` to confirm, `
 
 **Text alignment:** set left, center, or right alignment per element from the properties panel.
 
+### Sticky Notes
+
+Choose **Sticky note** from the toolbar (or **⋯ More tools** on narrow windows), or press `N`, then click the board. The yellow background appears immediately while you type, with 12 px of internal padding. The note keeps its width, wraps the text and grows taller when needed. `Enter` adds a line; click outside or press `Escape` to commit. Double-click to edit it again. An empty note is removed.
+
 ### Shape Labels
 Double-click any rectangle or ellipse to add a text label inside it. The label is clipped to the shape's bounds.
 
@@ -109,7 +119,7 @@ Double-click any line with arrowheads to add a label along its path. On curved c
 
 ## Library: Flowchart Shapes & Icons
 
-Open the **Library** with `I` or the library button (stacked books) in the top-right toolbar. It is a searchable sidebar, like Excalidraw's:
+Open the **Library** with `I` or **⋯ More tools → Library**. It is a searchable sidebar, like Excalidraw's:
 
 - **Click** an item to insert it at the center of the view, or **drag** it onto the canvas to drop it where you want.
 - **Search** filters every section at once. Recently used items are listed first.
@@ -349,22 +359,28 @@ A small overview panel in the bottom-right corner shows all elements at a reduce
 
 ## Share Link
 
-Click the **share icon** in the top-right toolbar to encode the entire scene into a URL. The link is copied to your clipboard automatically. Share it — anyone who opens the URL sees the same canvas, ready to continue editing.
+Choose **Menu → Share → Copy link** to encode the entire scene into a URL. The link is copied to your clipboard automatically. Share it — anyone who opens the URL sees the same canvas, ready to continue editing.
+
+---
+
+## Live Sessions
+
+Choose **⋯ More tools → Start live session** to open a shared board. Its link is copied to the clipboard; people opening it can draw with you. Your stored name appears in the top corner: click it to change it. A small red blinking dot beside the name indicates an active connection; it stays static when reduced motion is enabled.
 
 ---
 
 ## Theme
 
-Switch between **Dark**, **Light**, and **System** themes from the Settings panel (hamburger menu). Your preference is saved across sessions.
+Switch between **Dark**, **Light**, and **System** themes from **Menu → Theme**. Your preference is saved across sessions.
 
 ---
 
 ## Import & Export
 
-- **Import image:** click the image icon in the context toolbar (or drag and drop onto the canvas, or `Ctrl+V` to paste from clipboard).
+- **Import image:** choose **⋯ More tools → Insert image** (or drag and drop onto the canvas, or `Ctrl+V` to paste from clipboard).
 - **Open .markasso:** drag and drop a `.markasso` file onto the canvas, or use File → Open in the Settings menu.
 - **Save .markasso:** File → Save in the Settings menu. Saves the full scene including images.
-- **Import Mermaid diagram:** drag and drop a `.mmd` or `.mermaid` file onto the canvas, click the Mermaid button in the toolbar, or paste Mermaid text with `Ctrl+V`. Supported diagram types:
+- **Import Mermaid diagram:** drag and drop a `.mmd` or `.mermaid` file onto the canvas, choose **⋯ More tools → Import Mermaid**, or paste Mermaid text with `Ctrl+V`. Supported diagram types:
   - Parsing and layout use the official Mermaid engine, loaded on first import.
   - Flowcharts (including subgraphs), sequence, class, state and entity-relationship diagrams are converted to native, editable elements.
   - Other diagram types, such as gantt, pie, gitGraph and mindmap, are imported as an SVG image; their individual nodes cannot be edited.
@@ -402,6 +418,7 @@ Switch between **Dark**, **Light**, and **System** themes from the Settings pane
 | `Ctrl+Minus` | Zoom out |
 | `Shift+0` | Reset zoom to 100% |
 | `\` | Toggle all UI panels |
+| `Cmd+,` / `Ctrl+,` | Open Preferences directly |
 | `Ctrl+K` | Open command palette |
 | `Ctrl+F` | Open element search |
 | `Ctrl+Z` | Undo |

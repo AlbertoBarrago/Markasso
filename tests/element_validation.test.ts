@@ -226,3 +226,36 @@ describe('connector anchor validation', () => {
     expect(validateElements([{ ...line, endAnchor: [0, 1] }])).toBeNull();
   });
 });
+
+describe('text padding validation', () => {
+  const note = {
+    id: 'note',
+    type: 'text',
+    x: 0,
+    y: 0,
+    width: 200,
+    height: 180,
+    content: 'Note',
+    fontSize: 16,
+    fontFamily: 'Arial',
+    strokeColor: '#5c4a00',
+    fillColor: '#FFD966',
+    strokeWidth: 1,
+    opacity: 1,
+    roughness: 0,
+  };
+  it('accepts padded notes and older text without padding', () => {
+    expect(validateElements([note])?.length).toBe(1);
+    expect(validateElements([{ ...note, padding: 12 }])?.[0]).toMatchObject({
+      padding: 12,
+    });
+  });
+  it.each([
+    -1,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    '12',
+  ])('rejects invalid padding %s', (padding) => {
+    expect(validateElements([{ ...note, padding }])).toBeNull();
+  });
+});

@@ -36,7 +36,7 @@ Premi `Esc` per tornare in qualsiasi momento allo strumento Selezione.
 
 ### Modifica dei connettori
 
-Lo slot connettore principale è **Linea** (posizione `5` nella toolbar).
+Il connettore **Freccia / Linea** ha un pulsante dedicato con la freccia nella toolbar (`5`), fuori dal menu delle forme.
 
 - `A`, `L` e `5` selezionano tutti lo stesso strumento connettore.
 - Le punte di freccia sono uno stile delle linee, configurabile dal pannello proprietà.
@@ -45,16 +45,22 @@ Lo slot connettore principale è **Linea** (posizione `5` nella toolbar).
 - **Percorso:** passa un connettore da **Dritto** a **A gomito** (ortogonale) nel pannello proprietà. Vedi Smart Arrow Link più sotto.
 - **Stili delle punte:** ogni estremità può avere una punta aperta, un triangolo vuoto o pieno, un rombo vuoto o pieno, oppure un cerchio.
 
+La toolbar è dedicata al disegno. Nelle finestre strette penna, testo, nota e gomma confluiscono progressivamente nel menu **⋯ Altri strumenti**; mano, selezione, forme base e connettore restano visibili. Il menu contiene, in ordine, **Modelli**, **Libreria**, **Importa Mermaid**, **Inserisci immagine** e, in un gruppo separato, **Avvia sessione live**. I Modelli inseriscono un diagramma già raggruppato al centro della vista. Zoom e annulla/ripristina rimangono nei pannelli separati, attivabili dalle Preferenze.
+
 ### Spostare la toolbar
 
-La toolbar parte in basso al centro dello schermo. La **maniglia di spostamento** (sei puntini) alla sua estremità sinistra permette di posizionarla ovunque nella vista:
+La toolbar parte in basso al centro. La **maniglia di spostamento** (sei puntini) permette di agganciarla in **sei posizioni**: in alto o in basso, a sinistra, al centro o a destra.
 
-- **Trascina** la maniglia per spostare la toolbar.
-- **Fai clic** sulla maniglia, poi fai clic dove vuoi posizionare la toolbar (senza trascinare). Fai di nuovo clic sulla maniglia o premi `Esc` per annullare.
-- Con la maniglia selezionata, i **tasti freccia** spostano la toolbar (`Shift` per passi più ampi).
-- **Doppio clic** sulla maniglia, oppure `Home` quando è selezionata, riporta la toolbar in basso al centro.
+- **Trascina** la maniglia verso un punto evidenziato: frecce e anteprima mostrano l’aggancio prima del rilascio.
+- **Fai clic** sulla maniglia, poi sulla posizione desiderata, per spostarla senza trascinare. Premi `Esc` o fai di nuovo clic sulla maniglia per annullare.
+- Con la maniglia selezionata, **← / →** cambiano l’allineamento e **↑ / ↓** scelgono alto o basso.
+- **Doppio clic** sulla maniglia o **Home** ripristina l’aggancio in basso al centro.
 
-La posizione viene ricordata tra una sessione e l'altra. Quando la toolbar si trova nella metà superiore dello schermo, i suoi menu si aprono sotto. Nella posizione predefinita, nelle finestre strette si sposta sul bordo sinistro per non coprire la minimappa; sotto i 700px la minimappa è nascosta e la toolbar resta al centro.
+La posizione viene ricordata tra le sessioni e si adatta agli ingombri di menu, minimappa, pannelli e controlli visibili. I suggerimenti seguono la toolbar: sopra quando è in basso, sotto quando è in alto; i menu degli strumenti si aprono verso l’interno dello schermo.
+
+In **Menu → Preferenze**, **Mostra controlli zoom** e **Mostra annulla/ripristina** attivano separatamente i pannelli negli angoli inferiori. Il pannello zoom contiene adatta al contenuto, riduci, percentuale (clic per tornare al 100%) e aumenta. Le preferenze vengono salvate; con annulla/ripristina visibile, la minimappa sale per lasciare spazio.
+
+Apri direttamente le Preferenze con **⌘,** su macOS o **Ctrl+,** sugli altri sistemi, anche mentre stai scrivendo.
 
 ### Blocco strumento
 
@@ -99,6 +105,10 @@ Clicca in un punto qualsiasi per posizionare una casella di testo e iniziare a s
 
 **Allineamento del testo:** imposta l'allineamento a sinistra, al centro o a destra per ogni elemento dal pannello proprietà.
 
+### Note adesive
+
+Scegli la **nota adesiva** dalla toolbar (o da **⋯ Altri strumenti** nelle finestre strette), oppure premi `N`, poi fai clic sulla lavagna. Lo sfondo giallo compare subito mentre scrivi, con 12 px di spazio interno. La nota mantiene la sua larghezza, manda a capo il testo e cresce in altezza quando serve. `Invio` aggiunge una riga; clic fuori dalla nota o `Esc` conferma il testo. Fai doppio clic per modificarla di nuovo. Una nota lasciata vuota viene rimossa.
+
 ### Etichette sulle forme
 Fai doppio clic su un rettangolo o un'ellisse per aggiungere un'etichetta di testo al suo interno. L'etichetta viene ritagliata ai confini della forma.
 
@@ -109,7 +119,7 @@ Fai doppio clic su una linea con punte di freccia per aggiungere un'etichetta lu
 
 ## Libreria: forme flowchart e icone
 
-Apri la **Libreria** con `I` o con il pulsante libreria (i libri) nella toolbar in alto a destra. È un pannello laterale con ricerca, come quello di Excalidraw:
+Apri la **Libreria** con `I` o da **⋯ Altri strumenti → Libreria**. È un pannello laterale con ricerca, come quello di Excalidraw:
 
 - **Clic** su un elemento per inserirlo al centro della vista, oppure **trascinalo** sul canvas per posizionarlo dove vuoi.
 - La **ricerca** filtra tutte le sezioni insieme. Gli elementi usati di recente compaiono per primi.
@@ -349,22 +359,28 @@ Un piccolo pannello panoramico nell'angolo in basso a destra mostra tutti gli el
 
 ## Link di condivisione
 
-Clicca l'**icona di condivisione** nella toolbar in alto a destra per codificare l'intera scena in un URL. Il link viene copiato automaticamente negli appunti. Condividilo — chiunque apra l'URL vede lo stesso canvas, pronto per continuare a modificarlo.
+Scegli **Menu → Condividi → Copia link** per codificare l'intera scena in un URL. Il link viene copiato automaticamente negli appunti. Condividilo — chiunque apra l'URL vede lo stesso canvas, pronto per continuare a modificarlo.
+
+---
+
+## Sessioni live
+
+Scegli **⋯ Altri strumenti → Avvia sessione live** per aprire una lavagna condivisa. Il link viene copiato negli appunti; le persone che lo aprono possono disegnare insieme a te. Il nome salvato compare nell’angolo superiore: fai clic per cambiarlo. Un pallino rosso lampeggiante accanto al nome indica la connessione attiva; resta fisso con la preferenza di movimento ridotto.
 
 ---
 
 ## Tema
 
-Passa tra i temi **Scuro**, **Chiaro** e **Sistema** dal pannello Impostazioni (menu hamburger). La tua preferenza viene salvata tra una sessione e l'altra.
+Passa tra i temi **Scuro**, **Chiaro** e **Sistema** da **Menu → Tema**. La tua preferenza viene salvata tra una sessione e l'altra.
 
 ---
 
 ## Importa ed esporta
 
-- **Importa immagine:** clicca l'icona immagine nella toolbar contestuale (oppure trascina e rilascia sul canvas, o `Ctrl+V` per incollare dagli appunti).
+- **Importa immagine:** scegli **⋯ Altri strumenti → Inserisci immagine** (oppure trascina e rilascia sul canvas, o `Ctrl+V` per incollare dagli appunti).
 - **Apri .markasso:** trascina e rilascia un file `.markasso` sul canvas, oppure usa File → Apri nel menu Impostazioni.
 - **Salva .markasso:** File → Salva nel menu Impostazioni. Salva l'intera scena incluse le immagini.
-- **Importa diagramma Mermaid:** trascina e rilascia un file `.mmd` o `.mermaid` sul canvas, clicca il pulsante Mermaid nella toolbar, oppure incolla testo Mermaid con `Ctrl+V`. Tipi di diagramma supportati:
+- **Importa diagramma Mermaid:** trascina e rilascia un file `.mmd` o `.mermaid` sul canvas, scegli **⋯ Altri strumenti → Importa Mermaid**, oppure incolla testo Mermaid con `Ctrl+V`. Tipi di diagramma supportati:
   - Parsing e disposizione usano il motore ufficiale Mermaid, caricato alla prima importazione.
   - Flowchart (inclusi i sottografi), diagrammi di sequenza, classi, stati ed entità-relazioni vengono convertiti in elementi nativi modificabili.
   - Gli altri tipi di diagramma, come gantt, pie, gitGraph e mindmap, vengono importati come immagine SVG; i singoli nodi non sono modificabili.
@@ -402,6 +418,7 @@ Passa tra i temi **Scuro**, **Chiaro** e **Sistema** dal pannello Impostazioni (
 | `Ctrl+Meno` | Zoom indietro |
 | `Shift+0` | Reimposta zoom al 100% |
 | `\` | Mostra/nascondi tutti i pannelli UI |
+| `⌘,` / `Ctrl+,` | Apri direttamente le Preferenze |
 | `Ctrl+K` | Apri il riquadro comandi |
 | `Ctrl+F` | Apri la ricerca elementi |
 | `Ctrl+Z` | Annulla |

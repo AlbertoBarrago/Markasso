@@ -68,7 +68,9 @@ export function measureTextWidth(
 /**
  * Splits text into the lines it is drawn on: explicit newlines first, then
  * word wrapping at `maxWidth`. A single word longer than the width keeps
- * its own line rather than being broken mid-word.
+ * its own line rather than being broken mid-word, unless `breakWords` is set:
+ * then it is split by character like CSS `overflow-wrap: break-word`, which
+ * fixed-width boxes (sticky notes) need to match their editing textarea.
  */
 export function wrapTextLines(
   content: string,
@@ -76,9 +78,26 @@ export function wrapTextLines(
   fontSize: number,
   fontFamily: string,
   bold = false,
+  breakWords = false,
 ): string[] {
   const measure = (s: string) =>
     measureTextWidth(s, fontSize, fontFamily, bold);
+  /** Pushes every leading chunk of `text` that fills a line; returns the rest. */
+  const breakOverflow = (text: string): string => {
+    let chars = Array.from(text);
+    while (chars.length > 1 && measure(chars.join('')) > maxWidth) {
+      // Always keep at least one character so a too-narrow box still advances.
+      let fit = 1;
+      while (
+        fit < chars.length &&
+        measure(chars.slice(0, fit + 1).join('')) <= maxWidth
+      )
+        fit++;
+      result.push(chars.slice(0, fit).join(''));
+      chars = chars.slice(fit);
+    }
+    return chars.join('');
+  };
   const result: string[] = [];
   for (const line of content.split('\n')) {
     if (!line || measure(line) <= maxWidth) {
@@ -94,6 +113,7 @@ export function wrapTextLines(
       } else {
         current = candidate;
       }
+      if (breakWords) current = breakOverflow(current);
     }
     if (current) result.push(current);
   }

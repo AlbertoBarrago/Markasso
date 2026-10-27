@@ -102,6 +102,7 @@ body {
 
 /* Center-bottom: tools */
 .tb-island-tools {
+  width: max-content;
   position: fixed;
   bottom: 16px;
   left: 50%;
@@ -112,17 +113,6 @@ body {
 .tb-island-tools--moved {
   bottom: auto;
   transform: none;
-}
-/* In the default position, clear the bottom-right minimap on narrow
-   viewports by moving to the left edge (the minimap itself is hidden below
-   700px) */
-@media (min-width: 700px) and (max-width: 876px) {
-  body:not(.library-open)
-    #app:not(.minimap-hidden)
-    .tb-island-tools:not(.tb-island-tools--moved) {
-    left: 16px;
-    transform: none;
-  }
 }
 .tb-drag-handle {
   cursor: grab;
@@ -142,8 +132,8 @@ body.toolbar-placing * {
 }
 
 /* The hints sit where the toolbar panels open */
-:root:has(.tb-tool-group-panel.open) #shortcuts-hint,
-:root:has(.tb-tool-group-panel.open) #hint-bar {
+:root:has(.tb-more-panel.open) #shortcuts-hint,
+:root:has(.tb-more-panel.open) #hint-bar {
   display: none;
 }
 
@@ -225,26 +215,16 @@ body.toolbar-placing * {
   pointer-events: none;
 }
 
-/* Split button: current shape tool + chevron opening the other shapes */
+/* Toolbar menu anchored to its trigger. */
 .tb-tool-group {
   position: relative;
   display: flex;
   align-items: center;
   gap: 0;
 }
-.tb-tool-group-chevron {
-  width: 16px;
-}
-.tb-tool-group-chevron svg {
-  transition: transform 0.12s;
-}
-.tb-tool-group-chevron.open,
 .tb-tool-group > .tb-btn.open {
   color: var(--text);
   background: var(--bg-hover);
-}
-.tb-tool-group-chevron.open svg {
-  transform: rotate(180deg);
 }
 .tb-tool-group-panel {
   position: absolute;
@@ -292,21 +272,6 @@ body.toolbar-placing * {
 }
 .tb-tooltip.visible {
   display: block;
-}
-
-/* Zoom panel: zoom controls, aligned to the toolbar's right end */
-.tb-zoom-panel {
-  left: auto;
-  right: -4px;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 4px;
-}
-.tb-zoom-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2px;
 }
 
 .tb-name-chip {
@@ -451,4 +416,116 @@ body.ui-hidden #context-panel,
 body.ui-hidden #layers-panel,
 body.ui-hidden #mobile-actions {
   display: none !important;
+}
+
+/* Dock targets are visual guides and never intercept canvas input. */
+.toolbar-dock-preview {
+  position: fixed;
+  z-index: 49;
+  pointer-events: none;
+  border: 2px dashed var(--accent);
+  border-radius: var(--island-radius);
+  background: var(--accent-light);
+}
+.toolbar-dock-magnets span {
+  position: fixed;
+  z-index: 51;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 26px;
+  color: var(--accent);
+  font-size: 20px;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  background: var(--bg-island);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+#zoom-controls,
+#history-controls {
+  position: fixed;
+  bottom: 16px;
+  z-index: 10;
+  display: none;
+}
+#zoom-controls {
+  left: 16px;
+}
+#history-controls {
+  right: 16px;
+}
+.show-zoom-controls #zoom-controls,
+.show-history-controls #history-controls {
+  display: flex;
+}
+.show-history-controls #minimap {
+  bottom: 72px;
+}
+
+.toolbar-dock-guide {
+  position: fixed;
+  z-index: 52;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: calc(100vw - 48px);
+  padding: 10px 16px;
+  border: 1px solid var(--island-border);
+  border-radius: 10px;
+  background: var(--bg-island);
+  color: var(--text);
+  font-size: 13px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Tool overflow opens toward the canvas, like the other toolbar panels. */
+.tb-more-panel {
+  position: fixed;
+  pointer-events: auto;
+  right: auto;
+  bottom: auto;
+  min-width: 220px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+  flex-direction: column;
+  gap: 0;
+}
+.tb-more-panel [hidden],
+.tb-island-tools > [hidden] {
+  display: none;
+}
+#tb-more-tools {
+  font-size: 24px;
+}
+
+/* The name chip is visible only while the live session is connected. */
+.tb-name-chip::before,
+.mobile-name-chip::before {
+  content: "";
+  display: inline-block;
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: live-dot 1.6s ease-in-out infinite;
+}
+@keyframes live-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tb-name-chip::before,
+  .mobile-name-chip::before {
+    animation: none;
+  }
 }

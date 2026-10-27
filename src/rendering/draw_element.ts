@@ -1,4 +1,5 @@
 import { normalizeRect } from '../core/geometry';
+import { getTextContentBox } from '../core/text_measure';
 import { wrapTextLines } from '../core/text_metrics';
 import type {
   ArrowElement,
@@ -322,22 +323,27 @@ export function drawElement(
           el.textAlign ?? 'left',
         );
       } else {
+        const box = getTextContentBox(el);
+        if (el.fillColor !== 'transparent') {
+          ctx.fillStyle = el.fillColor;
+          ctx.fillRect(el.x, el.y, el.width, el.height);
+        }
         drawText(
           ctx,
-          el.x,
-          el.y,
+          box.x,
+          box.y,
           el.content,
           el.fontSize,
           el.fontFamily,
           strokeColor,
-          el.fillColor,
-          el.width,
-          el.height,
+          box.width,
           el.textAlign ?? 'left',
           el.bold,
           el.italic,
           el.underline,
           el.strikethrough,
+          // Padded text keeps a fixed box, like its editor (text_tool.ts).
+          box.padding > 0,
         );
       }
       break;
@@ -1042,19 +1048,14 @@ function drawText(
   fontSize: number,
   fontFamily: string,
   color: string,
-  bgColor: string,
   elWidth: number,
-  elHeight: number,
   textAlign: 'left' | 'center' | 'right' = 'left',
   bold?: boolean,
   italic?: boolean,
   underline?: boolean,
   strikethrough?: boolean,
+  breakWords = false,
 ): void {
-  if (bgColor !== 'transparent') {
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(x, y, elWidth, elHeight);
-  }
   const fontStyle = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${fontSize}px ${fontFamily}`;
   ctx.font = fontStyle;
   ctx.fillStyle = color;
@@ -1067,7 +1068,14 @@ function drawText(
         ? x + elWidth
         : x;
   const lineHeight = fontSize * 1.2;
-  const lines = wrapTextLines(content, elWidth, fontSize, fontFamily, bold);
+  const lines = wrapTextLines(
+    content,
+    elWidth,
+    fontSize,
+    fontFamily,
+    bold,
+    breakWords,
+  );
   for (let i = 0; i < lines.length; i++) {
     const lineY = y + i * lineHeight;
     ctx.fillText(lines[i] ?? '', drawX, lineY);

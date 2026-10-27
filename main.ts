@@ -101,26 +101,25 @@ async function bootstrap(): Promise<void> {
   // Restore persisted UI settings before first paint
   applySettings(appEl, loadSettings());
 
-  const { openMermaidDialog } = initToolbar(toolbar, hist);
+  const { openImagePicker } = initImageImport(workspace, hist);
+  initToolbar(toolbar, hist, openImagePicker);
   const reportForm = initReportForm(appEl);
   const guide = initGuide(appEl);
   const starCta = initStarCta(appEl);
-  initSettings(
+  const { openPreferences } = initSettings(
     appEl,
     toolbar,
     hist,
     () => reportForm.open(),
     () => guide.open(),
-    openMermaidDialog,
     () => starCta.open(),
   );
   const { selectTool } = initCanvasView(canvas, hist);
   initContextPanel(workspace, hist, (source) =>
     selectTool.activateFormatPainter(source),
   );
-  initImageImport(workspace, hist);
   initMobileActionBar(workspace, hist);
-  initShortcuts(hist, selectTool);
+  initShortcuts(hist, selectTool, openPreferences);
   initCommandPalette(hist, selectTool);
   initMinimap(workspace, hist);
   initElementSearch(workspace, hist);

@@ -58,7 +58,11 @@ function zoomKeyDirection(e: KeyboardEvent): 'in' | 'out' | null {
   return null;
 }
 
-export function initShortcuts(history: History, selectTool: SelectTool): void {
+export function initShortcuts(
+  history: History,
+  selectTool: SelectTool,
+  openPreferences: () => void,
+): void {
   let pasteCount = 0;
   const shortcuts = new Map<string, () => void>([
     ['h', () => history.dispatch({ type: 'SET_TOOL', tool: 'hand' })],
@@ -90,6 +94,11 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
   let previousTool: ActiveTool | null = null;
 
   window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key === ',') {
+      e.preventDefault();
+      openPreferences();
+      return;
+    }
     // Don't capture shortcuts when typing in an input/textarea/select/contenteditable
     const target = e.target as HTMLElement;
     if (

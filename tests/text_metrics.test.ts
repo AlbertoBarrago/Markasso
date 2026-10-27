@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { getTextContentBox, measureTextBounds } from '../src/core/text_measure';
 import {
   LINE_HEIGHT_RATIO,
   measureTextBlock,
@@ -64,6 +65,36 @@ describe('wrapTextLines', () => {
     ]);
   });
 
+  it('splits an overlong word by character when breakWords is set', () => {
+    const word = 'Supercalifragilistic';
+    const lines = wrapTextLines(word, 40, 14, ARIAL, false, true);
+    expect(lines.length).toBeGreaterThan(1);
+    expect(lines.join('')).toBe(word);
+    for (const line of lines)
+      expect(measureTextWidth(line, 14, ARIAL)).toBeLessThanOrEqual(40);
+  });
+
+  it('moves an overlong word to its own line before breaking it', () => {
+    const lines = wrapTextLines(
+      'io siasdasdasdasdasd',
+      60,
+      14,
+      ARIAL,
+      false,
+      true,
+    );
+    expect(lines[0]).toBe('io');
+    expect(lines.slice(1).join('')).toBe('siasdasdasdasdasd');
+  });
+
+  it('keeps at least one character per line in a too-narrow box', () => {
+    expect(wrapTextLines('abc', 1, 14, ARIAL, false, true)).toEqual([
+      'a',
+      'b',
+      'c',
+    ]);
+  });
+
   it('keeps empty lines', () => {
     expect(wrapTextLines('a\n\nb', 100, 14, ARIAL)).toEqual(['a', '', 'b']);
   });
@@ -74,5 +105,39 @@ describe('measureTextBlock', () => {
     const block = measureTextBlock(['ab', 'abcd'], 10, ARIAL);
     expect(block.width).toBeCloseTo(measureTextWidth('abcd', 10, ARIAL), 5);
     expect(block.height).toBeCloseTo(2 * 10 * LINE_HEIGHT_RATIO, 5);
+  });
+});
+
+describe('measureTextBounds with padding', () => {
+  it('adds the padding on every side', () => {
+    const bare = measureTextBounds('Note', 16, ARIAL);
+    const padded = measureTextBounds('Note', 16, ARIAL, false, 12);
+    expect(padded.width).toBe(bare.width + 24);
+    expect(padded.height).toBe(bare.height + 24);
+  });
+
+  it('leaves a content box wide enough to keep each line unwrapped', () => {
+    const content = 'Sticky note\nsecond line';
+    const size = measureTextBounds(content, 24, ARIAL, false, 12);
+    const box = getTextContentBox({
+      id: 'note',
+      type: 'text',
+      x: 0,
+      y: 0,
+      ...size,
+      content,
+      padding: 12,
+      fontSize: 24,
+      fontFamily: ARIAL,
+      strokeColor: '#000',
+      fillColor: '#fde68a',
+      strokeWidth: 1,
+      opacity: 1,
+      roughness: 0,
+    });
+    expect(wrapTextLines(content, box.width, 24, ARIAL)).toEqual([
+      'Sticky note',
+      'second line',
+    ]);
   });
 });

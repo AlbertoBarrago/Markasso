@@ -1,5 +1,6 @@
 import { normalizeRect } from '../core/geometry';
 import type { Scene } from '../core/scene';
+import { getTextContentBox } from '../core/text_measure';
 import { wrapTextLines } from '../core/text_metrics';
 import type {
   ArrowElement,
@@ -738,30 +739,36 @@ function freehandToSVG(el: FreehandElement, ox: number, oy: number): string {
 }
 
 function textToSVG(el: TextElement, ox: number, oy: number): string {
+  const box = getTextContentBox(el);
   const lines = wrapTextLines(
     el.content,
-    el.width,
+    box.width,
     el.fontSize,
     el.fontFamily,
     el.bold,
+    box.padding > 0,
   );
   const lineHeight = el.fontSize * 1.2;
   const align = el.textAlign ?? 'left';
   const x =
-    el.x +
+    box.x +
     ox +
-    (align === 'center' ? el.width / 2 : align === 'right' ? el.width : 0);
+    (align === 'center' ? box.width / 2 : align === 'right' ? box.width : 0);
   const anchor =
     align === 'center' ? 'middle' : align === 'right' ? 'end' : 'start';
   const tspans = lines
     .map(
       (line, i) =>
-        `<tspan x="${round(x)}" y="${round(el.y + oy + i * lineHeight)}">${escapeXml(line)}</tspan>`,
+        `<tspan x="${round(x)}" y="${round(box.y + oy + i * lineHeight)}">${escapeXml(line)}</tspan>`,
     )
     .join('');
   const weight = el.bold ? ' font-weight="bold"' : '';
   const style = el.italic ? ' font-style="italic"' : '';
-  return `<text font-family="${escapeXml(el.fontFamily)}" font-size="${el.fontSize}"${weight}${style} fill="${escapeXml(el.strokeColor)}" opacity="${el.opacity}" text-anchor="${anchor}" dominant-baseline="text-before-edge"${rotateAttr(el, ox, oy)}>${tspans}</text>`;
+  const background =
+    el.fillColor === 'transparent'
+      ? ''
+      : `<rect x="${round(el.x + ox)}" y="${round(el.y + oy)}" width="${round(el.width)}" height="${round(el.height)}" fill="${escapeXml(el.fillColor)}" opacity="${el.opacity}"${rotateAttr(el, ox, oy)}/>`;
+  return `${background}<text font-family="${escapeXml(el.fontFamily)}" font-size="${el.fontSize}"${weight}${style} fill="${escapeXml(el.strokeColor)}" opacity="${el.opacity}" text-anchor="${anchor}" dominant-baseline="text-before-edge"${rotateAttr(el, ox, oy)}>${tspans}</text>`;
 }
 
 /** Connector label on a box of the canvas color (see connector_labels.ts). */

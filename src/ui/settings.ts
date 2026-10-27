@@ -4,23 +4,10 @@ import { fitToElements } from '../core/viewport';
 import type { History } from '../engine/history';
 import { getLocale, LOCALES, type Locale, setLocale, t } from '../i18n';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
-import { PRESETS } from '../io/presets';
-import {
-  buildLiveRoomUrl,
-  generateRoomId,
-  getStoredName,
-  joinLiveSession,
-} from '../io/realtime';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 import { invalidateThemeCache } from '../rendering/theme_cache';
-import { toggleLibrary } from './library_panel';
-import { setLiveUI } from './live_name';
-import {
-  copyToClipboard,
-  showLiveStatusToast,
-  showShareToast,
-} from './share_actions';
+import { copyToClipboard, showShareToast } from './share_actions';
 
 // ── Theme ─────────────────────────────────────────────────────────────────
 export type ThemeMode = 'light' | 'dark' | 'device';
@@ -50,6 +37,8 @@ applyTheme(getThemeMode());
 export interface UISettings {
   bgColor: string;
   showMinimap: boolean;
+  showZoomControls: boolean;
+  showHistoryControls: boolean;
 }
 
 const STORAGE_KEY = 'markasso-ui-settings';
@@ -66,12 +55,19 @@ export function loadSettings(): UISettings {
       return {
         bgColor: defaultBg,
         showMinimap: true,
+        showZoomControls: false,
+        showHistoryControls: false,
         ...(JSON.parse(raw) as Partial<UISettings>),
       };
   } catch {
     /* ignore */
   }
-  return { bgColor: defaultBg, showMinimap: true };
+  return {
+    bgColor: defaultBg,
+    showMinimap: true,
+    showZoomControls: false,
+    showHistoryControls: false,
+  };
 }
 
 export function saveSettings(s: UISettings): void {
@@ -84,6 +80,8 @@ export function applySettings(appEl: HTMLElement, s: UISettings): void {
   // color change is reflected on the next frame.
   invalidateThemeCache();
   appEl.classList.toggle('minimap-hidden', !s.showMinimap);
+  appEl.classList.toggle('show-zoom-controls', s.showZoomControls);
+  appEl.classList.toggle('show-history-controls', s.showHistoryControls);
 }
 
 const GRID_TYPES: { type: GridType; label: string; desc: string }[] = [
@@ -135,9 +133,6 @@ const ICONS = {
   share: svg(
     `<circle cx="15" cy="5" r="2"/><circle cx="5" cy="10" r="2"/><circle cx="15" cy="15" r="2"/>${p('M7 9l6-3M7 11l6 3')}`,
   ),
-  live: svg(
-    `<circle cx="10" cy="10" r="2"/>${p('M6.5 6.5a5 5 0 000 7M13.5 6.5a5 5 0 010 7M4 4a8.5 8.5 0 000 12M16 4a8.5 8.5 0 010 12')}`,
-  ),
   link: svg(
     p(
       'M8.5 11.5a3.5 3.5 0 005 0l2.5-2.5a3.5 3.5 0 00-5-5l-1 1M11.5 8.5a3.5 3.5 0 00-5 0L4 11a3.5 3.5 0 005 5l1-1',
@@ -146,15 +141,6 @@ const ICONS = {
   x: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`,
   reddit: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/></svg>`,
   bluesky: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.912 0 3.083 0 3.75c0 .667.365 5.46.6 6.256.771 2.627 3.516 3.516 6.056 3.216-3.86.57-7.286 1.996-2.79 7.03 4.958 5.4 6.79-1.157 7.734-4.4.944 3.243 2.077 9.573 7.634 4.4 4.22-4.4 1.07-6.46-2.79-7.03 2.54.3 5.285-.59 6.056-3.216.235-.796.6-5.59.6-6.256 0-.667-.14-1.838-.902-2.185-.66-.3-2.164-.621-4.998 1.62-2.752 2.05-5.71 5.98-6.798 8.14z"/></svg>`,
-  mermaid: svg(
-    `<rect x="1" y="1" width="7" height="5" rx="1"/><rect x="12" y="14" width="7" height="5" rx="1"/>${p('M4.5 6v4h11v4M14 16l1.5-2 1.5 2')}`,
-  ),
-  presets: svg(
-    `<rect x="2" y="2" width="6" height="6" rx="1.5"/><rect x="12" y="2" width="6" height="6" rx="1.5"/><rect x="2" y="12" width="6" height="6" rx="1.5"/><rect x="12" y="12" width="6" height="6" rx="1.5"/>`,
-  ),
-  library: svg(
-    `<rect x="3" y="3.5" width="3.5" height="13" rx="0.8"/><rect x="8" y="3.5" width="3.5" height="13" rx="0.8"/>${p('M13.2 4.6l3.2-.9 3 11.6-3.2.9z')}`,
-  ),
   trash: svg(p('M4 6h12M9 3h2M16 6l-1 11H5L4 6M9 10v4M11 10v4')),
   prefs: svg(p('M3 5h14M3 10h14M3 15h14M7 3v4M13 8v4M10 13v4')),
   chevron: svg(p('M8 5l5 5-5 5')),
@@ -214,9 +200,8 @@ export function initSettings(
   history: History,
   openReportForm: () => void,
   openGuide: () => void,
-  openMermaidDialog: () => void,
   openSupport: () => void,
-): void {
+): { openPreferences: () => void } {
   let current = loadSettings();
   applySettings(appEl, current);
 
@@ -307,26 +292,11 @@ export function initSettings(
         'menu-share',
         ICONS.share,
         t('shareLink'),
-        item('menu-share-live', ICONS.live, t('shareGoLive')) +
-          separator +
-          item('menu-share-copy', ICONS.link, t('shareCopyLink')) +
+        item('menu-share-copy', ICONS.link, t('shareCopyLink')) +
           item('menu-share-x', ICONS.x, t('shareX')) +
           item('menu-share-reddit', ICONS.reddit, t('shareReddit')) +
           item('menu-share-bluesky', ICONS.bluesky, t('shareBluesky')),
-        '<span class="menu-item-hint" id="menu-share-peers"></span>',
       )}
-      ${item('menu-import-mermaid', ICONS.mermaid, t('importMermaid'))}
-      ${separator}
-      ${parentItem(
-        'menu-presets',
-        ICONS.presets,
-        t('presets'),
-        PRESETS.map((def) =>
-          item(`menu-preset-${def.id}`, def.icon, t(def.labelKey)),
-        ).join(''),
-      )}
-      ${item('menu-library', ICONS.library, t('library'), '', kbd('I'))}
-      ${separator}
       ${item('menu-clear', ICONS.trash, t('clearCanvas'), 'menu-item--danger')}
       ${separator}
       ${parentItem(
@@ -334,7 +304,7 @@ export function initSettings(
         ICONS.prefs,
         t('preferences'),
         checkItem('menuitemcheckbox', 'id="sp-grid-visible"', t('grid')) +
-          `<li role="none"><ul role="group" aria-label="${t('grid')}">${GRID_TYPES.map(
+          `<li role="none" id="sp-grid-types"><ul role="group" aria-label="${t('grid')}">${GRID_TYPES.map(
             (g) =>
               checkItem(
                 'menuitemradio',
@@ -351,8 +321,20 @@ export function initSettings(
             kbd('M'),
           ) +
           separator +
+          checkItem(
+            'menuitemcheckbox',
+            'id="sp-zoom-controls"',
+            t('showZoomControls'),
+          ) +
+          checkItem(
+            'menuitemcheckbox',
+            'id="sp-history-controls"',
+            t('showHistoryControls'),
+          ) +
+          separator +
           item('sp-fit-to-content', ICONS.fit, t('fitToContent')) +
           item('sp-reset-zoom', ICONS.zoomReset, t('resetZoom100')),
+        kbd(navigator.platform.toUpperCase().includes('MAC') ? '⌘,' : 'Ctrl+,'),
       )}
       ${parentItem(
         'menu-lang',
@@ -399,7 +381,7 @@ export function initSettings(
   /** The items of `menu` itself, not those of its submenus. */
   const itemsOf = (menu: HTMLElement): HTMLElement[] =>
     [...menu.querySelectorAll<HTMLElement>(ITEM)].filter(
-      (el) => el.closest('[role="menu"]') === menu,
+      (el) => el.closest('[role="menu"]') === menu && !el.closest('[hidden]'),
     );
   const focusAt = (items: HTMLElement[], index: number): void => {
     items[(index + items.length) % items.length]?.focus();
@@ -607,7 +589,20 @@ export function initSettings(
   }
   function syncPanel(): void {
     const { gridVisible, gridType } = history.present.appState;
+    setChecked(
+      panel.querySelector('#sp-zoom-controls')!,
+      current.showZoomControls,
+    );
+    setChecked(
+      panel.querySelector('#sp-history-controls')!,
+      current.showHistoryControls,
+    );
     setChecked(panel.querySelector('#sp-grid-visible')!, gridVisible);
+    const gridTypes = panel.querySelector<HTMLElement>('#sp-grid-types')!;
+    if (!gridVisible && gridTypes.contains(document.activeElement)) {
+      panel.querySelector<HTMLElement>('#sp-grid-visible')!.focus();
+    }
+    gridTypes.hidden = !gridVisible;
     setChecked(
       panel.querySelector('#sp-minimap-visible')!,
       current.showMinimap,
@@ -648,6 +643,7 @@ export function initSettings(
       b.classList.toggle('active', isActive);
       setChecked(b, isActive);
     });
+    if (openParent) positionSubmenu(openParent, submenuOf(openParent));
   }
 
   // ── Toggle ───────────────────────────────────────────────────────────────
@@ -689,36 +685,6 @@ export function initSettings(
   onActivate('#menu-export-html', () => exportHTML(history.present));
 
   // ── Share ────────────────────────────────────────────────────────────────
-  // A menu holds only menu items, so the live session uses the stored name;
-  // the name chip in the top-right island edits it once live.
-  const shareLive = panel.querySelector<HTMLElement>('#menu-share-live')!;
-  const sharePeers = panel.querySelector<HTMLElement>('#menu-share-peers')!;
-  onActivate('#menu-share-live', async () => {
-    const roomId = generateRoomId();
-    const url = buildLiveRoomUrl(roomId);
-    const ok = await copyToClipboard(url);
-    showShareToast(ok, url, t('shareLiveCopied'));
-    joinLiveSession(history, {
-      roomId,
-      name: getStoredName() || 'You',
-      seedElements: history.present.elements,
-      onPeers: (peers) => {
-        sharePeers.textContent =
-          peers.length > 0
-            ? t('livePeers').replace('{{count}}', String(peers.length))
-            : '';
-      },
-      onStatus: (connected) => {
-        setLiveUI(connected);
-        if (connected) shareLive.setAttribute('aria-disabled', 'true');
-        else {
-          shareLive.removeAttribute('aria-disabled');
-          sharePeers.textContent = '';
-        }
-        showLiveStatusToast(connected);
-      },
-    });
-  });
   onActivate('#menu-share-copy', async () => {
     const url = await buildShareUrl(history.present.elements);
     const ok = await copyToClipboard(url);
@@ -750,24 +716,6 @@ export function initSettings(
     ),
   );
 
-  onActivate('#menu-import-mermaid', openMermaidDialog);
-  for (const def of PRESETS) {
-    onActivate(`#menu-preset-${def.id}`, () => {
-      // Built at the center of the viewport and grouped.
-      const vp = history.present.viewport;
-      const cx = (window.innerWidth / 2 - vp.offsetX) / vp.zoom;
-      const cy = (window.innerHeight / 2 - vp.offsetY) / vp.zoom;
-      const elements = def.buildElements(cx, cy, !isResolvedLight());
-      history.dispatch({ type: 'CREATE_ELEMENTS', elements });
-      history.dispatch({
-        type: 'GROUP_ELEMENTS',
-        ids: elements.map((e) => e.id),
-        groupId: crypto.randomUUID(),
-      });
-    });
-  }
-  panel.querySelector('#menu-library')!.setAttribute('aria-keyshortcuts', 'I');
-  onActivate('#menu-library', () => toggleLibrary());
   onActivate('#menu-guide', openGuide);
   onActivate('#menu-report', openReportForm);
   // The link opens itself; this only closes the menu.
@@ -797,6 +745,17 @@ export function initSettings(
   panel
     .querySelector<HTMLElement>('#sp-minimap-visible')!
     .addEventListener('click', () => minimapToggle?.());
+  for (const [selector, key] of [
+    ['#sp-zoom-controls', 'showZoomControls'],
+    ['#sp-history-controls', 'showHistoryControls'],
+  ] as const) {
+    panel.querySelector(selector)!.addEventListener('click', () => {
+      current = { ...current, [key]: !current[key] };
+      saveSettings(current);
+      applySettings(appEl, current);
+      syncPanel();
+    });
+  }
   minimapToggle = () => {
     current = { ...current, showMinimap: !current.showMinimap };
     saveSettings(current);
@@ -917,4 +876,13 @@ export function initSettings(
     });
 
   history.subscribe(syncPanel);
+  const preferencesItem = panel.querySelector<HTMLElement>('#menu-prefs')!;
+  preferencesItem.setAttribute('aria-keyshortcuts', 'Meta+, Control+,');
+  return {
+    openPreferences: () => {
+      open('first');
+      preferencesItem.scrollIntoView({ block: 'nearest' });
+      openSubmenu(preferencesItem, 'first');
+    },
+  };
 }

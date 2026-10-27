@@ -1,3 +1,4 @@
+import { getTextContentBox } from '../core/text_measure';
 import { measureTextWidth } from '../core/text_metrics';
 import { worldToScreen } from '../core/viewport';
 import type { TextElement } from '../elements/element';
@@ -523,6 +524,11 @@ export class TextTool implements Tool {
     this.commitSync(ctx);
     this.editingId = el.id;
 
+    const box = getTextContentBox(el);
+    const hasBackground = !el.isCode && el.fillColor !== 'transparent';
+    // Padded text (sticky notes) keeps its box and wraps inside it; plain
+    // text, with or without a background, grows with its content instead.
+    const fixedBox = !el.isCode && box.padding > 0;
     const { viewport } = ctx.history.present;
     const [screenX, screenY] = worldToScreen(viewport, el.x, el.y);
     const canvasRect = ctx.canvas.getBoundingClientRect();
@@ -561,17 +567,25 @@ export class TextTool implements Tool {
     } else {
       ta.style.minWidth = '4px';
       ta.style.width = `${el.width * viewport.zoom}px`;
-      ta.style.background = 'transparent';
+      ta.style.background = hasBackground ? el.fillColor : 'transparent';
+      ta.style.boxSizing = 'border-box';
+      ta.style.minHeight = fixedBox ? `${el.height * viewport.zoom}px` : '';
+      if (hasBackground) {
+        ta.style.opacity = String(el.opacity);
+        ta.style.boxShadow = `${(el.shadowOffsetX ?? 0) * viewport.zoom}px ${(el.shadowOffsetY ?? 0) * viewport.zoom}px ${(el.shadowBlur ?? 0) * viewport.zoom}px ${el.shadowColor ?? 'transparent'}`;
+      }
       ta.style.border = 'none';
       ta.style.outline = 'none';
-      ta.style.padding = '0';
-      ta.style.whiteSpace = 'pre';
-      ta.style.overflowWrap = 'normal';
+      ta.style.padding = `${box.padding * viewport.zoom}px`;
+      ta.style.whiteSpace = fixedBox ? 'pre-wrap' : 'pre';
+      ta.style.overflowWrap = fixedBox ? 'break-word' : 'normal';
       ta.style.textAlign = el.textAlign ?? 'left';
 
-      mirror = document.createElement('span');
-      mirror.style.cssText = `position:fixed;visibility:hidden;white-space:pre;font:${scaledFont}px ${el.fontFamily};padding:0;`;
-      document.body.appendChild(mirror);
+      if (!fixedBox) {
+        mirror = document.createElement('span');
+        mirror.style.cssText = `position:fixed;visibility:hidden;white-space:pre;font:${scaledFont}px ${el.fontFamily};padding:0;`;
+        document.body.appendChild(mirror);
+      }
     }
 
     // Auto-grow width and height as user types

@@ -1,9 +1,9 @@
 /* ── Library sidebar (shapes and icons), modeled on Excalidraw's ──────── */
 #library-panel {
   position: fixed;
-  top: 16px;
+  top: max(16px, var(--toolbar-panel-top, 0px));
   right: 16px;
-  bottom: 76px;
+  bottom: max(76px, var(--toolbar-panel-bottom, 0px));
   /* Wide enough that shapes and generic icons fit without scrolling;
      bundled packs start collapsed for the same reason. */
   width: min(440px, calc(100vw - 32px));

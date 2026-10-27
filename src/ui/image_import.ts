@@ -13,7 +13,7 @@ const MERMAID_HEADER =
 export function initImageImport(
   workspace: HTMLElement,
   history: History,
-): void {
+): { openImagePicker: () => void } {
   // Hidden file input
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
@@ -140,7 +140,5 @@ export function initImageImport(
     reader.readAsDataURL(file);
   }
 
-  // Expose trigger function via the file input element
-  (fileInput as HTMLInputElement & { triggerOpen: () => void }).triggerOpen =
-    () => fileInput.click();
+  return { openImagePicker: () => fileInput.click() };
 }

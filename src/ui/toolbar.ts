@@ -3,10 +3,23 @@ import { fitToElements } from '../core/viewport';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { importMermaidText } from '../io/mermaid';
-import { getStoredName, onLivePeers, setLiveName } from '../io/realtime';
+import { PRESETS } from '../io/presets';
+import {
+  buildLiveRoomUrl,
+  generateRoomId,
+  getStoredName,
+  joinLiveSession,
+  onLivePeers,
+  setLiveName,
+} from '../io/realtime';
 import { toggleLibrary } from './library_panel';
-import { onLiveHide, onLiveReveal } from './live_name';
+import { onLiveHide, onLiveReveal, setLiveUI } from './live_name';
 import { initPeopleList } from './people_list';
+import {
+  copyToClipboard,
+  showLiveStatusToast,
+  showShareToast,
+} from './share_actions';
 import { initToolbarDrag } from './toolbar_drag';
 import { initTooltips } from './tooltip';
 
@@ -20,7 +33,6 @@ const IC = {
   select: `<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M5.5 3v12.8l2.9-2.9 2.4 5.4 2.1-.95-2.4-5.4 3.8.001z"/></svg>`,
   rectangle: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="14" height="10" rx="1.5"/></svg>`,
   ellipse: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="10" cy="10" rx="7.5" ry="5.5"/></svg>`,
-  line: `<svg width="18" height="18" viewBox="0 0 20 20"><line x1="4" y1="16" x2="16" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
   arrow: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="16" x2="16" y2="4"/><path d="M9 4h7v7"/></svg>`,
   rombo: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l7 7-7 7-7-7z"/></svg>`,
   freehand: `<svg width="18" height="18" aria-hidden="true" focusable="false" role="img" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M12.8 3.4l3.8 3.8-7.9 7.9-3.8-3.8z"/><path d="M4.9 11.3c-1.2 1-1.8 2.2-1.8 3.6 0 1.2-.4 2-1.1 2.7 2 .2 4.3-.2 5.8-1.7l.9-.8"/><path d="M11.6 4.6l3.8 3.8"/></svg>`,
@@ -37,8 +49,6 @@ const IC = {
   close: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="2" y1="2" x2="14" y2="14"/><line x1="14" y1="2" x2="2" y2="14"/></svg>`,
   sticky: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h12a1 1 0 011 1v9l-4 4H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M13 13v3.5L17 13h-4z" fill="currentColor" stroke="none"/><line x1="6" y1="7" x2="14" y2="7"/><line x1="6" y1="10" x2="11" y2="10"/></svg>`,
   curve: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 16 Q10 2 17 16"/></svg>`,
-  magnify: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="12.6" y1="12.6" x2="17" y2="17"/></svg>`,
-  chevronDown: `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5l3 3 3-3"/></svg>`,
   polygon: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l7 6.5-2.5 7h-9L3 9.5z"/></svg>`,
 };
 
@@ -81,7 +91,13 @@ const TOOLS: ToolDef[] = [
     key: 'E / 4',
     num: '4',
   },
-  { tool: 'line', icon: IC.line, label: t('line'), key: 'A / L / 5', num: '5' },
+  {
+    tool: 'line',
+    icon: IC.arrow,
+    label: `${t('arrow')} / ${t('line')}`,
+    key: 'A / L / 5',
+    num: '5',
+  },
   {
     tool: 'freehand',
     icon: IC.freehand,
@@ -90,22 +106,21 @@ const TOOLS: ToolDef[] = [
     num: '6',
   },
   { tool: 'text', icon: IC.text, label: t('textTool'), key: 'T / 7', num: '7' },
+  {
+    tool: 'sticky',
+    icon: IC.sticky,
+    label: t('stickyNote').replace(/\s*\(N\)$/, ''),
+    key: 'N',
+    num: 'N',
+  },
   { tool: 'eraser', icon: IC.eraser, label: t('eraser'), key: '0', num: '0' },
-];
-
-// Shape tools collapsed into one split button: the last used one stays on the
-// toolbar, the chevron opens a panel with the others.
-const SHAPE_GROUP: ReadonlyArray<ActiveTool> = [
-  'rectangle',
-  'rombo',
-  'ellipse',
-  'line',
 ];
 
 export function initToolbar(
   container: HTMLElement,
   history: History,
-): { openMermaidDialog: () => void } {
+  openImagePicker: () => void,
+): void {
   container.innerHTML = '';
 
   // ── Center-bottom: tool buttons pill ──────────────────────────────────────
@@ -114,7 +129,7 @@ export function initToolbar(
   centerPill.setAttribute('aria-label', 'Drawing tools');
   const toolBtns = new Map<ActiveTool, HTMLButtonElement>();
 
-  // Drag handle (first): moves the toolbar, double-click resets it
+  // Drag handle: docks the toolbar; double-click resets to bottom-center
   const dragHandle = mkBtn(IC.dragHandle, t('moveToolbarHint'));
   dragHandle.classList.add('tb-drag-handle');
   dragHandle.setAttribute('aria-label', t('moveToolbar'));
@@ -148,93 +163,272 @@ export function initToolbar(
   const toolBtnHTML = (toolDef: ToolDef): string =>
     `${toolDef.icon}${toolDef.num ? `<span class="tb-btn-key">${toolDef.num}</span>` : ''}`;
 
-  // Shape group split button
-  const shapeDefs = TOOLS.filter((d) => SHAPE_GROUP.includes(d.tool));
-  let shapeCurrent: ToolDef = shapeDefs[0]!;
-  const shapeGroup = div('tb-tool-group');
-  const shapeMainBtn = document.createElement('button');
-  shapeMainBtn.className = 'tb-btn';
-  shapeMainBtn.setAttribute('aria-pressed', 'false');
-  shapeMainBtn.addEventListener('click', () =>
-    history.dispatch({ type: 'SET_TOOL', tool: shapeCurrent.tool }),
-  );
-  const shapeChevron = document.createElement('button');
-  shapeChevron.className = 'tb-btn tb-tool-group-chevron';
-  shapeChevron.title = t('moreShapes');
-  shapeChevron.setAttribute('aria-label', t('moreShapes'));
-  shapeChevron.setAttribute('aria-expanded', 'false');
-  shapeChevron.innerHTML = IC.chevronDown;
-  const shapePanel = div('tb-tool-group-panel');
-  shapePanel.id = 'tb-shape-panel';
-  shapeChevron.setAttribute('aria-controls', shapePanel.id);
-  shapePanel.setAttribute('role', 'group');
-  shapePanel.setAttribute('aria-label', t('moreShapes'));
-  const shapePanelBtns = new Map<ActiveTool, HTMLButtonElement>();
-  for (const toolDef of shapeDefs) {
-    const b = document.createElement('button');
-    b.className = 'tb-btn';
-    b.title = `${toolDef.label} (${toolDef.key})`;
+  for (const toolDef of TOOLS) {
+    const b = mkBtn(toolBtnHTML(toolDef), `${toolDef.label} (${toolDef.key})`);
     b.setAttribute('aria-label', toolDef.label);
-    b.innerHTML = toolBtnHTML(toolDef);
+    b.setAttribute('aria-pressed', 'false');
+    b.dataset.tool = toolDef.tool;
     b.addEventListener('click', () => {
-      setShapeOpen(false);
+      setMoreOpen(false);
       history.dispatch({ type: 'SET_TOOL', tool: toolDef.tool });
     });
-    shapePanelBtns.set(toolDef.tool, b);
-    shapePanel.appendChild(b);
+    toolBtns.set(toolDef.tool, b);
+    centerPill.appendChild(b);
   }
-  // Only one toolbar submenu is open at a time.
-  const setShapeOpen = (open: boolean): void => {
-    if (open) setZoomOpen(false);
-    shapePanel.classList.toggle('open', open);
-    shapeChevron.classList.toggle('open', open);
-    shapeChevron.setAttribute('aria-expanded', String(open));
-  };
-  const renderShapeGroup = (): void => {
-    shapeMainBtn.title = `${shapeCurrent.label} (${shapeCurrent.key})`;
-    shapeMainBtn.setAttribute('aria-label', shapeCurrent.label);
-    shapeMainBtn.innerHTML = toolBtnHTML(shapeCurrent);
-    for (const [toolName, b] of shapePanelBtns) {
-      b.style.display = toolName === shapeCurrent.tool ? 'none' : '';
+
+  const moreGroup = div('tb-tool-group tb-more-group');
+  const moreToggle = mkBtn('⋯', t('moreTools'));
+  moreToggle.id = 'tb-more-tools';
+  moreToggle.setAttribute('aria-haspopup', 'menu');
+  moreToggle.setAttribute('aria-expanded', 'false');
+  const morePanel = div('tb-tool-group-panel tb-more-panel');
+  morePanel.id = 'tb-more-panel';
+  morePanel.setAttribute('role', 'menu');
+  morePanel.setAttribute('aria-labelledby', moreToggle.id);
+  moreToggle.setAttribute('aria-controls', morePanel.id);
+  const moreRoot = div('tb-more-root');
+  moreRoot.setAttribute('role', 'group');
+  morePanel.appendChild(moreRoot);
+  const presetList = div('tb-preset-list');
+  presetList.setAttribute('role', 'group');
+  presetList.setAttribute('aria-label', t('presets'));
+  presetList.hidden = true;
+  morePanel.appendChild(presetList);
+  const overflowTools = new Map<ActiveTool, HTMLButtonElement>();
+  function addMoreItem(
+    icon: string,
+    label: string,
+    run: () => void,
+    shortcut = '',
+  ): HTMLButtonElement {
+    const b = document.createElement('button');
+    b.className = 'menu-item';
+    b.setAttribute('role', 'menuitem');
+    b.tabIndex = -1;
+    if (shortcut)
+      b.setAttribute('aria-keyshortcuts', shortcut.replace(/\s*\/\s*/g, ' '));
+    b.innerHTML = `${icon}<span class="menu-item-label">${label}</span>${shortcut ? `<kbd class="menu-item-kbd">${shortcut}</kbd>` : ''}`;
+    b.addEventListener('click', () => {
+      if (b.getAttribute('aria-disabled') === 'true') return;
+      setMoreOpen(false);
+      focusMoreTrigger();
+      run();
+    });
+    moreRoot.appendChild(b);
+    return b;
+  }
+  const secondaryTools: ActiveTool[] = ['freehand', 'text', 'sticky', 'eraser'];
+  for (const tool of TOOLS.filter((d) => secondaryTools.includes(d.tool))) {
+    const b = addMoreItem(
+      tool.icon,
+      tool.label,
+      () => history.dispatch({ type: 'SET_TOOL', tool: tool.tool }),
+      tool.key,
+    );
+    b.hidden = true;
+    overflowTools.set(tool.tool, b);
+  }
+  const moreDivider = div('menu-divider');
+  moreDivider.setAttribute('role', 'separator');
+  moreRoot.appendChild(moreDivider);
+  const presetToggle = addMoreItem(IC.toolbox, t('presets'), openPresets);
+  presetToggle.id = 'tb-presets';
+  presetToggle.setAttribute('aria-controls', 'tb-preset-list');
+  presetToggle.setAttribute('aria-expanded', 'false');
+  presetList.id = 'tb-preset-list';
+  function openPresets(): void {
+    setMoreOpen(true);
+    moreRoot.hidden = true;
+    presetList.hidden = false;
+    presetToggle.setAttribute('aria-expanded', 'true');
+    positionMorePanel();
+    menuItems()[0]?.focus();
+  }
+  function closePresets(): void {
+    moreRoot.hidden = false;
+    presetList.hidden = true;
+    presetToggle.setAttribute('aria-expanded', 'false');
+  }
+  const backToTools = addMoreItem('←', t('moreTools'), () => {
+    setMoreOpen(true);
+    presetToggle.focus();
+  });
+  presetList.appendChild(backToTools);
+  for (const def of PRESETS) {
+    const button = addMoreItem(def.icon, t(def.labelKey), () => {
+      const vp = history.present.viewport;
+      const cx = (window.innerWidth / 2 - vp.offsetX) / vp.zoom;
+      const cy = (window.innerHeight / 2 - vp.offsetY) / vp.zoom;
+      const elements = def.buildElements(
+        cx,
+        cy,
+        document.documentElement.getAttribute('data-theme') !== 'light',
+      );
+      history.dispatch({ type: 'CREATE_ELEMENTS', elements });
+      history.dispatch({
+        type: 'GROUP_ELEMENTS',
+        ids: elements.map((e) => e.id),
+        groupId: crypto.randomUUID(),
+      });
+    });
+    button.dataset.preset = def.id;
+    presetList.appendChild(button);
+  }
+  addMoreItem(IC.library, t('library'), () => toggleLibrary(), 'I');
+  const mermaidIcon =
+    '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1" y="1" width="7" height="5" rx="1"/><rect x="12" y="14" width="7" height="5" rx="1"/><path d="M4.5 6v4h11v4M14 16l1.5-2 1.5 2"/></svg>';
+  addMoreItem(mermaidIcon, t('importMermaid'), showMermaidDialog);
+  addMoreItem(IC.importImg, t('insertImage'), openImagePicker);
+  const liveDivider = div('menu-divider');
+  liveDivider.setAttribute('role', 'separator');
+  moreRoot.appendChild(liveDivider);
+  const liveIcon =
+    '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2"/><path d="M6.5 6.5a5 5 0 000 7M13.5 6.5a5 5 0 010 7M4 4a8.5 8.5 0 000 12M16 4a8.5 8.5 0 010 12"/></svg>';
+  const liveAction = addMoreItem(liveIcon, t('startLiveSession'), () => {
+    void startLiveSession();
+  });
+  liveAction.id = 'tb-start-live';
+  onLiveReveal(() => liveAction.setAttribute('aria-disabled', 'true'));
+  onLiveHide(() => liveAction.removeAttribute('aria-disabled'));
+  async function startLiveSession(): Promise<void> {
+    liveAction.setAttribute('aria-disabled', 'true');
+    const roomId = generateRoomId();
+    const url = buildLiveRoomUrl(roomId);
+    const copied = await copyToClipboard(url);
+    showShareToast(copied, url, t('shareLiveCopied'));
+    joinLiveSession(history, {
+      roomId,
+      name: getStoredName() || 'You',
+      seedElements: history.present.elements,
+      onStatus: (connected) => {
+        setLiveUI(connected);
+        showLiveStatusToast(connected);
+      },
+    });
+  }
+
+  const menuItems = (): HTMLButtonElement[] =>
+    [
+      ...morePanel.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+    ].filter((b) => !b.closest('[hidden]'));
+  function focusMoreTrigger(): void {
+    if (!window.matchMedia('(pointer: coarse)').matches) moreToggle.focus();
+    else document.getElementById('mobile-tools-fab')?.focus();
+  }
+  function positionMorePanel(): void {
+    const anchor = window.matchMedia('(pointer: coarse)').matches
+      ? document.getElementById('mobile-tools-fab')
+      : moreToggle;
+    if (!anchor) return;
+    const r = anchor.getBoundingClientRect();
+    const below = r.top < window.innerHeight / 2;
+    const room = below ? window.innerHeight - r.bottom - 16 : r.top - 16;
+    morePanel.style.maxHeight = `${Math.max(80, room)}px`;
+    const height = morePanel.offsetHeight;
+    morePanel.style.left = `${Math.max(8, Math.min(r.right - morePanel.offsetWidth, window.innerWidth - morePanel.offsetWidth - 8))}px`;
+    morePanel.style.top = `${Math.max(8, Math.min(below ? r.bottom + 8 : r.top - height - 8, window.innerHeight - height - 8))}px`;
+  }
+  function setMoreOpen(open: boolean, focus = false): void {
+    if (!open) closePresets();
+    morePanel.classList.toggle('open', open);
+    moreToggle.setAttribute('aria-expanded', String(open));
+    moreToggle.classList.toggle('open', open);
+    if (open) {
+      const popup = document.getElementById('mobile-tools-popup');
+      if (popup) {
+        popup.classList.remove('open');
+        popup.hidden = true;
+      }
+      const fab = document.getElementById('mobile-tools-fab');
+      if (fab) {
+        fab.classList.remove('active');
+        fab.innerHTML = IC.toolbox;
+      }
+      positionMorePanel();
+      if (focus) menuItems()[0]?.focus();
     }
-  };
-  shapeChevron.addEventListener('click', () =>
-    setShapeOpen(!shapePanel.classList.contains('open')),
+  }
+  moreToggle.addEventListener('click', () =>
+    setMoreOpen(!morePanel.classList.contains('open'), true),
   );
-  shapeGroup.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && shapePanel.classList.contains('open')) {
+  moreToggle.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    e.stopPropagation();
+    setMoreOpen(true);
+    const items = menuItems();
+    (e.key === 'ArrowDown' ? items[0] : items.at(-1))?.focus();
+  });
+  morePanel.addEventListener('keydown', (e) => {
+    const items = menuItems();
+    const index = items.indexOf(document.activeElement as HTMLButtonElement);
+    if (!presetList.hidden && (e.key === 'Escape' || e.key === 'ArrowLeft')) {
+      e.preventDefault();
       e.stopPropagation();
-      setShapeOpen(false);
-      shapeChevron.focus();
+      closePresets();
+      positionMorePanel();
+      presetToggle.focus();
+      return;
+    }
+    if (e.key === 'ArrowRight' && document.activeElement === presetToggle) {
+      e.preventDefault();
+      e.stopPropagation();
+      openPresets();
+      return;
+    }
+    let next: number | undefined;
+    if (e.key === 'ArrowDown') next = (index + 1) % items.length;
+    else if (e.key === 'ArrowUp')
+      next = (index - 1 + items.length) % items.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = items.length - 1;
+    else if (e.key === 'Escape' || e.key === 'Tab') {
+      setMoreOpen(false);
+      focusMoreTrigger();
+      e.stopPropagation();
+      if (e.key === 'Escape') e.preventDefault();
+      return;
+    }
+    if (
+      next === undefined &&
+      e.key.length === 1 &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.altKey
+    ) {
+      for (let step = 1; step <= items.length; step++) {
+        const candidate = (index + step) % items.length;
+        if (
+          items[candidate]?.textContent
+            ?.trim()
+            .toLocaleLowerCase()
+            .startsWith(e.key.toLocaleLowerCase())
+        ) {
+          next = candidate;
+          break;
+        }
+      }
+    }
+    if (next !== undefined) {
+      e.preventDefault();
+      e.stopPropagation();
+      items[next]?.focus();
     }
   });
   document.addEventListener(
     'pointerdown',
     (e) => {
-      if (!shapeGroup.contains(e.target as Node)) setShapeOpen(false);
+      if (
+        !moreGroup.contains(e.target as Node) &&
+        !morePanel.contains(e.target as Node)
+      )
+        setMoreOpen(false);
     },
     { capture: true },
   );
-  renderShapeGroup();
-  shapeGroup.append(shapeMainBtn, shapeChevron, shapePanel);
-
-  TOOLS.forEach((toolDef) => {
-    if (SHAPE_GROUP.includes(toolDef.tool)) {
-      if (toolDef === shapeDefs[0]) centerPill.appendChild(shapeGroup);
-      return;
-    }
-    const b = document.createElement('button');
-    b.className = 'tb-btn';
-    b.title = `${toolDef.label} (${toolDef.key})`;
-    b.setAttribute('aria-label', toolDef.label);
-    b.setAttribute('aria-pressed', 'false');
-    b.innerHTML = toolBtnHTML(toolDef);
-    b.addEventListener('click', () =>
-      history.dispatch({ type: 'SET_TOOL', tool: toolDef.tool }),
-    );
-    toolBtns.set(toolDef.tool, b);
-    centerPill.appendChild(b);
-  });
+  moreGroup.append(moreToggle);
+  container.appendChild(morePanel);
+  centerPill.appendChild(moreGroup);
 
   // Locked-elements indicator — shown when selection contains locked elements
   const lockedSep = document.createElement('span');
@@ -256,55 +450,7 @@ export function initToolbar(
   centerPill.appendChild(lockedSep);
   centerPill.appendChild(lockedIndicator);
 
-  // ── Undo/redo: in the toolbar, after the zoom button ──────────────────────
-  const undoSep = document.createElement('span');
-  undoSep.className = 'tb-separator';
-  const undoPill = div('tb-tool-group');
-  undoPill.setAttribute('role', 'group');
-  undoPill.setAttribute('aria-label', 'History');
-  const undoBtn = mkBtn(IC.undo, t('undo'));
-  const redoBtn = mkBtn(IC.redo, t('redo'));
-  undoBtn.addEventListener('click', () => history.undo());
-  redoBtn.addEventListener('click', () => history.redo());
-  undoPill.append(undoBtn, redoBtn);
-
-  // ── Zoom: last toolbar button, opens a panel with the zoom controls ───────
-  const zoomGroup = div('tb-tool-group');
-  const zoomToggle = mkBtn(IC.magnify, t('zoomPanel'));
-  zoomToggle.setAttribute('aria-label', t('zoomPanel'));
-  zoomToggle.setAttribute('aria-expanded', 'false');
-  const zoomPanel = div('tb-tool-group-panel tb-zoom-panel');
-  zoomPanel.id = 'tb-zoom-panel';
-  zoomPanel.setAttribute('role', 'group');
-  zoomPanel.setAttribute('aria-label', t('zoomPanel'));
-  zoomToggle.setAttribute('aria-controls', zoomPanel.id);
-  // Stays open while panning and zooming the canvas; only the toggle or
-  // Escape closes it.
-  const setZoomOpen = (open: boolean): void => {
-    if (open) setShapeOpen(false);
-    zoomPanel.classList.toggle('open', open);
-    zoomToggle.classList.toggle('open', open);
-    zoomToggle.setAttribute('aria-expanded', String(open));
-  };
-  zoomToggle.addEventListener('click', () =>
-    setZoomOpen(!zoomPanel.classList.contains('open')),
-  );
-  zoomGroup.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && zoomPanel.classList.contains('open')) {
-      e.stopPropagation();
-      setZoomOpen(false);
-      zoomToggle.focus();
-    }
-  });
-  const zoomPill = div('tb-zoom-row');
-  const fitBtn = mkBtn(IC.fit, t('fitContent'));
-  const minusBtn = mkBtn('−', t('zoomOut'));
-  const plusBtn = mkBtn('+', t('zoomIn'));
-  minusBtn.style.fontSize = plusBtn.style.fontSize = '18px';
-  const zoomLabel = document.createElement('button');
-  zoomLabel.className = 'tb-btn tb-zoom-btn';
-  zoomLabel.title = t('resetZoom');
-  fitBtn.addEventListener('click', () => {
+  const fitContent = (): void => {
     const vp = fitToElements(
       history.present.elements,
       window.innerWidth,
@@ -316,10 +462,8 @@ export function initToolbar(
       offsetY: vp.offsetY,
       zoom: vp.zoom,
     });
-  });
-  minusBtn.addEventListener('click', () => zoomOut(history));
-  plusBtn.addEventListener('click', () => zoomIn(history));
-  zoomLabel.addEventListener('click', () => {
+  };
+  const resetZoom = (): void => {
     const vp = history.present.viewport;
     const w = window.innerWidth,
       h = window.innerHeight;
@@ -331,19 +475,7 @@ export function initToolbar(
       offsetX: w / 2 - worldCX,
       offsetY: h / 2 - worldCY,
     });
-  });
-
-  zoomPill.append(fitBtn, minusBtn, zoomLabel, plusBtn);
-
-  zoomPanel.append(zoomPill);
-  zoomGroup.append(zoomToggle, zoomPanel);
-  const zoomSep = document.createElement('span');
-  zoomSep.className = 'tb-separator';
-  centerPill.insertBefore(zoomSep, lockedSep);
-  centerPill.insertBefore(zoomGroup, lockedSep);
-  centerPill.insertBefore(undoSep, lockedSep);
-  centerPill.insertBefore(undoPill, lockedSep);
-
+  };
   // ── Top-right: live name and people ──────────────────────────────────────────
   const topRight = div('tb-island-topright');
 
@@ -643,8 +775,53 @@ export function initToolbar(
   const tbLeft = div('tb-island tb-left');
   topLeft.append(tbLeft);
 
+  function updateToolsLayout(): void {
+    setMoreOpen(false);
+    for (const tool of secondaryTools) toolBtns.get(tool)!.hidden = false;
+    for (const tool of [...secondaryTools].reverse()) {
+      if (centerPill.offsetWidth <= window.innerWidth - 32) break;
+      toolBtns.get(tool)!.hidden = true;
+    }
+    for (const [tool, button] of overflowTools)
+      button.hidden = !toolBtns.get(tool)!.hidden;
+    moreDivider.hidden = [...overflowTools.values()].every((b) => b.hidden);
+  }
   container.append(centerPill, topRight, topLeft);
+  updateToolsLayout();
+  window.addEventListener('resize', updateToolsLayout);
   initTooltips(centerPill);
+  // Optional standalone controls share the same actions as the toolbar.
+  const zoomControls = div('tb-island');
+  zoomControls.id = 'zoom-controls';
+  zoomControls.setAttribute('role', 'group');
+  zoomControls.setAttribute('aria-label', t('zoomPanel'));
+  const standaloneFit = mkBtn(IC.fit, t('fitContent'));
+  const standaloneMinus = mkBtn('−', t('zoomOut'));
+  const standaloneZoom = mkBtn('', t('resetZoom100'));
+  standaloneZoom.classList.add('tb-zoom-btn');
+  const standalonePlus = mkBtn('+', t('zoomIn'));
+  standaloneFit.addEventListener('click', fitContent);
+  standaloneMinus.addEventListener('click', () => zoomOut(history));
+  standaloneZoom.addEventListener('click', resetZoom);
+  standalonePlus.addEventListener('click', () => zoomIn(history));
+  zoomControls.append(
+    standaloneFit,
+    standaloneMinus,
+    standaloneZoom,
+    standalonePlus,
+  );
+  const historyControls = div('tb-island');
+  historyControls.id = 'history-controls';
+  historyControls.setAttribute('role', 'group');
+  historyControls.setAttribute('aria-label', t('showHistoryControls'));
+  const standaloneUndo = mkBtn(IC.undo, t('undo'));
+  const standaloneRedo = mkBtn(IC.redo, t('redo'));
+  standaloneUndo.addEventListener('click', () => history.undo());
+  standaloneRedo.addEventListener('click', () => history.redo());
+  historyControls.append(standaloneUndo, standaloneRedo);
+  container.append(zoomControls, historyControls);
+  initTooltips(zoomControls);
+  initTooltips(historyControls);
   initToolbarDrag(centerPill, dragHandle);
 
   // ── Mobile: tools FAB + popup ─────────────────────────────────────────────
@@ -672,18 +849,16 @@ export function initToolbar(
     toolsPopup.appendChild(b);
   }
 
-  // Library (shapes and icons) opens as a bottom sheet on mobile
-  const mobileLibraryBtn = document.createElement('button');
-  mobileLibraryBtn.className = 'mobile-tools-popup-btn';
-  mobileLibraryBtn.title = t('library');
-  mobileLibraryBtn.setAttribute('aria-label', t('library'));
-  mobileLibraryBtn.innerHTML = IC.library;
-  mobileLibraryBtn.addEventListener('click', () => {
-    toggleLibrary(true);
-    toolsPopup.classList.remove('open');
-    toolsFab.classList.remove('active');
-  });
-  toolsPopup.appendChild(mobileLibraryBtn);
+  const touch = window.matchMedia('(pointer: coarse)');
+  function placeMoreTrigger(): void {
+    moreToggle.classList.toggle('mobile-tools-popup-btn', touch.matches);
+    if (touch.matches) toolsPopup.appendChild(moreGroup);
+    else centerPill.insertBefore(moreGroup, lockedSep);
+    setMoreOpen(false);
+    updateToolsLayout();
+  }
+  placeMoreTrigger();
+  touch.addEventListener('change', placeMoreTrigger);
 
   // Lock button row at the bottom of the popup
   const lockRowSep = document.createElement('div');
@@ -704,6 +879,8 @@ export function initToolbar(
   toolsPopup.appendChild(lockRowEl);
 
   toolsFab.addEventListener('click', () => {
+    setMoreOpen(false);
+    toolsPopup.hidden = false;
     const open = toolsPopup.classList.toggle('open');
     toolsFab.classList.toggle('active', open);
     toolsFab.innerHTML = open ? IC.close : IC.toolbox;
@@ -738,15 +915,11 @@ export function initToolbar(
       b.classList.toggle('active', isActive);
       b.setAttribute('aria-pressed', String(isActive));
     }
-    const activeShape = shapeDefs.find((d) => d.tool === activeTool);
-    if (activeShape && activeShape !== shapeCurrent) {
-      shapeCurrent = activeShape;
-      renderShapeGroup();
-    }
-    shapeMainBtn.classList.toggle('active', activeShape !== undefined);
-    shapeMainBtn.setAttribute(
-      'aria-pressed',
-      String(activeShape !== undefined),
+    for (const [tool, button] of overflowTools)
+      button.classList.toggle('active', tool === activeTool);
+    moreToggle.classList.toggle(
+      'active',
+      toolBtns.get(activeTool)?.hidden === true,
     );
     toolsPopup
       .querySelectorAll<HTMLButtonElement>('.mobile-tools-popup-btn[data-tool]')
@@ -757,9 +930,10 @@ export function initToolbar(
     mobileLockBtn.classList.toggle('active', toolLocked);
     mobileLockBtn.setAttribute('aria-pressed', String(toolLocked));
     toolsFab.dataset.tool = activeTool;
-    undoBtn.disabled = !history.canUndo();
-    redoBtn.disabled = !history.canRedo();
-    zoomLabel.textContent = `${Math.round(history.present.viewport.zoom * 100)}%`;
+    standaloneUndo.disabled = !history.canUndo();
+    standaloneRedo.disabled = !history.canRedo();
+    const zoomText = `${Math.round(history.present.viewport.zoom * 100)}%`;
+    standaloneZoom.textContent = zoomText;
     // Locked-elements indicator
     const scene = history.present;
     const hasLockedSelected =
@@ -767,15 +941,14 @@ export function initToolbar(
       [...scene.selectedIds].some(
         (id) => scene.elements.find((el) => el.id === id)?.locked,
       );
+    const indicatorWasVisible = lockedIndicator.style.display !== 'none';
     lockedSep.style.display = hasLockedSelected ? '' : 'none';
     lockedIndicator.style.display = hasLockedSelected ? '' : 'none';
+    if (indicatorWasVisible !== hasLockedSelected) updateToolsLayout();
   }
 
   history.subscribe(sync);
   sync();
-
-  // The main menu (settings.ts) opens the Mermaid dialog.
-  return { openMermaidDialog: showMermaidDialog };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

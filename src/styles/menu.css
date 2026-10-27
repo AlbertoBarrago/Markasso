@@ -259,3 +259,8 @@
     max-height: calc(100vh - 160px);
   }
 }
+
+/* Keep the reset percentage with its label in every language. */
+#sp-reset-zoom .menu-item-label {
+  white-space: nowrap;
+}
