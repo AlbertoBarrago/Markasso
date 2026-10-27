@@ -141,12 +141,44 @@
   margin: 4px;
 }
 
+.menu-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+}
 .menu-version {
-  padding: 8px 12px;
   font-size: 11px;
+  margin-left: 4px;
   color: var(--text-muted);
-  text-align: center;
   letter-spacing: 0.04em;
+}
+.menu-footer-link {
+  text-decoration: none;
+  display: flex;
+  padding: 4px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  transition:
+    background 0.1s,
+    color 0.1s;
+}
+.menu-footer-link:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.menu-footer-coffee {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #f59e0b;
+}
+.menu-footer-coffee svg {
+  margin-right: 4px;
+}
+.menu-footer-coffee:hover {
+  color: #fbbf24;
 }
 
 .menu-section-label {
@@ -178,13 +210,6 @@
 }
 .sp-preset.active {
   border-color: var(--accent) !important;
-}
-
-@media (pointer: coarse) and (max-width: 359px) {
-  /* Narrowest phones: the coffee button is the last one that doesn't fit. */
-  .tb-coffee-btn {
-    display: none;
-  }
 }
 
 @media (pointer: coarse) {

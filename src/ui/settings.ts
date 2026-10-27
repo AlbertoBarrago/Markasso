@@ -208,6 +208,7 @@ export function initSettings(
   openReportForm: () => void,
   openGuide: () => void,
   openMermaidDialog: () => void,
+  openSupport: () => void,
 ): void {
   let current = loadSettings();
   applySettings(appEl, current);
@@ -319,13 +320,7 @@ export function initSettings(
       )}
       ${item('menu-library', ICONS.library, t('library'), '', kbd('I'))}
       ${separator}
-      ${item('menu-guide', ICONS.guide, t('guide'))}
-      ${item('menu-report', ICONS.report, t('reportProblem'))}
-      <li role="none">
-        <a class="menu-item" role="menuitem" tabindex="-1" id="menu-github" href="https://github.com/AlbertoBarrago/Markasso" target="_blank" rel="noopener noreferrer">
-          ${ICONS.github}<span class="menu-item-label">GitHub</span>
-        </a>
-      </li>
+      ${item('menu-clear', ICONS.trash, t('clearCanvas'), 'menu-item--danger')}
       ${separator}
       ${parentItem(
         'menu-prefs',
@@ -363,7 +358,8 @@ export function initSettings(
         hint(LOCALES[getLocale()]),
       )}
       ${separator}
-      ${item('menu-clear', ICONS.trash, t('clearCanvas'), 'menu-item--danger')}
+      ${item('menu-guide', ICONS.guide, t('guide'))}
+      ${item('menu-report', ICONS.report, t('reportProblem'))}
       ${separator}
       <li role="none" class="menu-section-label" id="menu-bg-label" aria-hidden="true">${t('canvasBg')}</li>
       <li role="none">
@@ -379,7 +375,15 @@ export function initSettings(
         </ul>
       </li>
     </ul>
-    <div class="menu-version">v${pkg.version}</div>
+    <div class="menu-footer">
+      <button class="menu-footer-link menu-footer-coffee" id="menu-coffee" title="Buy me a coffee" aria-label="Support Markasso with a coffee">${ICONS.coffee} Buy me a coffee</button>
+      <a class="menu-footer-link" id="menu-github" href="https://github.com/AlbertoBarrago/Markasso" target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="GitHub">
+        ${ICONS.github}
+        <span class="menu-version">
+          v${pkg.version}
+        </span> 
+       </a>
+    </div>
   `;
 
   // ── Menu navigation ──────────────────────────────────────────────────────
@@ -400,6 +404,30 @@ export function initSettings(
     document.getElementById(parent.getAttribute('aria-controls')!)!;
 
   let openParent: HTMLElement | null = null;
+  /** The item Tab left for the footer; Shift+Tab returns to it. */
+  let lastItem: HTMLElement | null = null;
+  // The footer controls (GitHub, coffee) sit outside the menu: Tab moves
+  // between them natively, and leaving them either way ends at the menu.
+  const footerControls = [
+    ...panel.querySelectorAll<HTMLElement>('.menu-footer-link'),
+  ];
+  for (const [i, el] of footerControls.entries()) {
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        close();
+      } else if (e.key === 'Tab' && e.shiftKey && i === 0) {
+        e.preventDefault();
+        (lastItem ?? itemsOf(mainMenu)[0])?.focus();
+      } else if (
+        e.key === 'Tab' &&
+        !e.shiftKey &&
+        i === footerControls.length - 1
+      ) {
+        close();
+      }
+    });
+  }
 
   function closeSubmenu(): void {
     if (!openParent) return;
@@ -496,8 +524,14 @@ export function initSettings(
         }
         break;
       case 'Tab':
-        // Close and hand focus back to the menu button; the browser then
-        // moves it on from there.
+        // Tab reaches the footer controls, outside the menu.
+        if (!e.shiftKey) {
+          lastItem = target;
+          footerControls[0]?.focus();
+          break;
+        }
+        // Shift+Tab closes and hands focus back to the menu button; the
+        // browser then moves it on from there.
         close();
         return;
       case ' ':
@@ -732,6 +766,7 @@ export function initSettings(
   onActivate('#menu-report', openReportForm);
   // The link opens itself; this only closes the menu.
   onActivate('#menu-github', () => {});
+  onActivate('#menu-coffee', openSupport);
   panel
     .querySelector<HTMLElement>('#menu-clear')!
     .addEventListener('click', (e) => {

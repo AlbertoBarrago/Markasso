@@ -1314,14 +1314,6 @@
   box-shadow: 0 4px 20px rgba(245, 158, 11, 0.5);
 }
 
-/* Toolbar coffee button styling */
-.tb-coffee-btn {
-  color: #f59e0b !important;
-}
-.tb-coffee-btn:hover {
-  color: #fbbf24 !important;
-}
-
 /* ── Report a problem modal ────────────────────────────────────────────────── */
 #report-modal {
   position: fixed;
@@ -1823,17 +1815,4 @@
   .guide-content {
     padding: 16px 18px;
   }
-}
-
-@keyframes star-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.2);
-  }
-}
-.tb-coffee-btn.pulse {
-  animation: star-pulse 1.6s ease-in-out 2;
 }

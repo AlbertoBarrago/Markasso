@@ -103,6 +103,7 @@ async function bootstrap(): Promise<void> {
   const { openMermaidDialog } = initToolbar(toolbar, hist);
   const reportForm = initReportForm(appEl);
   const guide = initGuide(appEl);
+  const starCta = initStarCta(appEl);
   initSettings(
     appEl,
     toolbar,
@@ -110,8 +111,8 @@ async function bootstrap(): Promise<void> {
     () => reportForm.open(),
     () => guide.open(),
     openMermaidDialog,
+    () => starCta.open(),
   );
-  initStarCta(appEl, toolbar);
   const { selectTool } = initCanvasView(canvas, hist);
   initContextPanel(workspace, hist, (source) =>
     selectTool.activateFormatPainter(source),
