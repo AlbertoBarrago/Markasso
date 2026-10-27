@@ -11,6 +11,7 @@ import { validateElements } from '../io/element_validation';
 import type { SelectTool } from '../tools/select_tool';
 import { isFocusInPanel } from './keyboard_utils';
 import { toggleLibrary } from './library_panel';
+import { toggleMinimap } from './settings';
 
 export function initShortcuts(history: History, selectTool: SelectTool): void {
   let pasteCount = 0;
@@ -36,6 +37,7 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
     ['i', () => toggleLibrary()],
     ['0', () => history.dispatch({ type: 'SET_TOOL', tool: 'eraser' })],
     ['g', () => history.dispatch({ type: 'TOGGLE_GRID' })],
+    ['m', () => toggleMinimap()],
   ]);
 
   // Space bar handling: hold to activate hand tool temporarily

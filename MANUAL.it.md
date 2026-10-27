@@ -331,7 +331,7 @@ Premi `Ctrl+F` per cercare elementi sul canvas in base alla loro etichetta o al 
 
 ## Minimappa
 
-Un piccolo pannello panoramico nell'angolo in basso a destra mostra tutti gli elementi in scala ridotta. Il rettangolo blu rappresenta la vista corrente. Clicca in un punto qualsiasi della minimappa per spostarti lì; trascina per fare pan in continuo. Comprimila o espandila con il pulsante dedicato.
+Un piccolo pannello panoramico nell'angolo in basso a destra mostra tutti gli elementi in scala ridotta. Il rettangolo blu rappresenta la vista corrente. Clicca in un punto qualsiasi della minimappa per spostarti lì; trascina per fare pan in continuo. Premi `M`, oppure usa **Mostra minimappa** nelle Preferenze del menu principale, per mostrarla o nasconderla.
 
 ---
 
@@ -384,6 +384,7 @@ Passa tra i temi **Scuro**, **Chiaro** e **Sistema** dal pannello Impostazioni (
 | `?` | Apri la finestra di aiuto scorciatoie |
 | `Esc` | Torna a Selezione / esci dal gruppo / deseleziona |
 | `G` | Attiva/disattiva griglia |
+| `M` | Mostra/nascondi la minimappa |
 | `F` | Adatta il canvas agli elementi |
 | `Shift+0` | Reimposta zoom al 100% |
 | `\` | Mostra/nascondi tutti i pannelli UI |

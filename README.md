@@ -285,6 +285,7 @@ No `.env` files. No API keys. No containerization required.
 | Key | Action |
 |---|---|
 | `G` | Toggle grid |
+| `M` | Toggle minimap |
 | `F` | Fit all content into view |
 | `Shift+0` | Reset viewport to origin |
 | `\` | Toggle all UI panels |

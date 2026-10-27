@@ -331,7 +331,7 @@ Press `Ctrl+F` to search elements on the canvas by their label or text content. 
 
 ## Minimap
 
-A small overview panel in the bottom-right corner shows all elements at a reduced scale. The blue rectangle represents the current viewport. Click anywhere on the minimap to jump there; drag to pan continuously. Collapse or expand it with the toggle button.
+A small overview panel in the bottom-right corner shows all elements at a reduced scale. The blue rectangle represents the current viewport. Click anywhere on the minimap to jump there; drag to pan continuously. Press `M`, or use **Show minimap** in the main menu's Preferences, to show or hide it.
 
 ---
 
@@ -384,6 +384,7 @@ Switch between **Dark**, **Light**, and **System** themes from the Settings pane
 | `?` | Open keyboard shortcuts help dialog |
 | `Escape` | Back to Select / exit group / deselect |
 | `G` | Toggle grid |
+| `M` | Show / hide the minimap |
 | `F` | Fit canvas to elements |
 | `Shift+0` | Reset zoom to 100% |
 | `\` | Toggle all UI panels |

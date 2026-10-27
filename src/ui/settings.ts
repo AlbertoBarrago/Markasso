@@ -201,6 +201,13 @@ const ICONS = {
   ),
 };
 
+// Set by initSettings so the `M` shortcut and the menu share the same state.
+let minimapToggle: (() => void) | null = null;
+
+export function toggleMinimap(): void {
+  minimapToggle?.();
+}
+
 export function initSettings(
   appEl: HTMLElement,
   toolbarEl: HTMLElement,
@@ -339,8 +346,9 @@ export function initSettings(
           separator +
           checkItem(
             'menuitemcheckbox',
-            'id="sp-minimap-visible"',
+            'id="sp-minimap-visible" aria-keyshortcuts="M"',
             t('showMinimap'),
+            kbd('M'),
           ) +
           separator +
           item('sp-fit-to-content', ICONS.fit, t('fitToContent')) +
@@ -788,12 +796,13 @@ export function initSettings(
     });
   panel
     .querySelector<HTMLElement>('#sp-minimap-visible')!
-    .addEventListener('click', () => {
-      current = { ...current, showMinimap: !current.showMinimap };
-      saveSettings(current);
-      applySettings(appEl, current);
-      syncPanel();
-    });
+    .addEventListener('click', () => minimapToggle?.());
+  minimapToggle = () => {
+    current = { ...current, showMinimap: !current.showMinimap };
+    saveSettings(current);
+    applySettings(appEl, current);
+    syncPanel();
+  };
   panel.querySelectorAll<HTMLElement>('[data-grid]').forEach((b) => {
     b.addEventListener('click', () => {
       history.dispatch({
