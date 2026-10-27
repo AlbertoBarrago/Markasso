@@ -1,10 +1,5 @@
-import type {
-  EllipseElement,
-  RectangleElement,
-  RhombusElement,
-  ShapeElement,
-  ShapeKind,
-} from '../elements/element';
+import type { ShapeKind } from '../elements/element';
+import { DEFAULT_SHAPE_LABEL_FONT_SIZE } from '../elements/label_defaults';
 import {
   SHAPE_DEFINITIONS,
   type ShapeBox,
@@ -90,20 +85,28 @@ export function getShapeTextBox(
 }
 
 /** Horizontal room kept free on each side of a shape label, in total. */
-const LABEL_INSET = 16;
+export const LABEL_INSET = 16;
 
-/** Size a shape label is drawn at when it does not store its own. */
-export const DEFAULT_SHAPE_LABEL_FONT_SIZE = 16;
-/** Font a shape label is drawn with when it does not store its own. */
-export const DEFAULT_SHAPE_LABEL_FONT_FAMILY = 'Arial, sans-serif';
+/** Share of an ellipse's or rhombus's width its label wraps in. */
+export const ROUND_LABEL_AREA = 0.7;
+
+/**
+ * What {@link getLabelWrapWidth} needs to know about a labeled shape: an
+ * element, or a description of one that is about to be created.
+ */
+export type LabeledShape = { readonly labelFontSize?: number } & (
+  | { readonly type: 'rectangle' | 'ellipse' | 'rhombus' }
+  | { readonly type: 'shape'; readonly kind: ShapeKind }
+);
 
 /**
  * Width a shape label wraps at, shared by the canvas, the SVG export and the
  * label editor so the text breaks at the same points in all three. Ellipses
- * and rhombi use 70% of their width, roughly the inscribed area.
+ * and rhombi use {@link ROUND_LABEL_AREA} of their width, roughly the
+ * inscribed area.
  */
 export function getLabelWrapWidth(
-  el: RectangleElement | EllipseElement | RhombusElement | ShapeElement,
+  el: LabeledShape,
   w: number,
   h: number,
 ): number {
@@ -114,7 +117,7 @@ export function getLabelWrapWidth(
       break;
     case 'ellipse':
     case 'rhombus':
-      area = w * 0.7;
+      area = w * ROUND_LABEL_AREA;
       break;
     case 'shape':
       area = getShapeTextBox(el.kind, w, h).w;

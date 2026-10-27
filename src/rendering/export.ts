@@ -15,11 +15,16 @@ import type {
   StencilElement,
   TextElement,
 } from '../elements/element';
+import {
+  DEFAULT_CONNECTOR_LABEL_FONT_SIZE,
+  DEFAULT_LABEL_FONT_FAMILY,
+  DEFAULT_SHAPE_LABEL_FONT_SIZE,
+  DEFAULT_STENCIL_LABEL_FONT_SIZE,
+} from '../elements/label_defaults';
 import { SHAPE_DEFINITIONS, shapeCommandsToPathData } from '../elements/shapes';
 import { ICON_GRID } from '../elements/stencils/generic';
 import { getBundledIcon } from '../elements/stencils/packs';
 import {
-  DEFAULT_STENCIL_LABEL_FONT_SIZE,
   getGenericIcon,
   getStencilLabelHeight,
   getStencilLabelLines,
@@ -49,12 +54,7 @@ import {
   resolveArrowEndpoints,
   resolveConnectorRoute,
 } from './draw_selection';
-import {
-  DEFAULT_SHAPE_LABEL_FONT_FAMILY,
-  DEFAULT_SHAPE_LABEL_FONT_SIZE,
-  getLabelWrapWidth,
-  getShapeTextBox,
-} from './shape_geometry';
+import { getLabelWrapWidth, getShapeTextBox } from './shape_geometry';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -417,7 +417,7 @@ function rectToSVG(el: RectangleElement, ox: number, oy: number): string {
         getLabelWrapWidth(el, w, h),
         el.label,
         el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
-        el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
+        el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
         el.labelColor ?? contrastColor(el.fillColor, el.strokeColor),
         el.opacity,
       );
@@ -440,7 +440,7 @@ function ellipseToSVG(el: EllipseElement, ox: number, oy: number): string {
         getLabelWrapWidth(el, rx * 2, ry * 2),
         el.label,
         el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
-        el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
+        el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
         el.labelColor ?? contrastColor(el.fillColor, el.strokeColor),
         el.opacity,
       );
@@ -468,7 +468,7 @@ function rhombusToSVG(el: RhombusElement, ox: number, oy: number): string {
         getLabelWrapWidth(el, w, h),
         el.label,
         el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
-        el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
+        el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
         el.labelColor ?? contrastColor(el.fillColor, el.strokeColor),
         el.opacity,
       );
@@ -530,7 +530,7 @@ function stencilToSVG(el: StencilElement, ox: number, oy: number): string {
         top + labelH / 2 - (fontSize * 1.2 - fontSize) / 2,
         labelLines,
         fontSize,
-        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
         el.labelColor ?? el.strokeColor,
         el.opacity,
       ),
@@ -563,7 +563,7 @@ function shapeToSVG(el: ShapeElement, ox: number, oy: number): string {
         getLabelWrapWidth(el, w, h),
         el.label,
         el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
-        el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
+        el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
         el.labelColor ?? contrastColor(el.fillColor, el.strokeColor),
         el.opacity,
       ),
@@ -788,8 +788,8 @@ function connectorLabelToSVG(
   const cx = box.x + ox;
   const cy = box.y + oy;
   const { w, h } = box;
-  const fontSize = el.labelFontSize ?? 12;
-  const fontFamily = el.labelFontFamily ?? 'Arial, sans-serif';
+  const fontSize = el.labelFontSize ?? DEFAULT_CONNECTOR_LABEL_FONT_SIZE;
+  const fontFamily = el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY;
   const lines = el.label.split('\n');
   return [
     `<rect x="${round(cx - w / 2)}" y="${round(cy - h / 2)}" width="${round(w)}" height="${round(h)}" fill="${canvasColor}"/>`,

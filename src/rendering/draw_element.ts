@@ -8,11 +8,16 @@ import type {
   ShapeElement,
   StencilElement,
 } from '../elements/element';
+import {
+  DEFAULT_CONNECTOR_LABEL_FONT_SIZE,
+  DEFAULT_LABEL_FONT_FAMILY,
+  DEFAULT_SHAPE_LABEL_FONT_SIZE,
+  DEFAULT_STENCIL_LABEL_FONT_SIZE,
+} from '../elements/label_defaults';
 import { SHAPE_DEFINITIONS, type ShapeCommand } from '../elements/shapes';
 import { type GenericIcon, ICON_GRID } from '../elements/stencils/generic';
 import { getBundledIcon } from '../elements/stencils/packs';
 import {
-  DEFAULT_STENCIL_LABEL_FONT_SIZE,
   getGenericIcon,
   getStencilLabelLines,
   STENCIL_LABEL_GAP,
@@ -35,12 +40,7 @@ import {
 } from './draw_selection';
 import { buildFreehandOutline } from './freehand_outline';
 import { getCachedImage } from './image_cache';
-import {
-  DEFAULT_SHAPE_LABEL_FONT_FAMILY,
-  DEFAULT_SHAPE_LABEL_FONT_SIZE,
-  getLabelWrapWidth,
-  getShapeTextBox,
-} from './shape_geometry';
+import { getLabelWrapWidth, getShapeTextBox } from './shape_geometry';
 import { getIsLightTheme } from './theme_cache';
 
 export function contrastColor(fill: string, fallback: string): string {
@@ -150,7 +150,7 @@ export function drawElement(
           getLabelWrapWidth(el, rw, rh),
           el.label,
           el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
-          el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
+          el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
           el.labelColor ?? contrastColor(el.fillColor, strokeColor),
         );
         ctx.restore();
@@ -190,7 +190,7 @@ export function drawElement(
           getLabelWrapWidth(el, rw, rh),
           el.label,
           el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
-          el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
+          el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
           el.labelColor ?? contrastColor(el.fillColor, strokeColor),
         );
         ctx.restore();
@@ -219,7 +219,7 @@ export function drawElement(
           getLabelWrapWidth(el, bw, bh),
           el.label,
           el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
-          el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
+          el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
           el.labelColor ?? contrastColor(el.fillColor, strokeColor),
         );
         ctx.restore();
@@ -251,7 +251,7 @@ export function drawElement(
           getLabelWrapWidth(el, erx * 2, ery * 2),
           el.label,
           el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
-          el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
+          el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
           el.labelColor ?? contrastColor(el.fillColor, strokeColor),
         );
         ctx.restore();
@@ -768,8 +768,8 @@ export function drawConnectorLabels(
       box.x,
       box.y,
       el.label,
-      el.labelFontSize ?? 12,
-      el.labelFontFamily ?? 'Arial, sans-serif',
+      el.labelFontSize ?? DEFAULT_CONNECTOR_LABEL_FONT_SIZE,
+      el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
       el.labelColor ?? resolveStrokeColorForTheme(el.strokeColor),
     );
     ctx.restore();
@@ -803,7 +803,7 @@ function drawStencil(
     const fontSize = el.labelFontSize ?? DEFAULT_STENCIL_LABEL_FONT_SIZE;
     ctx.save();
     ctx.setLineDash([]);
-    const fontFamily = el.labelFontFamily ?? 'Arial, sans-serif';
+    const fontFamily = el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY;
     ctx.font = `${fontSize}px ${fontFamily}`;
     ctx.fillStyle = el.labelColor ?? strokeColor;
     ctx.textAlign = 'center';

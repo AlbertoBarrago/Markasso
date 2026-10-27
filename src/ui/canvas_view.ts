@@ -13,9 +13,13 @@ import type {
   StencilElement,
   TextElement,
 } from '../elements/element';
+import {
+  DEFAULT_LABEL_FONT_FAMILY,
+  DEFAULT_SHAPE_LABEL_FONT_SIZE,
+  DEFAULT_STENCIL_LABEL_FONT_SIZE,
+} from '../elements/label_defaults';
 import { onBundledPackLoad } from '../elements/stencils/packs';
 import {
-  DEFAULT_STENCIL_LABEL_FONT_SIZE,
   getStencilLabelWidth,
   STENCIL_LABEL_GAP,
 } from '../elements/stencils/registry';
@@ -40,8 +44,6 @@ import {
 import { onImageLoad } from '../rendering/image_cache';
 import { render } from '../rendering/renderer';
 import {
-  DEFAULT_SHAPE_LABEL_FONT_FAMILY,
-  DEFAULT_SHAPE_LABEL_FONT_SIZE,
   getLabelWrapWidth,
   getShapeTextBox,
 } from '../rendering/shape_geometry';
@@ -1135,7 +1137,7 @@ function openShapeLabelEditor(
         : appState.fontSize);
   const fontFamily =
     el.labelFontFamily ??
-    (hasLabel ? DEFAULT_SHAPE_LABEL_FONT_FAMILY : appState.fontFamily);
+    (hasLabel ? DEFAULT_LABEL_FONT_FAMILY : appState.fontFamily);
   // Same wrap width as the renderer, so the label breaks where it will be drawn.
   const editorW =
     (el.type === 'stencil' ? textBox.w : getLabelWrapWidth(el, bw, bh)) *

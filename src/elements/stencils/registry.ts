@@ -5,6 +5,10 @@ import {
 } from '../../core/text_metrics';
 import type { StencilElement, StencilSource } from '../element';
 import {
+  DEFAULT_LABEL_FONT_FAMILY,
+  DEFAULT_STENCIL_LABEL_FONT_SIZE,
+} from '../label_defaults';
+import {
   GENERIC_ICONS,
   type GenericIcon,
   type GenericIconId,
@@ -30,7 +34,6 @@ export const DEFAULT_STENCIL_SIZE = 64;
 
 /** Gap between a stencil's box and the first line of its label. */
 export const STENCIL_LABEL_GAP = 6;
-export const DEFAULT_STENCIL_LABEL_FONT_SIZE = 14;
 
 /**
  * Width available to a stencil label: icons are small, so labels may run
@@ -47,7 +50,7 @@ export function getStencilLabelLines(el: StencilElement): string[] {
     el.label,
     getStencilLabelWidth(Math.abs(el.width)),
     el.labelFontSize ?? DEFAULT_STENCIL_LABEL_FONT_SIZE,
-    el.labelFontFamily ?? 'Arial, sans-serif',
+    el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
   );
 }
 
@@ -72,7 +75,7 @@ export function getStencilLabelBox(
   const { width } = measureTextBlock(
     lines,
     fontSize,
-    el.labelFontFamily ?? 'Arial, sans-serif',
+    el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
   );
   const iconW = Math.abs(el.width);
   const w = Math.max(width, iconW);

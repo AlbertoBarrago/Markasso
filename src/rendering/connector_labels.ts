@@ -1,6 +1,10 @@
 import { measureTextBlock } from '../core/text_metrics';
 import type { ArrowElement, Element, LineElement } from '../elements/element';
 import {
+  DEFAULT_CONNECTOR_LABEL_FONT_SIZE,
+  DEFAULT_LABEL_FONT_FAMILY,
+} from '../elements/label_defaults';
+import {
   getQuadraticPoint,
   getRoutePointAt,
   type RoutePoint,
@@ -27,8 +31,6 @@ type Connector = LineElement | ArrowElement;
 type Rect = { x: number; y: number; w: number; h: number };
 type Segment = readonly [RoutePoint, RoutePoint];
 
-const DEFAULT_FONT_SIZE = 12;
-const DEFAULT_FONT = 'Arial, sans-serif';
 /** Candidate positions along each segment, as fractions of its length. */
 const FRACTIONS = [0.5, 0.3, 0.7, 0.15, 0.85] as const;
 /** Samples used to treat a curved connector as a polyline. */
@@ -39,12 +41,12 @@ export function getConnectorLabelSize(el: Connector): {
   w: number;
   h: number;
 } {
-  const fontSize = el.labelFontSize ?? DEFAULT_FONT_SIZE;
+  const fontSize = el.labelFontSize ?? DEFAULT_CONNECTOR_LABEL_FONT_SIZE;
   const pad = fontSize * 0.4;
   const block = measureTextBlock(
     (el.label ?? '').split('\n'),
     fontSize,
-    el.labelFontFamily ?? DEFAULT_FONT,
+    el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
   );
   return { w: block.width + pad * 2, h: block.height + pad * 2 };
 }
