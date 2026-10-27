@@ -169,7 +169,9 @@ export function initToolbar(
     shapePanelBtns.set(toolDef.tool, b);
     shapePanel.appendChild(b);
   }
+  // Only one toolbar submenu is open at a time.
   const setShapeOpen = (open: boolean): void => {
+    if (open) setZoomOpen(false);
     shapePanel.classList.toggle('open', open);
     shapeChevron.classList.toggle('open', open);
     shapeChevron.setAttribute('aria-expanded', String(open));
@@ -265,6 +267,7 @@ export function initToolbar(
   // Stays open while panning and zooming the canvas; only the toggle or
   // Escape closes it.
   const setZoomOpen = (open: boolean): void => {
+    if (open) setShapeOpen(false);
     zoomPanel.classList.toggle('open', open);
     zoomToggle.classList.toggle('open', open);
     zoomToggle.setAttribute('aria-expanded', String(open));
