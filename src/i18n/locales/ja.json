@@ -64,7 +64,7 @@
   "fitContent": "コンテンツに合わせる (F)",
   "zoomOut": "縮小",
   "zoomIn": "拡大",
-  "zoomPanel": "ズームとミニマップ",
+  "zoomPanel": "ズーム",
   "resetZoom": "ズームを100%にリセット (Shift+0)",
   "openMarkasso": ".markasso を開く",
   "importMermaid": "Mermaid を読み込む",

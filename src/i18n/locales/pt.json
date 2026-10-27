@@ -64,7 +64,7 @@
   "fitContent": "Ajustar ao conteúdo (F)",
   "zoomOut": "Diminuir zoom",
   "zoomIn": "Aumentar zoom",
-  "zoomPanel": "Zoom e minimapa",
+  "zoomPanel": "Zoom",
   "resetZoom": "Redefinir zoom para 100% (Shift+0)",
   "openMarkasso": "Abrir .markasso",
   "importMermaid": "Importar Mermaid",
