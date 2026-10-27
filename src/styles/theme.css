@@ -29,11 +29,9 @@
   width: 100%;
   padding: 0 10px 8px;
 }
-.sp-lang-wrapper.menu-theme-toggle {
-  padding: 0 8px 10px;
-}
-.sp-lang-wrapper.menu-theme-toggle::after {
-  top: calc(50% - 5px);
+.menu-theme-toggle > li {
+  display: flex;
+  flex: 1;
 }
 .menu-theme-btn {
   flex: 1;
@@ -66,6 +64,7 @@
 
 [data-theme="light"] .tb-island,
 [data-theme="light"] .settings-panel,
+[data-theme="light"] .menu-sub,
 [data-theme="light"] #context-panel,
 [data-theme="light"] #mobile-actions,
 [data-theme="light"] #mobile-style-sheet,
@@ -112,17 +111,6 @@
   color: #000000;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-}
-[data-theme="light"] .tb-submenu-item:hover:not(:disabled) {
-  background: rgba(169, 1, 27, 0.08);
-}
-[data-theme="light"] .tb-submenu-divider {
-  background: rgba(0, 0, 0, 0.12);
-}
-[data-theme="light"] .tb-submenu-input {
-  background: #ffffff;
-  border-color: var(--island-border);
-  color: #000000;
 }
 [data-theme="light"] .tb-preset-card {
   background: rgba(0, 0, 0, 0.03);
@@ -270,23 +258,8 @@
 }
 
 /* Settings menu */
-[data-theme="light"] .sp-grid-btn {
-  background: rgba(0, 0, 0, 0.04);
-}
-[data-theme="light"] .pref-btn {
-  background: #ffffff;
-}
-[data-theme="light"] .pref-btn:hover {
-  background: rgba(0, 0, 0, 0.08);
-}
 [data-theme="light"] .sp-preset {
   border-color: var(--island-border);
-}
-[data-theme="light"] .sp-lang-select {
-  background: #ffffff;
-}
-[data-theme="light"] .sp-lang-select:focus {
-  background: #ffffff;
 }
 [data-theme="light"] .menu-theme-btn {
   background: #ffffff;

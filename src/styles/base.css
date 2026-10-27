@@ -312,28 +312,13 @@ body {
   color: var(--accent);
 }
 
-/* Submenus of the actions menu (presets, export, share); light theme in
-   theme.css */
+/* Submenu of the actions menu (presets); light theme in theme.css */
 .tb-submenu {
   background: rgba(26, 26, 40, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #d4d4e8;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-}
-.tb-submenu-item {
-  background: none;
-}
-.tb-submenu-item:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.07);
-}
-.tb-submenu-divider {
-  background: rgba(255, 255, 255, 0.1);
-}
-.tb-submenu-input {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #e7e7f2;
 }
 .tb-preset-card {
   background: rgba(255, 255, 255, 0.04);

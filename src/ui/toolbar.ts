@@ -2,29 +2,14 @@ import type { ActiveTool } from '../core/app_state';
 import { fitToElements } from '../core/viewport';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
-import { exportMarkasso, importMarkasso } from '../io/markasso';
+import { importMarkasso } from '../io/markasso';
 import { importMermaidText } from '../io/mermaid';
 import { PRESETS } from '../io/presets';
-import {
-  buildLiveRoomUrl,
-  generateRoomId,
-  getStoredName,
-  joinLiveSession,
-  onLivePeers,
-  setLiveName,
-  setStoredName,
-} from '../io/realtime';
-import { buildShareUrl } from '../io/share';
-import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
+import { getStoredName, onLivePeers, setLiveName } from '../io/realtime';
 import { onLibraryVisibilityChange, toggleLibrary } from './library_panel';
-import { onLiveHide, onLiveReveal, setLiveUI } from './live_name';
+import { onLiveHide, onLiveReveal } from './live_name';
 import { initMinimap } from './minimap';
 import { initPeopleList } from './people_list';
-import {
-  copyToClipboard,
-  showLiveStatusToast,
-  showShareToast,
-} from './share_actions';
 import { initTooltips } from './tooltip';
 
 // ── SVG icons ──────────────────────────────────────────────────────────────────
@@ -43,12 +28,8 @@ const IC = {
   text: `<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4h12v2.5H12v9.5H8V6.5H4z"/></svg>`,
   undo: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h9a4 4 0 010 8H8"/><path d="M7 5L4 8l3 3"/></svg>`,
   redo: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8H7a4 4 0 000 8h5"/><path d="M13 5l3 3-3 3"/></svg>`,
-  export: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M7 9l3 3 3-3"/><path d="M4 14v1.5A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5V14"/></svg>`,
   import: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7a2 2 0 012-2h3l2 2h5a2 2 0 012 2v5a2 2 0 01-2 2H4a2 2 0 01-2-2V7z"/></svg>`,
   fit: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="2.5"/><path d="M1 5V2h3M12 2h3v3M15 11v3h-3M4 14H1v-3"/></svg>`,
-  imgPNG: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><rect x="2" y="3" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="8" r="1.5" fill="currentColor"/><path d="M2 14l4-4 3 3 3-3 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  imgSVG: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><circle cx="4" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 10C8 5 12 5 13.5 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
-  markasso: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
   mermaid: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="7" height="5" rx="1"/><rect x="12" y="14" width="7" height="5" rx="1"/><path d="M4.5 6v4h11v4"/><path d="M14 16l1.5-2 1.5 2"/></svg>`,
   layers: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L2 6l8 4 8-4z"/><path d="M2 10l8 4 8-4"/><path d="M2 14l8 4 8-4"/></svg>`,
   hamburger: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/></svg>`,
@@ -365,7 +346,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   centerPill.insertBefore(undoSep, lockedSep);
   centerPill.insertBefore(undoPill, lockedSep);
 
-  // ── Top-right: import + export dropdown ───────────────────────────────────
+  // ── Top-right: import dropdown ───────────────────────────────────────────────
   const topRight = div('tb-island-topright');
 
   // Import .markasso
@@ -560,89 +541,6 @@ export function initToolbar(container: HTMLElement, history: History): void {
 
   importIsland.append(importTrigger, mermaidTrigger);
 
-  // Export dropdown
-  const exportIsland = div('tb-island');
-  exportIsland.style.position = 'relative';
-  const exportTrigger = mkBtn(IC.export, t('export'));
-  exportTrigger.setAttribute('aria-expanded', 'false');
-  const exportPanel = document.createElement('div');
-  exportPanel.className = 'tb-submenu';
-  exportPanel.setAttribute('role', 'menu');
-  exportPanel.style.cssText = [
-    'position:absolute',
-    'left:calc(100% + 10px)',
-    'top:-4px',
-    'border-radius:10px',
-    'padding:4px',
-    'display:none',
-    'flex-direction:column',
-    'gap:2px',
-    'min-width:148px',
-    'z-index:1000',
-  ].join(';');
-
-  const askBackground = (): boolean => confirm('Include white background?');
-
-  const exportPNGItem = menuItem(t('exportPNG'), IC.imgPNG, () =>
-    exportPNG(history.present, askBackground()),
-  );
-  const exportSVGItem = menuItem(t('exportSVG'), IC.imgSVG, () =>
-    exportSVG(history.present, askBackground()),
-  );
-  const exportHTMLItem = menuItem(t('exportHTML'), IC.export, () =>
-    exportHTML(history.present),
-  );
-  const exportMarkassoItem = menuItem(t('saveMarkasso'), IC.markasso, () =>
-    exportMarkasso(history.present),
-  );
-  exportPanel.append(
-    exportPNGItem,
-    exportSVGItem,
-    exportHTMLItem,
-    exportMarkassoItem,
-  );
-
-  let panelOpen = false;
-  exportTrigger.addEventListener('click', (e) => {
-    e.stopPropagation();
-    panelOpen = !panelOpen;
-    exportPanel.style.display = panelOpen ? 'flex' : 'none';
-    exportTrigger.setAttribute('aria-expanded', String(panelOpen));
-    if (panelOpen) {
-      exportPanel
-        .querySelector<HTMLButtonElement>('button:not([disabled])')
-        ?.focus();
-    }
-  });
-  exportIsland.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && panelOpen) {
-      panelOpen = false;
-      exportPanel.style.display = 'none';
-      exportTrigger.setAttribute('aria-expanded', 'false');
-      exportTrigger.focus();
-    }
-  });
-  document.addEventListener('click', () => {
-    if (panelOpen) {
-      panelOpen = false;
-      exportPanel.style.display = 'none';
-      exportTrigger.setAttribute('aria-expanded', 'false');
-    }
-  });
-  exportIsland.append(exportTrigger, exportPanel);
-
-  // Share island (dropdown)
-  const IC_SHARE = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="5" r="2"/><circle cx="5" cy="10" r="2"/><circle cx="15" cy="15" r="2"/><path d="M7 9l6-3M7 11l6 3"/></svg>`;
-  const IC_LINK_SM = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
-  const IC_BLUESKY = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.912 0 3.083 0 3.75c0 .667.365 5.46.6 6.256.771 2.627 3.516 3.516 6.056 3.216-3.86.57-7.286 1.996-2.79 7.03 4.958 5.4 6.79-1.157 7.734-4.4.944 3.243 2.077 9.573 7.634 4.4 4.22-4.4 1.07-6.46-2.79-7.03 2.54.3 5.285-.59 6.056-3.216.235-.796.6-5.59.6-6.256 0-.667-.14-1.838-.902-2.185-.66-.3-2.164-.621-4.998 1.62-2.752 2.05-5.71 5.98-6.798 8.14z"/></svg>`;
-  const IC_X = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
-  const IC_REDDIT = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/></svg>`;
-
-  const shareIsland = div('tb-island tb-share-island');
-  shareIsland.style.position = 'relative';
-  const shareBtn = mkBtn(IC_SHARE, t('shareLink'));
-  shareBtn.setAttribute('aria-expanded', 'false');
-
   // Editable "your name" chip, shown while a live session is active so any
   // participant (creator or link-joiner) can set/change their own name.
   const nameChip = document.createElement('button');
@@ -651,8 +549,8 @@ export function initToolbar(container: HTMLElement, history: History): void {
   nameChip.style.display = 'none';
   nameChip.title = t('liveName');
   nameChip.setAttribute('aria-label', t('liveName'));
-  // The chip stays top-right on its own island while the share button lives
-  // in the actions panel.
+  // The chip stays top-right on its own island while sharing lives in the
+  // main menu (settings.ts).
   const nameIsland = div('tb-island tb-live-name-island');
   nameIsland.style.display = 'none';
   const showNameChip = (): void => {
@@ -708,150 +606,6 @@ export function initToolbar(container: HTMLElement, history: History): void {
     input.addEventListener('blur', commit);
   });
 
-  const sharePanel = document.createElement('div');
-  sharePanel.className = 'tb-submenu';
-  sharePanel.setAttribute('role', 'menu');
-  sharePanel.style.cssText = [
-    'position:absolute',
-    'left:calc(100% + 10px)',
-    'top:-4px',
-    'border-radius:10px',
-    'padding:4px',
-    'display:none',
-    'flex-direction:column',
-    'gap:2px',
-    'min-width:196px',
-    'z-index:1000',
-  ].join(';');
-
-  const shareCopyLinkItem = menuItem(
-    t('shareCopyLink'),
-    IC_LINK_SM,
-    async () => {
-      const url = await buildShareUrl(history.present.elements);
-      const ok = await copyToClipboard(url);
-      showShareToast(ok, url);
-    },
-  );
-
-  // ── Live session (real-time collaboration) ──
-  const nameInput = document.createElement('input');
-  nameInput.type = 'text';
-  nameInput.maxLength = 24;
-  nameInput.placeholder = t('liveName');
-  nameInput.setAttribute('aria-label', t('liveName'));
-  nameInput.value = getStoredName();
-  nameInput.className = 'tb-submenu-input';
-  nameInput.style.cssText = [
-    'border-radius:6px',
-    'padding:6px 8px',
-    'font-size:13px',
-    'font-family:inherit',
-    'outline:none',
-  ].join(';');
-  nameInput.addEventListener('input', () => setStoredName(nameInput.value));
-  const divider = document.createElement('div');
-  divider.className = 'tb-submenu-divider';
-  divider.style.cssText = 'height:1px;margin:3px 4px;';
-  let livePeers = 0;
-  const shareGoLiveItem = menuItem(t('shareGoLive'), IC_SHARE, async () => {
-    const roomId = generateRoomId();
-    const url = buildLiveRoomUrl(roomId);
-    const ok = await copyToClipboard(url);
-    showShareToast(ok, url, t('shareLiveCopied'));
-    const name = nameInput.value.trim() || 'You';
-    setStoredName(name);
-    joinLiveSession(history, {
-      roomId,
-      name,
-      seedElements: history.present.elements,
-      onPeers: (peers) => {
-        livePeers = peers.length;
-        shareBtn.title =
-          livePeers > 0
-            ? t('livePeers').replace('{{count}}', String(livePeers))
-            : t('shareLink');
-      },
-      onStatus: (connected) => {
-        setLiveUI(connected);
-        shareGoLiveItem.style.opacity = connected ? '0.6' : '1';
-        if (!connected) shareBtn.title = t('shareLink');
-        showLiveStatusToast(connected);
-      },
-    });
-  });
-
-  const shareXItem = menuItem(t('shareX'), IC_X, async () => {
-    const url = await buildShareUrl(history.present.elements);
-    window.open(
-      `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent('Check out my Markasso drawing')}`,
-      '_blank',
-      'noopener',
-    );
-  });
-  const shareRedditItem = menuItem(t('shareReddit'), IC_REDDIT, async () => {
-    const url = await buildShareUrl(history.present.elements);
-    window.open(
-      `https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=Check%20out%20my%20Markasso%20drawing`,
-      '_blank',
-      'noopener',
-    );
-  });
-  const shareBlueskyItem = menuItem(t('shareBluesky'), IC_BLUESKY, async () => {
-    const url = await buildShareUrl(history.present.elements);
-    window.open(
-      `https://bsky.app/intent/compose?text=${encodeURIComponent(`Check out my Markasso drawing: ${url}`)}`,
-      '_blank',
-      'noopener',
-    );
-  });
-  sharePanel.append(
-    nameInput,
-    shareGoLiveItem,
-    divider,
-    shareCopyLinkItem,
-    shareXItem,
-    shareRedditItem,
-    shareBlueskyItem,
-  );
-
-  let sharePanelOpen = false;
-  shareBtn.addEventListener('click', (e) => {
-    if (history.present.elements.length === 0) return;
-    e.stopPropagation();
-    sharePanelOpen = !sharePanelOpen;
-    sharePanel.style.display = sharePanelOpen ? 'flex' : 'none';
-    shareBtn.setAttribute('aria-expanded', String(sharePanelOpen));
-    if (sharePanelOpen)
-      sharePanel.querySelector<HTMLButtonElement>('button')?.focus();
-  });
-  // Menu items hide the panel themselves (see menuItem). Other clicks, like
-  // on the name field, keep it open: they stop before the document listener
-  // that closes it.
-  sharePanel.addEventListener('click', (e) => {
-    if (!(e.target as Element).closest('[role="menuitem"]')) {
-      e.stopPropagation();
-      return;
-    }
-    sharePanelOpen = false;
-    shareBtn.setAttribute('aria-expanded', 'false');
-  });
-  shareIsland.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && sharePanelOpen) {
-      sharePanelOpen = false;
-      sharePanel.style.display = 'none';
-      shareBtn.setAttribute('aria-expanded', 'false');
-      shareBtn.focus();
-    }
-  });
-  document.addEventListener('click', () => {
-    if (sharePanelOpen) {
-      sharePanelOpen = false;
-      sharePanel.style.display = 'none';
-      shareBtn.setAttribute('aria-expanded', 'false');
-    }
-  });
-  shareIsland.append(shareBtn, sharePanel);
   nameIsland.append(nameChip);
 
   // ── Live participants (people list) ────────────────────────────────────────
@@ -1004,7 +758,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
 
   topRight.append(peopleIsland, nameIsland);
 
-  // ── Top-left: actions panel (import, presets, library, export, share) ────
+  // ── Top-left: actions panel (import, presets, library) ───────────────────
   const actionsGroup = div('tb-tool-group');
   const actionsToggle = mkBtn(IC.gear, t('actions'));
   actionsToggle.setAttribute('aria-expanded', 'false');
@@ -1014,13 +768,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   actionsPanel.setAttribute('aria-label', t('actions'));
   actionsToggle.setAttribute('aria-controls', actionsPanel.id);
   // Listed like the menu panel: icon + label rows, submenus open to the side.
-  for (const island of [
-    importIsland,
-    presetsIsland,
-    libraryIsland,
-    exportIsland,
-    shareIsland,
-  ]) {
+  for (const island of [importIsland, presetsIsland, libraryIsland]) {
     island.classList.replace('tb-island', 'tb-actions-item');
     for (const b of island.querySelectorAll<HTMLButtonElement>(
       ':scope > .tb-btn',
@@ -1040,8 +788,8 @@ export function initToolbar(container: HTMLElement, history: History): void {
     }
     actionsPanel.append(island);
   }
-  // Export, presets and share toggle their own menus on click, so closing
-  // one goes through its trigger.
+  // Presets toggles its own menu on click, so closing it goes through its
+  // trigger.
   const closeSubmenus = (except?: Element): void => {
     for (const b of actionsPanel.querySelectorAll<HTMLButtonElement>(
       '[aria-expanded="true"]',
@@ -1067,14 +815,14 @@ export function initToolbar(container: HTMLElement, history: History): void {
     },
     { capture: true },
   );
-  // Close once an action runs; the export and presets triggers only open
-  // their own menus, so the panel stays.
+  // Close once an action runs; the presets trigger only opens
+  // its own menu, so the panel stays.
   actionsPanel.addEventListener('click', (e) => {
     const el = (e.target as Element).closest('button');
     if (el?.getAttribute('role') === 'menuitem') setActionsOpen(false);
     else if (el && !el.hasAttribute('aria-expanded')) setActionsOpen(false);
   });
-  // Capture phase: an open export or presets menu takes the first Escape.
+  // Capture phase: an open presets menu takes the first Escape.
   actionsGroup.addEventListener(
     'keydown',
     (e) => {
@@ -1218,15 +966,6 @@ export function initToolbar(container: HTMLElement, history: History): void {
     undoBtn.disabled = !history.canUndo();
     redoBtn.disabled = !history.canRedo();
     zoomLabel.textContent = `${Math.round(history.present.viewport.zoom * 100)}%`;
-    const hasElements = history.present.elements.length > 0;
-    exportTrigger.disabled = !hasElements;
-    exportPNGItem.disabled = !hasElements;
-    exportSVGItem.disabled = !hasElements;
-
-    exportHTMLItem.disabled = !hasElements;
-    exportMarkassoItem.disabled = !hasElements;
-    shareBtn.disabled = !hasElements;
-
     // Locked-elements indicator
     const scene = history.present;
     const hasLockedSelected =
@@ -1256,34 +995,4 @@ function mkBtn(icon: string, title: string): HTMLButtonElement {
   b.setAttribute('aria-label', title);
   b.innerHTML = icon;
   return b;
-}
-
-function menuItem(
-  label: string,
-  iconSvg: string,
-  onClick: () => void,
-): HTMLButtonElement {
-  const item = document.createElement('button');
-  item.setAttribute('role', 'menuitem');
-  item.className = 'tb-submenu-item';
-  item.style.cssText = [
-    'display:flex',
-    'align-items:center',
-    'gap:8px',
-    'border:none',
-    'color:inherit',
-    'cursor:pointer',
-    'padding:7px 10px',
-    'border-radius:6px',
-    'font-size:13px',
-    'width:100%',
-    'text-align:left',
-    'white-space:nowrap',
-  ].join(';');
-  item.innerHTML = `${iconSvg}<span>${label}</span>`;
-  item.addEventListener('click', () => {
-    item.closest('div')!.style.display = 'none';
-    onClick();
-  });
-  return item;
 }
