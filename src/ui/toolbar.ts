@@ -7,7 +7,7 @@ import { PRESETS } from '../io/presets';
 import {
   buildLiveRoomUrl,
   generateRoomId,
-  getStoredName,
+  getLiveName,
   joinLiveSession,
   onLivePeers,
   setLiveName,
@@ -298,7 +298,7 @@ export function initToolbar(
     showShareToast(copied, url, t('shareLiveCopied'));
     joinLiveSession(history, {
       roomId,
-      name: getStoredName() || 'You',
+      // No name: the session uses the stored one or a random animal name.
       seedElements: history.present.elements,
       onStatus: (connected) => {
         setLiveUI(connected);
@@ -666,7 +666,7 @@ export function initToolbar(
   const showNameChip = (): void => {
     nameIsland.style.display = '';
     nameChip.style.display = '';
-    nameChip.textContent = getStoredName() || 'You';
+    nameChip.textContent = getLiveName();
   };
   const hideNameChip = (): void => {
     nameIsland.style.display = 'none';
@@ -678,7 +678,7 @@ export function initToolbar(
     const input = document.createElement('input');
     input.type = 'text';
     input.maxLength = 24;
-    input.value = getStoredName();
+    input.value = getLiveName();
     input.setAttribute('aria-label', t('liveName'));
     input.style.cssText = [
       'background:rgba(255,255,255,0.06)',
@@ -775,8 +775,15 @@ export function initToolbar(
   const tbLeft = div('tb-island tb-left');
   topLeft.append(tbLeft);
 
+  /**
+   * Moves secondary tools into More tools when the toolbar does not fit. An
+   * open menu is only closed when its content changes; otherwise it follows
+   * its trigger, so a virtual keyboard resizing the window keeps it open.
+   */
   function updateToolsLayout(): void {
-    setMoreOpen(false);
+    const overflowBefore = secondaryTools
+      .map((tool) => toolBtns.get(tool)!.hidden)
+      .join();
     for (const tool of secondaryTools) toolBtns.get(tool)!.hidden = false;
     for (const tool of [...secondaryTools].reverse()) {
       if (centerPill.offsetWidth <= window.innerWidth - 32) break;
@@ -785,6 +792,11 @@ export function initToolbar(
     for (const [tool, button] of overflowTools)
       button.hidden = !toolBtns.get(tool)!.hidden;
     moreDivider.hidden = [...overflowTools.values()].every((b) => b.hidden);
+    const overflowAfter = secondaryTools
+      .map((tool) => toolBtns.get(tool)!.hidden)
+      .join();
+    if (overflowAfter !== overflowBefore) setMoreOpen(false);
+    else if (morePanel.classList.contains('open')) positionMorePanel();
   }
   container.append(centerPill, topRight, topLeft);
   updateToolsLayout();

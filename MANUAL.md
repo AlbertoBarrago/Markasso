@@ -45,7 +45,7 @@ The **Arrow / Line** connector has its own arrow button on the toolbar (`5`), ou
 - **Routing:** switch a connector between **Straight** and **Elbow** (orthogonal) in the properties panel. See Smart Arrow Links below.
 - **Arrowhead styles:** each end can use an open head, a hollow or filled triangle, a hollow or filled diamond, or a circle.
 
-The toolbar is dedicated to drawing. On narrow windows, pen, text, sticky note and eraser progressively move into **⋯ More tools**; hand, select, basic shapes and the connector stay visible. The menu lists **Presets**, **Library**, **Import Mermaid**, **Insert image** and, in a separate group, **Start live session**. Presets insert a grouped diagram at the center of the viewport. Zoom and undo/redo remain in separate panels enabled from Preferences.
+The toolbar is dedicated to drawing. On narrow windows, pen, text, sticky note and eraser progressively move into **⋯ More tools**; hand, select, basic shapes and the connector stay visible. The menu lists **Presets**, **Library**, **Import Mermaid**, **Insert image** and, in a separate group, **Start live session**. Presets insert a grouped diagram at the center of the viewport. Zoom and undo/redo live in separate panels in the bottom corners, which you can hide from Preferences.
 
 ### Moving the Toolbar
 
@@ -58,7 +58,7 @@ The toolbar starts at the bottom center. Its **move handle** (six dots) docks it
 
 The position is remembered between sessions and adapts to the space occupied by the menu, minimap, panels and visible controls. Hints follow the toolbar: above it when docked at the bottom, below it when docked at the top; tool menus open toward the inside of the screen.
 
-In **Menu → Preferences**, **Show zoom controls** and **Show undo/redo controls** independently enable the panels in the bottom corners. The zoom panel offers fit to content, zoom out, the current percentage (click to reset to 100%) and zoom in. Preferences are saved; enabling undo/redo moves the minimap upward to leave room.
+In **Menu → Preferences**, **Show zoom controls** and **Show undo/redo controls** independently show or hide the panels in the bottom corners; both are visible by default. On touch devices they are not offered: undo/redo is in the bottom bar and you zoom with a pinch. The zoom panel offers fit to content, zoom out, the current percentage (click to reset to 100%) and zoom in. Preferences are saved; enabling undo/redo moves the minimap upward to leave room.
 
 Open Preferences directly with **Cmd+,** on macOS or **Ctrl+,** on other systems, including while typing.
 
@@ -365,7 +365,7 @@ Choose **Menu → Share → Copy link** to encode the entire scene into a URL. T
 
 ## Live Sessions
 
-Choose **⋯ More tools → Start live session** to open a shared board. Its link is copied to the clipboard; people opening it can draw with you. Your stored name appears in the top corner: click it to change it. A small red blinking dot beside the name indicates an active connection; it stays static when reduced motion is enabled.
+Choose **⋯ More tools → Start live session** to open a shared board. Its link is copied to the clipboard; people opening it can draw with you. Your stored name appears in the top corner, or a random animal name if you have not set one: click it to change it. A small red blinking dot beside the name indicates an active connection; it stays static when reduced motion is enabled.
 
 ---
 

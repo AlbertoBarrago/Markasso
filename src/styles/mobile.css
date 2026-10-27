@@ -342,3 +342,12 @@
 #mobile-tools-popup[hidden] {
   display: none;
 }
+
+/* Touch layouts have undo/redo in the bottom bar and pinch zoom: the
+   optional corner panels would overlap it (settings.ts hides their toggles). */
+@media (pointer: coarse) {
+  .show-zoom-controls #zoom-controls,
+  .show-history-controls #history-controls {
+    display: none;
+  }
+}
