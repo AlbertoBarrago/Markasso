@@ -357,6 +357,12 @@ A small overview panel in the bottom-right corner shows all elements at a reduce
 
 ---
 
+## Tips
+
+After about 20 seconds without activity, a short tip appears above the toolbar: a shortcut or a feature you have not used yet, picked for what is on the board (for example `⌘F` to search once there are several elements, `⌘D` to duplicate while something is selected). Any click, key or scroll hides it. A tip stops appearing once you use what it suggests, or after it was shown three times, and at most one tip shows per minute. Tips never appear while you type or while a menu or dialog is open, and not on touch devices. Turn them off with **Show tips** in **Menu → Preferences**.
+
+---
+
 ## Share Link
 
 Choose **Menu → Share → Copy link** to encode the entire scene into a URL. The link is copied to your clipboard automatically. Share it — anyone who opens the URL sees the same canvas, ready to continue editing.

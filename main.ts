@@ -11,6 +11,7 @@ import { initContextPanel } from './src/ui/context_panel';
 import { initElementSearch } from './src/ui/element_search';
 import { initGuide } from './src/ui/guide';
 import { initHintBar } from './src/ui/hint_bar';
+import { initIdleTips } from './src/ui/idle_tips';
 import { initImageImport } from './src/ui/image_import';
 import { initLibraryPanel } from './src/ui/library_panel';
 import { setLiveUI } from './src/ui/live_name';
@@ -126,6 +127,7 @@ async function bootstrap(): Promise<void> {
   initLibraryPanel(workspace, hist, canvas);
   initShortcutsHelp(appEl);
   initHintBar(appEl, hist);
+  initIdleTips(appEl, hist);
   initSession(hist);
   // People arriving through a shared or live link see the board first; the
   // notice stays unseen and shows on their next plain visit.

@@ -154,29 +154,7 @@ export function isShortcutsHelpOpen(): boolean {
   return overlayEl !== null;
 }
 
-function showCanvasHint(appEl: HTMLElement): void {
-  const hint = document.createElement('div');
-  hint.id = 'shortcuts-hint';
-  hint.innerHTML = `Press <kbd>?</kbd> to see all keyboard shortcuts`;
-  appEl.appendChild(hint);
-
-  // Fade in on next frame so the CSS transition fires
-  requestAnimationFrame(() => hint.classList.add('sh-hint-visible'));
-
-  const hide = (): void => {
-    hint.classList.remove('sh-hint-visible');
-    hint.addEventListener('transitionend', () => hint.remove(), { once: true });
-    clearTimeout(timer);
-  };
-
-  // Auto-hide after 5s or on first pointer interaction
-  const timer = setTimeout(hide, 5000);
-  window.addEventListener('pointerdown', hide, { once: true });
-}
-
 export function initShortcutsHelp(appEl: HTMLElement): void {
-  showCanvasHint(appEl);
-
   window.addEventListener('keydown', (e) => {
     if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
       const target = e.target as HTMLElement;

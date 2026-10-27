@@ -357,6 +357,12 @@ Un piccolo pannello panoramico nell'angolo in basso a destra mostra tutti gli el
 
 ---
 
+## Suggerimenti
+
+Dopo circa 20 secondi senza attività compare sopra la toolbar un breve suggerimento: una scorciatoia o una funzione che non hai ancora usato, scelta in base a cosa c’è sulla lavagna (per esempio `⌘F` per cercare quando ci sono diversi elementi, `⌘D` per duplicare quando hai una selezione). Un clic, un tasto o lo scorrimento lo nascondono. Un suggerimento smette di comparire quando usi ciò che propone, oppure dopo tre volte, e ne compare al massimo uno al minuto. Non appare mentre scrivi o con un menu o una finestra aperti, né sui dispositivi touch. Puoi disattivarli con **Mostra suggerimenti** in **Menu → Preferenze**.
+
+---
+
 ## Link di condivisione
 
 Scegli **Menu → Condividi → Copia link** per codificare l'intera scena in un URL. Il link viene copiato automaticamente negli appunti. Condividilo — chiunque apra l'URL vede lo stesso canvas, pronto per continuare a modificarlo.

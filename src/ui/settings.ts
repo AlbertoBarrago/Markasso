@@ -39,6 +39,7 @@ export interface UISettings {
   showMinimap: boolean;
   showZoomControls: boolean;
   showHistoryControls: boolean;
+  showTips: boolean;
 }
 
 const STORAGE_KEY = 'markasso-ui-settings';
@@ -54,6 +55,7 @@ export function loadSettings(): UISettings {
     // Zoom and undo/redo stay in sight by default, as in Excalidraw.
     showZoomControls: true,
     showHistoryControls: true,
+    showTips: true,
   };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -77,6 +79,7 @@ export function applySettings(appEl: HTMLElement, s: UISettings): void {
   appEl.classList.toggle('minimap-hidden', !s.showMinimap);
   appEl.classList.toggle('show-zoom-controls', s.showZoomControls);
   appEl.classList.toggle('show-history-controls', s.showHistoryControls);
+  appEl.classList.toggle('tips-hidden', !s.showTips);
 }
 
 const GRID_TYPES: { type: GridType; label: string; desc: string }[] = [
@@ -315,6 +318,7 @@ export function initSettings(
             t('showMinimap'),
             kbd('M'),
           ) +
+          checkItem('menuitemcheckbox', 'id="sp-tips-visible"', t('showTips')) +
           `<li role="none" id="sp-corner-controls"><ul role="group">${
             separator +
             checkItem(
@@ -594,6 +598,7 @@ export function initSettings(
       panel.querySelector('#sp-history-controls')!,
       current.showHistoryControls,
     );
+    setChecked(panel.querySelector('#sp-tips-visible')!, current.showTips);
     setChecked(panel.querySelector('#sp-grid-visible')!, gridVisible);
     const gridTypes = panel.querySelector<HTMLElement>('#sp-grid-types')!;
     if (!gridVisible && gridTypes.contains(document.activeElement)) {
@@ -756,6 +761,7 @@ export function initSettings(
   for (const [selector, key] of [
     ['#sp-zoom-controls', 'showZoomControls'],
     ['#sp-history-controls', 'showHistoryControls'],
+    ['#sp-tips-visible', 'showTips'],
   ] as const) {
     panel.querySelector(selector)!.addEventListener('click', () => {
       current = { ...current, [key]: !current[key] };
