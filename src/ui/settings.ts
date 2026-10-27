@@ -376,13 +376,11 @@ export function initSettings(
       </li>
     </ul>
     <div class="menu-footer">
-      <button class="menu-footer-link menu-footer-coffee" id="menu-coffee" title="Buy me a coffee" aria-label="Support Markasso with a coffee">${ICONS.coffee} Buy me a coffee</button>
-      <a class="menu-footer-link" id="menu-github" href="https://github.com/AlbertoBarrago/Markasso" target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="GitHub">
+      <button class="menu-footer-link menu-footer-coffee" id="menu-coffee">${ICONS.coffee} Buy me a coffee</button>
+      <a class="menu-footer-link" id="menu-github" href="https://github.com/AlbertoBarrago/Markasso" target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="GitHub, v${pkg.version}">
         ${ICONS.github}
-        <span class="menu-version">
-          v${pkg.version}
-        </span> 
-       </a>
+        <span class="menu-version">v${pkg.version}</span>
+      </a>
     </div>
   `;
 
