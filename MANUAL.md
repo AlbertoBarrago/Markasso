@@ -54,7 +54,7 @@ The toolbar starts at the bottom center of the screen. The **move handle** (six 
 - With the handle focused, the **arrow keys** move the toolbar (`Shift` for bigger steps).
 - **Double-click** the handle, or press `Home` while it is focused, to put the toolbar back at the bottom center.
 
-The position is remembered between sessions. When the toolbar sits in the upper half of the screen, its menus open below it. In its default position on narrow windows, it shifts slightly left so it does not cover the minimap.
+The position is remembered between sessions. When the toolbar sits in the upper half of the screen, its menus open below it. In its default position on narrow windows, it moves to the left edge so it does not cover the minimap; below 700px the minimap is hidden and the toolbar stays centered.
 
 ### Tool Lock
 

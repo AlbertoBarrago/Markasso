@@ -647,7 +647,7 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
 
-@media (pointer: coarse), (max-width: 600px) {
+@media (pointer: coarse), (max-width: 699px) {
   #minimap {
     display: none;
   }

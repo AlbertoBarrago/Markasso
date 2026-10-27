@@ -54,7 +54,7 @@ La toolbar parte in basso al centro dello schermo. La **maniglia di spostamento*
 - Con la maniglia selezionata, i **tasti freccia** spostano la toolbar (`Shift` per passi più ampi).
 - **Doppio clic** sulla maniglia, oppure `Home` quando è selezionata, riporta la toolbar in basso al centro.
 
-La posizione viene ricordata tra una sessione e l'altra. Quando la toolbar si trova nella metà superiore dello schermo, i suoi menu si aprono sotto. Nella posizione predefinita, nelle finestre strette si sposta leggermente a sinistra per non coprire la minimappa.
+La posizione viene ricordata tra una sessione e l'altra. Quando la toolbar si trova nella metà superiore dello schermo, i suoi menu si aprono sotto. Nella posizione predefinita, nelle finestre strette si sposta sul bordo sinistro per non coprire la minimappa; sotto i 700px la minimappa è nascosta e la toolbar resta al centro.
 
 ### Blocco strumento
 

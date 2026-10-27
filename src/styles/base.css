@@ -114,12 +114,14 @@ body {
   transform: none;
 }
 /* In the default position, clear the bottom-right minimap on narrow
-   viewports (the minimap itself is hidden at 600px and below) */
-@media (min-width: 601px) and (max-width: 840px) {
+   viewports by moving to the left edge (the minimap itself is hidden below
+   700px) */
+@media (min-width: 700px) and (max-width: 876px) {
   body:not(.library-open)
     #app:not(.minimap-hidden)
     .tb-island-tools:not(.tb-island-tools--moved) {
-    transform: translateX(calc(-50% - 16px));
+    left: 16px;
+    transform: none;
   }
 }
 .tb-drag-handle {
