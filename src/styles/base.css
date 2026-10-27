@@ -274,8 +274,8 @@ body {
   gap: 2px;
 }
 
-/* Top-left actions panel: import, presets, library and export, listed
-   like the menu panel (.menu-item rows, see menu.css) */
+/* Top-left actions panel: open .markasso, listed like the menu panel
+   (.menu-item rows, see menu.css) */
 .tb-actions-panel {
   position: absolute;
   top: calc(100% + 10px);
@@ -298,35 +298,6 @@ body {
 .tb-actions-item .menu-item > svg {
   width: 18px;
   height: 18px;
-}
-.tb-actions-item .menu-arrow {
-  display: flex;
-  margin-left: auto;
-  opacity: 0.6;
-}
-.tb-actions-item .menu-item.active,
-.tb-actions-item .menu-item[aria-expanded="true"] {
-  background: var(--bg-hover);
-}
-.tb-actions-item .menu-item.active {
-  color: var(--accent);
-}
-
-/* Submenu of the actions menu (presets); light theme in theme.css */
-.tb-submenu {
-  background: rgba(26, 26, 40, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #d4d4e8;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-.tb-preset-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-.tb-preset-card:hover {
-  background: rgba(255, 255, 255, 0.09);
-  border-color: var(--accent, #c42059);
 }
 
 .tb-name-chip {

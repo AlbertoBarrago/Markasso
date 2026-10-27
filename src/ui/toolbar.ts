@@ -4,9 +4,8 @@ import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { importMarkasso } from '../io/markasso';
 import { importMermaidText } from '../io/mermaid';
-import { PRESETS } from '../io/presets';
 import { getStoredName, onLivePeers, setLiveName } from '../io/realtime';
-import { onLibraryVisibilityChange, toggleLibrary } from './library_panel';
+import { toggleLibrary } from './library_panel';
 import { onLiveHide, onLiveReveal } from './live_name';
 import { initMinimap } from './minimap';
 import { initPeopleList } from './people_list';
@@ -41,7 +40,6 @@ const IC = {
   curve: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 16 Q10 2 17 16"/></svg>`,
   magnify: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="12.6" y1="12.6" x2="17" y2="17"/></svg>`,
   gear: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.33 4.32c.43-1.76 2.93-1.76 3.35 0a1.72 1.72 0 0 0 2.57 1.07c1.54-.94 3.31.83 2.37 2.37a1.72 1.72 0 0 0 1.06 2.57c1.76.43 1.76 2.93 0 3.35a1.72 1.72 0 0 0-1.07 2.57c.94 1.54-.83 3.31-2.37 2.37a1.72 1.72 0 0 0-2.57 1.06c-.43 1.76-2.93 1.76-3.35 0a1.72 1.72 0 0 0-2.57-1.07c-1.54.94-3.31-.83-2.37-2.37a1.72 1.72 0 0 0-1.06-2.57c-1.76-.43-1.76-2.93 0-3.35a1.72 1.72 0 0 0 1.07-2.57c-.94-1.54.83-3.31 2.37-2.37 1 .61 2.3.07 2.57-1.06z"/><circle cx="12" cy="12" r="3"/></svg>`,
-  chevronRight: `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l5 5-5 5"/></svg>`,
   chevronDown: `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5l3 3 3-3"/></svg>`,
   polygon: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l7 6.5-2.5 7h-9L3 9.5z"/></svg>`,
 };
@@ -657,107 +655,9 @@ export function initToolbar(
   });
   peopleIsland.append(peopleTrigger, peoplePanel);
 
-  // Presets dropdown
-  const presetsIsland = div('tb-island');
-  presetsIsland.style.position = 'relative';
-  const presetsTrigger = mkBtn(IC.toolbox, t('presets'));
-  presetsTrigger.setAttribute('aria-expanded', 'false');
-  const presetsPanel = document.createElement('div');
-  presetsPanel.className = 'tb-submenu';
-  presetsPanel.setAttribute('role', 'menu');
-  presetsPanel.style.cssText = [
-    'position:absolute',
-    'left:calc(100% + 10px)',
-    'top:-4px',
-    'border-radius:10px',
-    'padding:8px',
-    'display:none',
-    'grid-template-columns:1fr 1fr',
-    'gap:6px',
-    'min-width:260px',
-    'z-index:1000',
-  ].join(';');
-
-  for (const def of PRESETS) {
-    const card = document.createElement('button');
-    card.setAttribute('role', 'menuitem');
-    card.className = 'tb-preset-card';
-    card.style.cssText = [
-      'display:flex',
-      'flex-direction:column',
-      'align-items:center',
-      'gap:6px',
-      'padding:10px 8px',
-      'border-radius:8px',
-      'cursor:pointer',
-      'color:inherit',
-      'font:11px/1.2 inherit',
-      'text-align:center',
-      'transition:background .1s,border-color .1s',
-      'white-space:nowrap',
-    ].join(';');
-    card.innerHTML = `${def.icon}<span>${t(def.labelKey)}</span>`;
-    card.addEventListener('click', () => {
-      const vp = history.present.viewport;
-      const cx = (window.innerWidth / 2 - vp.offsetX) / vp.zoom;
-      const cy = (window.innerHeight / 2 - vp.offsetY) / vp.zoom;
-      const isDark =
-        document.documentElement.getAttribute('data-theme') !== 'light';
-      const elements = def.buildElements(cx, cy, isDark);
-      history.dispatch({ type: 'CREATE_ELEMENTS', elements });
-      history.dispatch({
-        type: 'GROUP_ELEMENTS',
-        ids: elements.map((e) => e.id),
-        groupId: crypto.randomUUID(),
-      });
-      presetsPanelOpen = false;
-      presetsPanel.style.display = 'none';
-      presetsTrigger.setAttribute('aria-expanded', 'false');
-    });
-    presetsPanel.appendChild(card);
-  }
-
-  let presetsPanelOpen = false;
-  presetsTrigger.addEventListener('click', (e) => {
-    e.stopPropagation();
-    presetsPanelOpen = !presetsPanelOpen;
-    presetsPanel.style.display = presetsPanelOpen ? 'grid' : 'none';
-    presetsTrigger.setAttribute('aria-expanded', String(presetsPanelOpen));
-    if (presetsPanelOpen)
-      presetsPanel.querySelector<HTMLButtonElement>('button')?.focus();
-  });
-  presetsIsland.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && presetsPanelOpen) {
-      presetsPanelOpen = false;
-      presetsPanel.style.display = 'none';
-      presetsTrigger.setAttribute('aria-expanded', 'false');
-      presetsTrigger.focus();
-    }
-  });
-  document.addEventListener('click', () => {
-    if (presetsPanelOpen) {
-      presetsPanelOpen = false;
-      presetsPanel.style.display = 'none';
-      presetsTrigger.setAttribute('aria-expanded', 'false');
-    }
-  });
-  presetsIsland.append(presetsTrigger, presetsPanel);
-
-  // Library sidebar toggle (shapes and icons), as in Excalidraw
-  const libraryIsland = div('tb-island');
-  const libraryTrigger = mkBtn(IC.library, `${t('library')} (I)`);
-  libraryTrigger.setAttribute('aria-label', t('library'));
-  libraryTrigger.setAttribute('aria-pressed', 'false');
-  libraryTrigger.addEventListener('click', () => toggleLibrary());
-  onLibraryVisibilityChange((open) => {
-    libraryTrigger.classList.toggle('active', open);
-    libraryTrigger.setAttribute('aria-pressed', String(open));
-  });
-  libraryIsland.append(libraryTrigger);
-
   topRight.append(peopleIsland, nameIsland);
 
-  // ── Top-left: actions panel (import, presets, library) ───────────────────
+  // ── Top-left: actions panel (import) ─────────────────────────────────────
   const actionsGroup = div('tb-tool-group');
   const actionsToggle = mkBtn(IC.gear, t('actions'));
   actionsToggle.setAttribute('aria-expanded', 'false');
@@ -766,8 +666,8 @@ export function initToolbar(
   actionsPanel.setAttribute('role', 'group');
   actionsPanel.setAttribute('aria-label', t('actions'));
   actionsToggle.setAttribute('aria-controls', actionsPanel.id);
-  // Listed like the menu panel: icon + label rows, submenus open to the side.
-  for (const island of [importIsland, presetsIsland, libraryIsland]) {
+  // Listed like the menu panel: icon + label rows.
+  for (const island of [importIsland]) {
     island.classList.replace('tb-island', 'tb-actions-item');
     for (const b of island.querySelectorAll<HTMLButtonElement>(
       ':scope > .tb-btn',
@@ -778,26 +678,10 @@ export function initToolbar(
       label.className = 'menu-item-label';
       label.textContent = b.getAttribute('aria-label');
       b.append(label);
-      if (b.hasAttribute('aria-expanded')) {
-        b.insertAdjacentHTML(
-          'beforeend',
-          `<span class="menu-arrow">${IC.chevronRight}</span>`,
-        );
-      }
     }
     actionsPanel.append(island);
   }
-  // Presets toggles its own menu on click, so closing it goes through its
-  // trigger.
-  const closeSubmenus = (except?: Element): void => {
-    for (const b of actionsPanel.querySelectorAll<HTMLButtonElement>(
-      '[aria-expanded="true"]',
-    )) {
-      if (b !== except) b.click();
-    }
-  };
   const setActionsOpen = (open: boolean): void => {
-    if (!open) closeSubmenus();
     actionsPanel.classList.toggle('open', open);
     actionsToggle.classList.toggle('open', open);
     actionsToggle.setAttribute('aria-expanded', String(open));
@@ -805,35 +689,15 @@ export function initToolbar(
   actionsToggle.addEventListener('click', () =>
     setActionsOpen(!actionsPanel.classList.contains('open')),
   );
-  // One submenu at a time: capture phase, since the triggers stop the click.
-  actionsPanel.addEventListener(
-    'click',
-    (e) => {
-      const el = (e.target as Element).closest('button');
-      if (el?.getAttribute('aria-expanded') === 'false') closeSubmenus(el);
-    },
-    { capture: true },
-  );
-  // Close once an action runs; the presets trigger only opens
-  // its own menu, so the panel stays.
+  // Close once an action runs.
   actionsPanel.addEventListener('click', (e) => {
-    const el = (e.target as Element).closest('button');
-    if (el?.getAttribute('role') === 'menuitem') setActionsOpen(false);
-    else if (el && !el.hasAttribute('aria-expanded')) setActionsOpen(false);
+    if ((e.target as Element).closest('button')) setActionsOpen(false);
   });
-  // Capture phase: an open presets menu takes the first Escape.
-  actionsGroup.addEventListener(
-    'keydown',
-    (e) => {
-      if (e.key !== 'Escape' || !actionsPanel.classList.contains('open')) {
-        return;
-      }
-      if (actionsPanel.querySelector('[aria-expanded="true"]')) return;
-      setActionsOpen(false);
-      actionsToggle.focus();
-    },
-    { capture: true },
-  );
+  actionsGroup.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !actionsPanel.classList.contains('open')) return;
+    setActionsOpen(false);
+    actionsToggle.focus();
+  });
   document.addEventListener(
     'pointerdown',
     (e) => {

@@ -4,6 +4,7 @@ import { fitToElements } from '../core/viewport';
 import type { History } from '../engine/history';
 import { getLocale, LOCALES, type Locale, setLocale, t } from '../i18n';
 import { exportMarkasso, importMarkasso } from '../io/markasso';
+import { PRESETS } from '../io/presets';
 import {
   buildLiveRoomUrl,
   generateRoomId,
@@ -13,6 +14,7 @@ import {
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 import { invalidateThemeCache } from '../rendering/theme_cache';
+import { toggleLibrary } from './library_panel';
 import { setLiveUI } from './live_name';
 import {
   copyToClipboard,
@@ -147,6 +149,12 @@ const ICONS = {
   mermaid: svg(
     `<rect x="1" y="1" width="7" height="5" rx="1"/><rect x="12" y="14" width="7" height="5" rx="1"/>${p('M4.5 6v4h11v4M14 16l1.5-2 1.5 2')}`,
   ),
+  presets: svg(
+    `<rect x="2" y="2" width="6" height="6" rx="1.5"/><rect x="12" y="2" width="6" height="6" rx="1.5"/><rect x="2" y="12" width="6" height="6" rx="1.5"/><rect x="12" y="12" width="6" height="6" rx="1.5"/>`,
+  ),
+  library: svg(
+    `<rect x="3" y="3.5" width="3.5" height="13" rx="0.8"/><rect x="8" y="3.5" width="3.5" height="13" rx="0.8"/>${p('M13.2 4.6l3.2-.9 3 11.6-3.2.9z')}`,
+  ),
   trash: svg(p('M4 6h12M9 3h2M16 6l-1 11H5L4 6M9 10v4M11 10v4')),
   prefs: svg(p('M3 5h14M3 10h14M3 15h14M7 3v4M13 8v4M10 13v4')),
   chevron: svg(p('M8 5l5 5-5 5')),
@@ -239,8 +247,14 @@ export function initSettings(
   panel.setAttribute('aria-hidden', 'true');
   document.body.appendChild(panel);
 
-  const item = (id: string, icon: string, label: string, cls = ''): string =>
-    `<li role="none"><button class="menu-item ${cls}" role="menuitem" tabindex="-1" id="${id}">${icon}<span class="menu-item-label">${label}</span></button></li>`;
+  const item = (
+    id: string,
+    icon: string,
+    label: string,
+    cls = '',
+    hint = '',
+  ): string =>
+    `<li role="none"><button class="menu-item ${cls}" role="menuitem" tabindex="-1" id="${id}">${icon}<span class="menu-item-label">${label}</span>${hint}</button></li>`;
   const checkMark = `<span class="menu-check" aria-hidden="true">${ICONS.check}</span>`;
   const checkItem = (
     role: 'menuitemcheckbox' | 'menuitemradio',
@@ -291,6 +305,16 @@ export function initSettings(
         '<span class="menu-item-hint" id="menu-share-peers"></span>',
       )}
       ${item('menu-import-mermaid', ICONS.mermaid, t('importMermaid'))}
+      ${separator}
+      ${parentItem(
+        'menu-presets',
+        ICONS.presets,
+        t('presets'),
+        PRESETS.map((def) =>
+          item(`menu-preset-${def.id}`, def.icon, t(def.labelKey)),
+        ).join(''),
+      )}
+      ${item('menu-library', ICONS.library, t('library'), '', hint('I'))}
       ${separator}
       ${item('menu-guide', ICONS.guide, t('guide'))}
       ${item('menu-report', ICONS.report, t('reportProblem'))}
@@ -684,6 +708,22 @@ export function initSettings(
   );
 
   onActivate('#menu-import-mermaid', openMermaidDialog);
+  for (const def of PRESETS) {
+    onActivate(`#menu-preset-${def.id}`, () => {
+      // Built at the center of the viewport and grouped.
+      const vp = history.present.viewport;
+      const cx = (window.innerWidth / 2 - vp.offsetX) / vp.zoom;
+      const cy = (window.innerHeight / 2 - vp.offsetY) / vp.zoom;
+      const elements = def.buildElements(cx, cy, !isResolvedLight());
+      history.dispatch({ type: 'CREATE_ELEMENTS', elements });
+      history.dispatch({
+        type: 'GROUP_ELEMENTS',
+        ids: elements.map((e) => e.id),
+        groupId: crypto.randomUUID(),
+      });
+    });
+  }
+  onActivate('#menu-library', () => toggleLibrary());
   onActivate('#menu-guide', openGuide);
   onActivate('#menu-report', openReportForm);
   // The link opens itself; this only closes the menu.

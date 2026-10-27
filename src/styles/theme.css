@@ -105,21 +105,6 @@
   outline-offset: -2px;
   color: var(--accent);
 }
-[data-theme="light"] .tb-submenu {
-  background: #ffffff;
-  border-color: var(--island-border);
-  color: #000000;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-[data-theme="light"] .tb-preset-card {
-  background: rgba(0, 0, 0, 0.03);
-  border-color: rgba(0, 0, 0, 0.12);
-}
-[data-theme="light"] .tb-preset-card:hover {
-  background: rgba(169, 1, 27, 0.08);
-  border-color: var(--accent);
-}
 
 [data-theme="light"] .tb-separator {
   background: linear-gradient(
