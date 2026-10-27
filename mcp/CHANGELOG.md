@@ -4,7 +4,7 @@ All notable changes to `@markasso/mcp` are documented here. The MCP server is ve
 
 ---
 
-## [Unreleased]
+## [0.4.0] - 2026-10-27
 
 ### Added
 - **Font size.** `diagram_add_nodes` and `diagram_update` take `fontSize` (6 to 400 px) for text nodes and for shape and icon labels; `diagram_connect` and `diagram_update_edge` take it for connector labels. Auto-sized nodes grow to fit a larger font, so a heading stays on one line. `diagram_read` shows sizes that differ from the default.

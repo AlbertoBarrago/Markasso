@@ -4,6 +4,14 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.14.1] - 2026-10-27
+
+### Changed
+- **Label fonts have one set of defaults.** Shape, icon and connector labels read their default size and font from a single module, shared by the canvas, the SVG export, the label editor and the MCP server. Nothing changes on screen.
+- **AI agents can size text.** With MCP server 0.4.0, agents set the font size of text, shape, icon and connector labels, so a diagram can have a real heading.
+
+---
+
 ## [1.14.0] - 2026-10-27
 
 ### Added
