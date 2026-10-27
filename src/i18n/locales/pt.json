@@ -57,6 +57,8 @@
   "eraser": "Borracha",
   "lockTool": "Bloquear ferramenta (manter ativa após desenhar)",
   "moreShapes": "Mais formas",
+  "moveToolbar": "Mover a barra de ferramentas",
+  "moveToolbarHint": "Mover a barra: arraste-a, ou clique e depois clique onde colocá-la. As setas a movem; clique duplo ou Home a redefine.",
   "undo": "Desfazer (Ctrl+Z)",
   "redo": "Refazer (Ctrl+Y)",
   "fitContent": "Ajustar ao conteúdo (F)",

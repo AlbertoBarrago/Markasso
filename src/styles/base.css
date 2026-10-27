@@ -108,6 +108,36 @@ body {
   transform: translateX(-50%);
   z-index: 10;
 }
+/* Moved by the user (toolbar_drag.ts sets left/top inline) */
+.tb-island-tools--moved {
+  bottom: auto;
+  transform: none;
+}
+/* In the default position, clear the bottom-right minimap on narrow
+   viewports (the minimap itself is hidden at 600px and below) */
+@media (min-width: 601px) and (max-width: 840px) {
+  body:not(.library-open)
+    #app:not(.minimap-hidden)
+    .tb-island-tools:not(.tb-island-tools--moved) {
+    transform: translateX(calc(-50% - 16px));
+  }
+}
+.tb-drag-handle {
+  cursor: grab;
+}
+.tb-island-tools--dragging,
+.tb-island-tools--dragging .tb-drag-handle {
+  cursor: grabbing;
+}
+/* Place mode: the next click positions the toolbar */
+body.toolbar-placing,
+body.toolbar-placing * {
+  cursor: crosshair !important;
+}
+.tb-drag-handle[aria-pressed="true"] {
+  background: var(--bg-hover);
+  color: var(--text);
+}
 
 /* The hints sit where the toolbar panels open */
 :root:has(.tb-tool-group-panel.open) #shortcuts-hint,
@@ -228,6 +258,10 @@ body {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   z-index: 20;
+}
+.tb-island-tools--below .tb-tool-group-panel {
+  top: calc(100% + 10px);
+  bottom: auto;
 }
 .tb-tool-group-panel.open {
   display: flex;

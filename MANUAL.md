@@ -45,9 +45,20 @@ The main numbered connector slot is **Line** (toolbar position `5`).
 - **Routing:** switch a connector between **Straight** and **Elbow** (orthogonal) in the properties panel. See Smart Arrow Links below.
 - **Arrowhead styles:** each end can use an open head, a hollow or filled triangle, a hollow or filled diamond, or a circle.
 
+### Moving the Toolbar
+
+The toolbar starts at the bottom center of the screen. The **move handle** (six dots) at its left end lets you place it anywhere in the viewport:
+
+- **Drag** the handle to move the toolbar.
+- **Click** the handle, then click where the toolbar should go (no dragging needed). Click the handle again or press `Escape` to cancel.
+- With the handle focused, the **arrow keys** move the toolbar (`Shift` for bigger steps).
+- **Double-click** the handle, or press `Home` while it is focused, to put the toolbar back at the bottom center.
+
+The position is remembered between sessions. When the toolbar sits in the upper half of the screen, its menus open below it. In its default position on narrow windows, it shifts slightly left so it does not cover the minimap.
+
 ### Tool Lock
 
-The **pin button** (thumbtack icon) at the far left of the toolbar controls what happens after you finish drawing a shape:
+The **pin button** (thumbtack icon) next to the move handle controls what happens after you finish drawing a shape:
 
 - **Unpinned (default):** the tool reverts to Select and the new element is selected — the properties panel opens automatically so you can style it immediately.
 - **Pinned:** the drawing tool stays active so you can place the next shape without re-selecting the tool. Useful for drawing many shapes of the same type in a row.

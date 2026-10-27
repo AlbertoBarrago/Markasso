@@ -45,9 +45,20 @@ Lo slot connettore principale è **Linea** (posizione `5` nella toolbar).
 - **Percorso:** passa un connettore da **Dritto** a **A gomito** (ortogonale) nel pannello proprietà. Vedi Smart Arrow Link più sotto.
 - **Stili delle punte:** ogni estremità può avere una punta aperta, un triangolo vuoto o pieno, un rombo vuoto o pieno, oppure un cerchio.
 
+### Spostare la toolbar
+
+La toolbar parte in basso al centro dello schermo. La **maniglia di spostamento** (sei puntini) alla sua estremità sinistra permette di posizionarla ovunque nella vista:
+
+- **Trascina** la maniglia per spostare la toolbar.
+- **Fai clic** sulla maniglia, poi fai clic dove vuoi posizionare la toolbar (senza trascinare). Fai di nuovo clic sulla maniglia o premi `Esc` per annullare.
+- Con la maniglia selezionata, i **tasti freccia** spostano la toolbar (`Shift` per passi più ampi).
+- **Doppio clic** sulla maniglia, oppure `Home` quando è selezionata, riporta la toolbar in basso al centro.
+
+La posizione viene ricordata tra una sessione e l'altra. Quando la toolbar si trova nella metà superiore dello schermo, i suoi menu si aprono sotto. Nella posizione predefinita, nelle finestre strette si sposta leggermente a sinistra per non coprire la minimappa.
+
 ### Blocco strumento
 
-Il **pulsante a puntina** (icona puntina da disegno) all'estrema sinistra della toolbar controlla cosa succede dopo aver finito di disegnare una forma:
+Il **pulsante a puntina** (icona puntina da disegno) accanto alla maniglia di spostamento controlla cosa succede dopo aver finito di disegnare una forma:
 
 - **Non fissato (predefinito):** lo strumento torna a Selezione e il nuovo elemento viene selezionato — il pannello proprietà si apre automaticamente per poterlo stilizzare subito.
 - **Fissato:** lo strumento di disegno resta attivo così puoi posizionare la forma successiva senza riselezionarlo. Utile per disegnare più forme dello stesso tipo di seguito.

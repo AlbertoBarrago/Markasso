@@ -57,6 +57,8 @@
   "eraser": "Radierer",
   "lockTool": "Werkzeug sperren (nach dem Zeichnen aktiv lassen)",
   "moreShapes": "Weitere Formen",
+  "moveToolbar": "Werkzeugleiste verschieben",
+  "moveToolbarHint": "Werkzeugleiste verschieben: ziehen, oder klicken und dann an die gewünschte Stelle klicken. Pfeiltasten verschieben sie; Doppelklick oder Pos1 setzt sie zurück.",
   "undo": "Rückgängig (Ctrl+Z)",
   "redo": "Wiederholen (Ctrl+Y)",
   "fitContent": "An Inhalt anpassen (F)",

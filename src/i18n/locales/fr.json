@@ -57,6 +57,8 @@
   "eraser": "Gomme",
   "lockTool": "Verrouiller l'outil (garder actif après dessin)",
   "moreShapes": "Plus de formes",
+  "moveToolbar": "Déplacer la barre d'outils",
+  "moveToolbarHint": "Déplacer la barre : faites-la glisser, ou cliquez puis cliquez à l'endroit voulu. Les flèches la déplacent ; double-clic ou Début la réinitialise.",
   "undo": "Annuler (Ctrl+Z)",
   "redo": "Rétablir (Ctrl+Y)",
   "fitContent": "Ajuster au contenu (F)",

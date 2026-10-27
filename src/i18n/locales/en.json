@@ -62,6 +62,8 @@
   "eraser": "Eraser",
   "lockTool": "Lock tool (keep active after drawing)",
   "moreShapes": "More shapes",
+  "moveToolbar": "Move toolbar",
+  "moveToolbarHint": "Move toolbar: drag it, or click and then click where it goes. Arrow keys move it; double-click or Home resets it.",
   "undo": "Undo (Ctrl+Z)",
   "redo": "Redo (Ctrl+Y)",
   "fitContent": "Fit to content (F)",

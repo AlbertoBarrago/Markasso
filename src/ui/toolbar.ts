@@ -7,10 +7,12 @@ import { getStoredName, onLivePeers, setLiveName } from '../io/realtime';
 import { toggleLibrary } from './library_panel';
 import { onLiveHide, onLiveReveal } from './live_name';
 import { initPeopleList } from './people_list';
+import { initToolbarDrag } from './toolbar_drag';
 import { initTooltips } from './tooltip';
 
 // ── SVG icons ──────────────────────────────────────────────────────────────────
 const IC = {
+  dragHandle: `<svg class="drag-handle" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M10 13a1 1 0 100-2 1 1 0 000 2zm-4 0a1 1 0 100-2 1 1 0 000 2zm1-5a1 1 0 11-2 0 1 1 0 012 0zm3 1a1 1 0 100-2 1 1 0 000 2zm1-5a1 1 0 11-2 0 1 1 0 012 0zM6 5a1 1 0 100-2 1 1 0 000 2z"></path></svg>`,
   lock: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 3.75l-3.33 3.33-3.33 1.25-1.25 1.25 5.83 5.83 1.25-1.25 1.25-3.33 3.33-3.33z" fill="currentColor" stroke="none"/><line x1="7.5" y1="12.5" x2="3.75" y2="16.25"/><line x1="12.08" y1="3.33" x2="16.67" y2="7.92"/></svg>`,
   lockOpen: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 3.75l-3.33 3.33-3.33 1.25-1.25 1.25 5.83 5.83 1.25-1.25 1.25-3.33 3.33-3.33z"/><line x1="7.5" y1="12.5" x2="3.75" y2="16.25"/><line x1="12.08" y1="3.33" x2="16.67" y2="7.92"/></svg>`,
   elemLocked: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="9" width="10" height="8" rx="1.5"/><path d="M7 9V6a3 3 0 0 1 6 0v3"/></svg>`,
@@ -112,7 +114,14 @@ export function initToolbar(
   centerPill.setAttribute('aria-label', 'Drawing tools');
   const toolBtns = new Map<ActiveTool, HTMLButtonElement>();
 
-  // Lock button (first, no shortcut badge)
+  // Drag handle (first): moves the toolbar, double-click resets it
+  const dragHandle = mkBtn(IC.dragHandle, t('moveToolbarHint'));
+  dragHandle.classList.add('tb-drag-handle');
+  dragHandle.setAttribute('aria-label', t('moveToolbar'));
+  dragHandle.setAttribute('aria-pressed', 'false');
+  centerPill.appendChild(dragHandle);
+
+  // Lock button (no shortcut badge)
   const lockBtn = document.createElement('button');
   lockBtn.className = 'tb-btn';
   lockBtn.title = t('lockTool');
@@ -645,6 +654,7 @@ export function initToolbar(
 
   container.append(centerPill, topRight, topLeft);
   initTooltips(centerPill);
+  initToolbarDrag(centerPill, dragHandle);
 
   // ── Mobile: tools FAB + popup ─────────────────────────────────────────────
   const toolsFab = document.createElement('button');

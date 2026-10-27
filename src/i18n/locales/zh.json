@@ -57,6 +57,8 @@
   "eraser": "橡皮",
   "lockTool": "锁定工具（绘制后保持激活）",
   "moreShapes": "更多形状",
+  "moveToolbar": "移动工具栏",
+  "moveToolbarHint": "移动工具栏：拖动，或先点击再点击目标位置。方向键可移动；双击或 Home 键恢复默认位置。",
   "undo": "撤销 (Ctrl+Z)",
   "redo": "重做 (Ctrl+Y)",
   "fitContent": "适应内容 (F)",

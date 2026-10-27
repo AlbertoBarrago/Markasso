@@ -57,6 +57,8 @@
   "eraser": "Gomma",
   "lockTool": "Blocca strumento (mantieni attivo dopo il disegno)",
   "moreShapes": "Altre forme",
+  "moveToolbar": "Sposta la barra degli strumenti",
+  "moveToolbarHint": "Sposta la barra: trascinala, oppure fai clic e poi clic dove posizionarla. Le frecce la spostano; doppio clic o Home la riporta alla posizione iniziale.",
   "undo": "Annulla (Ctrl+Z)",
   "redo": "Ripristina (Ctrl+Y)",
   "fitContent": "Adatta al contenuto (F)",
