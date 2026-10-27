@@ -45,7 +45,7 @@ Il connettore **Freccia / Linea** ha un pulsante dedicato con la freccia nella t
 - **Percorso:** passa un connettore da **Dritto** a **A gomito** (ortogonale) nel pannello proprietà. Vedi Smart Arrow Link più sotto.
 - **Stili delle punte:** ogni estremità può avere una punta aperta, un triangolo vuoto o pieno, un rombo vuoto o pieno, oppure un cerchio.
 
-La toolbar è dedicata al disegno. Nelle finestre strette penna, testo, nota e gomma confluiscono progressivamente nel menu **⋯ Altri strumenti**; mano, selezione, forme base e connettore restano visibili. Il menu contiene, in ordine, **Modelli**, **Libreria**, **Importa Mermaid**, **Inserisci immagine** e, in un gruppo separato, **Avvia sessione live**. I Modelli inseriscono un diagramma già raggruppato al centro della vista. Zoom e annulla/ripristina rimangono nei pannelli separati, attivabili dalle Preferenze.
+La toolbar è dedicata al disegno. Nelle finestre strette penna, testo, nota e gomma confluiscono progressivamente nel menu **⋯ Altri strumenti**; mano, selezione, forme base e connettore restano visibili. Il menu contiene, in ordine, **Modelli**, **Libreria**, **Importa Mermaid**, **Inserisci immagine** e, in un gruppo separato, **Avvia sessione live**. I Modelli inseriscono un diagramma già raggruppato al centro della vista. Zoom e annulla/ripristina stanno in pannelli separati negli angoli inferiori, che puoi nascondere dalle Preferenze.
 
 ### Spostare la toolbar
 
@@ -58,7 +58,7 @@ La toolbar parte in basso al centro. La **maniglia di spostamento** (sei puntini
 
 La posizione viene ricordata tra le sessioni e si adatta agli ingombri di menu, minimappa, pannelli e controlli visibili. I suggerimenti seguono la toolbar: sopra quando è in basso, sotto quando è in alto; i menu degli strumenti si aprono verso l’interno dello schermo.
 
-In **Menu → Preferenze**, **Mostra controlli zoom** e **Mostra annulla/ripristina** attivano separatamente i pannelli negli angoli inferiori. Il pannello zoom contiene adatta al contenuto, riduci, percentuale (clic per tornare al 100%) e aumenta. Le preferenze vengono salvate; con annulla/ripristina visibile, la minimappa sale per lasciare spazio.
+In **Menu → Preferenze**, **Mostra controlli zoom** e **Mostra annulla/ripristina** mostrano o nascondono separatamente i pannelli negli angoli inferiori; di default sono visibili entrambi. Sui dispositivi touch non compaiono: annulla/ripristina è nella barra in basso e lo zoom si fa con le dita. Il pannello zoom contiene adatta al contenuto, riduci, percentuale (clic per tornare al 100%) e aumenta. Le preferenze vengono salvate; con annulla/ripristina visibile, la minimappa sale per lasciare spazio.
 
 Apri direttamente le Preferenze con **⌘,** su macOS o **Ctrl+,** sugli altri sistemi, anche mentre stai scrivendo.
 
@@ -365,7 +365,7 @@ Scegli **Menu → Condividi → Copia link** per codificare l'intera scena in un
 
 ## Sessioni live
 
-Scegli **⋯ Altri strumenti → Avvia sessione live** per aprire una lavagna condivisa. Il link viene copiato negli appunti; le persone che lo aprono possono disegnare insieme a te. Il nome salvato compare nell’angolo superiore: fai clic per cambiarlo. Un pallino rosso lampeggiante accanto al nome indica la connessione attiva; resta fisso con la preferenza di movimento ridotto.
+Scegli **⋯ Altri strumenti → Avvia sessione live** per aprire una lavagna condivisa. Il link viene copiato negli appunti; le persone che lo aprono possono disegnare insieme a te. Il nome salvato compare nell’angolo superiore, oppure un nome di animale casuale se non ne hai impostato uno: fai clic per cambiarlo. Un pallino rosso lampeggiante accanto al nome indica la connessione attiva; resta fisso con la preferenza di movimento ridotto.
 
 ---
 

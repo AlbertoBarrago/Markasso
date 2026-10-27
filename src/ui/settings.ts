@@ -48,26 +48,21 @@ function isResolvedLight(): boolean {
 }
 
 export function loadSettings(): UISettings {
-  const defaultBg = isResolvedLight() ? '#ffffff' : '#080808';
+  const defaults: UISettings = {
+    bgColor: isResolvedLight() ? '#ffffff' : '#080808',
+    showMinimap: true,
+    // Zoom and undo/redo stay in sight by default, as in Excalidraw.
+    showZoomControls: true,
+    showHistoryControls: true,
+  };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw)
-      return {
-        bgColor: defaultBg,
-        showMinimap: true,
-        showZoomControls: false,
-        showHistoryControls: false,
-        ...(JSON.parse(raw) as Partial<UISettings>),
-      };
+      return { ...defaults, ...(JSON.parse(raw) as Partial<UISettings>) };
   } catch {
     /* ignore */
   }
-  return {
-    bgColor: defaultBg,
-    showMinimap: true,
-    showZoomControls: false,
-    showHistoryControls: false,
-  };
+  return defaults;
 }
 
 export function saveSettings(s: UISettings): void {
@@ -320,17 +315,19 @@ export function initSettings(
             t('showMinimap'),
             kbd('M'),
           ) +
-          separator +
-          checkItem(
-            'menuitemcheckbox',
-            'id="sp-zoom-controls"',
-            t('showZoomControls'),
-          ) +
-          checkItem(
-            'menuitemcheckbox',
-            'id="sp-history-controls"',
-            t('showHistoryControls'),
-          ) +
+          `<li role="none" id="sp-corner-controls"><ul role="group">${
+            separator +
+            checkItem(
+              'menuitemcheckbox',
+              'id="sp-zoom-controls"',
+              t('showZoomControls'),
+            ) +
+            checkItem(
+              'menuitemcheckbox',
+              'id="sp-history-controls"',
+              t('showHistoryControls'),
+            )
+          }</ul></li>` +
           separator +
           item('sp-fit-to-content', ICONS.fit, t('fitToContent')) +
           item('sp-reset-zoom', ICONS.zoomReset, t('resetZoom100')),
@@ -745,6 +742,17 @@ export function initSettings(
   panel
     .querySelector<HTMLElement>('#sp-minimap-visible')!
     .addEventListener('click', () => minimapToggle?.());
+  // Touch layouts have undo/redo in the bottom bar and pinch zoom, so the
+  // corner panels (hidden there by mobile.css) are not offered either.
+  const cornerControls = panel.querySelector<HTMLElement>(
+    '#sp-corner-controls',
+  )!;
+  const touch = window.matchMedia('(pointer: coarse)');
+  const syncCornerControls = (): void => {
+    cornerControls.hidden = touch.matches;
+  };
+  syncCornerControls();
+  touch.addEventListener('change', syncCornerControls);
   for (const [selector, key] of [
     ['#sp-zoom-controls', 'showZoomControls'],
     ['#sp-history-controls', 'showHistoryControls'],

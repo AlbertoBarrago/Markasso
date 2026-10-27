@@ -6,7 +6,7 @@ import {
 } from '../elements/element';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
-import { getStoredName, setLiveName } from '../io/realtime';
+import { getLiveName, setLiveName } from '../io/realtime';
 import { buildShareUrl } from '../io/share';
 import { hasEndHead, hasStartHead } from '../rendering/connector_geometry';
 import {
@@ -435,7 +435,7 @@ export function initMobileActionBar(
   nameChip.setAttribute('aria-label', t('liveName'));
   const showNameChip = (): void => {
     nameChip.style.display = '';
-    nameChip.textContent = getStoredName() || 'You';
+    nameChip.textContent = getLiveName();
   };
   const hideNameChip = (): void => {
     nameChip.style.display = 'none';
@@ -446,7 +446,7 @@ export function initMobileActionBar(
     const input = document.createElement('input');
     input.type = 'text';
     input.maxLength = 24;
-    input.value = getStoredName();
+    input.value = getLiveName();
     input.setAttribute('aria-label', t('liveName'));
     input.style.cssText = [
       'background:rgba(255,255,255,0.06)',

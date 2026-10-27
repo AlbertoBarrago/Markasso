@@ -151,6 +151,14 @@ export function onLivePeers(
 }
 
 /**
+ * Name this user shows in the live session: the session's own (possibly a
+ * random animal name) while one is open, else the stored name.
+ */
+export function getLiveName(): string {
+  return activeSession?.self.name ?? getStoredName();
+}
+
+/**
  * Update the current live session's display name and broadcast it to peers.
  * Persists the name locally and is a no-op when not in a live session.
  */
