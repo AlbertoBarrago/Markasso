@@ -97,6 +97,17 @@ describe('sceneToSVG', () => {
     expect(svg).not.toContain('<gateway>');
   });
 
+  it('breaks an overlong word inside a shape label, as the editor does', () => {
+    const [rect] = diagram();
+    const word = 'siasdasdasdasdasdasdasdasd';
+    const svg = sceneToSVG([{ ...rect!, label: word } as Element], OPTIONS)!;
+    const tspans = [...svg.matchAll(/<tspan[^>]*>([^<]*)<\/tspan>/g)].map(
+      (m) => m[1],
+    );
+    expect(tspans.length).toBeGreaterThan(1);
+    expect(tspans.join('')).toBe(word);
+  });
+
   it('rounds rectangle corners like the canvas', () => {
     const [rect] = diagram();
     const svg = sceneToSVG(

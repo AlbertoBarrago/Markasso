@@ -1,4 +1,10 @@
-import type { ShapeKind } from '../elements/element';
+import type {
+  EllipseElement,
+  RectangleElement,
+  RhombusElement,
+  ShapeElement,
+  ShapeKind,
+} from '../elements/element';
 import {
   SHAPE_DEFINITIONS,
   type ShapeBox,
@@ -81,6 +87,43 @@ export function getShapeTextBox(
   h: number,
 ): ShapeBox {
   return SHAPE_DEFINITIONS[kind].textBox(w, h);
+}
+
+/** Horizontal room kept free on each side of a shape label, in total. */
+const LABEL_INSET = 16;
+
+/** Size a shape label is drawn at when it does not store its own. */
+export const DEFAULT_SHAPE_LABEL_FONT_SIZE = 16;
+/** Font a shape label is drawn with when it does not store its own. */
+export const DEFAULT_SHAPE_LABEL_FONT_FAMILY = 'Arial, sans-serif';
+
+/**
+ * Width a shape label wraps at, shared by the canvas, the SVG export and the
+ * label editor so the text breaks at the same points in all three. Ellipses
+ * and rhombi use 70% of their width, roughly the inscribed area.
+ */
+export function getLabelWrapWidth(
+  el: RectangleElement | EllipseElement | RhombusElement | ShapeElement,
+  w: number,
+  h: number,
+): number {
+  let area: number;
+  switch (el.type) {
+    case 'rectangle':
+      area = w;
+      break;
+    case 'ellipse':
+    case 'rhombus':
+      area = w * 0.7;
+      break;
+    case 'shape':
+      area = getShapeTextBox(el.kind, w, h).w;
+      break;
+  }
+  return Math.max(
+    area - LABEL_INSET,
+    el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
+  );
 }
 
 function nearestOnSegment(px: number, py: number, a: Point, b: Point): Point {

@@ -35,7 +35,12 @@ import {
 } from './draw_selection';
 import { buildFreehandOutline } from './freehand_outline';
 import { getCachedImage } from './image_cache';
-import { getShapeTextBox } from './shape_geometry';
+import {
+  DEFAULT_SHAPE_LABEL_FONT_FAMILY,
+  DEFAULT_SHAPE_LABEL_FONT_SIZE,
+  getLabelWrapWidth,
+  getShapeTextBox,
+} from './shape_geometry';
 import { getIsLightTheme } from './theme_cache';
 
 export function contrastColor(fill: string, fallback: string): string {
@@ -142,10 +147,10 @@ export function drawElement(
           ctx,
           rx + rw / 2,
           ry + rh / 2,
-          rw,
+          getLabelWrapWidth(el, rw, rh),
           el.label,
-          el.labelFontSize ?? 16,
-          el.labelFontFamily ?? 'Arial, sans-serif',
+          el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
+          el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
           el.labelColor ?? contrastColor(el.fillColor, strokeColor),
         );
         ctx.restore();
@@ -182,10 +187,10 @@ export function drawElement(
           ctx,
           cx,
           cy,
-          rw * 0.7,
+          getLabelWrapWidth(el, rw, rh),
           el.label,
-          el.labelFontSize ?? 16,
-          el.labelFontFamily ?? 'Arial, sans-serif',
+          el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
+          el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
           el.labelColor ?? contrastColor(el.fillColor, strokeColor),
         );
         ctx.restore();
@@ -211,10 +216,10 @@ export function drawElement(
           ctx,
           bx + box.x + box.w / 2,
           by + box.y + box.h / 2,
-          box.w,
+          getLabelWrapWidth(el, bw, bh),
           el.label,
-          el.labelFontSize ?? 16,
-          el.labelFontFamily ?? 'Arial, sans-serif',
+          el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
+          el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
           el.labelColor ?? contrastColor(el.fillColor, strokeColor),
         );
         ctx.restore();
@@ -243,10 +248,10 @@ export function drawElement(
           ctx,
           cx,
           cy,
-          erx * 2 * 0.7,
+          getLabelWrapWidth(el, erx * 2, ery * 2),
           el.label,
-          el.labelFontSize ?? 16,
-          el.labelFontFamily ?? 'Arial, sans-serif',
+          el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
+          el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
           el.labelColor ?? contrastColor(el.fillColor, strokeColor),
         );
         ctx.restore();
@@ -1155,7 +1160,7 @@ function drawShapeLabel(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
-  shapeWidth: number,
+  maxWidth: number,
   label: string,
   fontSize: number,
   fontFamily: string,
@@ -1165,8 +1170,15 @@ function drawShapeLabel(
   ctx.fillStyle = color;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const maxWidth = Math.max(shapeWidth - 16, fontSize);
-  const lines = wrapTextLines(label, maxWidth, fontSize, fontFamily);
+  // Labels sit in a fixed box, so overlong words break like in the editor.
+  const lines = wrapTextLines(
+    label,
+    maxWidth,
+    fontSize,
+    fontFamily,
+    false,
+    true,
+  );
   const lineHeight = fontSize * 1.2;
   const totalHeight = lines.length * lineHeight;
   for (let i = 0; i < lines.length; i++) {

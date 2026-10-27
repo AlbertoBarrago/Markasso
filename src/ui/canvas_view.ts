@@ -39,7 +39,12 @@ import {
 } from '../rendering/draw_selection';
 import { onImageLoad } from '../rendering/image_cache';
 import { render } from '../rendering/renderer';
-import { getShapeTextBox } from '../rendering/shape_geometry';
+import {
+  DEFAULT_SHAPE_LABEL_FONT_FAMILY,
+  DEFAULT_SHAPE_LABEL_FONT_SIZE,
+  getLabelWrapWidth,
+  getShapeTextBox,
+} from '../rendering/shape_geometry';
 import { EllipseTool } from '../tools/ellipse_tool';
 import { EraserTool, type SlashPoint } from '../tools/eraser_tool';
 import { HandTool } from '../tools/hand_tool';
@@ -1117,22 +1122,33 @@ function openShapeLabelEditor(
   const [screenCX, screenCY] = worldToScreen(viewport, cx, cy);
   const canvasRect = canvas.getBoundingClientRect();
 
+  // An existing label without its own font is drawn with the renderer's
+  // defaults, so the editor uses them too; only a new label takes the font
+  // currently picked in the app.
+  const hasLabel = Boolean(el.label);
   const fontSize =
     el.labelFontSize ??
     (el.type === 'stencil'
       ? DEFAULT_STENCIL_LABEL_FONT_SIZE
-      : appState.fontSize);
-  const fontFamily = el.labelFontFamily ?? appState.fontFamily;
-  const shapeW = textBox.w * viewport.zoom;
+      : hasLabel
+        ? DEFAULT_SHAPE_LABEL_FONT_SIZE
+        : appState.fontSize);
+  const fontFamily =
+    el.labelFontFamily ??
+    (hasLabel ? DEFAULT_SHAPE_LABEL_FONT_FAMILY : appState.fontFamily);
+  // Same wrap width as the renderer, so the label breaks where it will be drawn.
+  const editorW =
+    (el.type === 'stencil' ? textBox.w : getLabelWrapWidth(el, bw, bh)) *
+    viewport.zoom;
 
   const ta = document.createElement('textarea');
   ta.spellcheck = true;
   ta.value = el.label ?? '';
 
   ta.style.position = 'fixed';
-  ta.style.left = `${screenCX + canvasRect.left - shapeW / 2}px`;
+  ta.style.left = `${screenCX + canvasRect.left - editorW / 2}px`;
   ta.style.top = `${screenCY + canvasRect.top - fontSize * viewport.zoom * 0.6}px`;
-  ta.style.width = `${shapeW}px`;
+  ta.style.width = `${editorW}px`;
   ta.style.minHeight = `${fontSize * viewport.zoom * 1.2}px`;
   ta.style.font = `${fontSize * viewport.zoom}px ${fontFamily}`;
   ta.style.color = labelEditorColor(el);

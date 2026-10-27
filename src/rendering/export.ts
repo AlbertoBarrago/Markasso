@@ -49,7 +49,12 @@ import {
   resolveArrowEndpoints,
   resolveConnectorRoute,
 } from './draw_selection';
-import { getShapeTextBox } from './shape_geometry';
+import {
+  DEFAULT_SHAPE_LABEL_FONT_FAMILY,
+  DEFAULT_SHAPE_LABEL_FONT_SIZE,
+  getLabelWrapWidth,
+  getShapeTextBox,
+} from './shape_geometry';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -409,10 +414,10 @@ function rectToSVG(el: RectangleElement, ox: number, oy: number): string {
       wrappedLabelToSVG(
         x + w / 2,
         y + h / 2,
-        w,
+        getLabelWrapWidth(el, w, h),
         el.label,
-        el.labelFontSize ?? 16,
-        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
+        el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
         el.labelColor ?? contrastColor(el.fillColor, el.strokeColor),
         el.opacity,
       );
@@ -432,10 +437,10 @@ function ellipseToSVG(el: EllipseElement, ox: number, oy: number): string {
       wrappedLabelToSVG(
         cx,
         cy,
-        rx * 2 * 0.7,
+        getLabelWrapWidth(el, rx * 2, ry * 2),
         el.label,
-        el.labelFontSize ?? 16,
-        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
+        el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
         el.labelColor ?? contrastColor(el.fillColor, el.strokeColor),
         el.opacity,
       );
@@ -460,10 +465,10 @@ function rhombusToSVG(el: RhombusElement, ox: number, oy: number): string {
       wrappedLabelToSVG(
         x + w / 2,
         y + h / 2,
-        w * 0.7,
+        getLabelWrapWidth(el, w, h),
         el.label,
-        el.labelFontSize ?? 16,
-        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
+        el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
         el.labelColor ?? contrastColor(el.fillColor, el.strokeColor),
         el.opacity,
       );
@@ -555,10 +560,10 @@ function shapeToSVG(el: ShapeElement, ox: number, oy: number): string {
       wrappedLabelToSVG(
         x + box.x + box.w / 2,
         y + box.y + box.h / 2,
-        box.w,
+        getLabelWrapWidth(el, w, h),
         el.label,
-        el.labelFontSize ?? 16,
-        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
+        el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
         el.labelColor ?? contrastColor(el.fillColor, el.strokeColor),
         el.opacity,
       ),
@@ -804,18 +809,17 @@ function connectorLabelToSVG(
 function wrappedLabelToSVG(
   cx: number,
   cy: number,
-  shapeWidth: number,
+  maxWidth: number,
   label: string,
   fontSize: number,
   fontFamily: string,
   color: string,
   opacity: number,
 ): string {
-  const maxWidth = Math.max(shapeWidth - 16, fontSize);
   return shapeLabelToSVG(
     cx,
     cy,
-    wrapTextLines(label, maxWidth, fontSize, fontFamily),
+    wrapTextLines(label, maxWidth, fontSize, fontFamily, false, true),
     fontSize,
     fontFamily,
     color,

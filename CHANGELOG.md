@@ -35,6 +35,7 @@ All notable changes to this project will be documented here.
 ### Removed
 - **The once/continuous label next to the tool lock button**, on desktop and mobile: the lock button already shows the mode.
 - **The second toolbar row on narrow desktop windows**, replaced by the docked toolbar.
+- **Shape labels wrap where you type them.** The label editor, the canvas and the SVG export share one wrap width per shape, so text breaks at the same points after editing; overlong words break inside the shape instead of overflowing. Editing a label that has no font of its own keeps the size and font it is drawn with.
 
 ---
 
