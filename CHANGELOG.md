@@ -4,7 +4,7 @@ All notable changes to this project will be documented here.
 
 ---
 
-## [Unreleased]
+## [1.15.0] - 2026-10-27
 
 ### Added
 - **Tips while you pause.** After about 20 seconds of inactivity a short tip appears above the toolbar: a shortcut or feature you have not used yet (command palette, search, duplicate, group, library, live sessions and more), chosen for what is on the board. Tips retire once used or after three showings, appear at most once a minute, never while typing or with a menu open, and not on touch devices. **Show tips** in Preferences turns them off. They are translated in all eight languages, including the startup hint about `?`, which was English only.
