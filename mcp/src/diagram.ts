@@ -9,6 +9,7 @@ import type {
   StencilElement,
 } from '../../src/elements/element';
 import { SHAPE_KINDS } from '../../src/elements/element';
+import { DEFAULT_LABEL_FONT_FAMILY } from '../../src/elements/label_defaults';
 import {
   getBundledIcon,
   isBundledPack,
@@ -72,6 +73,8 @@ export interface NodeSpec {
   /** Icon reference for kind "icon": "generic/database", "k8s/pod" or "database". */
   readonly icon?: string;
   readonly color?: NodeColor;
+  /** Text size in px: the content of a text node, the label of a shape or icon. */
+  readonly fontSize?: number;
   readonly x?: number;
   readonly y?: number;
   readonly width?: number;
@@ -89,6 +92,8 @@ export interface EdgeSpec {
   readonly endHead?: ArrowHeadStyle;
   readonly dashed?: boolean;
   readonly color?: NodeColor;
+  /** Label text size in px. */
+  readonly fontSize?: number;
 }
 
 /**
@@ -111,6 +116,8 @@ export interface EdgePatch {
   readonly endHead?: ArrowHeadStyle;
   readonly dashed?: boolean;
   readonly color?: NodeColor;
+  /** Label text size in px. */
+  readonly fontSize?: number;
 }
 
 /** Short id of a connection, as shown by diagram_read. */
@@ -121,6 +128,8 @@ export function edgeShortId(el: Element): string {
 export interface NodePatch {
   readonly label?: string;
   readonly color?: NodeColor;
+  /** Text size in px: the content of a text node, the label of a shape or icon. */
+  readonly fontSize?: number;
   readonly x?: number;
   readonly y?: number;
   readonly width?: number;
@@ -141,7 +150,8 @@ const DEFAULT_SIZES: Readonly<Record<string, { w: number; h: number }>> = {
 
 /** Gap used when placing new nodes before an explicit layout. */
 const PLACEMENT_GAP = 60;
-const TEXT_FONT_SIZE = 20;
+/** Size of a text node created without one. */
+export const TEXT_FONT_SIZE = 20;
 
 const BASE_STYLE = { strokeWidth: 2, opacity: 1, roughness: 0 } as const;
 
@@ -317,11 +327,19 @@ export class Diagram {
         style,
         label,
       );
-      return { ...stencil, width: w, height: h, x, y };
+      return {
+        ...stencil,
+        width: w,
+        height: h,
+        x,
+        y,
+        ...(spec.fontSize !== undefined && { labelFontSize: spec.fontSize }),
+      };
     }
 
     if (kind === 'text') {
-      const size = sizeForText(label, TEXT_FONT_SIZE);
+      const fontSize = spec.fontSize ?? TEXT_FONT_SIZE;
+      const size = sizeForText(label, fontSize);
       return {
         ...style,
         id,
@@ -329,8 +347,8 @@ export class Diagram {
         x,
         y,
         content: label,
-        fontSize: TEXT_FONT_SIZE,
-        fontFamily: 'Arial, sans-serif',
+        fontSize,
+        fontFamily: DEFAULT_LABEL_FONT_FAMILY,
         width: spec.width ?? size.w,
         height: spec.height ?? size.h,
       };
@@ -340,12 +358,13 @@ export class Diagram {
       ? 'shape'
       : kind;
     const defaults = DEFAULT_SIZES[sizeKey] ?? DEFAULT_SIZES.rectangle!;
-    const size = labelSize(kind, label, defaults);
+    const size = labelSize(kind, label, defaults, spec.fontSize);
     const box = {
       x,
       y,
       width: spec.width ?? size.w,
       height: spec.height ?? size.h,
+      ...(spec.fontSize !== undefined && { labelFontSize: spec.fontSize }),
     };
     if (kind === 'rectangle' || kind === 'ellipse' || kind === 'rhombus') {
       return {
@@ -389,6 +408,7 @@ export class Diagram {
         ...(spec.startHead && { startHeadStyle: spec.startHead }),
         ...(spec.endHead && { endHeadStyle: spec.endHead }),
         ...(spec.label && { label: spec.label }),
+        ...(spec.fontSize !== undefined && { labelFontSize: spec.fontSize }),
       };
       return line;
     });
@@ -406,13 +426,26 @@ export class Diagram {
           ? { type: 'EDIT_TEXT', id, content: patch.label }
           : { type: 'UPDATE_ELEMENT', id, props: { label: patch.label } },
       );
-      // Auto-sized nodes follow their new label unless a size is given.
-      const size =
-        this.autoSized.has(id) &&
-        patch.width === undefined &&
-        patch.height === undefined
-          ? autoSizeOf(el, patch.label)
-          : null;
+    }
+    if (patch.fontSize !== undefined) {
+      this.dispatch({
+        type: 'UPDATE_ELEMENT',
+        id,
+        props:
+          el.type === 'text'
+            ? { fontSize: patch.fontSize }
+            : { labelFontSize: patch.fontSize },
+      });
+    }
+    // Auto-sized nodes follow their new label and font unless a size is given.
+    if (
+      (patch.label !== undefined || patch.fontSize !== undefined) &&
+      this.autoSized.has(id) &&
+      patch.width === undefined &&
+      patch.height === undefined
+    ) {
+      const current = this.elements.find((e) => e.id === id)!;
+      const size = autoSizeOf(current);
       if (size)
         this.dispatch({
           type: 'RESIZE_ELEMENT',
@@ -507,6 +540,7 @@ export class Diagram {
       set.strokeColor = NODE_COLORS[patch.color].stroke;
     if (patch.startHead !== undefined) set.startHeadStyle = patch.startHead;
     if (patch.endHead !== undefined) set.endHeadStyle = patch.endHead;
+    if (patch.fontSize !== undefined) set.labelFontSize = patch.fontSize;
     if (patch.arrow !== undefined) {
       if (el.type !== 'line')
         throw new DiagramError(
@@ -601,22 +635,37 @@ export class Diagram {
 }
 
 /** Size a labeled node of this kind takes when created without one. */
-function labelSize(kind: NodeKind, label: string, defaults: Size): Size {
+function labelSize(
+  kind: NodeKind,
+  label: string,
+  defaults: Size,
+  fontSize?: number,
+): Size {
   if (kind === 'text' || kind === 'icon') return defaults;
-  return label ? sizeForLabel(kind, label, defaults) : defaults;
+  return label ? sizeForLabel(kind, label, defaults, fontSize) : defaults;
 }
 
-/** New auto size of an existing node after its label changes. */
-function autoSizeOf(el: Element, label: string): Size | null {
+/** New auto size of an existing node after its label or font changes. */
+function autoSizeOf(el: Element): Size | null {
   switch (el.type) {
     case 'text':
-      return sizeForText(label, el.fontSize);
+      return sizeForText(el.content, el.fontSize);
     case 'rectangle':
     case 'ellipse':
     case 'rhombus':
-      return labelSize(el.type, label, DEFAULT_SIZES[el.type]!);
+      return labelSize(
+        el.type,
+        el.label ?? '',
+        DEFAULT_SIZES[el.type]!,
+        el.labelFontSize,
+      );
     case 'shape':
-      return labelSize(el.kind, label, DEFAULT_SIZES.shape!);
+      return labelSize(
+        el.kind,
+        el.label ?? '',
+        DEFAULT_SIZES.shape!,
+        el.labelFontSize,
+      );
     default:
       return null;
   }

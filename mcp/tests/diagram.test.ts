@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { wrapTextLines } from '../../src/core/text_metrics';
 import type { Element } from '../../src/elements/element';
+import { DEFAULT_LABEL_FONT_FAMILY } from '../../src/elements/label_defaults';
 import {
   getConnectorBox,
   getElementBounds,
 } from '../../src/rendering/draw_selection';
 import { sceneToSVG } from '../../src/rendering/export';
+import { getLabelWrapWidth } from '../../src/rendering/shape_geometry';
 import { describeDiagram } from '../src/describe';
 import {
   Diagram,
@@ -339,5 +342,88 @@ describe('slugify', () => {
   it('makes short readable keys', () => {
     expect(slugify('Orders DB')).toBe('orders-db');
     expect(slugify('  Città / Servizio ')).toBe('citta-servizio');
+  });
+});
+
+describe('font size', () => {
+  const TITLE = 'A NEW VERSION IS OUT!';
+
+  it('sizes a large shape label so it stays on one line', async () => {
+    const d = new Diagram();
+    await d.addNodes([{ key: 'title', label: TITLE, fontSize: 40 }]);
+    const el = d.elements[0]!;
+    if (el.type !== 'rectangle') throw new Error('expected a rectangle');
+    expect(el.labelFontSize).toBe(40);
+    const lines = wrapTextLines(
+      TITLE,
+      getLabelWrapWidth(el, el.width, el.height),
+      40,
+      DEFAULT_LABEL_FONT_FAMILY,
+      false,
+      true,
+    );
+    expect(lines).toEqual([TITLE]);
+    expect(el.height).toBeGreaterThanOrEqual(40 * 1.2);
+  });
+
+  it('sets the size of text nodes and icon labels', async () => {
+    const d = new Diagram();
+    await d.addNodes([
+      { key: 'h1', kind: 'text', label: TITLE, fontSize: 48 },
+      { key: 'db', kind: 'icon', icon: 'database', fontSize: 20 },
+    ]);
+    const [text, icon] = d.elements;
+    if (text?.type !== 'text' || icon?.type !== 'stencil')
+      throw new Error('unexpected kinds');
+    expect(text.fontSize).toBe(48);
+    expect(wrapTextLines(TITLE, text.width, 48, text.fontFamily)).toEqual([
+      TITLE,
+    ]);
+    expect(icon.labelFontSize).toBe(20);
+  });
+
+  it('grows an auto-sized node when its font size changes', async () => {
+    const d = new Diagram();
+    await d.addNodes([{ key: 'api', label: 'Orders service' }]);
+    const before = d.elements[0]!;
+    d.update('api', { fontSize: 32 });
+    const after = d.elements[0]!;
+    if (after.type !== 'rectangle') throw new Error('expected a rectangle');
+    expect(after.labelFontSize).toBe(32);
+    expect(after.width).toBeGreaterThan(getElementBounds(before).w);
+  });
+
+  it('keeps an explicit size when only the font changes', async () => {
+    const d = new Diagram();
+    await d.addNodes([{ key: 'api', label: 'API', width: 200, height: 90 }]);
+    d.update('api', { fontSize: 24 });
+    expect(d.elements[0]).toMatchObject({
+      width: 200,
+      height: 90,
+      labelFontSize: 24,
+    });
+  });
+
+  it('sets and changes the connector label size', async () => {
+    const d = new Diagram();
+    await d.addNodes([{ key: 'a' }, { key: 'b' }]);
+    d.connect([{ from: 'a', to: 'b', label: 'calls', fontSize: 18 }]);
+    const line = () => d.elements.find((el) => el.type === 'line')!;
+    expect(line()).toMatchObject({ labelFontSize: 18 });
+    d.updateEdge({ from: 'a', to: 'b' }, { fontSize: 10 });
+    expect(line()).toMatchObject({ labelFontSize: 10 });
+  });
+
+  it('reports only font sizes that differ from the default', async () => {
+    const d = new Diagram();
+    await d.addNodes([
+      { key: 'title', label: 'Big', fontSize: 40 },
+      { key: 'plain', label: 'Plain' },
+    ]);
+    d.connect([{ from: 'title', to: 'plain', label: 'x', fontSize: 16 }]);
+    const text = describeDiagram(d);
+    expect(text).toMatch(/- title \[rectangle\] "Big" font 40px at/);
+    expect(text).toMatch(/- plain \[rectangle\] "Plain" at/);
+    expect(text).toMatch(/title -> plain "x" font 16px/);
   });
 });

@@ -79,10 +79,10 @@ Bump `version` in `mcp/package.json`, add the entry to `mcp/CHANGELOG.md`, merge
 | `diagram_new` | Start an empty diagram |
 | `diagram_open` | Open a `.markasso` file or a markasso.it share link |
 | `diagram_read` | Describe nodes (key, kind, label, position, size) and connections (with their ids) |
-| `diagram_add_nodes` | Add nodes by key: rectangle, ellipse, rhombus, text, flowchart symbols, icons. Nodes without a size fit their label |
-| `diagram_connect` | Connect nodes by key: label, straight/elbow routing, arrowhead styles, dashed |
-| `diagram_update` | Change a node's label, color, position or size |
-| `diagram_update_edge` | Change a connection's label, routing, heads, dash or color |
+| `diagram_add_nodes` | Add nodes by key: rectangle, ellipse, rhombus, text, flowchart symbols, icons, with an optional font size. Nodes without a size fit their label |
+| `diagram_connect` | Connect nodes by key: label and its font size, straight/elbow routing, arrowhead styles, dashed |
+| `diagram_update` | Change a node's label, color, font size, position or size |
+| `diagram_update_edge` | Change a connection's label, label font size, routing, heads, dash or color |
 | `diagram_disconnect` | Remove connections (by id or by from/to), keeping the nodes |
 | `diagram_remove` | Remove nodes and their connections |
 | `diagram_layout` | Arrange nodes in layers (top-to-bottom or left-to-right) |

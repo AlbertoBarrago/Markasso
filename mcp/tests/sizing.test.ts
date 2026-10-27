@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { measureTextWidth, wrapTextLines } from '../../src/core/text_metrics';
 import type { Element } from '../../src/elements/element';
 import { getConnectorBox } from '../../src/rendering/draw_selection';
-import { getShapeTextBox } from '../../src/rendering/shape_geometry';
+import {
+  getLabelWrapWidth,
+  getShapeTextBox,
+} from '../../src/rendering/shape_geometry';
 import { Diagram } from '../src/diagram';
 
 const LONG =
@@ -27,6 +30,27 @@ describe('node sizing', () => {
       expect(measureTextWidth(line, 16, 'Arial')).toBeLessThanOrEqual(
         el.width - 16,
       );
+  });
+
+  it('fits an overlong word broken like the canvas draws it', async () => {
+    const d = new Diagram();
+    const word = 'Supercalifragilisticexpialidocious'.repeat(3);
+    await d.addNodes([{ key: 'w', label: word }]);
+    const el = d.elements[0]!;
+    if (el.type !== 'rectangle') throw new Error('expected a rectangle');
+    const wrap = getLabelWrapWidth(el, el.width, el.height);
+    const lines = wrapTextLines(
+      word,
+      wrap,
+      16,
+      'Arial, sans-serif',
+      false,
+      true,
+    );
+    expect(lines.length).toBeGreaterThan(1);
+    expect(lines.length * 16 * 1.2).toBeLessThanOrEqual(el.height - 8);
+    for (const line of lines)
+      expect(measureTextWidth(line, 16, 'Arial')).toBeLessThanOrEqual(wrap);
   });
 
   it('keeps the default size for short labels', async () => {
