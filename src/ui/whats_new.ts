@@ -6,15 +6,15 @@ const STORAGE_KEY = 'markasso-whats-new-version';
  * Release whose highlights are shown. Bump it only when the list below
  * changes, so patch releases don't reopen the same notice.
  */
-const WHATS_NEW_ID = '1.13';
+const WHATS_NEW_ID = '1.14';
 const RELEASE_URL =
-  'https://github.com/AlbertoBarrago/Markasso/releases/tag/v1.13.0';
+  'https://github.com/AlbertoBarrago/Markasso/releases/tag/v1.14.0';
 
 const HIGHLIGHTS = [
-  ['whatsNewMcpTitle', 'whatsNewMcp'],
-  ['whatsNewFlowchartTitle', 'whatsNewFlowchart'],
-  ['whatsNewIconsTitle', 'whatsNewIcons'],
-  ['whatsNewTextTitle', 'whatsNewText'],
+  ['whatsNewToolbarTitle', 'whatsNewToolbar'],
+  ['whatsNewMenuTitle', 'whatsNewMenu'],
+  ['whatsNewPanelsTitle', 'whatsNewPanels'],
+  ['whatsNewNotesTitle', 'whatsNewNotes'],
 ] as const;
 
 /**

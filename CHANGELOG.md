@@ -4,6 +4,41 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.14.0] - 2026-10-27
+
+### Added
+- **Direct Preferences shortcut.** Cmd+, on macOS and Ctrl+, elsewhere opens the main menu directly on Preferences; the shortcut is shown in the menu and documented in the guide.
+- **Live connection indicator.** A small red dot beside the live name pulses only while connected, and remains static with reduced motion enabled.
+- **Sticky notes in the toolbar (N).** Notes show their background immediately during editing, keep their box size, wrap and grow with the text, and have 12 px of internal padding on the canvas and in exports.
+- **Six magnetic toolbar positions.** Dock the toolbar at the top or bottom, aligned left, center or right. Dragging shows arrows, a destination preview and a short guide. Click-to-place and arrow keys work too; Home or double-click restores bottom-center, and Escape cancels positioning. The saved dock adapts to visible controls and panels.
+- **Optional corner controls.** Preferences can independently show zoom and undo/redo panels, with settings remembered across sessions. The minimap moves above the history panel when both are visible.
+- **View shortcuts.** Press `M` to toggle the minimap and `Ctrl+Plus` / `Ctrl+Minus` to zoom the canvas. Manuals and the `?` shortcut reference include them and the toolbar docking keys.
+- **Updated What's New notice** covering the toolbar, quick actions, optional controls and sticky notes in all eight languages.
+
+### Fixed
+- **Hints follow the toolbar**, above it when docked at the bottom and below it when docked at the top, with space reserved on the inside of the viewport.
+- **Reset zoom (100%) stays on one line** in Preferences.
+- **Grid styles are hidden when the grid is off**, including keyboard menu navigation.
+
+### Changed
+- **A drawing-focused toolbar.** Hand, select, shapes, arrow/line, pen, text, sticky note and eraser are visible when space permits. A keyboard-accessible More tools menu contains presets, the library, Mermaid import and image insertion, followed by a quick action to start a live session. On narrow windows it also receives secondary tools; basic shapes and connectors remain visible.
+- **Zoom and undo/redo stay in optional corner panels**, outside the drawing toolbar. The minimap remains independently toggleable.
+- **Accessible toolbar tooltips.** Toolbar buttons show their name and shortcut in a tooltip on hover and on keyboard focus, instead of the browser's native one. Escape dismisses it, it stays open while the pointer moves onto it, and screen readers announce it as the button's description.
+- **One menu in the top-left island.** The menu button shows a gear instead of the hamburger and holds file, export, share and preference actions; the top-right corner now only shows your live name and the people in a live session.
+- **Export lives in the main menu.** The PNG and SVG entries of the menu are replaced by an Export submenu with PNG, SVG and HTML; saving as .markasso stays its own entry.
+- **Share stays in the main menu**, after Export, for copy link, X, Reddit and Bluesky. Starting a live session is a direct More tools action, using your stored name; click the live name chip to edit it.
+- **One place for insertion actions.** More tools lists presets, library, Mermaid import and image insertion in that order, with live collaboration in a separate group. The settings menu no longer duplicates them; the same actions are available on touch devices.
+- **The main menu follows the WAI-ARIA menu pattern.** Export, share, preferences and language open as submenus on the right, on hover, click or the Right arrow. The arrow keys, Home and End move through the items, typing a letter jumps to the next item starting with it, Left or Escape closes a submenu, Escape closes the menu and returns focus to its button; Tab moves to the support and GitHub footer controls. Grid, minimap, grid type, canvas background, theme and language are announced as checkable items, and the language picker is a list instead of a dropdown.
+- **The library sidebar reaches the top of the screen**, now that the top-right corner is free.
+- **Shadows in the light theme.** Islands, panels and menus keep their shadows in the light theme too.
+
+### Removed
+- **The once/continuous label next to the tool lock button**, on desktop and mobile: the lock button already shows the mode.
+- **The second toolbar row on narrow desktop windows**, replaced by the docked toolbar.
+- **Shape labels wrap where you type them.** The label editor, the canvas and the SVG export share one wrap width per shape, so text breaks at the same points after editing; overlong words break inside the shape instead of overflowing. Editing a label that has no font of its own keeps the size and font it is drawn with.
+
+---
+
 ## [1.13.3] - 2026-10-23
 
 ### Added

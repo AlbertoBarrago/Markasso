@@ -1,31 +1,5 @@
-const COFFEE_ICON = `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M6 2v3M10 2v3M14 2v3M4 7h12l-1.5 9a2 2 0 01-2 1.5h-5a2 2 0 01-2-1.5zM16 9h2a2 2 0 010 4h-2"/>
-</svg>`;
-
-export function initStarCta(appEl: HTMLElement, toolbarEl: HTMLElement): void {
-  // ── Toolbar button ──────────────────────────────────────────────────────────
-  const coffeeBtn = document.createElement('button');
-  coffeeBtn.className = 'tb-btn tb-coffee-btn';
-  coffeeBtn.title = 'Buy me a coffee';
-  coffeeBtn.setAttribute('aria-label', 'Support Markasso with a coffee');
-  coffeeBtn.innerHTML = COFFEE_ICON;
-
-  const leftSection = toolbarEl.querySelector<HTMLElement>('.tb-left');
-  (leftSection ?? toolbarEl).appendChild(coffeeBtn);
-
-  function triggerPulse(): void {
-    coffeeBtn.classList.remove('pulse');
-    void coffeeBtn.offsetWidth;
-    coffeeBtn.classList.add('pulse');
-  }
-
-  triggerPulse();
-  let pulseCount = 1;
-  const pulseTimer = setInterval(() => {
-    triggerPulse();
-    if (++pulseCount >= 2) clearInterval(pulseTimer);
-  }, 7000);
-
+/** The support modal; the main menu (settings.ts) opens it. */
+export function initStarCta(appEl: HTMLElement): { open: () => void } {
   // ── Modal ───────────────────────────────────────────────────────────────────
   let modalEl: HTMLElement | null = null;
 
@@ -93,5 +67,5 @@ export function initStarCta(appEl: HTMLElement, toolbarEl: HTMLElement): void {
     appEl.appendChild(modalEl);
   }
 
-  coffeeBtn.addEventListener('click', openModal);
+  return { open: openModal };
 }

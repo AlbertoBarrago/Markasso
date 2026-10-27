@@ -44,6 +44,7 @@ export class StickyTool implements Tool {
       width: STICKY_W,
       height: STICKY_H,
       content: '',
+      padding: 12,
       fontSize: STICKY_FONT_SIZE,
       fontFamily: appState.fontFamily,
       textAlign: 'left',

@@ -235,6 +235,7 @@ export interface FreehandElement extends BaseElement {
 export interface TextElement extends BaseElement {
   readonly type: 'text';
   readonly content: string;
+  readonly padding?: number;
   readonly fontSize: number;
   readonly fontFamily: string;
   readonly width: number;

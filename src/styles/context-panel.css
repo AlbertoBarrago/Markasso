@@ -1,7 +1,7 @@
 /* ── Context panel (Excalidraw-style) ────────────────────────────────── */
 #context-panel {
   position: fixed;
-  top: 72px;
+  top: max(72px, var(--toolbar-panel-top, 0px));
   left: 16px;
   width: 230px;
   max-width: 240px;
@@ -22,7 +22,11 @@
     transform 0.15s;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  max-height: calc(100vh - 148px);
+  max-height: calc(
+    100vh -
+    max(72px, var(--toolbar-panel-top, 0px)) -
+    max(76px, var(--toolbar-panel-bottom, 0px))
+  );
   overflow-y: auto;
 }
 #context-panel.open {

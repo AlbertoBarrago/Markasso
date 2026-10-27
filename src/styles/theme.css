@@ -5,9 +5,11 @@
   --accent-light: rgb(175, 20, 106, 0.2);
   --alert: #cb0303;
   --focus-ring: var(--accent);
-  --bg-island: #ffffff;
+  --bg-island: #f5f5f5;
   --island-border: #767676; /* 4.5:1 against white — was #a8a8a8 (2.37:1) */
-  --island-shadow: none;
+  --island-shadow:
+    inset 1px -1px 2px 0 rgba(0, 0, 0, 0.35),
+    inset -1px 1px 3px 0 rgba(255, 255, 255, 0.9);
   --bg-hover: rgba(169, 1, 27, 0.08);
   --border: #767676; /* 4.5:1 against white — was #b4b4b4 (2.07:1) */
   --input-border: rgba(
@@ -27,11 +29,9 @@
   width: 100%;
   padding: 0 10px 8px;
 }
-.sp-lang-wrapper.menu-theme-toggle {
-  padding: 0 8px 10px;
-}
-.sp-lang-wrapper.menu-theme-toggle::after {
-  top: calc(50% - 5px);
+.menu-theme-toggle > li {
+  display: flex;
+  flex: 1;
 }
 .menu-theme-btn {
   flex: 1;
@@ -62,23 +62,16 @@
   color: var(--accent);
 }
 
-[data-theme="light"],
-[data-theme="light"] *,
-[data-theme="light"] *::before,
-[data-theme="light"] *::after {
-  box-shadow: none !important;
-  text-shadow: none !important;
-}
-
 [data-theme="light"] .tb-island,
 [data-theme="light"] .settings-panel,
+[data-theme="light"] .menu-sub,
 [data-theme="light"] #context-panel,
 [data-theme="light"] #mobile-actions,
 [data-theme="light"] #mobile-style-sheet,
 [data-theme="light"] #mobile-share-sheet,
 [data-theme="light"] .wl-card,
 [data-theme="light"] .about-modal-box {
-  background: #ffffff !important;
+  background: var(--bg-island) !important;
   border-color: var(--island-border) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -112,6 +105,7 @@
   outline-offset: -2px;
   color: var(--accent);
 }
+
 [data-theme="light"] .tb-separator {
   background: linear-gradient(
     to bottom,
@@ -249,23 +243,8 @@
 }
 
 /* Settings menu */
-[data-theme="light"] .sp-grid-btn {
-  background: rgba(0, 0, 0, 0.04);
-}
-[data-theme="light"] .pref-btn {
-  background: #ffffff;
-}
-[data-theme="light"] .pref-btn:hover {
-  background: rgba(0, 0, 0, 0.08);
-}
 [data-theme="light"] .sp-preset {
   border-color: var(--island-border);
-}
-[data-theme="light"] .sp-lang-select {
-  background: #ffffff;
-}
-[data-theme="light"] .sp-lang-select:focus {
-  background: #ffffff;
 }
 [data-theme="light"] .menu-theme-btn {
   background: #ffffff;

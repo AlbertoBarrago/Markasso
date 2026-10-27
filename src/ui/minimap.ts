@@ -224,5 +224,19 @@ export function initMinimap(workspace: HTMLElement, history: History): void {
 
   // ── Subscribe and initial paint ───────────────────────────────────────────
   history.subscribe(() => paint());
+  // The theme and background color live on <html> (`data-theme`, the
+  // `--canvas-bg` inline style) and can change without a scene update.
+  let repaintQueued = false;
+  new MutationObserver(() => {
+    if (repaintQueued) return;
+    repaintQueued = true;
+    requestAnimationFrame(() => {
+      repaintQueued = false;
+      paint();
+    });
+  }).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme', 'style'],
+  });
   paint();
 }

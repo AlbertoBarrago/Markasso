@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { SHAPE_KINDS } from '../src/elements/element';
+import { type Element, SHAPE_KINDS } from '../src/elements/element';
 import {
   SHAPE_DEFINITIONS,
   shapeCommandsToPathData,
 } from '../src/elements/shapes';
 import {
   flattenShapeCommands,
+  getLabelWrapWidth,
   getShapeBorderPointToward,
   getShapeDistToBoundary,
   getShapeNearestBorderPoint,
@@ -159,5 +160,47 @@ describe('shapeCommandsToPathData', () => {
         20,
       ),
     ).toBe('M 10 20 L 11.23 22 C 11 22 13 24 15 26 Z');
+  });
+});
+
+describe('getLabelWrapWidth', () => {
+  const base = {
+    id: 'el',
+    x: 0,
+    y: 0,
+    width: W,
+    height: H,
+    strokeColor: '#000',
+    fillColor: 'transparent',
+    strokeWidth: 1,
+    opacity: 1,
+    roughness: 0,
+  } as const;
+
+  it('keeps the widths the renderer used before it was shared', () => {
+    expect(getLabelWrapWidth({ ...base, type: 'rectangle' }, W, H)).toBe(
+      W - 16,
+    );
+    expect(getLabelWrapWidth({ ...base, type: 'ellipse' }, W, H)).toBe(
+      W * 0.7 - 16,
+    );
+    expect(getLabelWrapWidth({ ...base, type: 'rhombus' }, W, H)).toBe(
+      W * 0.7 - 16,
+    );
+    for (const kind of SHAPE_KINDS) {
+      expect(getLabelWrapWidth({ ...base, type: 'shape', kind }, W, H)).toBe(
+        getShapeTextBox(kind, W, H).w - 16,
+      );
+    }
+  });
+
+  it('never goes below the label font size', () => {
+    const tiny: Element = {
+      ...base,
+      type: 'rectangle',
+      width: 10,
+      labelFontSize: 24,
+    };
+    expect(getLabelWrapWidth(tiny, 10, H)).toBe(24);
   });
 });

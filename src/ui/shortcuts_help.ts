@@ -47,8 +47,12 @@ const SECTIONS: ShortcutSection[] = [
   {
     title: 'View',
     items: [
+      { label: 'Preferences', key: `${mod},` },
       { label: 'Toggle grid', key: 'G' },
+      { label: 'Toggle minimap', key: 'M' },
       { label: 'Fit to content', key: 'F' },
+      { label: 'Zoom in', key: 'Ctrl++' },
+      { label: 'Zoom out', key: 'Ctrl+−' },
       { label: 'Reset zoom', key: 'Shift+0' },
       { label: 'Hide UI', key: '\\' },
     ],
@@ -58,6 +62,8 @@ const SECTIONS: ShortcutSection[] = [
     items: [
       { label: 'Cancel / Deselect', key: 'Esc' },
       { label: 'Keyboard shortcuts', key: '?' },
+      { label: 'Dock toolbar (handle focused)', key: '← / → / ↑ / ↓' },
+      { label: 'Reset toolbar (handle focused)', key: 'Home' },
     ],
   },
 ];

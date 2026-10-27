@@ -250,3 +250,48 @@ describe('canvas and SVG parity', () => {
     expect(Number(line[3]) - ox).toBeCloseTo(pts.x2, 1);
   });
 });
+
+describe('sticky note padding', () => {
+  it.each([
+    'left',
+    'center',
+    'right',
+  ] as const)('keeps padded %s-aligned text and the background in SVG', (textAlign) => {
+    const note = {
+      ...base,
+      id: 'note',
+      type: 'text',
+      x: 100,
+      y: 150,
+      width: 200,
+      height: 180,
+      content: 'A note with enough words to wrap inside its padded box',
+      fontSize: 16,
+      fontFamily: 'Arial',
+      fillColor: '#FFD966',
+      padding: 12,
+      textAlign,
+    } as const;
+    const { ctx, lines } = recordingContext();
+    drawElement(ctx, note);
+    const svg = sceneToSVG([note], {
+      canvasColor: '#080808',
+      withBackground: false,
+    })!;
+    const rect = svg.match(
+      /<rect x="([-\d.]+)" y="([-\d.]+)" width="200" height="180" fill="#FFD966"/,
+    )!;
+    expect(rect).not.toBeNull();
+    const exported = svgLines(
+      svg,
+      Number(rect[1]) - note.x,
+      Number(rect[2]) - note.y,
+    );
+    expect(exported.map((l) => l.text)).toEqual(lines.map((l) => l.text));
+    exported.forEach((line, i) => {
+      expect(line.x).toBeCloseTo(lines[i]!.x, 1);
+      expect(line.cy).toBeCloseTo(lines[i]!.cy, 1);
+    });
+    expect(lines[0]!.cy).toBe(note.y + 12 + note.fontSize / 2);
+  });
+});

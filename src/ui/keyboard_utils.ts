@@ -16,8 +16,7 @@ export function isFocusInPanel(): boolean {
 
   // Non-toolbar controls in toolbar islands (e.g. export menu items) keep blocking.
   return (
-    active.closest(
-      '.tb-island, .tb-island-bottomleft, .tb-island-topright, .tb-island-topleft',
-    ) !== null
+    active.closest('.tb-island, .tb-island-topright, .tb-island-topleft') !==
+    null
   );
 }

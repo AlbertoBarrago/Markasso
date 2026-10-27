@@ -1,5 +1,6 @@
 import { normalizeRect } from '../core/geometry';
 import type { Scene } from '../core/scene';
+import { getTextContentBox } from '../core/text_measure';
 import { wrapTextLines } from '../core/text_metrics';
 import type {
   ArrowElement,
@@ -48,7 +49,12 @@ import {
   resolveArrowEndpoints,
   resolveConnectorRoute,
 } from './draw_selection';
-import { getShapeTextBox } from './shape_geometry';
+import {
+  DEFAULT_SHAPE_LABEL_FONT_FAMILY,
+  DEFAULT_SHAPE_LABEL_FONT_SIZE,
+  getLabelWrapWidth,
+  getShapeTextBox,
+} from './shape_geometry';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -408,10 +414,10 @@ function rectToSVG(el: RectangleElement, ox: number, oy: number): string {
       wrappedLabelToSVG(
         x + w / 2,
         y + h / 2,
-        w,
+        getLabelWrapWidth(el, w, h),
         el.label,
-        el.labelFontSize ?? 16,
-        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
+        el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
         el.labelColor ?? contrastColor(el.fillColor, el.strokeColor),
         el.opacity,
       );
@@ -431,10 +437,10 @@ function ellipseToSVG(el: EllipseElement, ox: number, oy: number): string {
       wrappedLabelToSVG(
         cx,
         cy,
-        rx * 2 * 0.7,
+        getLabelWrapWidth(el, rx * 2, ry * 2),
         el.label,
-        el.labelFontSize ?? 16,
-        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
+        el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
         el.labelColor ?? contrastColor(el.fillColor, el.strokeColor),
         el.opacity,
       );
@@ -459,10 +465,10 @@ function rhombusToSVG(el: RhombusElement, ox: number, oy: number): string {
       wrappedLabelToSVG(
         x + w / 2,
         y + h / 2,
-        w * 0.7,
+        getLabelWrapWidth(el, w, h),
         el.label,
-        el.labelFontSize ?? 16,
-        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
+        el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
         el.labelColor ?? contrastColor(el.fillColor, el.strokeColor),
         el.opacity,
       );
@@ -554,10 +560,10 @@ function shapeToSVG(el: ShapeElement, ox: number, oy: number): string {
       wrappedLabelToSVG(
         x + box.x + box.w / 2,
         y + box.y + box.h / 2,
-        box.w,
+        getLabelWrapWidth(el, w, h),
         el.label,
-        el.labelFontSize ?? 16,
-        el.labelFontFamily ?? 'Arial, sans-serif',
+        el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
+        el.labelFontFamily ?? DEFAULT_SHAPE_LABEL_FONT_FAMILY,
         el.labelColor ?? contrastColor(el.fillColor, el.strokeColor),
         el.opacity,
       ),
@@ -738,30 +744,36 @@ function freehandToSVG(el: FreehandElement, ox: number, oy: number): string {
 }
 
 function textToSVG(el: TextElement, ox: number, oy: number): string {
+  const box = getTextContentBox(el);
   const lines = wrapTextLines(
     el.content,
-    el.width,
+    box.width,
     el.fontSize,
     el.fontFamily,
     el.bold,
+    box.padding > 0,
   );
   const lineHeight = el.fontSize * 1.2;
   const align = el.textAlign ?? 'left';
   const x =
-    el.x +
+    box.x +
     ox +
-    (align === 'center' ? el.width / 2 : align === 'right' ? el.width : 0);
+    (align === 'center' ? box.width / 2 : align === 'right' ? box.width : 0);
   const anchor =
     align === 'center' ? 'middle' : align === 'right' ? 'end' : 'start';
   const tspans = lines
     .map(
       (line, i) =>
-        `<tspan x="${round(x)}" y="${round(el.y + oy + i * lineHeight)}">${escapeXml(line)}</tspan>`,
+        `<tspan x="${round(x)}" y="${round(box.y + oy + i * lineHeight)}">${escapeXml(line)}</tspan>`,
     )
     .join('');
   const weight = el.bold ? ' font-weight="bold"' : '';
   const style = el.italic ? ' font-style="italic"' : '';
-  return `<text font-family="${escapeXml(el.fontFamily)}" font-size="${el.fontSize}"${weight}${style} fill="${escapeXml(el.strokeColor)}" opacity="${el.opacity}" text-anchor="${anchor}" dominant-baseline="text-before-edge"${rotateAttr(el, ox, oy)}>${tspans}</text>`;
+  const background =
+    el.fillColor === 'transparent'
+      ? ''
+      : `<rect x="${round(el.x + ox)}" y="${round(el.y + oy)}" width="${round(el.width)}" height="${round(el.height)}" fill="${escapeXml(el.fillColor)}" opacity="${el.opacity}"${rotateAttr(el, ox, oy)}/>`;
+  return `${background}<text font-family="${escapeXml(el.fontFamily)}" font-size="${el.fontSize}"${weight}${style} fill="${escapeXml(el.strokeColor)}" opacity="${el.opacity}" text-anchor="${anchor}" dominant-baseline="text-before-edge"${rotateAttr(el, ox, oy)}>${tspans}</text>`;
 }
 
 /** Connector label on a box of the canvas color (see connector_labels.ts). */
@@ -797,18 +809,17 @@ function connectorLabelToSVG(
 function wrappedLabelToSVG(
   cx: number,
   cy: number,
-  shapeWidth: number,
+  maxWidth: number,
   label: string,
   fontSize: number,
   fontFamily: string,
   color: string,
   opacity: number,
 ): string {
-  const maxWidth = Math.max(shapeWidth - 16, fontSize);
   return shapeLabelToSVG(
     cx,
     cy,
-    wrapTextLines(label, maxWidth, fontSize, fontFamily),
+    wrapTextLines(label, maxWidth, fontSize, fontFamily, false, true),
     fontSize,
     fontFamily,
     color,

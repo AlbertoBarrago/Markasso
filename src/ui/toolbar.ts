@@ -2,7 +2,6 @@ import type { ActiveTool } from '../core/app_state';
 import { fitToElements } from '../core/viewport';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
-import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { importMermaidText } from '../io/mermaid';
 import { PRESETS } from '../io/presets';
 import {
@@ -12,11 +11,8 @@ import {
   joinLiveSession,
   onLivePeers,
   setLiveName,
-  setStoredName,
 } from '../io/realtime';
-import { buildShareUrl } from '../io/share';
-import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
-import { onLibraryVisibilityChange, toggleLibrary } from './library_panel';
+import { toggleLibrary } from './library_panel';
 import { onLiveHide, onLiveReveal, setLiveUI } from './live_name';
 import { initPeopleList } from './people_list';
 import {
@@ -24,9 +20,12 @@ import {
   showLiveStatusToast,
   showShareToast,
 } from './share_actions';
+import { initToolbarDrag } from './toolbar_drag';
+import { initTooltips } from './tooltip';
 
 // ── SVG icons ──────────────────────────────────────────────────────────────────
 const IC = {
+  dragHandle: `<svg class="drag-handle" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M10 13a1 1 0 100-2 1 1 0 000 2zm-4 0a1 1 0 100-2 1 1 0 000 2zm1-5a1 1 0 11-2 0 1 1 0 012 0zm3 1a1 1 0 100-2 1 1 0 000 2zm1-5a1 1 0 11-2 0 1 1 0 012 0zM6 5a1 1 0 100-2 1 1 0 000 2z"></path></svg>`,
   lock: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 3.75l-3.33 3.33-3.33 1.25-1.25 1.25 5.83 5.83 1.25-1.25 1.25-3.33 3.33-3.33z" fill="currentColor" stroke="none"/><line x1="7.5" y1="12.5" x2="3.75" y2="16.25"/><line x1="12.08" y1="3.33" x2="16.67" y2="7.92"/></svg>`,
   lockOpen: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 3.75l-3.33 3.33-3.33 1.25-1.25 1.25 5.83 5.83 1.25-1.25 1.25-3.33 3.33-3.33z"/><line x1="7.5" y1="12.5" x2="3.75" y2="16.25"/><line x1="12.08" y1="3.33" x2="16.67" y2="7.92"/></svg>`,
   elemLocked: `<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="9" width="10" height="8" rx="1.5"/><path d="M7 9V6a3 3 0 0 1 6 0v3"/></svg>`,
@@ -34,20 +33,13 @@ const IC = {
   select: `<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M5.5 3v12.8l2.9-2.9 2.4 5.4 2.1-.95-2.4-5.4 3.8.001z"/></svg>`,
   rectangle: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="14" height="10" rx="1.5"/></svg>`,
   ellipse: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="10" cy="10" rx="7.5" ry="5.5"/></svg>`,
-  line: `<svg width="18" height="18" viewBox="0 0 20 20"><line x1="4" y1="16" x2="16" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
   arrow: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="16" x2="16" y2="4"/><path d="M9 4h7v7"/></svg>`,
   rombo: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l7 7-7 7-7-7z"/></svg>`,
   freehand: `<svg width="18" height="18" aria-hidden="true" focusable="false" role="img" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M12.8 3.4l3.8 3.8-7.9 7.9-3.8-3.8z"/><path d="M4.9 11.3c-1.2 1-1.8 2.2-1.8 3.6 0 1.2-.4 2-1.1 2.7 2 .2 4.3-.2 5.8-1.7l.9-.8"/><path d="M11.6 4.6l3.8 3.8"/></svg>`,
   text: `<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4h12v2.5H12v9.5H8V6.5H4z"/></svg>`,
   undo: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h9a4 4 0 010 8H8"/><path d="M7 5L4 8l3 3"/></svg>`,
   redo: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8H7a4 4 0 000 8h5"/><path d="M13 5l3 3-3 3"/></svg>`,
-  export: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M7 9l3 3 3-3"/><path d="M4 14v1.5A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5V14"/></svg>`,
-  import: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7a2 2 0 012-2h3l2 2h5a2 2 0 012 2v5a2 2 0 01-2 2H4a2 2 0 01-2-2V7z"/></svg>`,
   fit: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="2.5"/><path d="M1 5V2h3M12 2h3v3M15 11v3h-3M4 14H1v-3"/></svg>`,
-  imgPNG: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><rect x="2" y="3" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="8" r="1.5" fill="currentColor"/><path d="M2 14l4-4 3 3 3-3 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  imgSVG: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><circle cx="4" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 10C8 5 12 5 13.5 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
-  markasso: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" style="flex-shrink:0"><rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
-  mermaid: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="7" height="5" rx="1"/><rect x="12" y="14" width="7" height="5" rx="1"/><path d="M4.5 6v4h11v4"/><path d="M14 16l1.5-2 1.5 2"/></svg>`,
   layers: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L2 6l8 4 8-4z"/><path d="M2 10l8 4 8-4"/><path d="M2 14l8 4 8-4"/></svg>`,
   hamburger: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/></svg>`,
   importImg: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="16" height="14" rx="2"/><circle cx="7" cy="8" r="1.5"/><path d="M2 14l4-4 3 3 3-3 4 4"/><path d="M13 7l2-2 2 2M15 5v5"/></svg>`,
@@ -99,7 +91,13 @@ const TOOLS: ToolDef[] = [
     key: 'E / 4',
     num: '4',
   },
-  { tool: 'line', icon: IC.line, label: t('line'), key: 'A / L / 5', num: '5' },
+  {
+    tool: 'line',
+    icon: IC.arrow,
+    label: `${t('arrow')} / ${t('line')}`,
+    key: 'A / L / 5',
+    num: '5',
+  },
   {
     tool: 'freehand',
     icon: IC.freehand,
@@ -108,19 +106,42 @@ const TOOLS: ToolDef[] = [
     num: '6',
   },
   { tool: 'text', icon: IC.text, label: t('textTool'), key: 'T / 7', num: '7' },
+  {
+    tool: 'sticky',
+    icon: IC.sticky,
+    label: t('stickyNote').replace(/\s*\(N\)$/, ''),
+    key: 'N',
+    num: 'N',
+  },
   { tool: 'eraser', icon: IC.eraser, label: t('eraser'), key: '0', num: '0' },
 ];
 
-export function initToolbar(container: HTMLElement, history: History): void {
+export function initToolbar(
+  container: HTMLElement,
+  history: History,
+  openImagePicker: () => void,
+): void {
   container.innerHTML = '';
 
-  // ── Center-top: tool buttons pill ─────────────────────────────────────────
+  // ── Center-bottom: tool buttons pill ──────────────────────────────────────
   const centerPill = div('tb-island tb-island-tools');
   centerPill.setAttribute('role', 'toolbar');
   centerPill.setAttribute('aria-label', 'Drawing tools');
   const toolBtns = new Map<ActiveTool, HTMLButtonElement>();
 
-  // Lock button (first, no shortcut badge)
+  // Drag handle: docks the toolbar; double-click resets to bottom-center
+  const dragHandle = mkBtn(IC.dragHandle, t('moveToolbarHint'));
+  dragHandle.classList.add('tb-drag-handle');
+  dragHandle.setAttribute('aria-label', t('moveToolbar'));
+  dragHandle.setAttribute('aria-pressed', 'false');
+  centerPill.appendChild(dragHandle);
+
+  // Separator after the drag handle
+  const dragSep = document.createElement('span');
+  dragSep.className = 'tb-separator';
+  centerPill.appendChild(dragSep);
+
+  // Lock button (no shortcut badge)
   const lockBtn = document.createElement('button');
   lockBtn.className = 'tb-btn';
   lockBtn.title = t('lockTool');
@@ -134,36 +155,280 @@ export function initToolbar(container: HTMLElement, history: History): void {
   lockBtn.addEventListener('click', toggleToolLock);
   centerPill.appendChild(lockBtn);
 
-  const lockModeBtn = document.createElement('button');
-  lockModeBtn.className = 'tb-tool-mode-label';
-  lockModeBtn.type = 'button';
-  lockModeBtn.title = t('lockTool');
-  lockModeBtn.addEventListener('click', toggleToolLock);
-  centerPill.appendChild(lockModeBtn);
-
   // Separator after lock
   const lockSep = document.createElement('span');
   lockSep.className = 'tb-separator';
   centerPill.appendChild(lockSep);
 
-  TOOLS.forEach((toolDef) => {
-    if (toolDef.tool === 'eraser') {
-      const sep = document.createElement('span');
-      sep.className = 'tb-separator';
-      centerPill.appendChild(sep);
-    }
-    const b = document.createElement('button');
-    b.className = 'tb-btn';
-    b.title = `${toolDef.label} (${toolDef.key})`;
+  const toolBtnHTML = (toolDef: ToolDef): string =>
+    `${toolDef.icon}${toolDef.num ? `<span class="tb-btn-key">${toolDef.num}</span>` : ''}`;
+
+  for (const toolDef of TOOLS) {
+    const b = mkBtn(toolBtnHTML(toolDef), `${toolDef.label} (${toolDef.key})`);
     b.setAttribute('aria-label', toolDef.label);
     b.setAttribute('aria-pressed', 'false');
-    b.innerHTML = `${toolDef.icon}${toolDef.num ? `<span class="tb-btn-key">${toolDef.num}</span>` : ''}`;
-    b.addEventListener('click', () =>
-      history.dispatch({ type: 'SET_TOOL', tool: toolDef.tool }),
-    );
+    b.dataset.tool = toolDef.tool;
+    b.addEventListener('click', () => {
+      setMoreOpen(false);
+      history.dispatch({ type: 'SET_TOOL', tool: toolDef.tool });
+    });
     toolBtns.set(toolDef.tool, b);
     centerPill.appendChild(b);
+  }
+
+  const moreGroup = div('tb-tool-group tb-more-group');
+  const moreToggle = mkBtn('⋯', t('moreTools'));
+  moreToggle.id = 'tb-more-tools';
+  moreToggle.setAttribute('aria-haspopup', 'menu');
+  moreToggle.setAttribute('aria-expanded', 'false');
+  const morePanel = div('tb-tool-group-panel tb-more-panel');
+  morePanel.id = 'tb-more-panel';
+  morePanel.setAttribute('role', 'menu');
+  morePanel.setAttribute('aria-labelledby', moreToggle.id);
+  moreToggle.setAttribute('aria-controls', morePanel.id);
+  const moreRoot = div('tb-more-root');
+  moreRoot.setAttribute('role', 'group');
+  morePanel.appendChild(moreRoot);
+  const presetList = div('tb-preset-list');
+  presetList.setAttribute('role', 'group');
+  presetList.setAttribute('aria-label', t('presets'));
+  presetList.hidden = true;
+  morePanel.appendChild(presetList);
+  const overflowTools = new Map<ActiveTool, HTMLButtonElement>();
+  function addMoreItem(
+    icon: string,
+    label: string,
+    run: () => void,
+    shortcut = '',
+  ): HTMLButtonElement {
+    const b = document.createElement('button');
+    b.className = 'menu-item';
+    b.setAttribute('role', 'menuitem');
+    b.tabIndex = -1;
+    if (shortcut)
+      b.setAttribute('aria-keyshortcuts', shortcut.replace(/\s*\/\s*/g, ' '));
+    b.innerHTML = `${icon}<span class="menu-item-label">${label}</span>${shortcut ? `<kbd class="menu-item-kbd">${shortcut}</kbd>` : ''}`;
+    b.addEventListener('click', () => {
+      if (b.getAttribute('aria-disabled') === 'true') return;
+      setMoreOpen(false);
+      focusMoreTrigger();
+      run();
+    });
+    moreRoot.appendChild(b);
+    return b;
+  }
+  const secondaryTools: ActiveTool[] = ['freehand', 'text', 'sticky', 'eraser'];
+  for (const tool of TOOLS.filter((d) => secondaryTools.includes(d.tool))) {
+    const b = addMoreItem(
+      tool.icon,
+      tool.label,
+      () => history.dispatch({ type: 'SET_TOOL', tool: tool.tool }),
+      tool.key,
+    );
+    b.hidden = true;
+    overflowTools.set(tool.tool, b);
+  }
+  const moreDivider = div('menu-divider');
+  moreDivider.setAttribute('role', 'separator');
+  moreRoot.appendChild(moreDivider);
+  const presetToggle = addMoreItem(IC.toolbox, t('presets'), openPresets);
+  presetToggle.id = 'tb-presets';
+  presetToggle.setAttribute('aria-controls', 'tb-preset-list');
+  presetToggle.setAttribute('aria-expanded', 'false');
+  presetList.id = 'tb-preset-list';
+  function openPresets(): void {
+    setMoreOpen(true);
+    moreRoot.hidden = true;
+    presetList.hidden = false;
+    presetToggle.setAttribute('aria-expanded', 'true');
+    positionMorePanel();
+    menuItems()[0]?.focus();
+  }
+  function closePresets(): void {
+    moreRoot.hidden = false;
+    presetList.hidden = true;
+    presetToggle.setAttribute('aria-expanded', 'false');
+  }
+  const backToTools = addMoreItem('←', t('moreTools'), () => {
+    setMoreOpen(true);
+    presetToggle.focus();
   });
+  presetList.appendChild(backToTools);
+  for (const def of PRESETS) {
+    const button = addMoreItem(def.icon, t(def.labelKey), () => {
+      const vp = history.present.viewport;
+      const cx = (window.innerWidth / 2 - vp.offsetX) / vp.zoom;
+      const cy = (window.innerHeight / 2 - vp.offsetY) / vp.zoom;
+      const elements = def.buildElements(
+        cx,
+        cy,
+        document.documentElement.getAttribute('data-theme') !== 'light',
+      );
+      history.dispatch({ type: 'CREATE_ELEMENTS', elements });
+      history.dispatch({
+        type: 'GROUP_ELEMENTS',
+        ids: elements.map((e) => e.id),
+        groupId: crypto.randomUUID(),
+      });
+    });
+    button.dataset.preset = def.id;
+    presetList.appendChild(button);
+  }
+  addMoreItem(IC.library, t('library'), () => toggleLibrary(), 'I');
+  const mermaidIcon =
+    '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1" y="1" width="7" height="5" rx="1"/><rect x="12" y="14" width="7" height="5" rx="1"/><path d="M4.5 6v4h11v4M14 16l1.5-2 1.5 2"/></svg>';
+  addMoreItem(mermaidIcon, t('importMermaid'), showMermaidDialog);
+  addMoreItem(IC.importImg, t('insertImage'), openImagePicker);
+  const liveDivider = div('menu-divider');
+  liveDivider.setAttribute('role', 'separator');
+  moreRoot.appendChild(liveDivider);
+  const liveIcon =
+    '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2"/><path d="M6.5 6.5a5 5 0 000 7M13.5 6.5a5 5 0 010 7M4 4a8.5 8.5 0 000 12M16 4a8.5 8.5 0 010 12"/></svg>';
+  const liveAction = addMoreItem(liveIcon, t('startLiveSession'), () => {
+    void startLiveSession();
+  });
+  liveAction.id = 'tb-start-live';
+  onLiveReveal(() => liveAction.setAttribute('aria-disabled', 'true'));
+  onLiveHide(() => liveAction.removeAttribute('aria-disabled'));
+  async function startLiveSession(): Promise<void> {
+    liveAction.setAttribute('aria-disabled', 'true');
+    const roomId = generateRoomId();
+    const url = buildLiveRoomUrl(roomId);
+    const copied = await copyToClipboard(url);
+    showShareToast(copied, url, t('shareLiveCopied'));
+    joinLiveSession(history, {
+      roomId,
+      name: getStoredName() || 'You',
+      seedElements: history.present.elements,
+      onStatus: (connected) => {
+        setLiveUI(connected);
+        showLiveStatusToast(connected);
+      },
+    });
+  }
+
+  const menuItems = (): HTMLButtonElement[] =>
+    [
+      ...morePanel.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+    ].filter((b) => !b.closest('[hidden]'));
+  function focusMoreTrigger(): void {
+    if (!window.matchMedia('(pointer: coarse)').matches) moreToggle.focus();
+    else document.getElementById('mobile-tools-fab')?.focus();
+  }
+  function positionMorePanel(): void {
+    const anchor = window.matchMedia('(pointer: coarse)').matches
+      ? document.getElementById('mobile-tools-fab')
+      : moreToggle;
+    if (!anchor) return;
+    const r = anchor.getBoundingClientRect();
+    const below = r.top < window.innerHeight / 2;
+    const room = below ? window.innerHeight - r.bottom - 16 : r.top - 16;
+    morePanel.style.maxHeight = `${Math.max(80, room)}px`;
+    const height = morePanel.offsetHeight;
+    morePanel.style.left = `${Math.max(8, Math.min(r.right - morePanel.offsetWidth, window.innerWidth - morePanel.offsetWidth - 8))}px`;
+    morePanel.style.top = `${Math.max(8, Math.min(below ? r.bottom + 8 : r.top - height - 8, window.innerHeight - height - 8))}px`;
+  }
+  function setMoreOpen(open: boolean, focus = false): void {
+    if (!open) closePresets();
+    morePanel.classList.toggle('open', open);
+    moreToggle.setAttribute('aria-expanded', String(open));
+    moreToggle.classList.toggle('open', open);
+    if (open) {
+      const popup = document.getElementById('mobile-tools-popup');
+      if (popup) {
+        popup.classList.remove('open');
+        popup.hidden = true;
+      }
+      const fab = document.getElementById('mobile-tools-fab');
+      if (fab) {
+        fab.classList.remove('active');
+        fab.innerHTML = IC.toolbox;
+      }
+      positionMorePanel();
+      if (focus) menuItems()[0]?.focus();
+    }
+  }
+  moreToggle.addEventListener('click', () =>
+    setMoreOpen(!morePanel.classList.contains('open'), true),
+  );
+  moreToggle.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    e.stopPropagation();
+    setMoreOpen(true);
+    const items = menuItems();
+    (e.key === 'ArrowDown' ? items[0] : items.at(-1))?.focus();
+  });
+  morePanel.addEventListener('keydown', (e) => {
+    const items = menuItems();
+    const index = items.indexOf(document.activeElement as HTMLButtonElement);
+    if (!presetList.hidden && (e.key === 'Escape' || e.key === 'ArrowLeft')) {
+      e.preventDefault();
+      e.stopPropagation();
+      closePresets();
+      positionMorePanel();
+      presetToggle.focus();
+      return;
+    }
+    if (e.key === 'ArrowRight' && document.activeElement === presetToggle) {
+      e.preventDefault();
+      e.stopPropagation();
+      openPresets();
+      return;
+    }
+    let next: number | undefined;
+    if (e.key === 'ArrowDown') next = (index + 1) % items.length;
+    else if (e.key === 'ArrowUp')
+      next = (index - 1 + items.length) % items.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = items.length - 1;
+    else if (e.key === 'Escape' || e.key === 'Tab') {
+      setMoreOpen(false);
+      focusMoreTrigger();
+      e.stopPropagation();
+      if (e.key === 'Escape') e.preventDefault();
+      return;
+    }
+    if (
+      next === undefined &&
+      e.key.length === 1 &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.altKey
+    ) {
+      for (let step = 1; step <= items.length; step++) {
+        const candidate = (index + step) % items.length;
+        if (
+          items[candidate]?.textContent
+            ?.trim()
+            .toLocaleLowerCase()
+            .startsWith(e.key.toLocaleLowerCase())
+        ) {
+          next = candidate;
+          break;
+        }
+      }
+    }
+    if (next !== undefined) {
+      e.preventDefault();
+      e.stopPropagation();
+      items[next]?.focus();
+    }
+  });
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (
+        !moreGroup.contains(e.target as Node) &&
+        !morePanel.contains(e.target as Node)
+      )
+        setMoreOpen(false);
+    },
+    { capture: true },
+  );
+  moreGroup.append(moreToggle);
+  container.appendChild(morePanel);
+  centerPill.appendChild(moreGroup);
 
   // Locked-elements indicator — shown when selection contains locked elements
   const lockedSep = document.createElement('span');
@@ -171,6 +436,8 @@ export function initToolbar(container: HTMLElement, history: History): void {
   lockedSep.style.display = 'none';
   const lockedIndicator = document.createElement('button');
   lockedIndicator.className = 'tb-btn tb-locked-indicator';
+  lockedIndicator.title = t('unlockElements');
+  lockedIndicator.setAttribute('aria-label', t('unlockElements'));
   lockedIndicator.innerHTML = IC.elemLocked;
   lockedIndicator.style.display = 'none';
   lockedIndicator.addEventListener('click', () => {
@@ -183,34 +450,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
   centerPill.appendChild(lockedSep);
   centerPill.appendChild(lockedIndicator);
 
-  // ── Bottom-right: undo/redo ────────────────────────────────────────────────
-  const bottomRight = div('tb-island-bottomright');
-
-  const undoPill = div('tb-island tb-island-undo');
-  undoPill.setAttribute('role', 'group');
-  undoPill.setAttribute('aria-label', 'History');
-  const undoBtn = mkBtn(IC.undo, t('undo'));
-  const redoBtn = mkBtn(IC.redo, t('redo'));
-  undoBtn.addEventListener('click', () => history.undo());
-  redoBtn.addEventListener('click', () => history.redo());
-  undoPill.append(undoBtn, redoBtn);
-  bottomRight.append(undoPill);
-
-  // ── Bottom-left: zoom ──────────────────────────────────────────────────────
-  const bottomLeft = div('tb-island-bottomleft');
-
-  // Zoom
-  const zoomPill = div('tb-island tb-island-zoom');
-  zoomPill.setAttribute('role', 'group');
-  zoomPill.setAttribute('aria-label', 'Zoom');
-  const fitBtn = mkBtn(IC.fit, t('fitContent'));
-  const minusBtn = mkBtn('−', t('zoomOut'));
-  const plusBtn = mkBtn('+', t('zoomIn'));
-  minusBtn.style.fontSize = plusBtn.style.fontSize = '18px';
-  const zoomLabel = document.createElement('button');
-  zoomLabel.className = 'tb-btn tb-zoom-btn';
-  zoomLabel.title = t('resetZoom');
-  fitBtn.addEventListener('click', () => {
+  const fitContent = (): void => {
     const vp = fitToElements(
       history.present.elements,
       window.innerWidth,
@@ -222,24 +462,8 @@ export function initToolbar(container: HTMLElement, history: History): void {
       offsetY: vp.offsetY,
       zoom: vp.zoom,
     });
-  });
-  minusBtn.addEventListener('click', () =>
-    history.dispatch({
-      type: 'ZOOM_VIEWPORT',
-      factor: 1 / 1.2,
-      originX: window.innerWidth / 2,
-      originY: window.innerHeight / 2,
-    }),
-  );
-  plusBtn.addEventListener('click', () =>
-    history.dispatch({
-      type: 'ZOOM_VIEWPORT',
-      factor: 1.2,
-      originX: window.innerWidth / 2,
-      originY: window.innerHeight / 2,
-    }),
-  );
-  zoomLabel.addEventListener('click', () => {
+  };
+  const resetZoom = (): void => {
     const vp = history.present.viewport;
     const w = window.innerWidth,
       h = window.innerHeight;
@@ -251,28 +475,9 @@ export function initToolbar(container: HTMLElement, history: History): void {
       offsetX: w / 2 - worldCX,
       offsetY: h / 2 - worldCY,
     });
-  });
-  zoomPill.append(fitBtn, minusBtn, zoomLabel, plusBtn);
-
-  bottomLeft.append(zoomPill);
-
-  // ── Top-right: import + export dropdown ───────────────────────────────────
+  };
+  // ── Top-right: live name and people ──────────────────────────────────────────
   const topRight = div('tb-island-topright');
-
-  // Import .markasso
-  const importIsland = div('tb-island');
-  const importInput = document.createElement('input');
-  importInput.type = 'file';
-  importInput.accept = '.markasso,application/json';
-  importInput.style.display = 'none';
-  container.appendChild(importInput);
-  importInput.addEventListener('change', () => {
-    const file = importInput.files?.[0];
-    if (file) importMarkasso(file, history);
-    importInput.value = '';
-  });
-  const importTrigger = mkBtn(IC.import, t('openMarkasso'));
-  importTrigger.addEventListener('click', () => importInput.click());
 
   // Mermaid dialog
   const mermaidDialog = document.createElement('div');
@@ -446,97 +651,6 @@ export function initToolbar(container: HTMLElement, history: History): void {
     }
   }
 
-  const mermaidTrigger = mkBtn(IC.mermaid, t('importMermaid'));
-  mermaidTrigger.addEventListener('click', showMermaidDialog);
-
-  importIsland.append(importTrigger, mermaidTrigger);
-
-  // Export dropdown
-  const exportIsland = div('tb-island');
-  exportIsland.style.position = 'relative';
-  const exportTrigger = mkBtn(IC.export, t('export'));
-  exportTrigger.setAttribute('aria-expanded', 'false');
-  const exportPanel = document.createElement('div');
-  exportPanel.setAttribute('role', 'menu');
-  exportPanel.style.cssText = [
-    'position:absolute',
-    'right:0',
-    'top:calc(100% + 6px)',
-    'background:rgba(26,26,40,0.98)',
-    'border:1px solid rgba(255,255,255,0.1)',
-    'border-radius:10px',
-    'padding:4px',
-    'display:none',
-    'flex-direction:column',
-    'gap:2px',
-    'min-width:148px',
-    'box-shadow:0 4px 24px rgba(0,0,0,0.6)',
-    'z-index:1000',
-    'backdrop-filter:blur(16px)',
-  ].join(';');
-
-  const askBackground = (): boolean => confirm('Include white background?');
-
-  const exportPNGItem = menuItem(t('exportPNG'), IC.imgPNG, () =>
-    exportPNG(history.present, askBackground()),
-  );
-  const exportSVGItem = menuItem(t('exportSVG'), IC.imgSVG, () =>
-    exportSVG(history.present, askBackground()),
-  );
-  const exportHTMLItem = menuItem(t('exportHTML'), IC.export, () =>
-    exportHTML(history.present),
-  );
-  const exportMarkassoItem = menuItem(t('saveMarkasso'), IC.markasso, () =>
-    exportMarkasso(history.present),
-  );
-  exportPanel.append(
-    exportPNGItem,
-    exportSVGItem,
-    exportHTMLItem,
-    exportMarkassoItem,
-  );
-
-  let panelOpen = false;
-  exportTrigger.addEventListener('click', (e) => {
-    e.stopPropagation();
-    panelOpen = !panelOpen;
-    exportPanel.style.display = panelOpen ? 'flex' : 'none';
-    exportTrigger.setAttribute('aria-expanded', String(panelOpen));
-    if (panelOpen) {
-      exportPanel
-        .querySelector<HTMLButtonElement>('button:not([disabled])')
-        ?.focus();
-    }
-  });
-  exportIsland.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && panelOpen) {
-      panelOpen = false;
-      exportPanel.style.display = 'none';
-      exportTrigger.setAttribute('aria-expanded', 'false');
-      exportTrigger.focus();
-    }
-  });
-  document.addEventListener('click', () => {
-    if (panelOpen) {
-      panelOpen = false;
-      exportPanel.style.display = 'none';
-      exportTrigger.setAttribute('aria-expanded', 'false');
-    }
-  });
-  exportIsland.append(exportTrigger, exportPanel);
-
-  // Share island (dropdown)
-  const IC_SHARE = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="5" r="2"/><circle cx="5" cy="10" r="2"/><circle cx="15" cy="15" r="2"/><path d="M7 9l6-3M7 11l6 3"/></svg>`;
-  const IC_LINK_SM = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
-  const IC_BLUESKY = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.912 0 3.083 0 3.75c0 .667.365 5.46.6 6.256.771 2.627 3.516 3.516 6.056 3.216-3.86.57-7.286 1.996-2.79 7.03 4.958 5.4 6.79-1.157 7.734-4.4.944 3.243 2.077 9.573 7.634 4.4 4.22-4.4 1.07-6.46-2.79-7.03 2.54.3 5.285-.59 6.056-3.216.235-.796.6-5.59.6-6.256 0-.667-.14-1.838-.902-2.185-.66-.3-2.164-.621-4.998 1.62-2.752 2.05-5.71 5.98-6.798 8.14z"/></svg>`;
-  const IC_X = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
-  const IC_REDDIT = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/></svg>`;
-
-  const shareIsland = div('tb-island tb-share-island');
-  shareIsland.style.position = 'relative';
-  const shareBtn = mkBtn(IC_SHARE, t('shareLink'));
-  shareBtn.setAttribute('aria-expanded', 'false');
-
   // Editable "your name" chip, shown while a live session is active so any
   // participant (creator or link-joiner) can set/change their own name.
   const nameChip = document.createElement('button');
@@ -545,11 +659,17 @@ export function initToolbar(container: HTMLElement, history: History): void {
   nameChip.style.display = 'none';
   nameChip.title = t('liveName');
   nameChip.setAttribute('aria-label', t('liveName'));
+  // The chip stays top-right on its own island while sharing lives in the
+  // main menu (settings.ts).
+  const nameIsland = div('tb-island tb-live-name-island');
+  nameIsland.style.display = 'none';
   const showNameChip = (): void => {
+    nameIsland.style.display = '';
     nameChip.style.display = '';
     nameChip.textContent = getStoredName() || 'You';
   };
   const hideNameChip = (): void => {
+    nameIsland.style.display = 'none';
     nameChip.style.display = 'none';
   };
   onLiveReveal(showNameChip);
@@ -596,148 +716,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
     input.addEventListener('blur', commit);
   });
 
-  const sharePanel = document.createElement('div');
-  sharePanel.setAttribute('role', 'menu');
-  sharePanel.style.cssText = [
-    'position:absolute',
-    'right:0',
-    'top:calc(100% + 6px)',
-    'background:rgba(26,26,40,0.98)',
-    'border:1px solid rgba(255,255,255,0.1)',
-    'border-radius:10px',
-    'padding:4px',
-    'display:none',
-    'flex-direction:column',
-    'gap:2px',
-    'min-width:196px',
-    'box-shadow:0 4px 24px rgba(0,0,0,0.6)',
-    'z-index:1000',
-    'backdrop-filter:blur(16px)',
-  ].join(';');
-
-  const shareCopyLinkItem = menuItem(
-    t('shareCopyLink'),
-    IC_LINK_SM,
-    async () => {
-      const url = await buildShareUrl(history.present.elements);
-      const ok = await copyToClipboard(url);
-      showShareToast(ok, url);
-    },
-  );
-
-  // ── Live session (real-time collaboration) ──
-  const nameInput = document.createElement('input');
-  nameInput.type = 'text';
-  nameInput.maxLength = 24;
-  nameInput.placeholder = t('liveName');
-  nameInput.setAttribute('aria-label', t('liveName'));
-  nameInput.value = getStoredName();
-  nameInput.style.cssText = [
-    'background:rgba(255,255,255,0.06)',
-    'border:1px solid rgba(255,255,255,0.15)',
-    'border-radius:6px',
-    'color:#e7e7f2',
-    'padding:6px 8px',
-    'font-size:13px',
-    'font-family:inherit',
-    'outline:none',
-  ].join(';');
-  nameInput.addEventListener('input', () => setStoredName(nameInput.value));
-  const divider = document.createElement('div');
-  divider.style.cssText =
-    'height:1px;background:rgba(255,255,255,0.1);margin:3px 4px;';
-  let livePeers = 0;
-  const shareGoLiveItem = menuItem(t('shareGoLive'), IC_SHARE, async () => {
-    const roomId = generateRoomId();
-    const url = buildLiveRoomUrl(roomId);
-    const ok = await copyToClipboard(url);
-    showShareToast(ok, url, t('shareLiveCopied'));
-    const name = nameInput.value.trim() || 'You';
-    setStoredName(name);
-    joinLiveSession(history, {
-      roomId,
-      name,
-      seedElements: history.present.elements,
-      onPeers: (peers) => {
-        livePeers = peers.length;
-        shareBtn.title =
-          livePeers > 0
-            ? t('livePeers').replace('{{count}}', String(livePeers))
-            : t('shareLink');
-      },
-      onStatus: (connected) => {
-        setLiveUI(connected);
-        shareGoLiveItem.style.opacity = connected ? '0.6' : '1';
-        if (!connected) shareBtn.title = t('shareLink');
-        showLiveStatusToast(connected);
-      },
-    });
-  });
-
-  const shareXItem = menuItem(t('shareX'), IC_X, async () => {
-    const url = await buildShareUrl(history.present.elements);
-    window.open(
-      `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent('Check out my Markasso drawing')}`,
-      '_blank',
-      'noopener',
-    );
-  });
-  const shareRedditItem = menuItem(t('shareReddit'), IC_REDDIT, async () => {
-    const url = await buildShareUrl(history.present.elements);
-    window.open(
-      `https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=Check%20out%20my%20Markasso%20drawing`,
-      '_blank',
-      'noopener',
-    );
-  });
-  const shareBlueskyItem = menuItem(t('shareBluesky'), IC_BLUESKY, async () => {
-    const url = await buildShareUrl(history.present.elements);
-    window.open(
-      `https://bsky.app/intent/compose?text=${encodeURIComponent(`Check out my Markasso drawing: ${url}`)}`,
-      '_blank',
-      'noopener',
-    );
-  });
-  sharePanel.append(
-    nameInput,
-    shareGoLiveItem,
-    divider,
-    shareCopyLinkItem,
-    shareXItem,
-    shareRedditItem,
-    shareBlueskyItem,
-  );
-
-  let sharePanelOpen = false;
-  shareBtn.addEventListener('click', (e) => {
-    if (history.present.elements.length === 0) return;
-    e.stopPropagation();
-    sharePanelOpen = !sharePanelOpen;
-    sharePanel.style.display = sharePanelOpen ? 'flex' : 'none';
-    shareBtn.setAttribute('aria-expanded', String(sharePanelOpen));
-    if (sharePanelOpen)
-      sharePanel.querySelector<HTMLButtonElement>('button')?.focus();
-  });
-  sharePanel.addEventListener('click', () => {
-    sharePanelOpen = false;
-    shareBtn.setAttribute('aria-expanded', 'false');
-  });
-  shareIsland.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && sharePanelOpen) {
-      sharePanelOpen = false;
-      sharePanel.style.display = 'none';
-      shareBtn.setAttribute('aria-expanded', 'false');
-      shareBtn.focus();
-    }
-  });
-  document.addEventListener('click', () => {
-    if (sharePanelOpen) {
-      sharePanelOpen = false;
-      sharePanel.style.display = 'none';
-      shareBtn.setAttribute('aria-expanded', 'false');
-    }
-  });
-  shareIsland.append(nameChip, shareBtn, sharePanel);
+  nameIsland.append(nameChip);
 
   // ── Live participants (people list) ────────────────────────────────────────
   const peopleIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/><circle cx="17" cy="9.5" r="2.5"/><path d="M16 15.2c2 .3 3.7 1.5 4.5 3.6"/></svg>`;
@@ -789,132 +768,61 @@ export function initToolbar(container: HTMLElement, history: History): void {
   });
   peopleIsland.append(peopleTrigger, peoplePanel);
 
-  // Presets dropdown
-  const presetsIsland = div('tb-island');
-  presetsIsland.style.position = 'relative';
-  const presetsTrigger = mkBtn(IC.toolbox, t('presets'));
-  presetsTrigger.setAttribute('aria-expanded', 'false');
-  const presetsPanel = document.createElement('div');
-  presetsPanel.setAttribute('role', 'menu');
-  presetsPanel.style.cssText = [
-    'position:absolute',
-    'right:0',
-    'top:calc(100% + 6px)',
-    'background:rgba(26,26,40,0.98)',
-    'border:1px solid rgba(255,255,255,0.1)',
-    'border-radius:10px',
-    'padding:8px',
-    'display:none',
-    'grid-template-columns:1fr 1fr',
-    'gap:6px',
-    'min-width:260px',
-    'box-shadow:0 4px 24px rgba(0,0,0,0.6)',
-    'z-index:1000',
-    'backdrop-filter:blur(16px)',
-  ].join(';');
+  topRight.append(peopleIsland, nameIsland);
 
-  for (const def of PRESETS) {
-    const card = document.createElement('button');
-    card.setAttribute('role', 'menuitem');
-    card.style.cssText = [
-      'display:flex',
-      'flex-direction:column',
-      'align-items:center',
-      'gap:6px',
-      'padding:10px 8px',
-      'border-radius:8px',
-      'cursor:pointer',
-      'background:rgba(255,255,255,0.04)',
-      'border:1px solid rgba(255,255,255,0.08)',
-      'color:inherit',
-      'font:11px/1.2 inherit',
-      'text-align:center',
-      'transition:background .1s,border-color .1s',
-      'white-space:nowrap',
-    ].join(';');
-    card.innerHTML = `${def.icon}<span>${t(def.labelKey)}</span>`;
-    card.addEventListener('mouseenter', () => {
-      card.style.background = 'rgba(255,255,255,0.09)';
-      card.style.borderColor = 'var(--accent, #c42059)';
-    });
-    card.addEventListener('mouseleave', () => {
-      card.style.background = 'rgba(255,255,255,0.04)';
-      card.style.borderColor = 'rgba(255,255,255,0.08)';
-    });
-    card.addEventListener('click', () => {
-      const vp = history.present.viewport;
-      const cx = (window.innerWidth / 2 - vp.offsetX) / vp.zoom;
-      const cy = (window.innerHeight / 2 - vp.offsetY) / vp.zoom;
-      const isDark =
-        document.documentElement.getAttribute('data-theme') !== 'light';
-      const elements = def.buildElements(cx, cy, isDark);
-      history.dispatch({ type: 'CREATE_ELEMENTS', elements });
-      history.dispatch({
-        type: 'GROUP_ELEMENTS',
-        ids: elements.map((e) => e.id),
-        groupId: crypto.randomUUID(),
-      });
-      presetsPanelOpen = false;
-      presetsPanel.style.display = 'none';
-      presetsTrigger.setAttribute('aria-expanded', 'false');
-    });
-    presetsPanel.appendChild(card);
-  }
-
-  let presetsPanelOpen = false;
-  presetsTrigger.addEventListener('click', (e) => {
-    e.stopPropagation();
-    presetsPanelOpen = !presetsPanelOpen;
-    presetsPanel.style.display = presetsPanelOpen ? 'grid' : 'none';
-    presetsTrigger.setAttribute('aria-expanded', String(presetsPanelOpen));
-    if (presetsPanelOpen)
-      presetsPanel.querySelector<HTMLButtonElement>('button')?.focus();
-  });
-  presetsIsland.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && presetsPanelOpen) {
-      presetsPanelOpen = false;
-      presetsPanel.style.display = 'none';
-      presetsTrigger.setAttribute('aria-expanded', 'false');
-      presetsTrigger.focus();
-    }
-  });
-  document.addEventListener('click', () => {
-    if (presetsPanelOpen) {
-      presetsPanelOpen = false;
-      presetsPanel.style.display = 'none';
-      presetsTrigger.setAttribute('aria-expanded', 'false');
-    }
-  });
-  presetsIsland.append(presetsTrigger, presetsPanel);
-
-  // Library sidebar toggle (shapes and icons), as in Excalidraw
-  const libraryIsland = div('tb-island');
-  const libraryTrigger = mkBtn(IC.library, `${t('library')} (I)`);
-  libraryTrigger.setAttribute('aria-label', t('library'));
-  libraryTrigger.setAttribute('aria-pressed', 'false');
-  libraryTrigger.addEventListener('click', () => toggleLibrary());
-  onLibraryVisibilityChange((open) => {
-    libraryTrigger.classList.toggle('active', open);
-    libraryTrigger.setAttribute('aria-pressed', String(open));
-  });
-  libraryIsland.append(libraryTrigger);
-
-  topRight.append(
-    importIsland,
-    presetsIsland,
-    libraryIsland,
-    exportIsland,
-    peopleIsland,
-    shareIsland,
-  );
-
-  // Top-left: settings button injected by settings.ts
+  // Top-left: menu button (settings.ts) | coffee (star_cta.ts)
   const topLeft = div('tb-island-topleft');
   const tbLeft = div('tb-island tb-left');
   topLeft.append(tbLeft);
 
-  container.append(centerPill, bottomLeft, bottomRight, topRight, topLeft);
-  watchToolsRow(centerPill, [topLeft, topRight]);
+  function updateToolsLayout(): void {
+    setMoreOpen(false);
+    for (const tool of secondaryTools) toolBtns.get(tool)!.hidden = false;
+    for (const tool of [...secondaryTools].reverse()) {
+      if (centerPill.offsetWidth <= window.innerWidth - 32) break;
+      toolBtns.get(tool)!.hidden = true;
+    }
+    for (const [tool, button] of overflowTools)
+      button.hidden = !toolBtns.get(tool)!.hidden;
+    moreDivider.hidden = [...overflowTools.values()].every((b) => b.hidden);
+  }
+  container.append(centerPill, topRight, topLeft);
+  updateToolsLayout();
+  window.addEventListener('resize', updateToolsLayout);
+  initTooltips(centerPill);
+  // Optional standalone controls share the same actions as the toolbar.
+  const zoomControls = div('tb-island');
+  zoomControls.id = 'zoom-controls';
+  zoomControls.setAttribute('role', 'group');
+  zoomControls.setAttribute('aria-label', t('zoomPanel'));
+  const standaloneFit = mkBtn(IC.fit, t('fitContent'));
+  const standaloneMinus = mkBtn('−', t('zoomOut'));
+  const standaloneZoom = mkBtn('', t('resetZoom100'));
+  standaloneZoom.classList.add('tb-zoom-btn');
+  const standalonePlus = mkBtn('+', t('zoomIn'));
+  standaloneFit.addEventListener('click', fitContent);
+  standaloneMinus.addEventListener('click', () => zoomOut(history));
+  standaloneZoom.addEventListener('click', resetZoom);
+  standalonePlus.addEventListener('click', () => zoomIn(history));
+  zoomControls.append(
+    standaloneFit,
+    standaloneMinus,
+    standaloneZoom,
+    standalonePlus,
+  );
+  const historyControls = div('tb-island');
+  historyControls.id = 'history-controls';
+  historyControls.setAttribute('role', 'group');
+  historyControls.setAttribute('aria-label', t('showHistoryControls'));
+  const standaloneUndo = mkBtn(IC.undo, t('undo'));
+  const standaloneRedo = mkBtn(IC.redo, t('redo'));
+  standaloneUndo.addEventListener('click', () => history.undo());
+  standaloneRedo.addEventListener('click', () => history.redo());
+  historyControls.append(standaloneUndo, standaloneRedo);
+  container.append(zoomControls, historyControls);
+  initTooltips(zoomControls);
+  initTooltips(historyControls);
+  initToolbarDrag(centerPill, dragHandle);
 
   // ── Mobile: tools FAB + popup ─────────────────────────────────────────────
   const toolsFab = document.createElement('button');
@@ -941,18 +849,16 @@ export function initToolbar(container: HTMLElement, history: History): void {
     toolsPopup.appendChild(b);
   }
 
-  // Library (shapes and icons) opens as a bottom sheet on mobile
-  const mobileLibraryBtn = document.createElement('button');
-  mobileLibraryBtn.className = 'mobile-tools-popup-btn';
-  mobileLibraryBtn.title = t('library');
-  mobileLibraryBtn.setAttribute('aria-label', t('library'));
-  mobileLibraryBtn.innerHTML = IC.library;
-  mobileLibraryBtn.addEventListener('click', () => {
-    toggleLibrary(true);
-    toolsPopup.classList.remove('open');
-    toolsFab.classList.remove('active');
-  });
-  toolsPopup.appendChild(mobileLibraryBtn);
+  const touch = window.matchMedia('(pointer: coarse)');
+  function placeMoreTrigger(): void {
+    moreToggle.classList.toggle('mobile-tools-popup-btn', touch.matches);
+    if (touch.matches) toolsPopup.appendChild(moreGroup);
+    else centerPill.insertBefore(moreGroup, lockedSep);
+    setMoreOpen(false);
+    updateToolsLayout();
+  }
+  placeMoreTrigger();
+  touch.addEventListener('change', placeMoreTrigger);
 
   // Lock button row at the bottom of the popup
   const lockRowSep = document.createElement('div');
@@ -962,25 +868,19 @@ export function initToolbar(container: HTMLElement, history: History): void {
   const mobileLockBtn = document.createElement('button');
   mobileLockBtn.className = 'mobile-tools-popup-btn';
   mobileLockBtn.title = t('lockTool');
+  mobileLockBtn.setAttribute('aria-label', t('lockTool'));
   mobileLockBtn.innerHTML = IC.lockOpen;
   mobileLockBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     toggleToolLock();
   });
   lockRowEl.appendChild(mobileLockBtn);
-  const mobileLockLabel = document.createElement('button');
-  mobileLockLabel.className = 'mobile-tools-popup-lock-label';
-  mobileLockLabel.type = 'button';
-  mobileLockLabel.title = t('lockTool');
-  mobileLockLabel.addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggleToolLock();
-  });
-  lockRowEl.appendChild(mobileLockLabel);
   toolsPopup.appendChild(lockRowSep);
   toolsPopup.appendChild(lockRowEl);
 
   toolsFab.addEventListener('click', () => {
+    setMoreOpen(false);
+    toolsPopup.hidden = false;
     const open = toolsPopup.classList.toggle('open');
     toolsFab.classList.toggle('active', open);
     toolsFab.innerHTML = open ? IC.close : IC.toolbox;
@@ -1010,16 +910,17 @@ export function initToolbar(container: HTMLElement, history: History): void {
     lockBtn.classList.toggle('active', toolLocked);
     lockBtn.setAttribute('aria-pressed', String(toolLocked));
     lockBtn.innerHTML = toolLocked ? IC.lock : IC.lockOpen;
-    lockModeBtn.textContent = toolLocked
-      ? t('toolModeContinuous')
-      : t('toolModeOnce');
-    lockModeBtn.classList.toggle('active', toolLocked);
-    lockModeBtn.setAttribute('aria-pressed', String(toolLocked));
     for (const [toolName, b] of toolBtns) {
       const isActive = toolName === activeTool;
       b.classList.toggle('active', isActive);
       b.setAttribute('aria-pressed', String(isActive));
     }
+    for (const [tool, button] of overflowTools)
+      button.classList.toggle('active', tool === activeTool);
+    moreToggle.classList.toggle(
+      'active',
+      toolBtns.get(activeTool)?.hidden === true,
+    );
     toolsPopup
       .querySelectorAll<HTMLButtonElement>('.mobile-tools-popup-btn[data-tool]')
       .forEach((btn) => {
@@ -1028,24 +929,11 @@ export function initToolbar(container: HTMLElement, history: History): void {
     mobileLockBtn.innerHTML = toolLocked ? IC.lock : IC.lockOpen;
     mobileLockBtn.classList.toggle('active', toolLocked);
     mobileLockBtn.setAttribute('aria-pressed', String(toolLocked));
-    mobileLockLabel.textContent = toolLocked
-      ? t('toolModeContinuous')
-      : t('toolModeOnce');
-    mobileLockLabel.classList.toggle('active', toolLocked);
-    mobileLockLabel.setAttribute('aria-pressed', String(toolLocked));
     toolsFab.dataset.tool = activeTool;
-    undoBtn.disabled = !history.canUndo();
-    redoBtn.disabled = !history.canRedo();
-    zoomLabel.textContent = `${Math.round(history.present.viewport.zoom * 100)}%`;
-    const hasElements = history.present.elements.length > 0;
-    exportTrigger.disabled = !hasElements;
-    exportPNGItem.disabled = !hasElements;
-    exportSVGItem.disabled = !hasElements;
-
-    exportHTMLItem.disabled = !hasElements;
-    exportMarkassoItem.disabled = !hasElements;
-    shareBtn.disabled = !hasElements;
-
+    standaloneUndo.disabled = !history.canUndo();
+    standaloneRedo.disabled = !history.canRedo();
+    const zoomText = `${Math.round(history.present.viewport.zoom * 100)}%`;
+    standaloneZoom.textContent = zoomText;
     // Locked-elements indicator
     const scene = history.present;
     const hasLockedSelected =
@@ -1053,16 +941,10 @@ export function initToolbar(container: HTMLElement, history: History): void {
       [...scene.selectedIds].some(
         (id) => scene.elements.find((el) => el.id === id)?.locked,
       );
+    const indicatorWasVisible = lockedIndicator.style.display !== 'none';
     lockedSep.style.display = hasLockedSelected ? '' : 'none';
     lockedIndicator.style.display = hasLockedSelected ? '' : 'none';
-    if (hasLockedSelected) {
-      const allLocked = [...scene.selectedIds].every(
-        (id) => scene.elements.find((el) => el.id === id)?.locked,
-      );
-      lockedIndicator.title = allLocked
-        ? t('unlockElements')
-        : t('unlockElements');
-    }
+    if (indicatorWasVisible !== hasLockedSelected) updateToolsLayout();
   }
 
   history.subscribe(sync);
@@ -1070,33 +952,22 @@ export function initToolbar(container: HTMLElement, history: History): void {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-/**
- * On narrow desktop windows the centered tools would run under the side
- * islands: drop them to a second row instead (`tools-wrapped` on the root,
- * see base.css). The room left depends on the locale and on the live people
- * list, so it is measured rather than tied to a breakpoint. Touch layouts
- * hide the tools, which keeps the class off.
- */
-function watchToolsRow(
-  tools: HTMLElement,
-  sides: ReadonlyArray<HTMLElement>,
-): void {
-  const GAP = 12;
-  const root = document.documentElement;
-  const update = (): void => {
-    root.classList.remove('tools-wrapped');
-    const t = tools.getBoundingClientRect();
-    if (t.width === 0) return;
-    const collides = sides.some((side) => {
-      const r = side.getBoundingClientRect();
-      return r.width > 0 && r.left < t.right + GAP && r.right > t.left - GAP;
-    });
-    root.classList.toggle('tools-wrapped', collides);
-  };
-  window.addEventListener('resize', update);
-  const observer = new ResizeObserver(update);
-  for (const el of [tools, ...sides]) observer.observe(el);
-  update();
+// Zoom around the viewport center: the toolbar buttons and Ctrl+Plus/Minus.
+export function zoomIn(history: History): void {
+  zoomByFactor(history, 1.2);
+}
+
+export function zoomOut(history: History): void {
+  zoomByFactor(history, 1 / 1.2);
+}
+
+function zoomByFactor(history: History, factor: number): void {
+  history.dispatch({
+    type: 'ZOOM_VIEWPORT',
+    factor,
+    originX: window.innerWidth / 2,
+    originY: window.innerHeight / 2,
+  });
 }
 
 function div(cls: string): HTMLElement {
@@ -1109,42 +980,7 @@ function mkBtn(icon: string, title: string): HTMLButtonElement {
   const b = document.createElement('button');
   b.className = 'tb-btn';
   b.title = title;
+  b.setAttribute('aria-label', title);
   b.innerHTML = icon;
   return b;
-}
-
-function menuItem(
-  label: string,
-  iconSvg: string,
-  onClick: () => void,
-): HTMLButtonElement {
-  const item = document.createElement('button');
-  item.setAttribute('role', 'menuitem');
-  item.style.cssText = [
-    'display:flex',
-    'align-items:center',
-    'gap:8px',
-    'background:none',
-    'border:none',
-    'color:#d4d4e8',
-    'cursor:pointer',
-    'padding:7px 10px',
-    'border-radius:6px',
-    'font-size:13px',
-    'width:100%',
-    'text-align:left',
-    'white-space:nowrap',
-  ].join(';');
-  item.innerHTML = `${iconSvg}<span>${label}</span>`;
-  item.addEventListener('mouseenter', () => {
-    item.style.background = 'rgba(255,255,255,0.07)';
-  });
-  item.addEventListener('mouseleave', () => {
-    item.style.background = 'none';
-  });
-  item.addEventListener('click', () => {
-    item.closest('div')!.style.display = 'none';
-    onClick();
-  });
-  return item;
 }

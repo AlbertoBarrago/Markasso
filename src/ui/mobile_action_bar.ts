@@ -6,14 +6,7 @@ import {
 } from '../elements/element';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
-import {
-  buildLiveRoomUrl,
-  generateRoomId,
-  getStoredName,
-  joinLiveSession,
-  setLiveName,
-  setStoredName,
-} from '../io/realtime';
+import { getStoredName, setLiveName } from '../io/realtime';
 import { buildShareUrl } from '../io/share';
 import { hasEndHead, hasStartHead } from '../rendering/connector_geometry';
 import {
@@ -27,13 +20,9 @@ import {
   saveCustomColor,
   updateCustomColorButton,
 } from './color_picker';
-import { onLiveHide, onLiveReveal, setLiveUI } from './live_name';
+import { onLiveHide, onLiveReveal } from './live_name';
 import { initPeopleList } from './people_list';
-import {
-  copyToClipboard,
-  showLiveStatusToast,
-  showShareToast,
-} from './share_actions';
+import { copyToClipboard, showShareToast } from './share_actions';
 import { hasFillStyle, hasStrokeStyle, styleTypeOf } from './style_type';
 
 const STROKE_PRESETS = [
@@ -145,48 +134,10 @@ export function initMobileActionBar(
 
   shareSheet.innerHTML = `
     <div class="mss-handle"></div>
-    <input type="text" class="mss-share-input" id="mss-share-name" maxlength="24" placeholder="${t('liveName')}" aria-label="${t('liveName')}" value="${getStoredName().replace(/"/g, '&quot;')}" />
-    <button class="mss-share-btn" id="mss-share-golive">${IC_SHARE}<span>${t('shareGoLive')}</span></button>
     <button class="mss-share-btn" id="mss-share-copylink">${IC_LINK}<span>${t('shareCopyLink')}</span></button>
     <div class="pp-mobile" id="mss-people"></div>
   `;
   initPeopleList(shareSheet.querySelector<HTMLElement>('#mss-people')!);
-
-  const shareNameInput =
-    shareSheet.querySelector<HTMLInputElement>('#mss-share-name')!;
-  shareNameInput.addEventListener('input', () =>
-    setStoredName(shareNameInput.value),
-  );
-
-  const shareGoLiveBtn =
-    shareSheet.querySelector<HTMLButtonElement>('#mss-share-golive')!;
-  shareGoLiveBtn.addEventListener('click', async () => {
-    const roomId = generateRoomId();
-    const url = buildLiveRoomUrl(roomId);
-    const ok = await copyToClipboard(url);
-    showShareToast(ok, url, t('shareLiveCopied'));
-    const name = shareNameInput.value.trim() || 'You';
-    setStoredName(name);
-    shareSheet.classList.remove('open');
-    shareBtn.classList.remove('active');
-    joinLiveSession(history, {
-      roomId,
-      name,
-      seedElements: history.present.elements,
-      onPeers: (peers) => {
-        shareBtn.title =
-          peers.length > 0
-            ? t('livePeers').replace('{{count}}', String(peers.length))
-            : t('shareLink');
-      },
-      onStatus: (connected) => {
-        setLiveUI(connected);
-        shareGoLiveBtn.style.opacity = connected ? '0.6' : '1';
-        if (!connected) shareBtn.title = t('shareLink');
-        showLiveStatusToast(connected);
-      },
-    });
-  });
 
   const shareCopyLinkBtn = shareSheet.querySelector<HTMLButtonElement>(
     '#mss-share-copylink',

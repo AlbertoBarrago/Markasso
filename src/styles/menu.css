@@ -1,4 +1,4 @@
-/* ── Menu panel (hamburger dropdown) ────────────────────────────────── */
+/* ── Menu panel (settings dropdown) ─────────────────────────────────── */
 .settings-panel {
   position: fixed;
   z-index: 200;
@@ -6,19 +6,16 @@
   background: var(--bg-island);
   border: 1px solid var(--island-border);
   border-radius: var(--island-radius);
-  box-shadow: var(--island-shadow);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   opacity: 0;
   pointer-events: none;
   transform: scale(0.97) translateY(-4px);
+  display: flex;
+  flex-direction: column;
   transition:
     opacity 0.15s,
     transform 0.15s;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
 }
 .settings-panel.open {
   opacity: 1;
@@ -26,10 +23,17 @@
   transform: scale(1) translateY(0);
 }
 
+/* The list scrolls rather than the panel, so submenus (positioned against
+   the panel) are not clipped by it. */
 .menu-body {
+  min-height: 0;
   padding: 4px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
-.menu-body ul {
+:where(.settings-panel) ul {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -53,15 +57,20 @@
   text-decoration: none;
   transition: background 0.1s;
 }
-.menu-item:hover:not(:disabled) {
+.menu-item:hover:not(:disabled, [aria-disabled="true"]),
+.menu-item:focus-visible,
+.menu-item[aria-expanded="true"] {
   background: var(--bg-hover);
 }
-.menu-item:disabled {
+.menu-item:disabled,
+.menu-item[aria-disabled="true"] {
   opacity: 0.35;
   cursor: default;
 }
 .menu-item svg {
   flex-shrink: 0;
+  width: 16px;
+  height: 16px;
   opacity: 0.7;
 }
 .menu-item-label {
@@ -76,12 +85,54 @@
 .menu-item--danger svg {
   opacity: 0.85;
 }
-.menu-item--prefs .menu-arrow {
-  margin-left: auto;
-  transition: transform 0.15s;
+.menu-item-hint {
+  font-size: 11px;
+  color: var(--text-muted);
 }
-.menu-item--prefs.prefs-open .menu-arrow {
-  transform: rotate(90deg);
+.menu-item-kbd {
+  min-width: 18px;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--text-muted);
+}
+.menu-arrow {
+  display: flex;
+  opacity: 0.6;
+}
+/* Check mark of checkbox and radio items, hidden while unchecked */
+.menu-check {
+  display: flex;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+.menu-item:not([aria-checked="true"]) .menu-check svg {
+  visibility: hidden;
+}
+.menu-item[aria-checked="true"] .menu-check {
+  color: var(--accent);
+}
+.menu-item[aria-checked="true"] .menu-check svg {
+  opacity: 1;
+}
+
+/* Submenus open on the right of the panel; settings.ts positions them */
+.menu-sub {
+  position: absolute;
+  z-index: 1;
+  min-width: 200px;
+  max-height: calc(100vh - 16px);
+  padding: 4px;
+  overflow-y: auto;
+  background: var(--bg-island);
+  border: 1px solid var(--island-border);
+  border-radius: var(--island-radius);
 }
 
 .menu-divider {
@@ -90,90 +141,44 @@
   margin: 4px;
 }
 
+.menu-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+}
 .menu-version {
-  padding: 8px 12px;
   font-size: 11px;
+  margin-left: 4px;
   color: var(--text-muted);
-  text-align: center;
   letter-spacing: 0.04em;
 }
-
-.menu-prefs {
-  padding: 2px 8px 6px;
+.menu-footer-link {
+  text-decoration: none;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.menu-prefs[aria-hidden="true"] {
-  display: none;
-}
-
-.pref-check-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 2px 2px;
-}
-.pref-check-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text);
-  cursor: pointer;
-  flex: 1;
-}
-.pref-check-label input {
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-.pref-grid-types {
-  display: flex;
-  gap: 4px;
-}
-.sp-grid-btn {
-  width: 28px;
-  height: 24px;
-  border: 1.5px solid var(--border);
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.04);
-  cursor: pointer;
-  font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 600;
-  transition:
-    border-color 0.1s,
-    color 0.1s,
-    background 0.1s;
-}
-.sp-grid-btn:hover {
-  border-color: var(--accent);
-  color: var(--text);
-}
-.sp-grid-btn.active {
-  background: var(--accent-light);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.pref-btn {
-  padding: 6px 10px;
-  border: 1.5px solid var(--border);
+  padding: 4px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
-  font-size: 12px;
-  font-family: inherit;
-  cursor: pointer;
-  text-align: left;
+  color: var(--text-muted);
   transition:
-    border-color 0.1s,
-    background 0.1s;
+    background 0.1s,
+    color 0.1s;
 }
-.pref-btn:hover {
-  border-color: var(--accent);
-  background: rgba(255, 255, 255, 0.06);
+.menu-footer-link:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.menu-footer-coffee {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #f59e0b;
+}
+.menu-footer-coffee svg {
+  margin-right: 4px;
+}
+.menu-footer-coffee:hover {
+  color: #fbbf24;
 }
 
 .menu-section-label {
@@ -207,49 +212,6 @@
   border-color: var(--accent) !important;
 }
 
-.sp-lang-wrapper {
-  position: relative;
-  width: 140px;
-}
-.sp-lang-wrapper::after {
-  content: "▲\A▼";
-  white-space: pre;
-  position: absolute;
-  right: 18px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 7px;
-  line-height: 1.3;
-  text-align: center;
-  color: var(--text-muted);
-  pointer-events: none;
-}
-.sp-lang-select {
-  width: 100%;
-  appearance: none;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font-size: 12px;
-  padding: 5px 32px 5px 10px;
-  cursor: pointer;
-}
-.sp-lang-select:focus {
-  background: rgba(255, 255, 255, 0.08);
-}
-.sp-lang-select:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-@media (pointer: coarse) and (max-width: 359px) {
-  /* Narrowest phones: the coffee button is the last one that doesn't fit. */
-  .tb-coffee-btn {
-    display: none;
-  }
-}
-
 @media (pointer: coarse) {
   /* Hide keyboard shortcut badges — useless on touch */
   .tb-btn-key {
@@ -258,14 +220,6 @@
 
   /* ── Hide the always-visible tools bar; replaced by FAB + popup ── */
   .tb-island-tools {
-    display: none;
-  }
-
-  /* Hide undo/redo/zoom islands — handled by mobile-actions bar */
-  .tb-island-bottomleft {
-    display: none;
-  }
-  .tb-island-bottomright {
     display: none;
   }
 
@@ -279,9 +233,9 @@
     left: 12px;
   }
 
-  /* Share and people live in the bottom action bar's share sheet on touch;
-     dropping the duplicates keeps the top islands from overlapping. */
-  .tb-share-island,
+  /* The live name and people live in the bottom action bar's share sheet on
+     touch; dropping the duplicates keeps the top islands from overlapping. */
+  .tb-live-name-island,
   .tb-people-island {
     display: none !important;
   }
@@ -304,4 +258,9 @@
     max-width: 320px;
     max-height: calc(100vh - 160px);
   }
+}
+
+/* Keep the reset percentage with its label in every language. */
+#sp-reset-zoom .menu-item-label {
+  white-space: nowrap;
 }

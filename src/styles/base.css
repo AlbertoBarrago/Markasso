@@ -5,10 +5,11 @@
   --focus-ring: var(--accent);
   --alert: #fa0101;
 
-  --bg-island: rgba(13, 7, 7, 0.98);
+  --bg-island: rgb(21 21 21 / 0.98);
   --island-border: rgba(255, 255, 255, 0.18);
   --island-shadow:
-    0 2px 24px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.04);
+    inset 1px -1px 2px 0 rgba(0, 0, 0, 0.9),
+    inset -1px 1px 1px 0 rgba(255, 255, 255, 0.2);
   --island-radius: 12px;
   --input-border: rgba(89, 89, 89, 0.4);
 
@@ -99,26 +100,41 @@ body {
   user-select: none;
 }
 
-/* Center-top: tools */
+/* Center-bottom: tools */
 .tb-island-tools {
+  width: max-content;
   position: fixed;
-  top: 12px;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
 }
+/* Moved by the user (toolbar_drag.ts sets left/top inline) */
+.tb-island-tools--moved {
+  bottom: auto;
+  transform: none;
+}
+.tb-drag-handle {
+  cursor: grab;
+}
+.tb-island-tools--dragging,
+.tb-island-tools--dragging .tb-drag-handle {
+  cursor: grabbing;
+}
+/* Place mode: the next click positions the toolbar */
+body.toolbar-placing,
+body.toolbar-placing * {
+  cursor: crosshair !important;
+}
+.tb-drag-handle[aria-pressed="true"] {
+  background: var(--bg-hover);
+  color: var(--text);
+}
 
-/* Narrow desktop windows: tools on a second row, and what sits below them
-   moves down with them (see watchToolsRow in toolbar.ts). */
-.tools-wrapped .tb-island-tools {
-  top: 68px;
-}
-.tools-wrapped #shortcuts-hint {
-  top: 120px;
-}
-.tools-wrapped #context-panel {
-  top: 128px;
-  max-height: calc(100vh - 204px);
+/* The hints sit where the toolbar panels open */
+:root:has(.tb-more-panel.open) #shortcuts-hint,
+:root:has(.tb-more-panel.open) #hint-bar {
+  display: none;
 }
 
 /* Top-right: export */
@@ -139,30 +155,6 @@ body {
   top: 12px;
   left: 16px;
   z-index: 10;
-  pointer-events: all;
-}
-
-/* Bottom-left: zoom */
-.tb-island-bottomleft {
-  position: fixed;
-  bottom: 16px;
-  left: 16px;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  pointer-events: all;
-}
-
-/* Bottom-right: undo/redo */
-.tb-island-bottomright {
-  position: fixed;
-  bottom: 16px;
-  right: 16px;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 8px;
   pointer-events: all;
 }
 
@@ -221,6 +213,65 @@ body {
 }
 .tb-btn svg {
   pointer-events: none;
+}
+
+/* Toolbar menu anchored to its trigger. */
+.tb-tool-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.tb-tool-group > .tb-btn.open {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+.tb-tool-group-panel {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  display: none;
+  gap: 2px;
+  padding: 4px;
+  background: var(--bg-island);
+  border: 1px solid var(--island-border);
+  border-radius: var(--island-radius);
+  box-shadow: var(--island-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 20;
+}
+.tb-island-tools--below .tb-tool-group-panel {
+  top: calc(100% + 10px);
+  bottom: auto;
+}
+.tb-tool-group-panel.open {
+  display: flex;
+}
+
+/* Toolbar tooltip (role="tooltip", see ui/tooltip.ts) */
+.tb-tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  display: none;
+  max-width: 240px;
+  padding: 5px 8px;
+  border: 1px solid var(--island-border);
+  border-radius: 6px;
+  background: var(--bg-island);
+  box-shadow: var(--island-shadow);
+  color: var(--text);
+  font:
+    500 12px / 1.3 system-ui,
+    -apple-system,
+    sans-serif;
+  white-space: normal;
+  pointer-events: auto;
+}
+.tb-tooltip.visible {
+  display: block;
 }
 
 .tb-name-chip {
@@ -315,35 +366,6 @@ body {
   padding-top: 6px;
 }
 
-.tb-tool-mode-label {
-  height: 28px;
-  padding: 0 8px;
-  margin-left: 4px;
-  border: 1px solid var(--island-border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-muted);
-  cursor: pointer;
-  font:
-    600 10px / 1 system-ui,
-    -apple-system,
-    sans-serif;
-  white-space: nowrap;
-  transition:
-    background 0.12s,
-    border-color 0.12s,
-    color 0.12s;
-}
-.tb-tool-mode-label:hover {
-  background: var(--bg-hover);
-  color: var(--text);
-}
-.tb-tool-mode-label.active {
-  background: var(--accent-light);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 .tb-locked-indicator {
   color: var(--warning, #f59e0b) !important;
   width: 28px !important;
@@ -394,4 +416,116 @@ body.ui-hidden #context-panel,
 body.ui-hidden #layers-panel,
 body.ui-hidden #mobile-actions {
   display: none !important;
+}
+
+/* Dock targets are visual guides and never intercept canvas input. */
+.toolbar-dock-preview {
+  position: fixed;
+  z-index: 49;
+  pointer-events: none;
+  border: 2px dashed var(--accent);
+  border-radius: var(--island-radius);
+  background: var(--accent-light);
+}
+.toolbar-dock-magnets span {
+  position: fixed;
+  z-index: 51;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 26px;
+  color: var(--accent);
+  font-size: 20px;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  background: var(--bg-island);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+#zoom-controls,
+#history-controls {
+  position: fixed;
+  bottom: 16px;
+  z-index: 10;
+  display: none;
+}
+#zoom-controls {
+  left: 16px;
+}
+#history-controls {
+  right: 16px;
+}
+.show-zoom-controls #zoom-controls,
+.show-history-controls #history-controls {
+  display: flex;
+}
+.show-history-controls #minimap {
+  bottom: 72px;
+}
+
+.toolbar-dock-guide {
+  position: fixed;
+  z-index: 52;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: calc(100vw - 48px);
+  padding: 10px 16px;
+  border: 1px solid var(--island-border);
+  border-radius: 10px;
+  background: var(--bg-island);
+  color: var(--text);
+  font-size: 13px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Tool overflow opens toward the canvas, like the other toolbar panels. */
+.tb-more-panel {
+  position: fixed;
+  pointer-events: auto;
+  right: auto;
+  bottom: auto;
+  min-width: 220px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+  flex-direction: column;
+  gap: 0;
+}
+.tb-more-panel [hidden],
+.tb-island-tools > [hidden] {
+  display: none;
+}
+#tb-more-tools {
+  font-size: 24px;
+}
+
+/* The name chip is visible only while the live session is connected. */
+.tb-name-chip::before,
+.mobile-name-chip::before {
+  content: "";
+  display: inline-block;
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: live-dot 1.6s ease-in-out infinite;
+}
+@keyframes live-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tb-name-chip::before,
+  .mobile-name-chip::before {
+    animation: none;
+  }
 }
