@@ -50,6 +50,8 @@ const SECTIONS: ShortcutSection[] = [
       { label: 'Toggle grid', key: 'G' },
       { label: 'Toggle minimap', key: 'M' },
       { label: 'Fit to content', key: 'F' },
+      { label: 'Zoom in', key: 'Ctrl++' },
+      { label: 'Zoom out', key: 'Ctrl+−' },
       { label: 'Reset zoom', key: 'Shift+0' },
       { label: 'Hide UI', key: '\\' },
     ],

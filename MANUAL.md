@@ -321,6 +321,7 @@ With an element selected, the **Properties panel** (slider icon in the context t
 |--------|-----|
 | Pan | Middle-click drag, or `Alt+drag` |
 | Zoom | Scroll wheel, or pinch on trackpad/touch |
+| Zoom in / out | `Ctrl+Plus` / `Ctrl+Minus` |
 | Fit all elements | `F` |
 | Reset zoom to 100% | `Shift+0` |
 | Toggle all panels | `\` (backslash) |
@@ -397,6 +398,8 @@ Switch between **Dark**, **Light**, and **System** themes from the Settings pane
 | `G` | Toggle grid |
 | `M` | Show / hide the minimap |
 | `F` | Fit canvas to elements |
+| `Ctrl+Plus` | Zoom in |
+| `Ctrl+Minus` | Zoom out |
 | `Shift+0` | Reset zoom to 100% |
 | `\` | Toggle all UI panels |
 | `Ctrl+K` | Open command palette |

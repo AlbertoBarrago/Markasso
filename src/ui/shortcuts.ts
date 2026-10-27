@@ -12,6 +12,51 @@ import type { SelectTool } from '../tools/select_tool';
 import { isFocusInPanel } from './keyboard_utils';
 import { toggleLibrary } from './library_panel';
 import { toggleMinimap } from './settings';
+import { zoomIn, zoomOut } from './toolbar';
+
+// The Plus and Minus keys sit on different physical keys per layout (e.g.
+// BracketRight and Slash on Italian), and on US layouts Plus is Shift+=, so
+// Ctrl+Plus/Minus is matched by physical key as well: the codes whose
+// unmodified character is + / = or -, from the layout map where supported
+// and from plain key presses otherwise.
+const zoomInCodes = new Set(['Equal', 'NumpadAdd']);
+const zoomOutCodes = new Set(['Minus', 'NumpadSubtract']);
+
+interface KeyboardLayoutApi {
+  getLayoutMap(): Promise<Map<string, string>>;
+}
+void (navigator as Navigator & { keyboard?: KeyboardLayoutApi }).keyboard
+  ?.getLayoutMap()
+  .then((layout) => {
+    zoomInCodes.clear();
+    zoomOutCodes.clear();
+    zoomInCodes.add('NumpadAdd');
+    zoomOutCodes.add('NumpadSubtract');
+    for (const [code, char] of layout) {
+      if (char === '+' || char === '=') zoomInCodes.add(code);
+      else if (char === '-') zoomOutCodes.add(code);
+    }
+  })
+  .catch(() => {
+    /* keep the US-layout defaults */
+  });
+
+// Only + and -: on some layouts = is Shift+0, which must stay Reset zoom.
+function learnZoomKey(e: KeyboardEvent): void {
+  if (e.key === '+') {
+    zoomOutCodes.delete(e.code);
+    zoomInCodes.add(e.code);
+  } else if (e.key === '-') {
+    zoomInCodes.delete(e.code);
+    zoomOutCodes.add(e.code);
+  }
+}
+
+function zoomKeyDirection(e: KeyboardEvent): 'in' | 'out' | null {
+  if (zoomInCodes.has(e.code) || e.key === '+') return 'in';
+  if (zoomOutCodes.has(e.code) || e.key === '-') return 'out';
+  return null;
+}
 
 export function initShortcuts(history: History, selectTool: SelectTool): void {
   let pasteCount = 0;
@@ -54,6 +99,20 @@ export function initShortcuts(history: History, selectTool: SelectTool): void {
       target.isContentEditable
     )
       return;
+
+    // Ctrl+Plus / Ctrl+Minus — same as the toolbar zoom buttons; this also
+    // keeps the browser from zooming the page.
+    if (!e.ctrlKey && !e.altKey && !e.metaKey) learnZoomKey(e);
+    if (e.ctrlKey && !e.altKey && !e.metaKey) {
+      const dir = zoomKeyDirection(e);
+      if (dir) {
+        e.preventDefault();
+        if (dir === 'in') zoomIn(history);
+        else zoomOut(history);
+        return;
+      }
+    }
+
     // Block single-key shortcuts when focus is inside a UI panel; allow modifier combos (Ctrl/Cmd+…)
     if (isFocusInPanel() && !e.ctrlKey && !e.metaKey) return;
 

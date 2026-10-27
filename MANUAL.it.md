@@ -322,6 +322,7 @@ Con un elemento selezionato, il **pannello Proprietà** (icona a cursori nella t
 | Pan | Trascinamento con clic centrale, oppure `Alt+trascina` |
 | Zoom | Rotella del mouse, oppure pizzico su trackpad/touch |
 | Adatta tutti gli elementi | `F` |
+| Zoom avanti / indietro | `Ctrl+Più` / `Ctrl+Meno` |
 | Reimposta zoom al 100% | `Shift+0` |
 | Mostra/nascondi tutti i pannelli | `\` (backslash) |
 | Minimappa | Angolo in basso a destra — clicca o trascina la minimappa per spostare la vista |
@@ -397,6 +398,8 @@ Passa tra i temi **Scuro**, **Chiaro** e **Sistema** dal pannello Impostazioni (
 | `G` | Attiva/disattiva griglia |
 | `M` | Mostra/nascondi la minimappa |
 | `F` | Adatta il canvas agli elementi |
+| `Ctrl+Più` | Zoom avanti |
+| `Ctrl+Meno` | Zoom indietro |
 | `Shift+0` | Reimposta zoom al 100% |
 | `\` | Mostra/nascondi tutti i pannelli UI |
 | `Ctrl+K` | Apri il riquadro comandi |

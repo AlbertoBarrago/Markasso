@@ -317,22 +317,8 @@ export function initToolbar(
       zoom: vp.zoom,
     });
   });
-  minusBtn.addEventListener('click', () =>
-    history.dispatch({
-      type: 'ZOOM_VIEWPORT',
-      factor: 1 / 1.2,
-      originX: window.innerWidth / 2,
-      originY: window.innerHeight / 2,
-    }),
-  );
-  plusBtn.addEventListener('click', () =>
-    history.dispatch({
-      type: 'ZOOM_VIEWPORT',
-      factor: 1.2,
-      originX: window.innerWidth / 2,
-      originY: window.innerHeight / 2,
-    }),
-  );
+  minusBtn.addEventListener('click', () => zoomOut(history));
+  plusBtn.addEventListener('click', () => zoomIn(history));
   zoomLabel.addEventListener('click', () => {
     const vp = history.present.viewport;
     const w = window.innerWidth,
@@ -793,6 +779,24 @@ export function initToolbar(
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+// Zoom around the viewport center: the toolbar buttons and Ctrl+Plus/Minus.
+export function zoomIn(history: History): void {
+  zoomByFactor(history, 1.2);
+}
+
+export function zoomOut(history: History): void {
+  zoomByFactor(history, 1 / 1.2);
+}
+
+function zoomByFactor(history: History, factor: number): void {
+  history.dispatch({
+    type: 'ZOOM_VIEWPORT',
+    factor,
+    originX: window.innerWidth / 2,
+    originY: window.innerHeight / 2,
+  });
+}
+
 function div(cls: string): HTMLElement {
   const e = document.createElement('div');
   e.className = cls;
