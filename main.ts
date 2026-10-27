@@ -14,6 +14,7 @@ import { initHintBar } from './src/ui/hint_bar';
 import { initImageImport } from './src/ui/image_import';
 import { initLibraryPanel } from './src/ui/library_panel';
 import { setLiveUI } from './src/ui/live_name';
+import { initMinimap } from './src/ui/minimap';
 import { initMobileActionBar } from './src/ui/mobile_action_bar';
 import { initReportForm } from './src/ui/report_form';
 import { applySettings, initSettings, loadSettings } from './src/ui/settings';
@@ -121,6 +122,7 @@ async function bootstrap(): Promise<void> {
   initMobileActionBar(workspace, hist);
   initShortcuts(hist, selectTool);
   initCommandPalette(hist, selectTool);
+  initMinimap(workspace, hist);
   initElementSearch(workspace, hist);
   initLibraryPanel(workspace, hist, canvas);
   initShortcutsHelp(appEl);

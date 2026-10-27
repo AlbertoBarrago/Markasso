@@ -258,8 +258,7 @@ body {
   display: block;
 }
 
-/* Zoom panel: minimap above the zoom controls, aligned to the toolbar's
-   right end */
+/* Zoom panel: zoom controls, aligned to the toolbar's right end */
 .tb-zoom-panel {
   left: auto;
   right: -4px;

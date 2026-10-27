@@ -6,7 +6,6 @@ import { importMermaidText } from '../io/mermaid';
 import { getStoredName, onLivePeers, setLiveName } from '../io/realtime';
 import { toggleLibrary } from './library_panel';
 import { onLiveHide, onLiveReveal } from './live_name';
-import { initMinimap } from './minimap';
 import { initPeopleList } from './people_list';
 import { initTooltips } from './tooltip';
 
@@ -253,7 +252,7 @@ export function initToolbar(
   redoBtn.addEventListener('click', () => history.redo());
   undoPill.append(undoBtn, redoBtn);
 
-  // ── Zoom: last toolbar button, opens a panel with the minimap and controls ─
+  // ── Zoom: last toolbar button, opens a panel with the zoom controls ───────
   const zoomGroup = div('tb-tool-group');
   const zoomToggle = mkBtn(IC.magnify, t('zoomPanel'));
   zoomToggle.setAttribute('aria-label', t('zoomPanel'));
@@ -334,7 +333,6 @@ export function initToolbar(
   zoomPill.append(fitBtn, minusBtn, zoomLabel, plusBtn);
 
   zoomPanel.append(zoomPill);
-  initMinimap(zoomPanel, history);
   zoomGroup.append(zoomToggle, zoomPanel);
   const zoomSep = document.createElement('span');
   zoomSep.className = 'tb-separator';
