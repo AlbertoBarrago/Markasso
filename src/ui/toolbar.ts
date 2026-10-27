@@ -121,6 +121,11 @@ export function initToolbar(
   dragHandle.setAttribute('aria-pressed', 'false');
   centerPill.appendChild(dragHandle);
 
+  // Separator after the drag handle
+  const dragSep = document.createElement('span');
+  dragSep.className = 'tb-separator';
+  centerPill.appendChild(dragSep);
+
   // Lock button (no shortcut badge)
   const lockBtn = document.createElement('button');
   lockBtn.className = 'tb-btn';
