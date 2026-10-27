@@ -279,6 +279,9 @@ export function initSettings(
   const separator = '<li role="separator" class="menu-divider"></li>';
   const hint = (text: string): string =>
     `<span class="menu-item-hint" aria-hidden="true">${text}</span>`;
+  // Shown only; the item exposes the shortcut through aria-keyshortcuts.
+  const kbd = (key: string): string =>
+    `<kbd class="menu-item-kbd" aria-hidden="true">${key}</kbd>`;
 
   panel.innerHTML = `
     <ul class="menu-body" role="menu" id="menu-list" aria-labelledby="menu-btn">
@@ -314,7 +317,7 @@ export function initSettings(
           item(`menu-preset-${def.id}`, def.icon, t(def.labelKey)),
         ).join(''),
       )}
-      ${item('menu-library', ICONS.library, t('library'), '', hint('I'))}
+      ${item('menu-library', ICONS.library, t('library'), '', kbd('I'))}
       ${separator}
       ${item('menu-guide', ICONS.guide, t('guide'))}
       ${item('menu-report', ICONS.report, t('reportProblem'))}
@@ -723,6 +726,7 @@ export function initSettings(
       });
     });
   }
+  panel.querySelector('#menu-library')!.setAttribute('aria-keyshortcuts', 'I');
   onActivate('#menu-library', () => toggleLibrary());
   onActivate('#menu-guide', openGuide);
   onActivate('#menu-report', openReportForm);
