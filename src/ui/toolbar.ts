@@ -2,7 +2,6 @@ import type { ActiveTool } from '../core/app_state';
 import { fitToElements } from '../core/viewport';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
-import { importMarkasso } from '../io/markasso';
 import { importMermaidText } from '../io/mermaid';
 import { getStoredName, onLivePeers, setLiveName } from '../io/realtime';
 import { toggleLibrary } from './library_panel';
@@ -27,7 +26,6 @@ const IC = {
   text: `<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4h12v2.5H12v9.5H8V6.5H4z"/></svg>`,
   undo: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h9a4 4 0 010 8H8"/><path d="M7 5L4 8l3 3"/></svg>`,
   redo: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8H7a4 4 0 000 8h5"/><path d="M13 5l3 3-3 3"/></svg>`,
-  import: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7a2 2 0 012-2h3l2 2h5a2 2 0 012 2v5a2 2 0 01-2 2H4a2 2 0 01-2-2V7z"/></svg>`,
   fit: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="2.5"/><path d="M1 5V2h3M12 2h3v3M15 11v3h-3M4 14H1v-3"/></svg>`,
   layers: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L2 6l8 4 8-4z"/><path d="M2 10l8 4 8-4"/><path d="M2 14l8 4 8-4"/></svg>`,
   hamburger: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/></svg>`,
@@ -39,7 +37,6 @@ const IC = {
   sticky: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h12a1 1 0 011 1v9l-4 4H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M13 13v3.5L17 13h-4z" fill="currentColor" stroke="none"/><line x1="6" y1="7" x2="14" y2="7"/><line x1="6" y1="10" x2="11" y2="10"/></svg>`,
   curve: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 16 Q10 2 17 16"/></svg>`,
   magnify: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="12.6" y1="12.6" x2="17" y2="17"/></svg>`,
-  gear: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.33 4.32c.43-1.76 2.93-1.76 3.35 0a1.72 1.72 0 0 0 2.57 1.07c1.54-.94 3.31.83 2.37 2.37a1.72 1.72 0 0 0 1.06 2.57c1.76.43 1.76 2.93 0 3.35a1.72 1.72 0 0 0-1.07 2.57c.94 1.54-.83 3.31-2.37 2.37a1.72 1.72 0 0 0-2.57 1.06c-.43 1.76-2.93 1.76-3.35 0a1.72 1.72 0 0 0-2.57-1.07c-1.54.94-3.31-.83-2.37-2.37a1.72 1.72 0 0 0-1.06-2.57c-1.76-.43-1.76-2.93 0-3.35a1.72 1.72 0 0 0 1.07-2.57c-.94-1.54.83-3.31 2.37-2.37 1 .61 2.3.07 2.57-1.06z"/><circle cx="12" cy="12" r="3"/></svg>`,
   chevronDown: `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5l3 3 3-3"/></svg>`,
   polygon: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l7 6.5-2.5 7h-9L3 9.5z"/></svg>`,
 };
@@ -346,23 +343,8 @@ export function initToolbar(
   centerPill.insertBefore(undoSep, lockedSep);
   centerPill.insertBefore(undoPill, lockedSep);
 
-  // ── Top-right: import dropdown ───────────────────────────────────────────────
+  // ── Top-right: live name and people ──────────────────────────────────────────
   const topRight = div('tb-island-topright');
-
-  // Import .markasso
-  const importIsland = div('tb-island');
-  const importInput = document.createElement('input');
-  importInput.type = 'file';
-  importInput.accept = '.markasso,application/json';
-  importInput.style.display = 'none';
-  container.appendChild(importInput);
-  importInput.addEventListener('change', () => {
-    const file = importInput.files?.[0];
-    if (file) importMarkasso(file, history);
-    importInput.value = '';
-  });
-  const importTrigger = mkBtn(IC.import, t('openMarkasso'));
-  importTrigger.addEventListener('click', () => importInput.click());
 
   // Mermaid dialog
   const mermaidDialog = document.createElement('div');
@@ -536,8 +518,6 @@ export function initToolbar(
     }
   }
 
-  importIsland.append(importTrigger);
-
   // Editable "your name" chip, shown while a live session is active so any
   // participant (creator or link-joiner) can set/change their own name.
   const nameChip = document.createElement('button');
@@ -657,60 +637,9 @@ export function initToolbar(
 
   topRight.append(peopleIsland, nameIsland);
 
-  // ── Top-left: actions panel (import) ─────────────────────────────────────
-  const actionsGroup = div('tb-tool-group');
-  const actionsToggle = mkBtn(IC.gear, t('actions'));
-  actionsToggle.setAttribute('aria-expanded', 'false');
-  const actionsPanel = div('tb-island tb-actions-panel');
-  actionsPanel.id = 'tb-actions-panel';
-  actionsPanel.setAttribute('role', 'group');
-  actionsPanel.setAttribute('aria-label', t('actions'));
-  actionsToggle.setAttribute('aria-controls', actionsPanel.id);
-  // Listed like the menu panel: icon + label rows.
-  for (const island of [importIsland]) {
-    island.classList.replace('tb-island', 'tb-actions-item');
-    for (const b of island.querySelectorAll<HTMLButtonElement>(
-      ':scope > .tb-btn',
-    )) {
-      b.className = 'menu-item';
-      b.removeAttribute('title');
-      const label = document.createElement('span');
-      label.className = 'menu-item-label';
-      label.textContent = b.getAttribute('aria-label');
-      b.append(label);
-    }
-    actionsPanel.append(island);
-  }
-  const setActionsOpen = (open: boolean): void => {
-    actionsPanel.classList.toggle('open', open);
-    actionsToggle.classList.toggle('open', open);
-    actionsToggle.setAttribute('aria-expanded', String(open));
-  };
-  actionsToggle.addEventListener('click', () =>
-    setActionsOpen(!actionsPanel.classList.contains('open')),
-  );
-  // Close once an action runs.
-  actionsPanel.addEventListener('click', (e) => {
-    if ((e.target as Element).closest('button')) setActionsOpen(false);
-  });
-  actionsGroup.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || !actionsPanel.classList.contains('open')) return;
-    setActionsOpen(false);
-    actionsToggle.focus();
-  });
-  document.addEventListener(
-    'pointerdown',
-    (e) => {
-      if (!actionsGroup.contains(e.target as Node)) setActionsOpen(false);
-    },
-    { capture: true },
-  );
-  actionsGroup.append(actionsToggle, actionsPanel);
-
-  // Top-left: menu button (settings.ts) | actions | coffee (star_cta.ts)
+  // Top-left: menu button (settings.ts) | coffee (star_cta.ts)
   const topLeft = div('tb-island-topleft');
   const tbLeft = div('tb-island tb-left');
-  tbLeft.append(actionsGroup);
   topLeft.append(tbLeft);
 
   container.append(centerPill, topRight, topLeft);

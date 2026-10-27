@@ -12,7 +12,7 @@ All notable changes to this project will be documented here.
 - **Zoom and minimap in a panel.** A magnifier button after the eraser opens a panel with the minimap and the zoom controls (fit, zoom out, reset, zoom in). It stays open while you pan and zoom; the button or Escape closes it.
 - **Undo and redo in the toolbar**, after the zoom button.
 - **Accessible toolbar tooltips.** Toolbar buttons show their name and shortcut in a tooltip on hover and on keyboard focus, instead of the browser's native one. Escape dismisses it, it stays open while the pointer moves onto it, and screen readers announce it as the button's description.
-- **Actions menu in the top-left island.** A gear button between the menu and the coffee button opens a menu with open .markasso, with its label. The top-right corner now only shows your live name and the people in a live session.
+- **One menu in the top-left island.** The menu button shows a gear instead of the hamburger and holds every file, export, share and insert action; the top-right corner now only shows your live name and the people in a live session.
 - **Export lives in the main menu.** The PNG and SVG entries of the menu are replaced by an Export submenu with PNG, SVG and HTML; saving as .markasso stays its own entry.
 - **Share lives in the main menu**, after Export: go live, copy link, X, Reddit and Bluesky. Going live uses your saved name, which the name chip in the top-right corner changes once the session starts; the peer count shows next to Share.
 - **Import Mermaid lives in the main menu**, after Share.
