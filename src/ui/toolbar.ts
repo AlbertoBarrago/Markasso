@@ -30,7 +30,6 @@ const IC = {
   redo: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8H7a4 4 0 000 8h5"/><path d="M13 5l3 3-3 3"/></svg>`,
   import: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7a2 2 0 012-2h3l2 2h5a2 2 0 012 2v5a2 2 0 01-2 2H4a2 2 0 01-2-2V7z"/></svg>`,
   fit: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="2.5"/><path d="M1 5V2h3M12 2h3v3M15 11v3h-3M4 14H1v-3"/></svg>`,
-  mermaid: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="7" height="5" rx="1"/><rect x="12" y="14" width="7" height="5" rx="1"/><path d="M4.5 6v4h11v4"/><path d="M14 16l1.5-2 1.5 2"/></svg>`,
   layers: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L2 6l8 4 8-4z"/><path d="M2 10l8 4 8-4"/><path d="M2 14l8 4 8-4"/></svg>`,
   hamburger: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/></svg>`,
   importImg: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="16" height="14" rx="2"/><circle cx="7" cy="8" r="1.5"/><path d="M2 14l4-4 3 3 3-3 4 4"/><path d="M13 7l2-2 2 2M15 5v5"/></svg>`,
@@ -107,7 +106,10 @@ const SHAPE_GROUP: ReadonlyArray<ActiveTool> = [
   'line',
 ];
 
-export function initToolbar(container: HTMLElement, history: History): void {
+export function initToolbar(
+  container: HTMLElement,
+  history: History,
+): { openMermaidDialog: () => void } {
   container.innerHTML = '';
 
   // ── Center-bottom: tool buttons pill ──────────────────────────────────────
@@ -536,10 +538,7 @@ export function initToolbar(container: HTMLElement, history: History): void {
     }
   }
 
-  const mermaidTrigger = mkBtn(IC.mermaid, t('importMermaid'));
-  mermaidTrigger.addEventListener('click', showMermaidDialog);
-
-  importIsland.append(importTrigger, mermaidTrigger);
+  importIsland.append(importTrigger);
 
   // Editable "your name" chip, shown while a live session is active so any
   // participant (creator or link-joiner) can set/change their own name.
@@ -979,6 +978,9 @@ export function initToolbar(container: HTMLElement, history: History): void {
 
   history.subscribe(sync);
   sync();
+
+  // The main menu (settings.ts) opens the Mermaid dialog.
+  return { openMermaidDialog: showMermaidDialog };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

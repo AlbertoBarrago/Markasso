@@ -100,7 +100,7 @@ async function bootstrap(): Promise<void> {
   // Restore persisted UI settings before first paint
   applySettings(appEl, loadSettings());
 
-  initToolbar(toolbar, hist);
+  const { openMermaidDialog } = initToolbar(toolbar, hist);
   const reportForm = initReportForm(appEl);
   const guide = initGuide(appEl);
   initSettings(
@@ -109,6 +109,7 @@ async function bootstrap(): Promise<void> {
     hist,
     () => reportForm.open(),
     () => guide.open(),
+    openMermaidDialog,
   );
   initStarCta(appEl, toolbar);
   const { selectTool } = initCanvasView(canvas, hist);
