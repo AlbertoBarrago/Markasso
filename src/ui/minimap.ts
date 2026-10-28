@@ -1,5 +1,9 @@
 import type { History } from '../engine/history';
-import { getElementBounds } from '../rendering/draw_selection';
+import {
+  getElementBounds,
+  resolveArrowEndpoints,
+  resolveConnectorRoute,
+} from '../rendering/draw_selection';
 
 const MM_W = 168; // minimap canvas logical width
 const MM_H = 100; // minimap canvas logical height
@@ -79,14 +83,18 @@ export function initMinimap(workspace: HTMLElement, history: History): void {
       return;
     }
 
+    // Bounds are resolved against the whole scene so bound connectors follow
+    // their shapes, as on the main canvas. Their stored x/y/x2/y2 can be stale
+    // (e.g. MCP boards connect nodes before laying them out).
+    const visible = elements.filter((el) => el.visible !== false);
+    const bounds = visible.map((el) => getElementBounds(el, elements));
+
     // Compute scene bounding box
     let minX = Infinity,
       minY = Infinity,
       maxX = -Infinity,
       maxY = -Infinity;
-    for (const el of elements) {
-      if (el.visible === false) continue;
-      const b = getElementBounds(el);
+    for (const b of bounds) {
       minX = Math.min(minX, b.x);
       minY = Math.min(minY, b.y);
       maxX = Math.max(maxX, b.x + b.w);
@@ -107,53 +115,58 @@ export function initMinimap(workspace: HTMLElement, history: History): void {
     const worldW = maxX - minX;
     const worldH = maxY - minY;
 
-    // Fit scene into minimap while preserving aspect ratio
+    // Fit scene into minimap while preserving aspect ratio. The origin is
+    // shifted so the scene sits centered: worldLeft/worldTop already carry
+    // that offset, and worldToMm (elements and viewport rect alike) uses them.
     worldToMmScale = Math.min(MM_W / worldW, MM_H / worldH);
-    const scaledW = worldW * worldToMmScale;
-    const scaledH = worldH * worldToMmScale;
     worldLeft = minX - (MM_W / worldToMmScale - worldW) / 2;
     worldTop = minY - (MM_H / worldToMmScale - worldH) / 2;
 
-    // Center unused space
-    const offX = ((MM_W - scaledW) / 2) * devicePixelRatio;
-    const offY = ((MM_H - scaledH) / 2) * devicePixelRatio;
+    const k = worldToMmScale * devicePixelRatio;
 
-    // Draw elements as simplified shapes
+    // Draw elements as simplified shapes: connectors as their path, the rest
+    // as their bounding box.
     ctx.save();
-    ctx.translate(
-      offX - worldLeft * worldToMmScale * devicePixelRatio,
-      offY - worldTop * worldToMmScale * devicePixelRatio,
-    );
+    ctx.translate(-worldLeft * k, -worldTop * k);
 
-    for (const el of elements) {
-      if (el.visible === false) continue;
-      const b = getElementBounds(el);
-      const x = b.x * worldToMmScale * devicePixelRatio;
-      const y = b.y * worldToMmScale * devicePixelRatio;
-      const w = Math.max(1, b.w * worldToMmScale * devicePixelRatio);
-      const h = Math.max(1, b.h * worldToMmScale * devicePixelRatio);
+    visible.forEach((el, i) => {
+      const b = bounds[i]!;
+      ctx.strokeStyle = el.strokeColor;
+      ctx.lineWidth = Math.max(0.5, (el.strokeWidth ?? 1) * k * 0.5);
+
+      if (el.type === 'line' || el.type === 'arrow') {
+        ctx.globalAlpha = (el.opacity ?? 1) * 0.8;
+        ctx.beginPath();
+        if (el.type === 'line' && el.cx !== undefined && el.cy !== undefined) {
+          const pts = resolveArrowEndpoints(el, elements);
+          ctx.moveTo(pts.x * k, pts.y * k);
+          ctx.quadraticCurveTo(el.cx * k, el.cy * k, pts.x2 * k, pts.y2 * k);
+        } else {
+          resolveConnectorRoute(el, elements).forEach(([px, py], j) => {
+            if (j === 0) ctx.moveTo(px * k, py * k);
+            else ctx.lineTo(px * k, py * k);
+          });
+        }
+        ctx.stroke();
+        return;
+      }
+
+      const x = b.x * k;
+      const y = b.y * k;
+      const w = Math.max(1, b.w * k);
+      const h = Math.max(1, b.h * k);
 
       ctx.globalAlpha = el.opacity ?? 1;
-
       if (el.fillColor && el.fillColor !== 'transparent') {
         ctx.fillStyle = el.fillColor;
         ctx.fillRect(x, y, w, h);
       }
-      ctx.strokeStyle = el.strokeColor;
-      ctx.lineWidth = Math.max(
-        0.5,
-        (el.strokeWidth ?? 1) * worldToMmScale * devicePixelRatio * 0.5,
-      );
       ctx.globalAlpha = (el.opacity ?? 1) * 0.8;
       ctx.strokeRect(x, y, w, h);
-    }
+    });
 
     ctx.restore();
     ctx.globalAlpha = 1;
-
-    // Correct worldLeft/worldTop for drawViewportRect (they account for centering)
-    worldLeft = minX - (MM_W / worldToMmScale - worldW) / 2;
-    worldTop = minY - (MM_H / worldToMmScale - worldH) / 2;
 
     drawViewportRect(viewport);
   }
