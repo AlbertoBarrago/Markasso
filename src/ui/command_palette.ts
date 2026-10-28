@@ -79,6 +79,7 @@ const _IC_ACTION = `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" 
 export function initCommandPalette(
   history: History,
   _selectTool: SelectTool,
+  openMcpSetup: () => void,
 ): void {
   // ── DOM ──────────────────────────────────────────────────────────────────
   const overlay = document.createElement('div');
@@ -305,6 +306,13 @@ export function initCommandPalette(
           offsetY: h / 2 - worldCY,
         });
       },
+    });
+    items.push({
+      id: 'action:connect-ai-agent',
+      label: t('connectAiAgent'),
+      category: 'action',
+      icon: `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="14" height="9" rx="2"/><path d="M10 4v3M7.5 11.5h.01M12.5 11.5h.01"/></svg>`,
+      execute: openMcpSetup,
     });
     items.push({
       id: 'action:toggle-grid',

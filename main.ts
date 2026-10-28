@@ -15,6 +15,7 @@ import { initIdleTips } from './src/ui/idle_tips';
 import { initImageImport } from './src/ui/image_import';
 import { initLibraryPanel } from './src/ui/library_panel';
 import { setLiveUI } from './src/ui/live_name';
+import { initMcpSetup } from './src/ui/mcp_setup';
 import { initMinimap } from './src/ui/minimap';
 import { initMobileActionBar } from './src/ui/mobile_action_bar';
 import { initReportForm } from './src/ui/report_form';
@@ -106,6 +107,7 @@ async function bootstrap(): Promise<void> {
   initToolbar(toolbar, hist, openImagePicker);
   const reportForm = initReportForm(appEl);
   const guide = initGuide(appEl);
+  const mcpSetup = initMcpSetup(appEl);
   const starCta = initStarCta(appEl);
   const { openPreferences } = initSettings(
     appEl,
@@ -114,6 +116,7 @@ async function bootstrap(): Promise<void> {
     () => reportForm.open(),
     () => guide.open(),
     () => starCta.open(),
+    () => mcpSetup.open(),
   );
   const { selectTool } = initCanvasView(canvas, hist);
   initContextPanel(workspace, hist, (source) =>
@@ -121,7 +124,7 @@ async function bootstrap(): Promise<void> {
   );
   initMobileActionBar(workspace, hist);
   initShortcuts(hist, selectTool, openPreferences);
-  initCommandPalette(hist, selectTool);
+  initCommandPalette(hist, selectTool, () => mcpSetup.open());
   initMinimap(workspace, hist);
   initElementSearch(workspace, hist);
   initLibraryPanel(workspace, hist, canvas);
