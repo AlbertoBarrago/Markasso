@@ -59,6 +59,8 @@
   "moveToolbar": "Déplacer la barre d'outils",
   "moreTools": "Autres outils",
   "startLiveSession": "Démarrer une session en direct",
+  "inviteAiAgent": "Inviter un agent IA",
+  "mcpInviteCopied": "Prompt copié : collez-le dans votre agent IA",
   "insertImage": "Insérer une image",
   "moveToolbarHint": "Ancrez la barre en haut ou en bas : faites-la glisser, ou cliquez puis choisissez une position. Les flèches changent l’ancrage ; double-clic ou Début le réinitialise.",
   "toolbarDockGuide": "Choisissez une position en surbrillance en haut ou en bas · Échap pour annuler",

@@ -68,3 +68,12 @@ export function buildMcpClients(): McpClient[] {
     },
   ];
 }
+
+/**
+ * Prompt that brings an agent into a live session: pasted into any client
+ * with the server installed, it makes the agent call `live_join` on the link.
+ * Kept in English because it is read by the model, not shown in the UI.
+ */
+export function buildLiveInvitePrompt(liveUrl: string): string {
+  return `Join this Markasso live session with the markasso MCP server (live_join) and draw with me: ${liveUrl}`;
+}

@@ -59,6 +59,8 @@
   "moveToolbar": "Werkzeugleiste verschieben",
   "moreTools": "Weitere Werkzeuge",
   "startLiveSession": "Live-Sitzung starten",
+  "inviteAiAgent": "KI-Agent einladen",
+  "mcpInviteCopied": "Prompt kopiert: füge ihn in deinen KI-Agenten ein",
   "insertImage": "Bild einfügen",
   "moveToolbarHint": "Werkzeugleiste oben oder unten andocken: ziehen oder klicken und eine Position wählen. Pfeiltasten wechseln die Position; Doppelklick oder Pos1 setzt sie zurück.",
   "toolbarDockGuide": "Eine markierte Position oben oder unten wählen · Esc zum Abbrechen",

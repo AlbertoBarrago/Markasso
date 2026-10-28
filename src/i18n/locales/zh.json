@@ -59,6 +59,8 @@
   "moveToolbar": "移动工具栏",
   "moreTools": "更多工具",
   "startLiveSession": "开始实时会话",
+  "inviteAiAgent": "邀请 AI 代理",
+  "mcpInviteCopied": "提示已复制：粘贴给你的 AI 代理",
   "insertImage": "插入图片",
   "moveToolbarHint": "将工具栏吸附到顶部或底部：拖动，或点击后选择位置。方向键切换吸附位置；双击或 Home 键恢复默认位置。",
   "toolbarDockGuide": "选择顶部或底部高亮的位置 · Esc 取消",

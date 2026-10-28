@@ -132,6 +132,7 @@ function randomName(): string {
 
 /** The active live session (if any), so the UI can update the peer's name. */
 let activeSession: {
+  roomId: string;
   self: PeerInfo;
   send: (msg: unknown) => void;
   emitPeers: () => void;
@@ -156,6 +157,15 @@ export function onLivePeers(
  */
 export function getLiveName(): string {
   return activeSession?.self.name ?? getStoredName();
+}
+
+/**
+ * Link to the live session this tab is in, or null outside one. Rebuilt from
+ * the room id because a session started from the toolbar never puts it in
+ * the address bar.
+ */
+export function getLiveSessionUrl(): string | null {
+  return activeSession ? buildLiveRoomUrl(activeSession.roomId) : null;
 }
 
 /**
@@ -213,7 +223,7 @@ export function joinLiveSession(
     for (const cb of peerListeners) cb(others, self);
   };
 
-  activeSession = { self, send, emitPeers };
+  activeSession = { roomId, self, send, emitPeers };
 
   // When connected, our own pointer moves broadcast through this sender.
   // Registered once: it survives reconnects since `send` always targets the

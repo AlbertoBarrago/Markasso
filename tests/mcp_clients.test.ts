@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import en from '../src/i18n/locales/en.json';
-import { buildMcpClients, MCP_PACKAGE } from '../src/ui/mcp_clients';
+import {
+  buildLiveInvitePrompt,
+  buildMcpClients,
+  MCP_PACKAGE,
+} from '../src/ui/mcp_clients';
 
 describe('MCP client setup', () => {
   const clients = buildMcpClients();
@@ -40,5 +44,12 @@ describe('MCP client setup', () => {
   it('has an English text for every placement hint', () => {
     for (const client of clients)
       expect(en[client.whereKey], client.id).toBeTruthy();
+  });
+
+  it('puts the live link in the invite prompt', () => {
+    const url = 'https://markasso.it/?live=abc123';
+    const prompt = buildLiveInvitePrompt(url);
+    expect(prompt).toContain(url);
+    expect(prompt).toContain('live_join');
   });
 });

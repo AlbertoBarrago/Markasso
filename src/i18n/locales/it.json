@@ -59,6 +59,8 @@
   "moveToolbar": "Sposta la barra degli strumenti",
   "moreTools": "Altri strumenti",
   "startLiveSession": "Avvia sessione live",
+  "inviteAiAgent": "Invita agente AI",
+  "mcpInviteCopied": "Prompt copiato: incollalo nel tuo agente AI",
   "insertImage": "Inserisci immagine",
   "moveToolbarHint": "Aggancia la barra in alto o in basso: trascina, oppure fai clic e scegli una posizione. Le frecce cambiano aggancio; doppio clic o Home ripristina la posizione iniziale.",
   "toolbarDockGuide": "Scegli una posizione evidenziata in alto o in basso · Esc per annullare",

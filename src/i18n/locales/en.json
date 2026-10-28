@@ -64,6 +64,8 @@
   "moveToolbar": "Move toolbar",
   "moreTools": "More tools",
   "startLiveSession": "Start live session",
+  "inviteAiAgent": "Invite AI agent",
+  "mcpInviteCopied": "Prompt copied: paste it into your AI agent",
   "insertImage": "Insert image",
   "moveToolbarHint": "Dock toolbar at the top or bottom: drag, or click then choose a position. Arrow keys change dock; double-click or Home resets it.",
   "toolbarDockGuide": "Choose a highlighted position at the top or bottom · Esc to cancel",

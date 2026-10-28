@@ -59,6 +59,8 @@
   "moveToolbar": "ツールバーを移動",
   "moreTools": "その他のツール",
   "startLiveSession": "ライブセッションを開始",
+  "inviteAiAgent": "AIエージェントを招待",
+  "mcpInviteCopied": "プロンプトをコピーしました：AIエージェントに貼り付けてください",
   "insertImage": "画像を挿入",
   "moveToolbarHint": "ツールバーを上端または下端に配置：ドラッグするか、クリックして配置先を選びます。矢印キーで位置を切り替え、ダブルクリックまたは Home キーで元に戻します。",
   "toolbarDockGuide": "上端または下端の強調された位置を選択 · Esc でキャンセル",
