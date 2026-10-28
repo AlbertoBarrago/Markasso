@@ -1,6 +1,7 @@
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { onLiveHide, onLiveReveal } from './live_name';
+import { onMcpSetupOpen } from './mcp_setup';
 import {
   buildTips,
   markShown,
@@ -31,6 +32,7 @@ const BUSY_SELECTORS = [
   '#welcome-overlay',
   '#whats-new-overlay',
   '#guide-modal',
+  '#mcp-setup-modal',
   '#report-modal',
   '#star-modal',
   '.settings-panel.open',
@@ -208,6 +210,7 @@ export function initIdleTips(appEl: HTMLElement, history: History): void {
   onLiveHide(() => {
     isLive = false;
   });
+  onMcpSetupOpen(() => learn({ type: 'mcpSetup' }));
 
   setTimeout(() => {
     show();

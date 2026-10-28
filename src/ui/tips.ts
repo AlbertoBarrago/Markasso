@@ -24,7 +24,8 @@ export type TipEvent =
       readonly altKey: boolean;
     }
   | { readonly type: 'dblclick' }
-  | { readonly type: 'live' };
+  | { readonly type: 'live' }
+  | { readonly type: 'mcpSetup' };
 
 export interface Tip {
   readonly id: string;
@@ -150,6 +151,12 @@ export function buildTips(isMac: boolean): Tip[] {
       textKey: 'tipLive',
       when: (ctx) => !ctx.isLive,
       isUsedBy: (e) => e.type === 'live',
+    },
+    {
+      id: 'mcp',
+      textKey: 'tipMcp',
+      key: mod('K'),
+      isUsedBy: (e) => e.type === 'mcpSetup',
     },
     {
       id: 'minimap',

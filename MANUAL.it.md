@@ -375,6 +375,21 @@ Scegli **⋯ Altri strumenti → Avvia sessione live** per aprire una lavagna co
 
 ---
 
+## Agenti AI (MCP)
+
+Claude, Codex, Gemini e i modelli locali (per esempio Gemma in LM Studio) possono creare, leggere e modificare diagrammi Markasso tramite il server [MCP](https://modelcontextprotocol.io) di Markasso, pubblicato su npm come `@markasso/mcp` (Node 22+).
+
+Scegli **Menu → Collega un agente AI**, oppure `⌘K` e poi **Collega un agente AI**, per la configurazione di ogni client con il pulsante di copia. Per Claude Code e Codex basta un comando:
+
+- **Claude Code:** `claude mcp add markasso -- npx -y @markasso/mcp@latest`
+- **Codex:** `codex mcp add markasso -- npx -y @markasso/mcp@latest`
+
+Claude Desktop, Gemini CLI e LM Studio usano lo stesso comando `npx -y @markasso/mcp@latest` nella configurazione `mcpServers`. Poi chiedi all’agente di disegnare, per esempio "Disegna l’architettura di un servizio di checkout con le icone e dammi un link di condivisione".
+
+**Disegnare insieme a un agente:** avvia una sessione live, poi scegli **⋯ Altri strumenti → Invita agente AI**. Viene copiato un prompt con il link della sessione: incollalo nel tuo agente e l’agente entra nella lavagna, visibile nell’elenco dei partecipanti. Chiunque abbia un link live può modificare la lavagna, agente compreso, e le etichette scritte da altri sono contenuto che l’agente legge: tienilo presente se l’agente ha altri strumenti potenti. Elenco completo degli strumenti e note di sicurezza: [mcp/README.md](https://github.com/AlbertoBarrago/Markasso/blob/main/mcp/README.md).
+
+---
+
 ## Tema
 
 Passa tra i temi **Scuro**, **Chiaro** e **Sistema** da **Menu → Tema**. La tua preferenza viene salvata tra una sessione e l'altra.

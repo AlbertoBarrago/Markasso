@@ -150,6 +150,12 @@ describe('markUsed', () => {
     expect(markUsed(tips, {}, { type: 'live' }).live?.used).toBe(true);
   });
 
+  it('retires the agent tip only once the setup is opened', () => {
+    // The tip shows ⌘K too, but opening the palette is not using the setup.
+    expect(markUsed(tips, {}, key('k', { metaKey: true })).mcp).toBeUndefined();
+    expect(markUsed(tips, {}, { type: 'mcpSetup' }).mcp?.used).toBe(true);
+  });
+
   it('returns the same stats when nothing changes', () => {
     const stats = markUsed(tips, {}, key('k', { metaKey: true }));
     expect(markUsed(tips, stats, key('k', { metaKey: true }))).toBe(stats);

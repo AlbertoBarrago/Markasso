@@ -150,6 +150,11 @@ const ICONS = {
   ),
   zoomReset: svg(`<circle cx="9" cy="9" r="5.5"/>${p('M13 13l4 4M7 9h4')}`),
   guide: svg(p('M10 2a8 8 0 100 16A8 8 0 0010 2zM10 7v4M10 13h.01')),
+  agent: svg(
+    p(
+      'M4 7h12a2 2 0 012 2v5a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2zM10 4v3M7.5 11.5h.01M12.5 11.5h.01',
+    ),
+  ),
   report: svg(
     p(
       'M10 3v3M6 4l1.5 2M14 4l-1.5 2M4 12a6 6 0 0112 0M5 9h10M4 12v2a1 1 0 001 1h10a1 1 0 001-1v-2M8 17h4',
@@ -199,6 +204,7 @@ export function initSettings(
   openReportForm: () => void,
   openGuide: () => void,
   openSupport: () => void,
+  openMcpSetup: () => void,
 ): { openPreferences: () => void } {
   let current = loadSettings();
   applySettings(appEl, current);
@@ -350,6 +356,7 @@ export function initSettings(
       )}
       ${separator}
       ${item('menu-guide', ICONS.guide, t('guide'))}
+      ${item('menu-mcp', ICONS.agent, t('connectAiAgent'))}
       ${item('menu-report', ICONS.report, t('reportProblem'))}
       ${separator}
       <li role="none" class="menu-section-label" id="menu-bg-label" aria-hidden="true">${t('canvasBg')}</li>
@@ -719,6 +726,7 @@ export function initSettings(
   );
 
   onActivate('#menu-guide', openGuide);
+  onActivate('#menu-mcp', openMcpSetup);
   onActivate('#menu-report', openReportForm);
   // The link opens itself; this only closes the menu.
   onActivate('#menu-github', () => {});

@@ -8,12 +8,14 @@ import {
   buildLiveRoomUrl,
   generateRoomId,
   getLiveName,
+  getLiveSessionUrl,
   joinLiveSession,
   onLivePeers,
   setLiveName,
 } from '../io/realtime';
 import { toggleLibrary } from './library_panel';
 import { onLiveHide, onLiveReveal, setLiveUI } from './live_name';
+import { buildLiveInvitePrompt } from './mcp_clients';
 import { initPeopleList } from './people_list';
 import {
   copyToClipboard,
@@ -290,6 +292,22 @@ export function initToolbar(
   liveAction.id = 'tb-start-live';
   onLiveReveal(() => liveAction.setAttribute('aria-disabled', 'true'));
   onLiveHide(() => liveAction.removeAttribute('aria-disabled'));
+  // Copies a prompt that makes an MCP-enabled agent join this room; enabled
+  // only while a live session is connected, the reverse of liveAction.
+  const agentIcon =
+    '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="12" height="9" rx="2"/><path d="M10 4v3M8 11h.01M12 11h.01M2 11v2M18 11v2"/></svg>';
+  const inviteAgentAction = addMoreItem(agentIcon, t('inviteAiAgent'), () => {
+    const url = getLiveSessionUrl();
+    if (!url) return;
+    const prompt = buildLiveInvitePrompt(url);
+    void copyToClipboard(prompt).then((copied) =>
+      showShareToast(copied, prompt, t('mcpInviteCopied')),
+    );
+  });
+  inviteAgentAction.id = 'tb-invite-agent';
+  inviteAgentAction.setAttribute('aria-disabled', 'true');
+  onLiveReveal(() => inviteAgentAction.removeAttribute('aria-disabled'));
+  onLiveHide(() => inviteAgentAction.setAttribute('aria-disabled', 'true'));
   async function startLiveSession(): Promise<void> {
     liveAction.setAttribute('aria-disabled', 'true');
     const roomId = generateRoomId();
