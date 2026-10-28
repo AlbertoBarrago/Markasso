@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.16.1] - 2026-10-28
+
+### Fixed
+- **Minimap matches the board.** Connectors follow the shapes they link, so boards drawn by AI agents no longer show stray bars, elements line up with the viewport frame instead of sitting off-center, and lines and arrows appear as lines rather than boxes.
+
+---
+
 ## [1.16.0] - 2026-10-28
 
 ### Added
