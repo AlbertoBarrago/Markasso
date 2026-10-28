@@ -375,6 +375,21 @@ Choose **⋯ More tools → Start live session** to open a shared board. Its lin
 
 ---
 
+## AI Agents (MCP)
+
+Claude, Codex, Gemini and local models (for example Gemma in LM Studio) can create, read and edit Markasso diagrams through the Markasso [MCP](https://modelcontextprotocol.io) server, published on npm as `@markasso/mcp` (Node 22+).
+
+Choose **Menu → Connect AI agent**, or `⌘K` then **Connect AI agent**, for the setup of each client with a copy button. For Claude Code and Codex it is a single command:
+
+- **Claude Code:** `claude mcp add markasso -- npx -y @markasso/mcp@latest`
+- **Codex:** `codex mcp add markasso -- npx -y @markasso/mcp@latest`
+
+Claude Desktop, Gemini CLI and LM Studio take the same `npx -y @markasso/mcp@latest` command in their `mcpServers` configuration. Then ask the agent to draw, for example "Draw the architecture of a checkout service with icons and give me a share link".
+
+**Drawing together with an agent:** start a live session, then choose **⋯ More tools → Invite AI agent**. A prompt with the session link is copied: paste it into your agent and it joins the board, visible in the participant list. Anyone with a live link can edit the board, the agent included, and labels written by others are content the agent reads: keep that in mind when the agent has other powerful tools. Full tool list and security notes: [mcp/README.md](https://github.com/AlbertoBarrago/Markasso/blob/main/mcp/README.md).
+
+---
+
 ## Theme
 
 Switch between **Dark**, **Light**, and **System** themes from **Menu → Theme**. Your preference is saved across sessions.
