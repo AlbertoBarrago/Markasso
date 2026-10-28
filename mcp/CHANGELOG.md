@@ -4,6 +4,13 @@ All notable changes to `@markasso/mcp` are documented here. The MCP server is ve
 
 ---
 
+## [0.4.2] - 2026-10-28
+
+### Fixed
+- **Saved boards keep connectors where they are drawn.** After `diagram_layout` or `diagram_update`, `diagram_save` and `diagram_share` used to write connectors with the ends they had when connected; they now store the ends the app draws, so the file matches the board.
+
+---
+
 ## [0.4.1] - 2026-10-28
 
 ### Fixed

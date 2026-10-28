@@ -427,7 +427,7 @@ server.registerTool(
     },
   },
   guarded(async ({ path }: { path: string }) => {
-    await saveMarkassoFile(path, diagram.elements);
+    await saveMarkassoFile(path, diagram.snapshot());
     return `Saved ${diagram.elements.length} elements to ${path}.`;
   }),
 );
@@ -524,7 +524,7 @@ server.registerTool(
   guarded(async () => {
     if (diagram.elements.length === 0)
       return 'The diagram is empty: nothing to share.';
-    const { url, expiresAt } = await createShareLink(diagram.elements);
+    const { url, expiresAt } = await createShareLink(diagram.snapshot());
     const until = expiresAt
       ? `on ${expiresAt.toISOString().slice(0, 10)}`
       : 'after a while';

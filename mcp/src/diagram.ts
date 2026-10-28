@@ -25,6 +25,8 @@ import { validateElements } from '../../src/io/element_validation';
 import {
   getConnectorBox,
   getElementBounds,
+  resolveArrowEndpoints,
+  resolveConnectorRoute,
 } from '../../src/rendering/draw_selection';
 
 import { type Size, sizeForLabel, sizeForText } from './sizing';
@@ -202,6 +204,27 @@ export class Diagram {
 
   get elements(): ReadonlyArray<Element> {
     return this.history.present.elements;
+  }
+
+  /**
+   * Elements to write out (file, share link). Bound connectors keep the
+   * x/y/x2/y2 they had when connected, since the app resolves their ends
+   * from the shapes at draw time; here they are set to where they are drawn
+   * now, so a saved board stays consistent for readers that use the stored
+   * coordinates. The live scene and its undo stack are left untouched.
+   */
+  snapshot(): Element[] {
+    const all = this.elements;
+    return all.map((el) => {
+      if (!isConnector(el) || (!el.startElementId && !el.endElementId))
+        return el;
+      if (el.type === 'line' && el.cx !== undefined && el.cy !== undefined)
+        return { ...el, ...resolveArrowEndpoints(el, all) };
+      const route = resolveConnectorRoute(el, all);
+      const [x, y] = route[0]!;
+      const [x2, y2] = route[route.length - 1]!;
+      return { ...el, x, y, x2, y2 };
+    });
   }
 
   /**

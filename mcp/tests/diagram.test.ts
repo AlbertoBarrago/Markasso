@@ -211,6 +211,21 @@ describe('connectors follow moved nodes', () => {
     expect(y2).toBeGreaterThanOrEqual(400 - 0.5);
     expect(y2).toBeLessThanOrEqual(500);
   });
+
+  it('snapshot stores the drawn ends of bound connectors', async () => {
+    const d = await chain();
+    d.layout('TB');
+    const before = d.elements.find((el) => el.type === 'line')!;
+    const saved = d.snapshot().find((el) => el.type === 'line')!;
+    if (saved.type !== 'line') throw new Error('expected a line');
+    const [x1, y1, x2, y2] = exportedLine(d);
+    expect(saved.x).toBeCloseTo(x1!, 0);
+    expect(saved.y).toBeCloseTo(y1!, 0);
+    expect(saved.x2).toBeCloseTo(x2!, 0);
+    expect(saved.y2).toBeCloseTo(y2!, 0);
+    // The scene itself keeps its connector as is.
+    expect(d.elements.find((el) => el.type === 'line')).toBe(before);
+  });
 });
 
 describe('icon labels in layout', () => {
