@@ -44,7 +44,7 @@ codex mcp add markasso -- npx -y @markasso/mcp@latest
 
 Claude Desktop, Gemini CLI and LM Studio use the same `npx -y @markasso/mcp@latest` command in their `mcpServers` config: see [`mcp/README.md`](mcp/README.md) for every client, the tool list, building from source and the security notes.
 
-**2. Ask for a diagram**, for example: *"Draw the architecture of a checkout service with icons, lay it out left to right and give me a share link"*. For live mode, open **Share → Share live session** in Markasso and ask the agent to join that link.
+**2. Ask for a diagram**, for example: *"Draw the architecture of a checkout service with icons, lay it out left to right and give me a share link"*. For live mode, start a session with **⋯ More tools → Start live session** in Markasso, then **⋯ More tools → Invite AI agent** copies a prompt that brings the agent onto the board. **Menu → Connect AI agent** shows the setup for every client.
 
 ---
 
@@ -188,7 +188,7 @@ Cloud vendors allow their icons in diagrams but not their redistribution in tool
 
 | Feature | Description |
 |---|---|
-| **Live sessions** | "Share live session" creates a `?live=roomId` link; anyone who opens it joins the same infinite canvas and edits in real time over WebSocket |
+| **Live sessions** | "Start live session" creates a `?live=roomId` link; anyone who opens it joins the same infinite canvas and edits in real time over WebSocket |
 | **Instant sync** | Commands are relayed through a Cloudflare Durable Object in server order, so every peer converges to the same scene (LWW on concurrent same-element edits) |
 | **Seeding** | Sharing a session publishes your current board into the room, so invitees arrive with it already populated |
 | **Remote cursors** | Other participants' cursors + name tags render live on the canvas; your own name is remembered after the first set |

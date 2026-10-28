@@ -91,7 +91,7 @@ Bump `version` in `mcp/package.json`, add the entry to `mcp/CHANGELOG.md`, merge
 | `diagram_export_svg` | Export an SVG image |
 | `diagram_export_png` | Render a PNG the agent can look at (optionally saved to a file) |
 | `diagram_share` | Publish and return a markasso.it link, with its expiry date |
-| `live_join` / `live_leave` | Draw on a live board in real time (link from Share → Share live session) |
+| `live_join` / `live_leave` | Draw on a live board in real time (link from ⋯ More tools → Start live session) |
 
 Vendor icon packs (AWS, Azure, Google Cloud) are not available to agents: they can't be redistributed, and in the app they are imported by each user into their own browser.
 
@@ -103,7 +103,7 @@ Vendor icon packs (AWS, Azure, Google Cloud) are not available to agents: they c
 
 ## Live mode
 
-1. In Markasso, open **Share → Share live session** and copy the live link.
+1. In Markasso, choose **⋯ More tools → Start live session**: the live link is copied to the clipboard. Or, once the session is running, choose **⋯ More tools → Invite AI agent** to copy a ready-made prompt with the link.
 2. Ask the agent to `live_join` it. If the room already has content, it becomes the agent's current diagram; if it is empty, the agent's diagram is published to it.
 3. Every change the agent makes is applied for everyone in the room; changes made by people show up when the agent calls `diagram_read`.
 
