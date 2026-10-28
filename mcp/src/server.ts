@@ -542,7 +542,9 @@ server.registerTool(
       link: z
         .string()
         .min(1)
-        .describe('Live session link from Markasso (Share > Live)'),
+        .describe(
+          'Live session link from Markasso (⋯ More tools > Start live session, or the prompt from Invite AI agent)',
+        ),
       name: z
         .string()
         .min(1)

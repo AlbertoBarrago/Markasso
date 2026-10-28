@@ -4,6 +4,13 @@ All notable changes to `@markasso/mcp` are documented here. The MCP server is ve
 
 ---
 
+## [0.4.1] - 2026-10-28
+
+### Fixed
+- **`live_join` points to the right place in the app.** The `link` parameter now says the live link comes from **⋯ More tools → Start live session** (or the prompt copied by **Invite AI agent**), not from a Share menu that no longer exists.
+
+---
+
 ## [0.4.0] - 2026-10-27
 
 ### Added
