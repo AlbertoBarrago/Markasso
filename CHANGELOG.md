@@ -4,6 +4,15 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.16.0] - 2026-10-28
+
+### Added
+- **Connect an AI agent.** **Menu → Connect AI agent** (also in the command palette) shows how to add the Markasso MCP server to Claude Code, Codex, Claude Desktop, Gemini CLI and LM Studio, one tab per client with a copy button, plus example prompts and a link to the full setup and security notes.
+- **Invite an AI agent into a live session.** During a live session, **⋯ More tools → Invite AI agent** copies a prompt with the session link: pasted into an MCP-enabled agent, it joins the board and draws with you.
+- **Discoverability.** A new idle tip points to the agent setup, the What's new notice covers AI agents and tips, and the manual (English and Italian) has an "AI Agents (MCP)" section.
+
+---
+
 ## [1.15.0] - 2026-10-27
 
 ### Added
