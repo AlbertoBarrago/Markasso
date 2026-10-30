@@ -5,19 +5,21 @@
  * `{ generator, cases }` JSON files the Swift tests replay to prove parity
  * (format and comparison rules: markasso-apple `docs/04-fixtures.md`).
  *
- * It is a vitest file only because vitest already resolves the extensionless
- * `.ts` imports of `src/`; it asserts nothing beyond case-name uniqueness.
+ * It is a vitest file because vitest already resolves the extensionless
+ * `.ts` imports of `src/`, and because `vi.mock` lets it record the web's own
+ * reducer and History tests as fixtures: `reducer` and `History` are swapped
+ * for recording wrappers (scripts/fixtures/recording.ts) and the test files
+ * are imported, so they run here too and each test becomes one or more cases.
  * The name does not match vitest's default `*.test.ts` include, so `pnpm test`
  * never runs it: `scripts/dump-fixtures.mjs` runs it with an explicit include.
+ *
+ * Families other than `validation` and `connectors` live in
+ * `scripts/fixtures/<family>.ts`.
  *
  * Output dir: `MARKASSO_FIXTURES_OUT`, default
  * `../markasso-apple/Packages/MarkassoKit/Tests/Fixtures` from the repo root.
  */
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type {
   ArrowElement,
   ConnectorAnchor,
@@ -55,144 +57,62 @@ import {
   resolveArrowEndpoints,
   resolveConnectorRoute,
 } from '../src/rendering/draw_selection';
+import {
+  Family,
+  fmt,
+  type Json,
+  nextDown,
+  nextUp,
+  without,
+  withPath,
+  writeFamily,
+} from './fixtures/common';
+import { buildFiles } from './fixtures/files';
+import { buildGeometry } from './fixtures/geometry';
+import { buildHistory } from './fixtures/history';
+import { buildLive } from './fixtures/live';
+import { beginSession, endSession, type Session } from './fixtures/recording';
+import { buildReducer } from './fixtures/reducer';
+import { buildText } from './fixtures/text';
+import { buildViewport } from './fixtures/viewport';
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const OUT_DIR = resolve(
-  ROOT,
-  process.env.MARKASSO_FIXTURES_OUT ??
-    '../markasso-apple/Packages/MarkassoKit/Tests/Fixtures',
-);
+// ── Lifted tests ──────────────────────────────────────────────────────────────
 
-// ── Fixture writing ───────────────────────────────────────────────────────────
+vi.mock('../src/engine/reducer', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../src/engine/reducer')>();
+  const { recordingReducer } = await import('./fixtures/recording');
+  return { ...real, reducer: recordingReducer(real.reducer) };
+});
 
-type Json = Record<string, unknown>;
+vi.mock('../src/engine/history', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../src/engine/history')>();
+  const { recordingHistory } = await import('./fixtures/recording');
+  return { ...real, History: recordingHistory(real.History) };
+});
 
-interface FixtureCase {
-  readonly name: string;
-  readonly fn: string;
-  readonly input: unknown;
-  readonly output: unknown;
-}
+// Importing a test file registers its tests in this file: they run before the
+// generator below and each one is recorded as a session.
+import '../tests/reducer.test';
+import '../tests/history.test';
+import '../tests/live_sync.test';
+import '../tests/realtime.test';
+import '../tests/text_resize.test';
 
-class Family {
-  readonly cases: FixtureCase[] = [];
-  private readonly names = new Set<string>();
+const GENERATOR_TEST = 'writes the parity fixtures';
 
-  constructor(readonly name: string) {}
+/** Recorded sessions of the lifted tests, by full test name. */
+const lifted: Array<[string, Session]> = [];
+let liftedName: string | undefined;
 
-  add(name: string, fn: string, input: unknown, output: unknown): void {
-    if (this.names.has(name)) {
-      throw new Error(`${this.name}: duplicate case name "${name}"`);
-    }
-    this.names.add(name);
-    this.cases.push({ name, fn, input, output });
-  }
-}
+beforeEach(() => {
+  liftedName = expect.getState().currentTestName;
+  if (liftedName !== GENERATOR_TEST) beginSession();
+});
 
-/**
- * Makes a value JSON-safe the way the Swift side expects: `undefined` object
- * fields are dropped (as JSON.stringify does) and non-finite numbers become
- * the strings "NaN" / "Infinity" / "-Infinity", which JSON.stringify would
- * otherwise silently turn into null. `found.nonFinite` records whether any
- * such number was seen, so the header can say so.
- */
-function toJsonSafe(value: unknown, found: { nonFinite: boolean }): unknown {
-  if (typeof value === 'number') {
-    if (Number.isFinite(value)) return value;
-    found.nonFinite = true;
-    return Number.isNaN(value) ? 'NaN' : value > 0 ? 'Infinity' : '-Infinity';
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) =>
-      item === undefined ? null : toJsonSafe(item, found),
-    );
-  }
-  if (typeof value === 'object' && value !== null) {
-    const out: Json = {};
-    for (const [key, item] of Object.entries(value)) {
-      if (item !== undefined) out[key] = toJsonSafe(item, found);
-    }
-    return out;
-  }
-  return value;
-}
-
-function generatorInfo(): { version: string; commit: string } {
-  const pkg = JSON.parse(readFileSync(resolve(ROOT, 'package.json'), 'utf8'));
-  // In the colocated jj repo git's HEAD is the parent of the working-copy
-  // commit (main), which is the code the fixtures were generated from.
-  const commit = execFileSync('git', ['rev-parse', '--short=8', 'HEAD'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-  }).trim();
-  return { version: String(pkg.version), commit };
-}
-
-function writeFamily(family: Family): string {
-  const found = { nonFinite: false };
-  const cases = family.cases.map((c) => ({
-    name: c.name,
-    fn: c.fn,
-    input: toJsonSafe(c.input, found),
-    output: toJsonSafe(c.output, found),
-  }));
-  const generator = {
-    ...generatorInfo(),
-    family: family.name,
-    ...(found.nonFinite && { nonFinite: 'string' }),
-  };
-  const dir = resolve(OUT_DIR, family.name);
-  mkdirSync(dir, { recursive: true });
-  const file = resolve(dir, `${family.name}.json`);
-  writeFileSync(file, `${JSON.stringify({ generator, cases }, null, 2)}\n`);
-  return file;
-}
-
-// ── Shared helpers ────────────────────────────────────────────────────────────
-
-/** Smallest double greater than x (exact one-ulp boundary probes). */
-function nextUp(x: number): number {
-  if (x === 0) return Number.MIN_VALUE;
-  const f = new Float64Array([x]);
-  const bits = new BigInt64Array(f.buffer);
-  bits[0] = bits[0]! + (x > 0 ? 1n : -1n);
-  return f[0]!;
-}
-
-function nextDown(x: number): number {
-  return -nextUp(-x);
-}
-
-/** Deep copy of `obj` with the value at `path` replaced (or removed). */
-function withPath(
-  obj: Json,
-  path: ReadonlyArray<string | number>,
-  value: unknown,
-): Json {
-  const copy = structuredClone(obj);
-  let target: Record<string | number, unknown> = copy;
-  for (const key of path.slice(0, -1)) {
-    target = target[key] as Record<string | number, unknown>;
-  }
-  const last = path[path.length - 1]!;
-  if (value === undefined) delete target[last];
-  else target[last] = value;
-  return copy;
-}
-
-function without(obj: Json, key: string): Json {
-  return withPath(obj, [key], undefined);
-}
-
-function fmt(value: unknown): string {
-  if (typeof value === 'string') {
-    return value.length > 48
-      ? `string(${value.length} units)`
-      : JSON.stringify(value);
-  }
-  if (typeof value === 'number') return String(value);
-  return JSON.stringify(value) ?? String(value);
-}
+afterEach(() => {
+  const session = endSession();
+  if (session && liftedName) lifted.push([liftedName, session]);
+});
 
 // ── validation family ─────────────────────────────────────────────────────────
 
@@ -2276,10 +2196,32 @@ function buildConnectors(): Family {
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
-it('writes the parity fixtures', () => {
-  for (const family of [buildValidation(), buildConnectors()]) {
-    const file = writeFamily(family);
+it(GENERATOR_TEST, async () => {
+  // Route each recorded test: direct reducer calls are reducer cases, traces
+  // of one History instance are history cases, several instances are live.
+  const reducerTests = lifted.filter(([, s]) => s.reducerCalls.length > 0);
+  const historyTests = lifted.filter(([, s]) => s.peers.length === 1);
+  const liveTests = lifted.filter(([, s]) => s.peers.length > 1);
+  for (const [name, s] of lifted) {
+    if (s.reducerCalls.length > 0 && s.peers.length > 0) {
+      throw new Error(`lifted test mixes reducer and History: ${name}`);
+    }
+  }
+
+  const families = [
+    buildValidation(),
+    buildConnectors(),
+    await buildFiles(),
+    buildReducer(reducerTests),
+    buildHistory(historyTests),
+    buildLive(liveTests),
+    buildText(),
+    buildGeometry(),
+    buildViewport(),
+  ];
+  for (const family of families) {
+    const files = writeFamily(family);
     expect(family.cases.length).toBeGreaterThan(0);
-    expect(file.endsWith('.json')).toBe(true);
+    expect(files.every((file) => file.endsWith('.json'))).toBe(true);
   }
 });
