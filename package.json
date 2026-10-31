@@ -19,7 +19,9 @@
     "prepare": "husky",
     "deploy": "pnpm run build && wrangler deploy",
     "mcp:build": "pnpm --filter @markasso/mcp build",
-    "fixtures": "node scripts/dump-fixtures.mjs"
+    "fixtures": "node scripts/dump-fixtures.mjs",
+    "corpus": "node scripts/corpus.mjs",
+    "roundtrip-check": "node scripts/roundtrip-check.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.2",
