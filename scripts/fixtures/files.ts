@@ -21,7 +21,7 @@ import { importMarkasso } from '../../src/io/markasso';
 import { Family, type Json } from './common';
 
 /** Window size the web reader fits to when a file has no valid viewport. */
-const WINDOW = { innerWidth: 1280, innerHeight: 800 } as const;
+export const WINDOW = { innerWidth: 1280, innerHeight: 800 } as const;
 
 const STYLE = {
   strokeColor: '#000000',
@@ -70,7 +70,7 @@ const ELEMENTS: Json[] = [
 
 const VIEWPORT = { offsetX: 12.5, offsetY: -40, zoom: 1.5 };
 
-type WebOutcome =
+export type WebOutcome =
   | { accepted: false; reason: 'empty' | 'unparseable' | 'invalid' }
   | {
       accepted: true;
@@ -129,7 +129,7 @@ function webRead(text: string): {
   return { alert, loaded, warnings };
 }
 
-function webOutcome(text: string): WebOutcome {
+export function webOutcome(text: string): WebOutcome {
   const { alert, loaded, warnings } = webRead(text);
   if (!loaded) {
     if (alert === null) return { accepted: false, reason: 'empty' };
@@ -163,7 +163,7 @@ function webOutcome(text: string): WebOutcome {
   };
 }
 
-async function mcpOutcome(dir: string, text: string): Promise<Json> {
+export async function mcpOutcome(dir: string, text: string): Promise<Json> {
   const path = join(dir, 'case.markasso');
   writeFileSync(path, text, 'utf8');
   try {
@@ -182,8 +182,8 @@ function pretty(value: unknown): string {
   return JSON.stringify(value, null, 2);
 }
 
-/** File contents to read, as [label, text]. */
-function corpus(): Array<[string, string]> {
+/** File contents to read, as [label, text]. Also the base of the round-trip corpus (corpus.ts). */
+export function corpus(): Array<[string, string]> {
   const file = (extra: Json) => pretty({ version: 1, ...extra });
   const els = ELEMENTS;
   const rect = els[0]!;

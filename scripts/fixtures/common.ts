@@ -107,7 +107,7 @@ function sourceCommit(): string {
 
 let cachedInfo: { version: string; commit: string } | undefined;
 
-function generatorInfo(): { version: string; commit: string } {
+export function generatorInfo(): { version: string; commit: string } {
   if (!cachedInfo) {
     const pkg = JSON.parse(readFileSync(resolve(ROOT, 'package.json'), 'utf8'));
     cachedInfo = { version: String(pkg.version), commit: sourceCommit() };
