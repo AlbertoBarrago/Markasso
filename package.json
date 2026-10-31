@@ -18,7 +18,8 @@
     "coverage": "vitest run --coverage && node scripts/update-badge.mjs",
     "prepare": "husky",
     "deploy": "pnpm run build && wrangler deploy",
-    "mcp:build": "pnpm --filter @markasso/mcp build"
+    "mcp:build": "pnpm --filter @markasso/mcp build",
+    "fixtures": "node scripts/dump-fixtures.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.2",
