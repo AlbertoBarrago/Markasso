@@ -440,21 +440,32 @@ export function initSettings(
       sub.hidden = false;
       openParent = parent;
       positionSubmenu(parent, sub);
+      if (sub.classList.contains('menu-sub--inline')) {
+        sub.scrollIntoView({ block: 'nearest' });
+      }
     }
     if (focus) focusAt(itemsOf(sub), focus === 'first' ? 0 : -1);
   }
   /**
    * Submenus are absolutely positioned against the panel, so they escape the
    * scrolling list and sit on its right, top-aligned with their item. Where
-   * the viewport is too narrow (phones) they overlap the panel instead.
+   * the viewport is too narrow for that (phones), overlapping the panel would
+   * cut its labels in half, so the submenu expands inline below its item
+   * instead, inside the scrolling list.
    */
   function positionSubmenu(parent: HTMLElement, sub: HTMLElement): void {
+    // Measure in the flyout layout: the inline one has a different width.
+    sub.classList.remove('menu-sub--inline');
     const pr = panel.getBoundingClientRect();
     const ir = parent.getBoundingClientRect();
-    const left = Math.min(
-      pr.right + 6,
-      window.innerWidth - sub.offsetWidth - 8,
-    );
+    const MARGIN = 8;
+    if (pr.right + 6 + sub.offsetWidth + MARGIN > window.innerWidth) {
+      sub.classList.add('menu-sub--inline');
+      sub.style.removeProperty('left');
+      sub.style.removeProperty('top');
+      return;
+    }
+    const left = pr.right + 6;
     const top = Math.max(
       8,
       Math.min(ir.top - 5, window.innerHeight - sub.offsetHeight - 8),
@@ -562,7 +573,13 @@ export function initSettings(
     else closeSubmenu();
   });
   mainMenu.addEventListener('scroll', () => {
-    if (openParent) positionSubmenu(openParent, submenuOf(openParent));
+    if (!openParent) return;
+    const sub = submenuOf(openParent);
+    // An inline submenu scrolls with the list; re-measuring it would resize
+    // the list mid-scroll.
+    if (!sub.classList.contains('menu-sub--inline')) {
+      positionSubmenu(openParent, sub);
+    }
   });
 
   // ── Panel state ──────────────────────────────────────────────────────────
