@@ -19,7 +19,7 @@
  * Output dir: `MARKASSO_FIXTURES_OUT`, default
  * `../markasso-apple/Packages/MarkassoKit/Tests/Fixtures` from the repo root.
  */
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   ArrowElement,
   ConnectorAnchor,
@@ -67,13 +67,19 @@ import {
   withPath,
   writeFamily,
 } from './fixtures/common';
+import { buildDraw } from './fixtures/draw';
 import { buildFiles } from './fixtures/files';
+import { buildFreehand } from './fixtures/freehand';
 import { buildGeometry } from './fixtures/geometry';
 import { buildHistory } from './fixtures/history';
+import { beginLift, endLift, type LiftedCall } from './fixtures/lift';
 import { buildLive } from './fixtures/live';
 import { beginSession, endSession, type Session } from './fixtures/recording';
 import { buildReducer } from './fixtures/reducer';
+import { buildSelection } from './fixtures/selection';
+import { buildShapes } from './fixtures/shapes';
 import { buildText } from './fixtures/text';
+import { buildTools } from './fixtures/tools';
 import { buildViewport } from './fixtures/viewport';
 
 // ── Lifted tests ──────────────────────────────────────────────────────────────
@@ -90,6 +96,34 @@ vi.mock('../src/engine/history', async (importOriginal) => {
   return { ...real, History: recordingHistory(real.History) };
 });
 
+// Geometry modules whose tests are lifted call by call (scripts/fixtures/lift.ts).
+vi.mock('../src/rendering/draw_selection', async (importOriginal) => {
+  const real =
+    await importOriginal<typeof import('../src/rendering/draw_selection')>();
+  const { recordingModule, DRAW_SELECTION_PARAMS } = await import(
+    './fixtures/lift'
+  );
+  return recordingModule(real, DRAW_SELECTION_PARAMS);
+});
+
+vi.mock('../src/rendering/shape_geometry', async (importOriginal) => {
+  const real =
+    await importOriginal<typeof import('../src/rendering/shape_geometry')>();
+  const { recordingModule, SHAPE_GEOMETRY_PARAMS } = await import(
+    './fixtures/lift'
+  );
+  return recordingModule(real, SHAPE_GEOMETRY_PARAMS);
+});
+
+vi.mock('../src/rendering/freehand_outline', async (importOriginal) => {
+  const real =
+    await importOriginal<typeof import('../src/rendering/freehand_outline')>();
+  const { recordingModule, FREEHAND_OUTLINE_PARAMS } = await import(
+    './fixtures/lift'
+  );
+  return recordingModule(real, FREEHAND_OUTLINE_PARAMS);
+});
+
 // Importing a test file registers its tests in this file: they run before the
 // generator below and each one is recorded as a session.
 import '../tests/reducer.test';
@@ -97,6 +131,21 @@ import '../tests/history.test';
 import '../tests/live_sync.test';
 import '../tests/realtime.test';
 import '../tests/text_resize.test';
+
+/**
+ * Geometry tests lifted call by call: the describe name routes them to a
+ * family. Imported inside the (async) describe so their names carry it.
+ */
+const LIFT_PREFIX = 'lift: ';
+describe(`${LIFT_PREFIX}selection`, async () => {
+  await import('../tests/draw_selection.test');
+});
+describe(`${LIFT_PREFIX}shapes`, async () => {
+  await import('../tests/shape_geometry.test');
+});
+describe(`${LIFT_PREFIX}freehand`, async () => {
+  await import('../tests/freehand_outline.test');
+});
 
 const GENERATOR_TEST = 'writes the parity fixtures';
 
@@ -112,6 +161,23 @@ beforeEach(() => {
 afterEach(() => {
   const session = endSession();
   if (session && liftedName) lifted.push([liftedName, session]);
+});
+
+/** Lifted geometry calls by family, then by full test name. */
+const liftedCalls = new Map<string, Array<[string, LiftedCall[]]>>();
+
+beforeEach(() => {
+  if (liftedName?.startsWith(LIFT_PREFIX)) beginLift();
+});
+
+afterEach(() => {
+  if (!liftedName?.startsWith(LIFT_PREFIX)) return;
+  const calls = endLift();
+  const rest = liftedName.slice(LIFT_PREFIX.length);
+  const family = rest.slice(0, rest.indexOf(' > '));
+  const list = liftedCalls.get(family) ?? [];
+  list.push([rest.slice(family.length + 3), calls]);
+  liftedCalls.set(family, list);
 });
 
 // ── validation family ─────────────────────────────────────────────────────────
@@ -2218,6 +2284,11 @@ it(GENERATOR_TEST, async () => {
     buildText(),
     buildGeometry(),
     buildViewport(),
+    buildSelection(liftedCalls.get('selection') ?? []),
+    buildShapes(liftedCalls.get('shapes') ?? []),
+    buildFreehand(liftedCalls.get('freehand') ?? []),
+    await buildDraw(),
+    buildTools(),
   ];
   for (const family of families) {
     const files = writeFamily(family);
