@@ -134,6 +134,22 @@
   border: 1px solid var(--island-border);
   border-radius: var(--island-radius);
 }
+/* No room beside the panel (phones): the submenu expands inline below its
+   item, inside the scrolling list, instead of covering the panel. */
+.menu-sub.menu-sub--inline {
+  position: static;
+  min-width: 0;
+  max-height: none;
+  padding: 0 0 0 18px;
+  overflow: visible;
+  background: none;
+  border: none;
+  border-radius: 0;
+}
+/* The chevron points down while its submenu is expanded inline */
+.menu-item[aria-expanded="true"]:has(+ .menu-sub--inline) .menu-arrow {
+  transform: rotate(90deg);
+}
 
 .menu-divider {
   height: 1px;
