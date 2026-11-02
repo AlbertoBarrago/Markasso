@@ -9,7 +9,7 @@ import { cloneElementsWithOffset } from '../elements/clone';
 import type { History } from '../engine/history';
 import { validateElements } from '../io/element_validation';
 import type { SelectTool } from '../tools/select_tool';
-import { isFocusInPanel } from './keyboard_utils';
+import { isFocusInPanel, isModalDialogOpen } from './keyboard_utils';
 import { toggleLibrary } from './library_panel';
 import { toggleMinimap } from './settings';
 import { zoomIn, zoomOut } from './toolbar';
@@ -96,6 +96,8 @@ export function initShortcuts(
   window.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key === ',') {
       e.preventDefault();
+      // The menu would open on top of the dialog, behind its overlay.
+      if (isModalDialogOpen()) return;
       openPreferences();
       return;
     }

@@ -20,3 +20,14 @@ export function isFocusInPanel(): boolean {
     null
   );
 }
+
+/**
+ * Returns true while a modal dialog is shown. Dialogs are either removed from
+ * the DOM or hidden with `display: none` when closed, so presence alone is not
+ * enough: an element with no client rects is not rendered.
+ */
+export function isModalDialogOpen(): boolean {
+  return [...document.querySelectorAll('[aria-modal="true"]')].some(
+    (el) => el.getClientRects().length > 0,
+  );
+}
