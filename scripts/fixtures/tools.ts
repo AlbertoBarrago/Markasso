@@ -23,6 +23,7 @@ import { screenToWorld, type Viewport } from '../../src/core/viewport';
 import type { Element } from '../../src/elements/element';
 import { History } from '../../src/engine/history';
 import { EllipseTool } from '../../src/tools/ellipse_tool';
+import { EraserTool } from '../../src/tools/eraser_tool';
 import { HandTool } from '../../src/tools/hand_tool';
 import { LineTool } from '../../src/tools/line_tool';
 import { PenTool } from '../../src/tools/pen_tool';
@@ -45,7 +46,8 @@ type ToolName =
   | 'text'
   | 'pen'
   | 'line'
-  | 'sticky';
+  | 'sticky'
+  | 'eraser';
 
 /** Tools whose world coordinates canvas_view.ts snaps to the grid. */
 const SNAP_TOOLS = new Set<ToolName>([
@@ -66,6 +68,7 @@ const ACTIVE_TOOL: Record<ToolName, AppState['activeTool']> = {
   pen: 'freehand',
   line: 'line',
   sticky: 'sticky',
+  eraser: 'eraser',
 };
 
 export type ToolEvent =
@@ -84,7 +87,9 @@ export type ToolEvent =
   | { type: 'textInput'; value: string }
   | { type: 'textKey'; key: string; shift?: boolean }
   | { type: 'textSelect'; start: number; end: number }
-  | { type: 'editExisting'; id: string };
+  | { type: 'editExisting'; id: string }
+  | { type: 'leave' }
+  | { type: 'prune'; t: number };
 
 const TOOL_EVENT_ENCODING =
   'input {tool, scene, events}: tool is select | hand | rectangle | ellipse | rombo | text | pen; scene is the ' +
@@ -283,6 +288,8 @@ function makeTool(name: ToolName): Tool {
       return new LineTool();
     case 'sticky':
       return new StickyTool();
+    case 'eraser':
+      return new EraserTool();
   }
 }
 
@@ -353,6 +360,10 @@ function toolState(
     }
     case 'sticky':
       return textState(companion!, doc);
+    case 'eraser': {
+      const t = tool as EraserTool;
+      return { hoveredId: t.hoveredId, slashTrail: snapshot(t.slashTrail) };
+    }
   }
 }
 
@@ -368,6 +379,13 @@ function runCase(spec: CaseSpec): { input: Json; output: Json } {
         `00000000-0000-4000-8000-${(++uuid).toString(16).padStart(12, '0')}` as `${string}-${string}-${string}-${string}-${string}`,
     );
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  // The eraser stamps its slash trail with Date.now(): the clock reads the
+  // current event's t (default 0). Other tools keep the real clock.
+  let now = 0;
+  const nowSpy =
+    spec.tool === 'eraser'
+      ? vi.spyOn(Date, 'now').mockImplementation(() => now)
+      : null;
   Object.defineProperty(g, 'document', {
     value: doc,
     configurable: true,
@@ -435,6 +453,8 @@ function runCase(spec: CaseSpec): { input: Json; output: Json } {
       calls = [];
       let recorded: Json = { ...ev };
       let cursor: string | undefined;
+      let pruned: boolean | undefined;
+      now = 't' in ev && ev.t !== undefined ? ev.t : 0;
       switch (ev.type) {
         case 'down':
         case 'move':
@@ -525,12 +545,20 @@ function runCase(spec: CaseSpec): { input: Json; output: Json } {
           ta.selectionEnd = ev.end;
           break;
         }
+        case 'leave':
+          // canvas_view.ts: mouseleave calls onMouseLeave when the tool has one.
+          if ('onMouseLeave' in tool) (tool as EraserTool).onMouseLeave();
+          break;
+        case 'prune':
+          pruned = (tool as EraserTool).pruneTrail();
+          break;
       }
       vi.runAllTimers();
       events.push(recorded);
       steps.push({
         calls,
         ...(cursor !== undefined && { cursor }),
+        ...(pruned !== undefined && { pruned }),
         ...toolState(spec.tool, tool, doc, companion),
       });
     }
@@ -546,6 +574,7 @@ function runCase(spec: CaseSpec): { input: Json; output: Json } {
   } finally {
     vi.useRealTimers();
     uuidSpy.mockRestore();
+    nowSpy?.mockRestore();
     if (savedDocument) Object.defineProperty(g, 'document', savedDocument);
     else delete g.document;
   }
@@ -1988,4 +2017,288 @@ export function buildToolsM3(): Family[] {
     }
     return fam;
   });
+}
+
+// ── M4 cases: the eraser (tools/eraser.json) ─────────────────────────────────
+
+function eraserCases(): Array<[string, CaseSpec]> {
+  const out: Array<[string, CaseSpec]> = [];
+  const add = (name: string, spec: Omit<CaseSpec, 'tool'>) =>
+    out.push([name, { tool: 'eraser', ...spec }]);
+  const box = (
+    id: string,
+    x: number,
+    y: number,
+    width = 100,
+    height = 60,
+    extra: Partial<Record<string, unknown>> = {},
+  ): Element =>
+    clean(
+      sample('rect', { id, x, y, width, height, label: undefined, ...extra }),
+    );
+  const click = (sx: number, sy: number): ToolEvent[] => [
+    down(sx, sy),
+    up(sx, sy),
+  ];
+
+  // Basic erasing
+  add('click deletes the element under the pointer', {
+    elements: [box('A', 100, 100)],
+    events: click(150, 130),
+  });
+  add('click on empty canvas opens and closes a drag', {
+    elements: [box('A', 100, 100)],
+    events: click(500, 400),
+  });
+  add('empty scene', { events: drag(10, 10, 200, 200) });
+  add('overlap deletes only the topmost', {
+    elements: [box('A', 100, 100), box('B', 150, 130)],
+    events: click(175, 145),
+  });
+  add('pointer that stays deletes one element per event', {
+    elements: [box('A', 100, 100), box('B', 150, 130), box('C', 120, 110)],
+    events: [down(175, 145), move(175, 145), move(175, 145), up(175, 145)],
+  });
+  add('drag across several elements deletes each in one drag', {
+    elements: [box('A', 100, 100), box('B', 300, 100), box('C', 500, 100)],
+    events: drag(90, 130, 610, 130, 13),
+  });
+  add('drag that skips over an element between moves misses it', {
+    elements: [box('A', 100, 100, 20, 20), box('B', 300, 100, 20, 20)],
+    events: [down(50, 110), move(200, 110), move(400, 110), up(400, 110)],
+  });
+
+  // The 4 px pad around the bounds
+  for (const [label, sx, sy] of [
+    ['right pad edge', 204, 130],
+    ['just past the right pad', 204.25, 130],
+    ['left pad edge', 96, 130],
+    ['just past the left pad', 95.75, 130],
+    ['top pad edge', 150, 96],
+    ['bottom pad edge', 150, 164],
+    ['just past the bottom pad', 150, 164.5],
+    ['pad corner', 204, 164],
+  ] as const) {
+    add(`pad: ${label}`, {
+      elements: [box('A', 100, 100)],
+      events: click(sx, sy),
+    });
+  }
+
+  // Locked elements
+  add('locked element on top is skipped, the one below goes', {
+    elements: [
+      box('A', 100, 100),
+      box('B', 150, 130, 100, 60, { locked: true }),
+    ],
+    events: click(175, 145),
+  });
+  add('only locked elements: nothing deleted', {
+    elements: [box('A', 100, 100, 100, 60, { locked: true })],
+    events: click(150, 130),
+  });
+
+  // Hover
+  add('hover without press tracks the topmost element', {
+    elements: [box('A', 100, 100), box('B', 150, 130)],
+    events: [move(120, 110), move(175, 145), move(500, 500)],
+  });
+  add('hover skips locked elements', {
+    elements: [
+      box('A', 100, 100),
+      box('B', 150, 130, 100, 60, { locked: true }),
+    ],
+    events: [move(175, 145), move(240, 180)],
+  });
+  add('mouse leave clears the hover', {
+    elements: [box('A', 100, 100)],
+    events: [move(150, 130), { type: 'leave' }],
+  });
+  add('hover reads the scene before the deletion of the same move', {
+    elements: [box('A', 100, 100), box('B', 150, 130)],
+    events: [down(20, 20), move(175, 145), move(175, 145), up(175, 145)],
+  });
+  add('moves after release only hover', {
+    elements: [box('A', 100, 100), box('B', 300, 100)],
+    events: [...click(150, 130), move(350, 130), move(360, 130)],
+  });
+
+  // Gesture lifecycle
+  add('release without press does nothing', {
+    elements: [box('A', 100, 100)],
+    events: [up(150, 130)],
+  });
+  add('cancel mid drag restores the erased elements', {
+    elements: [box('A', 100, 100), box('B', 300, 100)],
+    events: [down(150, 130), move(350, 130), { type: 'cancel' }, up(350, 130)],
+  });
+  add('deactivate mid drag cancels', {
+    elements: [box('A', 100, 100)],
+    events: [down(150, 130), { type: 'deactivate' }, move(160, 130)],
+  });
+  add('cancel without a gesture does nothing', {
+    elements: [box('A', 100, 100)],
+    events: [{ type: 'cancel' }, { type: 'deactivate' }],
+  });
+  add('two gestures are two undo steps', {
+    elements: [box('A', 100, 100), box('B', 300, 100)],
+    events: [...click(150, 130), ...click(350, 130)],
+  });
+
+  // Slash trail and pruning (TRAIL_DURATION 350 ms, points with time >= now - 350 stay)
+  add('trail grows while erasing and is pruned by age', {
+    elements: [box('A', 100, 100)],
+    events: [
+      down(50, 50, { t: 1000 }),
+      move(80, 60, { t: 1100 }),
+      move(150, 130, { t: 1200 }),
+      up(160, 130, { t: 1300 }),
+      { type: 'prune', t: 1449 },
+      { type: 'prune', t: 1450 },
+      { type: 'prune', t: 1451 },
+      { type: 'prune', t: 1550 },
+      { type: 'prune', t: 1551 },
+    ],
+  });
+  add('hover moves do not extend the trail', {
+    elements: [box('A', 100, 100)],
+    events: [
+      down(50, 50, { t: 10 }),
+      up(50, 50, { t: 20 }),
+      move(150, 130, { t: 30 }),
+      { type: 'prune', t: 40 },
+    ],
+  });
+  add('a new press restarts the trail', {
+    events: [
+      ...drag(10, 10, 50, 50, 2, { t: 5 }),
+      down(300, 300, { t: 100 }),
+      up(300, 300, { t: 100 }),
+    ],
+  });
+  add('cancel clears the trail', {
+    events: [
+      down(10, 10),
+      move(20, 20),
+      { type: 'cancel' },
+      { type: 'prune', t: 0 },
+    ],
+  });
+  add('prune on an empty trail', { events: [{ type: 'prune', t: 0 }] });
+
+  // Viewport and grid
+  add('zoomed and panned viewport', {
+    elements: [box('A', 100, 100), box('B', 300, 100)],
+    viewport: zoom2,
+    events: drag(200, 200, 700, 200, 5),
+  });
+  add('grid does not snap the eraser', {
+    elements: [box('A', 100, 100)],
+    appState: { gridVisible: true, gridSize: 20 },
+    events: click(207, 130),
+  });
+
+  // Element types (bounds from getElementBounds)
+  const types: ReadonlyArray<[string, Element[], number, number]> = [
+    ['ellipse', [clean(sample('ellipse'))], 350, 40],
+    ['rhombus corner box', [clean(sample('rhombus'))], 2, 202],
+    ['shape', [clean(sample('shape'))], 350, 260],
+    ['stencil', [clean(sample('icon'))], 532, 32],
+    ['nothing under a stencil label', [clean(sample('icon'))], 532, 70],
+    ['embedded stencil', [clean(sample('vendorIcon'))], 632, 32],
+    ['text', [clean(sample('text'))], 80, 412],
+    ['sticky note', [clean(sample('note'))], 300, 490],
+    ['image', [clean(sample('image'))], 580, 260],
+    ['free arrow', [clean(sample('freeArrow'))], -60, -80],
+    ['curve control point side', [clean(sample('curve'))], 100, 565],
+    ['polygon', [clean(sample('polygon'))], 340, 620],
+    ['freehand', [clean(sample('freehand'))], 510, 610],
+    [
+      'bound line over its start shape',
+      [clean(sample('rect')), clean(sample('ellipse')), clean(sample('line'))],
+      120,
+      30,
+    ],
+    [
+      'bound shape with its connector',
+      [clean(sample('rect')), clean(sample('ellipse')), clean(sample('line'))],
+      20,
+      50,
+    ],
+    [
+      'elbow arrow',
+      [clean(sample('rect')), clean(sample('rhombus')), clean(sample('arrow'))],
+      60,
+      130,
+    ],
+    [
+      'nothing outside the unrotated bounds of a rotated rectangle',
+      [box('A', 100, 100, 200, 20, { rotation: Math.PI / 4 })],
+      200,
+      190,
+    ],
+    [
+      'rotated rectangle by its unrotated bounds',
+      [box('A', 100, 100, 200, 20, { rotation: Math.PI / 4 })],
+      110,
+      110,
+    ],
+    [
+      'hidden element',
+      [box('A', 100, 100, 100, 60, { visible: false })],
+      150,
+      130,
+    ],
+    ['zero size element', [box('A', 100, 100, 0, 0)], 103, 97],
+    ['negative size element', [box('A', 200, 200, -100, -60)], 150, 170],
+    [
+      'grouped element goes alone',
+      [
+        box('A', 100, 100, 100, 60, { groupIds: ['g'] }),
+        box('B', 300, 100, 100, 60, { groupIds: ['g'] }),
+      ],
+      150,
+      130,
+    ],
+  ];
+  for (const [label, elements, sx, sy] of types) {
+    add(`erases ${label}`, { elements, events: click(sx, sy) });
+  }
+  add('selected element leaves the selection', {
+    elements: [box('A', 100, 100), box('B', 300, 100)],
+    selected: ['A', 'B'],
+    events: click(150, 130),
+  });
+  return out;
+}
+
+/** The eraser cases, written next to tools.json as tools/eraser.json. */
+export function buildToolsEraser(): Family {
+  const fam = new Family(
+    'tools',
+    {
+      sceneEncoding: SCENE_ENCODING,
+      eventEncoding:
+        TOOL_EVENT_ENCODING.replace(
+          'tool is select | hand | rectangle | ellipse | rombo | text | pen',
+          'tool is eraser',
+        ).replace(
+          'when appState.gridVisible and the tool is rectangle, ellipse, rombo or text.',
+          'when appState.gridVisible and the tool is rectangle, ellipse, rombo or text (never for the eraser).',
+        ) +
+        ' leave calls onMouseLeave (canvas_view.ts on mouseleave). prune {t} calls pruneTrail. Date.now() ' +
+        "returns the current event's t (default 0; prune uses its own t) for the whole event.",
+      outputEncoding: TOOL_OUTPUT_ENCODING.replace(
+        /; select: .*?scene, canUndo,/,
+        '; eraser: hoveredId and slashTrail ([{worldX, worldY, time}]), plus pruned (the pruneTrail result) on ' +
+          'prune steps. scene, canUndo,',
+      ),
+    },
+    'eraser',
+  );
+  for (const [name, spec] of eraserCases()) {
+    const { input, output } = runCase(spec);
+    fam.add(name, spec.tool, input, output);
+  }
+  return fam;
 }

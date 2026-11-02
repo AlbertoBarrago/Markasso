@@ -14,7 +14,7 @@
  * never runs it: `scripts/dump-fixtures.mjs` runs it with an explicit include.
  *
  * Families other than `validation` and `connectors` live in
- * `scripts/fixtures/<family>.ts` (the M3 tool cases in `tools.ts` too).
+ * `scripts/fixtures/<family>.ts` (the M3 and M4 tool cases in `tools.ts` too).
  *
  * Output dir: `MARKASSO_FIXTURES_OUT`, default
  * `../markasso-apple/Packages/MarkassoKit/Tests/Fixtures` from the repo root.
@@ -73,9 +73,11 @@ import { buildFiles } from './fixtures/files';
 import { buildFreehand } from './fixtures/freehand';
 import { buildGeometry } from './fixtures/geometry';
 import { buildHistory } from './fixtures/history';
+import { buildIconPackFamily } from './fixtures/icon_pack';
 import { buildLabels } from './fixtures/labels';
 import { beginLift, endLift, type LiftedCall } from './fixtures/lift';
 import { buildLive } from './fixtures/live';
+import { buildPresets } from './fixtures/presets';
 import { beginSession, endSession, type Session } from './fixtures/recording';
 import { buildReducer } from './fixtures/reducer';
 import { buildSelection } from './fixtures/selection';
@@ -83,7 +85,7 @@ import { buildShapes } from './fixtures/shapes';
 import { buildStencils } from './fixtures/stencils';
 import { buildSvg } from './fixtures/svg';
 import { buildText } from './fixtures/text';
-import { buildTools, buildToolsM3 } from './fixtures/tools';
+import { buildTools, buildToolsEraser, buildToolsM3 } from './fixtures/tools';
 import { buildViewport } from './fixtures/viewport';
 
 // ── Lifted tests ──────────────────────────────────────────────────────────────
@@ -2298,6 +2300,9 @@ it(GENERATOR_TEST, async () => {
     await buildStencils(),
     await buildSvg(),
     ...buildToolsM3(),
+    buildPresets(),
+    ...(await buildIconPackFamily()),
+    buildToolsEraser(),
   ];
   for (const family of families) {
     const files = writeFamily(family);
