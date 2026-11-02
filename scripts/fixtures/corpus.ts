@@ -137,12 +137,12 @@ async function mcpSave(
 const VIEWPORT: Viewport = { offsetX: -120.25, offsetY: 64, zoom: 0.75 };
 
 /** One of every sample, with unique ids. */
-function allTypes(): Element[] {
+export function allTypes(): Element[] {
   return SAMPLE_NAMES.map((name) => sample(name, { id: `s-${name}` }));
 }
 
 /** Labels and text that stress string handling: normalization, emoji, scripts. */
-function unicodeScene(): Element[] {
+export function unicodeScene(): Element[] {
   return [
     sample('rect', { id: 'u-nfc', label: 'Café crème' }),
     sample('rect', { id: 'u-nfd', x: 200, label: 'Café crème' }),
@@ -160,7 +160,7 @@ function unicodeScene(): Element[] {
 }
 
 /** Fields the validator does not know, which both readers keep. */
-function extrasScene(): Element[] {
+export function extrasScene(): Element[] {
   return [
     sample('rect', {
       id: 'x-rect',
@@ -179,7 +179,7 @@ function extrasScene(): Element[] {
 }
 
 /** Every optional field and every enum value the element types persist. */
-function fieldsScene(): Element[] {
+export function fieldsScene(): Element[] {
   const anchorA = { x: 1, y: 0.5 };
   const anchorB = { x: 0, y: 0.25 };
   const out: Element[] = [
@@ -280,7 +280,7 @@ function fieldsScene(): Element[] {
 }
 
 /** A large board: mixed types, positions from a fixed seed. */
-function bigScene(count: number): Element[] {
+export function bigScene(count: number): Element[] {
   const rand = prng(20261031);
   const names = [
     'rect',

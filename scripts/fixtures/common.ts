@@ -36,10 +36,14 @@ export class Family {
   /**
    * @param header Extra keys for the `generator` header (encodings the Swift
    *   side needs to read the cases), written after the standard ones.
+   * @param file File name (without `.json`) inside the family directory, for
+   *   a family written as several files with their own headers (default: the
+   *   family name).
    */
   constructor(
     readonly name: string,
     readonly header: Json = {},
+    readonly file: string = name,
   ) {}
 
   add(name: string, fn: string, input: unknown, output: unknown): void {
@@ -133,15 +137,16 @@ function serialize(family: Family, cases: ReadonlyArray<FixtureCase>): string {
 }
 
 /**
- * Writes `<family>/<family>.json`, or one `<family>/<fn>.json` per function
- * when the single file would exceed {@link MAX_FILE_BYTES}. Returns the paths.
+ * Writes `<family>/<file>.json` (`file` defaults to the family name), or one
+ * `<family>/<fn>.json` per function when the single file would exceed
+ * {@link MAX_FILE_BYTES}. Returns the paths.
  */
 export function writeFamily(family: Family): string[] {
   const dir = resolve(OUT_DIR, family.name);
   mkdirSync(dir, { recursive: true });
   const whole = serialize(family, family.cases);
   if (Buffer.byteLength(whole) <= MAX_FILE_BYTES) {
-    const file = resolve(dir, `${family.name}.json`);
+    const file = resolve(dir, `${family.file}.json`);
     writeFileSync(file, whole);
     return [file];
   }

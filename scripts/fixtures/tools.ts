@@ -1,6 +1,9 @@
 /**
  * `tools` family: tool state machines driven by an event script, for the M2
- * tools (select, hand, rectangle, ellipse, rombo, text, pen). Each case runs
+ * tools (select, hand, rectangle, ellipse, rombo, text, pen) in tools.json,
+ * and for the M3 tools in their own files: line.json (the line tool and
+ * connector editing with the select tool) and text.json (text tool parity:
+ * code mode, decorations, alignment, sticky notes, resize). Each case runs
  * the real tool class against a real History; the History calls the tool
  * makes (dispatch, beginDrag, endDrag, cancelDrag) are recorded per event,
  * together with the tool state the renderer reads (previews, marquee,
@@ -9,20 +12,24 @@
  * The text tool's DOM overlay is stubbed with a minimal fake document (see
  * `textareaStub` in the header). Behaviour that only a real browser layout
  * can produce (soft wrapping inside a textarea, real font measurement of the
- * mirror span, code mode with scrollWidth) is not covered.
+ * mirror span) is not covered; code mode uses a fake scrollWidth (see
+ * `TEXTAREA_STUB_M3`).
  */
 import { vi } from 'vitest';
 import type { Command } from '../../src/commands/commands';
 import type { AppState } from '../../src/core/app_state';
+import { measureTextWidth } from '../../src/core/text_metrics';
 import { screenToWorld, type Viewport } from '../../src/core/viewport';
 import type { Element } from '../../src/elements/element';
 import { History } from '../../src/engine/history';
 import { EllipseTool } from '../../src/tools/ellipse_tool';
 import { HandTool } from '../../src/tools/hand_tool';
+import { LineTool } from '../../src/tools/line_tool';
 import { PenTool } from '../../src/tools/pen_tool';
 import { RectangleTool } from '../../src/tools/rectangle_tool';
 import { RomboTool } from '../../src/tools/rombo_tool';
 import { SelectTool } from '../../src/tools/select_tool';
+import { StickyTool } from '../../src/tools/sticky_tool';
 import { TextTool } from '../../src/tools/text_tool';
 import type { Tool, ToolContext } from '../../src/tools/tool';
 import { Family, type Json, prng } from './common';
@@ -36,10 +43,18 @@ type ToolName =
   | 'ellipse'
   | 'rombo'
   | 'text'
-  | 'pen';
+  | 'pen'
+  | 'line'
+  | 'sticky';
 
 /** Tools whose world coordinates canvas_view.ts snaps to the grid. */
-const SNAP_TOOLS = new Set<ToolName>(['rectangle', 'ellipse', 'rombo', 'text']);
+const SNAP_TOOLS = new Set<ToolName>([
+  'rectangle',
+  'ellipse',
+  'rombo',
+  'text',
+  'line',
+]);
 
 const ACTIVE_TOOL: Record<ToolName, AppState['activeTool']> = {
   select: 'select',
@@ -49,6 +64,8 @@ const ACTIVE_TOOL: Record<ToolName, AppState['activeTool']> = {
   rombo: 'rombo',
   text: 'text',
   pen: 'freehand',
+  line: 'line',
+  sticky: 'sticky',
 };
 
 export type ToolEvent =
@@ -66,6 +83,7 @@ export type ToolEvent =
   | { type: 'cancel' | 'deactivate' | 'blur' }
   | { type: 'textInput'; value: string }
   | { type: 'textKey'; key: string; shift?: boolean }
+  | { type: 'textSelect'; start: number; end: number }
   | { type: 'editExisting'; id: string };
 
 const TOOL_EVENT_ENCODING =
@@ -100,6 +118,29 @@ const TEXTAREA_STUB =
   'offsetWidth = max(px(width), px(minWidth)) and offsetHeight = max(px(height), px(minHeight)), plus 2p each ' +
   'unless boxSizing is "border-box"; scrollHeight = lines * parseFloat(lineHeight) * px(font) + 2p, with ' +
   'lines = value.split("\\n").length (no soft wrapping) and px(font) the leading size of the font shorthand.';
+
+const TOOL_EVENT_ENCODING_M3 =
+  TOOL_EVENT_ENCODING.replace(
+    'tool is select | hand | rectangle | ellipse | rombo | text | pen',
+    'tool is select | line | text | sticky',
+  ).replace(
+    'when appState.gridVisible and the tool is rectangle, ellipse, rombo or text.',
+    'when appState.gridVisible and the tool is rectangle, ellipse, rombo, text or line.',
+  ) +
+  ' textSelect {start, end} sets selectionStart / selectionEnd of the open textarea (where Tab inserts its ' +
+  'two spaces in code mode). sticky: the StickyTool with onPlaced wired as canvas_view.ts does, to ' +
+  'editExisting of a TextTool owned by the case; the text overlay events and editExisting then act on that ' +
+  'TextTool.';
+
+const TOOL_OUTPUT_ENCODING_M3 =
+  TOOL_OUTPUT_ENCODING +
+  ' line: preview (element or null), snapIndicator ({worldX, worldY} or null), snapElementId, snapAnchor ' +
+  '({x, y} or null). sticky: editingId and textarea of its TextTool, in the text encoding (no preview).';
+
+const TEXTAREA_STUB_M3 =
+  TEXTAREA_STUB +
+  ' scrollWidth = ceil(max over value.split("\\n") of measureTextWidth(line, px(font), family)) + 2p, with ' +
+  'family the font shorthand after its leading "<size>px " (src/core/text_metrics, the ported tables).';
 
 // ── Fake DOM for the text tool ────────────────────────────────────────────────
 
@@ -171,6 +212,16 @@ class FakeElement {
     return Math.max(px(this.style.height), px(this.style.minHeight)) + this.pad;
   }
 
+  get scrollWidth(): number {
+    const font = this.style.font ?? '';
+    const family = font.slice(font.indexOf('px ') + 3);
+    let width = 0;
+    for (const line of this.value.split('\n')) {
+      width = Math.max(width, measureTextWidth(line, px(font), family));
+    }
+    return Math.ceil(width) + 2 * px(this.style.padding);
+  }
+
   get scrollHeight(): number {
     const lines = this.value.split('\n').length;
     return (
@@ -228,10 +279,41 @@ function makeTool(name: ToolName): Tool {
       return new TextTool();
     case 'pen':
       return new PenTool();
+    case 'line':
+      return new LineTool();
+    case 'sticky':
+      return new StickyTool();
   }
 }
 
-function toolState(name: ToolName, tool: Tool, doc: FakeDocument): Json {
+function textState(
+  t: TextTool,
+  doc: FakeDocument,
+): { editingId: string | null; textarea: Json | null } {
+  const ta = doc.openTextarea();
+  return {
+    editingId: t.editingId,
+    textarea: ta
+      ? {
+          value: ta.value,
+          left: ta.style.left,
+          top: ta.style.top,
+          width: ta.style.width,
+          height: ta.style.height,
+          font: ta.style.font,
+          textAlign: ta.style.textAlign,
+          padding: ta.style.padding,
+        }
+      : null,
+  };
+}
+
+function toolState(
+  name: ToolName,
+  tool: Tool,
+  doc: FakeDocument,
+  companion: TextTool | null,
+): Json {
   switch (name) {
     case 'select': {
       const t = tool as SelectTool;
@@ -256,26 +338,21 @@ function toolState(name: ToolName, tool: Tool, doc: FakeDocument): Json {
       };
     case 'text': {
       const t = tool as TextTool;
-      const ta = doc.openTextarea();
-      return {
-        preview: t.getPreview(),
-        editingId: t.editingId,
-        textarea: ta
-          ? {
-              value: ta.value,
-              left: ta.style.left,
-              top: ta.style.top,
-              width: ta.style.width,
-              height: ta.style.height,
-              font: ta.style.font,
-              textAlign: ta.style.textAlign,
-              padding: ta.style.padding,
-            }
-          : null,
-      };
+      return { preview: t.getPreview(), ...textState(t, doc) };
     }
     case 'hand':
       return {};
+    case 'line': {
+      const t = tool as LineTool;
+      return {
+        preview: snapshot(t.preview),
+        snapIndicator: snapshot(t.snapIndicator),
+        snapElementId: t.snapElementId,
+        snapAnchor: snapshot(t.snapAnchor),
+      };
+    }
+    case 'sticky':
+      return textState(companion!, doc);
   }
 }
 
@@ -346,6 +423,12 @@ function runCase(spec: CaseSpec): { input: Json; output: Json } {
       onPreviewUpdate: () => {},
     };
     const tool = makeTool(spec.tool);
+    // canvas_view.ts opens the text editor on a freshly placed sticky note.
+    const companion = spec.tool === 'sticky' ? new TextTool() : null;
+    if (companion) {
+      (tool as StickyTool).onPlaced = (el, c) => companion.editExisting(el, c);
+    }
+    const textTool = companion ?? (tool as TextTool);
     const events: Json[] = [];
     const steps: Json[] = [];
     for (const ev of spec.events) {
@@ -432,7 +515,14 @@ function runCase(spec: CaseSpec): { input: Json; output: Json } {
         case 'editExisting': {
           const target = history.present.elements.find((e) => e.id === ev.id);
           if (target?.type !== 'text') throw new Error('editExisting: no text');
-          (tool as TextTool).editExisting(target, ctx);
+          textTool.editExisting(target, ctx);
+          break;
+        }
+        case 'textSelect': {
+          const ta = doc.openTextarea();
+          if (!ta) throw new Error('textSelect without an open textarea');
+          ta.selectionStart = ev.start;
+          ta.selectionEnd = ev.end;
           break;
         }
       }
@@ -441,7 +531,7 @@ function runCase(spec: CaseSpec): { input: Json; output: Json } {
       steps.push({
         calls,
         ...(cursor !== undefined && { cursor }),
-        ...toolState(spec.tool, tool, doc),
+        ...toolState(spec.tool, tool, doc, companion),
       });
     }
     return {
@@ -1149,4 +1239,753 @@ export function buildTools(): Family {
     fam.add(name, spec.tool, input, output);
   }
   return fam;
+}
+
+// ── M3 cases: line tool and connector editing (tools/line.json) ─────────────
+
+const M3_BASE = {
+  strokeColor: '#1e1e1e',
+  fillColor: 'transparent',
+  strokeWidth: 2,
+  opacity: 1,
+  roughness: 0,
+} as const;
+
+/** Nodes shared by the connector cases. Rectangle ports: (160,100), (220,130), (160,160), (100,130). */
+function connectorNodes(): Element[] {
+  return [
+    clean(RECT),
+    clean(sample('ellipse', { x: 400, y: 100, width: 100, height: 80 })),
+    clean(sample('icon', { x: 100, y: 300 })),
+    clean(sample('shape', { x: 400, y: 300, width: 100, height: 120 })),
+  ];
+}
+
+function connector(
+  id: string,
+  extra: Partial<Record<string, unknown>>,
+): Element {
+  return clean({
+    ...M3_BASE,
+    id,
+    type: 'line',
+    x: 100,
+    y: 500,
+    x2: 300,
+    y2: 550,
+    ...extra,
+  }) as Element;
+}
+
+function lineCases(): Array<[string, CaseSpec]> {
+  const out: Array<[string, CaseSpec]> = [];
+  const add = (name: string, spec: Omit<CaseSpec, 'tool'>) =>
+    out.push([`line ${name}`, { tool: 'line', ...spec }]);
+  const nodes = connectorNodes();
+  add('test: creates lines with an end arrowhead by default', {
+    events: [down(0, 0), up(100, 0)],
+  });
+  add('tiny drag creates nothing', {
+    events: [down(50, 50), move(51, 51), up(51, 51)],
+  });
+  add('exactly 2 px is a line', {
+    events: [down(50, 50), move(52, 50), up(52, 50)],
+  });
+  add('free drag', { elements: nodes, events: drag(20, 520, 300, 560, 3) });
+  add('shift snaps to 45 degrees', {
+    events: drag(20, 500, 200, 540, 2, { shift: true }),
+  });
+  add('shift snaps to vertical', {
+    events: drag(20, 500, 30, 300, 2, { shift: true }),
+  });
+  add('shift snaps diagonal up left', {
+    events: drag(300, 500, 150, 330, 2, { shift: true }),
+  });
+  add('starts on rectangle border', {
+    elements: nodes,
+    events: drag(223, 145, 330, 260, 3),
+  });
+  add('starts on rectangle port', {
+    elements: nodes,
+    events: drag(161, 98, 300, 30, 2),
+  });
+  add('ends on ellipse border', {
+    elements: nodes,
+    events: drag(300, 260, 470, 175, 3),
+  });
+  add('ends on ellipse port', {
+    elements: nodes,
+    events: drag(300, 260, 401, 141, 3),
+  });
+  add('rectangle to ellipse both bound', {
+    elements: nodes,
+    events: drag(221, 131, 399, 139, 4),
+  });
+  add('to stencil bottom port below its label', {
+    elements: nodes,
+    events: [down(300, 520), move(200, 450), move(133, 392), up(133, 392)],
+  });
+  add('to stencil border', {
+    elements: nodes,
+    events: drag(300, 330, 166, 340, 2),
+  });
+  add('to flowchart shape', {
+    elements: nodes,
+    events: drag(300, 520, 452, 421, 3),
+  });
+  add('start and end on the same element', {
+    elements: nodes,
+    events: drag(161, 99, 219, 131, 2),
+  });
+  add('elbow routing', {
+    elements: nodes,
+    appState: { lineRouting: 'elbow' },
+    events: drag(221, 131, 399, 139, 3),
+  });
+  add('tool locked keeps tool', {
+    elements: nodes,
+    appState: { toolLocked: true },
+    events: drag(20, 520, 200, 560, 2),
+  });
+  add('styled from app state', {
+    appState: {
+      strokeColor: '#ff0000',
+      strokeWidth: 4,
+      opacity: 0.5,
+      roughness: 2,
+      strokeStyle: 'dashed',
+    },
+    events: drag(20, 520, 200, 560, 2),
+  });
+  add('zoomed snap radius', {
+    elements: nodes,
+    viewport: zoom2,
+    events: drag(510, 270, 700, 400, 2),
+  });
+  add('grid snapping', {
+    elements: nodes,
+    appState: { gridVisible: true, gridSize: 20 },
+    events: drag(13, 507, 191, 553, 2),
+  });
+  add('hover shows snap indicator', {
+    elements: nodes,
+    events: [move(600, 600), move(223, 140), move(161, 101), move(452, 182)],
+  });
+  add('cancel during drag', {
+    elements: nodes,
+    events: [down(20, 520), move(200, 540), { type: 'cancel' }, up(200, 540)],
+  });
+  add('deactivate during drag', {
+    elements: nodes,
+    events: [
+      down(20, 520),
+      move(200, 540),
+      { type: 'deactivate' },
+      up(200, 540),
+    ],
+  });
+  add('up without down', { events: [up(100, 100), move(150, 150)] });
+  add('locked target still snaps', {
+    elements: [clean({ ...RECT, locked: true })],
+    events: drag(300, 300, 222, 140, 2),
+  });
+  add('hidden target is ignored', {
+    elements: [clean({ ...RECT, visible: false })],
+    events: drag(300, 300, 222, 140, 2),
+  });
+  add('rotated target', {
+    elements: [clean({ ...RECT, rotation: 0.6 })],
+    events: drag(400, 300, 230, 160, 3),
+  });
+  add('onto another connector', {
+    elements: [connector('u', { x: 100, y: 300, x2: 300, y2: 300 })],
+    events: drag(200, 400, 200, 302, 2),
+  });
+  add('shift snap then end snaps to element', {
+    elements: nodes,
+    events: drag(300, 130, 225, 128, 2, { shift: true }),
+  });
+  return out;
+}
+
+function connectorEditCases(): Array<[string, CaseSpec]> {
+  const out: Array<[string, CaseSpec]> = [];
+  const sel = (name: string, spec: Omit<CaseSpec, 'tool'>) =>
+    out.push([`connector ${name}`, { tool: 'select', ...spec }]);
+  const nodes = connectorNodes();
+  const free = connector('u', {});
+  const bound = connector('b', {
+    x: 220,
+    y: 130,
+    x2: 400,
+    y2: 140,
+    startElementId: 'r',
+    endElementId: 'e',
+    startAnchor: { x: 1, y: 0.5 },
+    arrowHead: 'end',
+  });
+  const elbow = connector('w', {
+    x: 160,
+    y: 160,
+    x2: 450,
+    y2: 300,
+    routing: 'elbow',
+    startElementId: 'r',
+    endElementId: 's',
+    startAnchor: { x: 0.5, y: 1 },
+    endHeadStyle: 'triangleFilled',
+    arrowHead: 'end',
+  });
+  const curved = connector('q', {
+    x: 100,
+    y: 600,
+    x2: 300,
+    y2: 600,
+    cx: 200,
+    cy: 540,
+    startHeadStyle: 'circle',
+    arrowHead: 'both',
+  });
+  const arrow = clean({
+    ...M3_BASE,
+    id: 'a',
+    type: 'arrow',
+    x: 600,
+    y: 400,
+    x2: 700,
+    y2: 500,
+    endHeadStyle: 'diamond',
+  }) as Element;
+  const legacyCurve = clean(
+    sample('curve', {
+      id: 'c',
+      x: 600,
+      y: 600,
+      x2: 760,
+      y2: 600,
+      cx: 680,
+      cy: 540,
+    }),
+  );
+  const scene = [...nodes, free, bound, elbow, curved, arrow, legacyCurve];
+
+  sel('drag free end onto rectangle border', {
+    elements: scene,
+    selected: ['u'],
+    events: [down(300, 550), move(260, 300), move(223, 150), up(223, 150)],
+  });
+  sel('drag free start onto rectangle port', {
+    elements: scene,
+    selected: ['u'],
+    events: [down(100, 500), move(160, 200), move(161, 162), up(161, 162)],
+  });
+  sel('drag free end onto ellipse', {
+    elements: scene,
+    selected: ['u'],
+    events: drag(300, 550, 470, 176, 3),
+  });
+  sel('drag free end onto stencil bottom port', {
+    elements: scene,
+    selected: ['u'],
+    events: drag(300, 550, 133, 393, 3),
+  });
+  sel('drag free end onto flowchart shape', {
+    elements: scene,
+    selected: ['u'],
+    events: drag(300, 550, 452, 421, 2),
+  });
+  sel('drag bound start off into empty space unbinds', {
+    elements: scene,
+    selected: ['b'],
+    events: drag(220, 130, 300, 230, 3),
+  });
+  sel('drag bound end to another element', {
+    elements: scene,
+    selected: ['b'],
+    events: drag(400, 140, 449, 299, 3),
+  });
+  sel('drag bound start from port to border', {
+    elements: scene,
+    selected: ['b'],
+    events: drag(220, 130, 222, 150, 2),
+  });
+  sel('drag end onto its own start element', {
+    elements: scene,
+    selected: ['b'],
+    events: drag(400, 140, 219, 155, 2),
+  });
+  sel('drag elbow end', {
+    elements: scene,
+    selected: ['w'],
+    events: drag(450, 300, 401, 141, 3),
+  });
+  sel('drag elbow start unbinds', {
+    elements: scene,
+    selected: ['w'],
+    events: drag(160, 160, 250, 260, 2),
+  });
+  sel('drag arrow element end onto rectangle', {
+    elements: scene,
+    selected: ['a'],
+    events: drag(700, 500, 221, 129, 3),
+  });
+  sel('drag end zoomed', {
+    elements: scene,
+    selected: ['u'],
+    viewport: zoom2,
+    events: drag(650, 1080, 494, 280, 3),
+  });
+  sel('drag end then cancel', {
+    elements: scene,
+    selected: ['u'],
+    events: [down(300, 550), move(223, 150), { type: 'cancel' }],
+  });
+  sel('drag line control point', {
+    elements: scene,
+    selected: ['u'],
+    events: drag(200, 525, 230, 470, 2),
+  });
+  sel('drag curved line control point', {
+    elements: scene,
+    selected: ['q'],
+    events: drag(200, 540, 180, 640, 3),
+  });
+  sel('elbow line has no control point', {
+    elements: scene,
+    selected: ['w'],
+    events: drag(305, 230, 330, 260, 2),
+  });
+  sel('drag legacy curve control point', {
+    elements: scene,
+    selected: ['c'],
+    events: drag(680, 540, 700, 500, 2),
+  });
+  sel('hover cursors over endpoints and control point', {
+    elements: scene,
+    selected: ['u'],
+    events: [move(300, 550), move(100, 500), move(200, 525), move(250, 525)],
+  });
+  sel('move a bound connector', {
+    elements: scene,
+    events: drag(310, 136, 330, 176, 2),
+  });
+  sel('move a node with attached connectors', {
+    elements: scene,
+    events: drag(130, 120, 190, 60, 3),
+  });
+  sel('alt drag duplicates node and connector', {
+    elements: scene,
+    selected: ['r', 'b', 'e'],
+    events: drag(130, 120, 130, 700, 2, { alt: true }),
+  });
+  sel('shift drag clones a connector', {
+    elements: scene,
+    selected: ['u'],
+    events: drag(150, 512, 150, 650, 2, { shift: true }),
+  });
+  sel('resize a selection with connectors', {
+    elements: [clean(RECT), free],
+    selected: ['r', 'u'],
+    events: drag(300, 550, 400, 650, 2),
+  });
+  sel('nudge a bound connector', {
+    elements: scene,
+    selected: ['b'],
+    events: [key('ArrowRight'), key('ArrowDown', true)],
+  });
+  sel('marquee selects connectors', {
+    elements: scene,
+    events: drag(50, 480, 340, 680, 2),
+  });
+  // The handles are drawn at the resolved ends (drawSelection) but the press
+  // is tested against the stored coordinates (select_tool.ts).
+  const stale = connector('s2', {
+    x: 0,
+    y: 0,
+    x2: 10,
+    y2: 10,
+    startElementId: 'r',
+    endElementId: 'e',
+  });
+  sel('stale stored ends: press on the drawn end', {
+    elements: [...nodes, stale],
+    selected: ['s2'],
+    events: drag(400, 140, 300, 300, 2),
+  });
+  sel('stale stored ends: press on the stored end', {
+    elements: [...nodes, stale],
+    selected: ['s2'],
+    events: drag(10, 10, 300, 300, 2),
+  });
+  return out;
+}
+
+// ── M3 cases: text tool parity (tools/text.json) ────────────────────────────
+
+function textParityCases(): Array<[string, CaseSpec]> {
+  const out: Array<[string, CaseSpec]> = [];
+  const add = (name: string, spec: Omit<CaseSpec, 'tool'>) =>
+    out.push([`text ${name}`, { tool: 'text', ...spec }]);
+  const ti = (value: string): ToolEvent => ({ type: 'textInput', value });
+  const tk = (k: string, shift?: boolean): ToolEvent =>
+    ({ type: 'textKey', key: k, ...(shift && { shift }) }) as ToolEvent;
+  const code = { textMode: 'code' as const };
+
+  add('code click creates code box', {
+    appState: code,
+    events: [
+      down(200, 200),
+      up(200, 200),
+      ti('const a = 1;\nreturn a;'),
+      { type: 'blur' },
+    ],
+  });
+  add('code shift enter commits', {
+    appState: code,
+    events: [down(200, 200), up(200, 200), ti('x = 1'), tk('Enter', true)],
+  });
+  add('code plain enter does not commit', {
+    appState: code,
+    events: [
+      down(200, 200),
+      up(200, 200),
+      ti('x = 1'),
+      tk('Enter'),
+      ti('x = 1\ny = 2'),
+      tk('Escape'),
+    ],
+  });
+  add('code tab inserts two spaces', {
+    appState: code,
+    events: [
+      down(200, 200),
+      up(200, 200),
+      ti('if (a) {\nb\n}'),
+      { type: 'textSelect', start: 9, end: 9 },
+      tk('Tab'),
+      { type: 'blur' },
+    ],
+  });
+  add('code tab replaces selection', {
+    appState: code,
+    events: [
+      down(200, 200),
+      up(200, 200),
+      ti('abcdef'),
+      { type: 'textSelect', start: 1, end: 4 },
+      tk('Tab'),
+      tk('Escape'),
+    ],
+  });
+  add('code whitespace only creates nothing', {
+    appState: code,
+    events: [down(200, 200), up(200, 200), ti('  \n  '), { type: 'blur' }],
+  });
+  add('code keeps leading whitespace', {
+    appState: code,
+    events: [
+      down(200, 200),
+      up(200, 200),
+      ti('\n  indented\n'),
+      { type: 'blur' },
+    ],
+  });
+  add('code long line widens the box', {
+    appState: code,
+    events: [
+      down(100, 100),
+      up(100, 100),
+      ti(
+        'const aVeryLongIdentifierName = someFunctionCall(argumentOne, argumentTwo);',
+      ),
+      { type: 'blur' },
+    ],
+  });
+  add('code zoomed and tool locked', {
+    appState: { ...code, toolLocked: true, fontSize: 14 },
+    viewport: zoom2,
+    events: [down(200, 200), up(200, 200), ti('zoomed()'), { type: 'blur' }],
+  });
+  add('code drag is still a code box', {
+    appState: code,
+    events: [
+      down(100, 100),
+      move(300, 100),
+      up(300, 100),
+      ti('dragged'),
+      { type: 'blur' },
+    ],
+  });
+
+  for (const align of ['left', 'center', 'right'] as const) {
+    add(`create aligned ${align}`, {
+      appState: { textAlign: align },
+      events: [
+        down(200, 200),
+        up(200, 200),
+        ti('Aligned\nlonger second line'),
+        { type: 'blur' },
+      ],
+    });
+    add(`create fixed width aligned ${align}`, {
+      appState: { textAlign: align },
+      events: [
+        down(100, 100),
+        move(260, 100),
+        up(260, 100),
+        ti('Fixed\nwidth'),
+        { type: 'blur' },
+      ],
+    });
+  }
+  add('create with serif font and size', {
+    appState: { fontFamily: 'Georgia, serif', fontSize: 32 },
+    events: [down(200, 200), up(200, 200), ti('Serif title'), { type: 'blur' }],
+  });
+
+  const base = clean(
+    sample('text', { x: 100, y: 100, width: 160, height: 24 }),
+  );
+  const decorated = (extra: Record<string, unknown>) =>
+    clean({ ...base, ...extra }) as Element;
+  add('edit bold text measures bold', {
+    elements: [decorated({ bold: true })],
+    events: [
+      { type: 'editExisting', id: 't' },
+      ti('Hello bold world wider'),
+      { type: 'blur' },
+    ],
+  });
+  add('edit italic underline strikethrough', {
+    elements: [
+      decorated({ italic: true, underline: true, strikethrough: true }),
+    ],
+    events: [
+      { type: 'editExisting', id: 't' },
+      ti('Decorated'),
+      { type: 'blur' },
+    ],
+  });
+  for (const align of ['center', 'right'] as const) {
+    add(`edit aligned ${align}`, {
+      elements: [decorated({ textAlign: align })],
+      events: [
+        { type: 'editExisting', id: 't' },
+        ti('Aligned edit\nline'),
+        { type: 'blur' },
+      ],
+    });
+  }
+  add('edit grows width and height', {
+    elements: [base],
+    events: [
+      { type: 'editExisting', id: 't' },
+      ti('Hello world\nwith a much longer second line'),
+      { type: 'blur' },
+    ],
+  });
+  add('edit shrinks', {
+    elements: [base],
+    events: [{ type: 'editExisting', id: 't' }, ti('Hi'), tk('Escape')],
+  });
+  add('edit refits the width to the content', {
+    elements: [decorated({ width: 112.5, height: 24 })],
+    events: [
+      { type: 'editExisting', id: 't' },
+      ti('Hello world'),
+      { type: 'blur' },
+    ],
+  });
+  add('edit change under one pixel keeps size', {
+    elements: [decorated({ width: 103.5, height: 24 })],
+    events: [
+      { type: 'editExisting', id: 't' },
+      ti('Hello world'),
+      { type: 'blur' },
+    ],
+  });
+  add('edit text with background grows', {
+    elements: [
+      decorated({
+        fillColor: '#333333',
+        shadowBlur: 4,
+        shadowColor: '#000',
+        shadowOffsetX: 2,
+        shadowOffsetY: 1,
+        opacity: 0.8,
+      }),
+    ],
+    events: [
+      { type: 'editExisting', id: 't' },
+      ti('Background text grows'),
+      { type: 'blur' },
+    ],
+  });
+  add('edit zoomed', {
+    elements: [base],
+    viewport: zoom2,
+    events: [
+      { type: 'editExisting', id: 't' },
+      ti('Zoomed edit'),
+      { type: 'blur' },
+    ],
+  });
+  const codeEl = clean({
+    ...base,
+    content: 'let x = 1;',
+    fontFamily: '"Courier New", monospace',
+    isCode: true,
+    width: 180,
+    height: 40,
+  }) as Element;
+  add('edit code element shift enter', {
+    elements: [codeEl],
+    events: [
+      { type: 'editExisting', id: 't' },
+      ti('let x = 1;\nlet y = 2;'),
+      tk('Enter', true),
+    ],
+  });
+  add('edit code element tab', {
+    elements: [codeEl],
+    events: [
+      { type: 'editExisting', id: 't' },
+      { type: 'textSelect', start: 0, end: 0 },
+      tk('Tab'),
+      { type: 'blur' },
+    ],
+  });
+  add('edit code element plain enter keeps editing', {
+    elements: [codeEl],
+    events: [
+      { type: 'editExisting', id: 't' },
+      tk('Enter'),
+      ti('changed'),
+      tk('Escape'),
+    ],
+  });
+  const note = clean(sample('note'));
+  add('edit sticky note wraps in its box', {
+    elements: [note],
+    events: [
+      { type: 'editExisting', id: 'n' },
+      ti(
+        'A sticky note line that is long\nsecond\nthird\nfourth\nfifth\nsixth\nseventh\neighth\nninth',
+      ),
+      { type: 'blur' },
+    ],
+  });
+  add('edit sticky note to empty deletes it', {
+    elements: [note],
+    events: [{ type: 'editExisting', id: 'n' }, ti('  '), { type: 'blur' }],
+  });
+  add('click on sticky note edits it', {
+    elements: [note],
+    events: [down(300, 480), ti('Clicked'), { type: 'blur' }],
+  });
+  add('edit while another edit is open commits the first', {
+    elements: [base, note],
+    events: [
+      { type: 'editExisting', id: 't' },
+      ti('First edit'),
+      { type: 'editExisting', id: 'n' },
+      ti('Second edit'),
+      { type: 'blur' },
+    ],
+  });
+  return out;
+}
+
+function stickyCases(): Array<[string, CaseSpec]> {
+  const out: Array<[string, CaseSpec]> = [];
+  const add = (name: string, spec: Omit<CaseSpec, 'tool'>) =>
+    out.push([`sticky ${name}`, { tool: 'sticky', ...spec }]);
+  add('place and type', {
+    events: [
+      down(300, 300),
+      up(300, 300),
+      { type: 'textInput', value: 'Remember\nthe milk' },
+      { type: 'blur' },
+    ],
+  });
+  add('place and leave empty deletes it', {
+    events: [down(300, 300), up(300, 300), { type: 'blur' }],
+  });
+  add('place with escape', {
+    events: [
+      down(300, 300),
+      up(300, 300),
+      { type: 'textInput', value: 'Escaped' },
+      { type: 'textKey', key: 'Escape' },
+    ],
+  });
+  add('place tool locked and styled', {
+    appState: {
+      toolLocked: true,
+      fontFamily: 'Georgia, serif',
+      strokeWidth: 3,
+    },
+    events: [
+      down(120, 80),
+      up(120, 80),
+      { type: 'textInput', value: 'Locked' },
+      { type: 'blur' },
+    ],
+  });
+  add('place zoomed', {
+    viewport: zoom2,
+    events: [
+      down(400, 400),
+      up(400, 400),
+      { type: 'textInput', value: 'Zoomed' },
+      { type: 'blur' },
+    ],
+  });
+  add('long text wraps and grows', {
+    events: [
+      down(300, 300),
+      up(300, 300),
+      { type: 'textInput', value: 'word '.repeat(60).trim() },
+      { type: 'blur' },
+    ],
+  });
+  add('grid does not snap sticky notes', {
+    appState: { gridVisible: true, gridSize: 20 },
+    events: [
+      down(313, 307),
+      up(313, 307),
+      { type: 'textInput', value: 'Grid' },
+      { type: 'blur' },
+    ],
+  });
+  return out;
+}
+
+const M3_SKIPPED =
+  'Not covered: shape, connector and stencil label editing (openShapeLabelEditor and openArrowLabelEditor ' +
+  'are private functions of src/ui/canvas_view.ts, not tool classes; their geometry is in the labels ' +
+  'family and SET_SHAPE_LABEL in reducer and stencils), the canvas_view.ts double click routing, real ' +
+  'textarea soft wrapping and font measurement, touch gestures.';
+
+/** The M3 tool cases, written next to tools.json as tools/line.json and tools/text.json. */
+export function buildToolsM3(): Family[] {
+  const header = {
+    sceneEncoding: SCENE_ENCODING,
+    eventEncoding: TOOL_EVENT_ENCODING_M3,
+    outputEncoding: TOOL_OUTPUT_ENCODING_M3,
+    textareaStub: TEXTAREA_STUB_M3,
+    skipped: M3_SKIPPED,
+  };
+  const files: Array<[string, Array<[string, CaseSpec]>]> = [
+    ['line', [...lineCases(), ...connectorEditCases()]],
+    ['text', [...textParityCases(), ...stickyCases()]],
+  ];
+  return files.map(([file, cases]) => {
+    const fam = new Family('tools', header, file);
+    for (const [name, spec] of cases) {
+      const { input, output } = runCase(spec);
+      fam.add(name, spec.tool, input, output);
+    }
+    return fam;
+  });
 }
