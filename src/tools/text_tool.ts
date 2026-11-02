@@ -559,9 +559,15 @@ export class TextTool implements Tool {
     const scaledFont = el.fontSize * viewport.zoom;
 
     if (el.isCode) {
+      // The element's width already includes the padding and the border:
+      // border-box keeps offsetWidth / zoom equal to it, so an edit does not
+      // widen the block.
+      ta.style.boxSizing = 'border-box';
       ta.style.width = `${el.width * viewport.zoom}px`;
       ta.style.minWidth = `${el.width * viewport.zoom}px`;
       ta.style.fontFamily = '"Courier New", monospace';
+      // The canvas and the create editor set code lines 1.3 apart.
+      ta.style.lineHeight = '1.3';
       ta.style.background = 'rgba(0,0,0,0.55)';
       // Chrome in world units, as in createCodeTextarea.
       ta.style.border = `${viewport.zoom}px dashed rgba(255,255,255,0.3)`;
@@ -612,7 +618,10 @@ export class TextTool implements Tool {
         ta.style.height = `${scaledFont * 1.2 * lines.length}px`;
       } else {
         ta.style.height = '0';
-        ta.style.height = `${ta.scrollHeight}px`;
+        // scrollHeight leaves out the border, which border-box counts in
+        // the height: add it back so the code block keeps its border box.
+        const borders = el.isCode ? 2 * viewport.zoom : 0;
+        ta.style.height = `${ta.scrollHeight + borders}px`;
       }
     };
     ta.addEventListener('input', grow);
