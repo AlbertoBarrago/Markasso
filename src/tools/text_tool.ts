@@ -393,23 +393,27 @@ export class TextTool implements Tool {
     const [screenX, screenY] = worldToScreen(viewport, worldX, worldY);
     const canvasRect = ctx.canvas.getBoundingClientRect();
     const scaledFont = appState.fontSize * viewport.zoom;
+    // The editor's chrome is in world units like the text, so the box keeps
+    // its proportions at any zoom and the committed size (offset size / zoom)
+    // does not depend on the zoom the box was created at.
+    const z = viewport.zoom;
 
     const ta = document.createElement('textarea');
     ta.spellcheck = true;
     ta.style.position = 'fixed';
     ta.style.left = `${screenX + canvasRect.left}px`;
     ta.style.top = `${screenY + canvasRect.top}px`;
-    ta.style.minWidth = '160px';
+    ta.style.minWidth = `${160 * z}px`;
     ta.style.minHeight = `${scaledFont * 1.5}px`;
-    ta.style.width = '160px';
+    ta.style.width = `${160 * z}px`;
     ta.style.height = `${scaledFont * 1.5}px`;
     ta.style.font = `${scaledFont}px "Courier New", monospace`;
     ta.style.color = appState.strokeColor;
     ta.style.caretColor = 'var(--accent, #7c63d4)';
     ta.style.lineHeight = '1.3';
-    ta.style.padding = '10px';
+    ta.style.padding = `${10 * z}px`;
     ta.style.margin = '0';
-    ta.style.border = '1px dashed rgba(255,255,255,0.3)';
+    ta.style.border = `${z}px dashed rgba(255,255,255,0.3)`;
     ta.style.outline = 'none';
     ta.style.boxShadow = 'none';
     ta.style.resize = 'none';
@@ -423,7 +427,7 @@ export class TextTool implements Tool {
       ta.style.height = '0';
       ta.style.height = `${ta.scrollHeight}px`;
       ta.style.width = '0';
-      ta.style.width = `${Math.max(ta.scrollWidth + 4, 160)}px`;
+      ta.style.width = `${Math.max(ta.scrollWidth + 4 * z, 160 * z)}px`;
     };
     ta.addEventListener('input', grow);
 
@@ -559,8 +563,9 @@ export class TextTool implements Tool {
       ta.style.minWidth = `${el.width * viewport.zoom}px`;
       ta.style.fontFamily = '"Courier New", monospace';
       ta.style.background = 'rgba(0,0,0,0.55)';
-      ta.style.border = '1px dashed rgba(255,255,255,0.3)';
-      ta.style.padding = '10px';
+      // Chrome in world units, as in createCodeTextarea.
+      ta.style.border = `${viewport.zoom}px dashed rgba(255,255,255,0.3)`;
+      ta.style.padding = `${10 * viewport.zoom}px`;
       ta.style.whiteSpace = 'pre';
       ta.style.wordBreak = 'normal';
       ta.style.overflowWrap = 'normal';
