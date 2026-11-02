@@ -413,7 +413,10 @@ export class TextTool implements Tool {
     ta.style.lineHeight = '1.3';
     ta.style.padding = `${10 * z}px`;
     ta.style.margin = '0';
-    ta.style.border = `${z}px dashed rgba(255,255,255,0.3)`;
+    // The box drawCode paints (1 unit outline, 6 unit radius), so the editor
+    // looks like the block it commits, as in Excalidraw's WYSIWYG editor.
+    ta.style.border = `${z}px solid rgba(255,255,255,0.15)`;
+    ta.style.borderRadius = `${6 * z}px`;
     ta.style.outline = 'none';
     ta.style.boxShadow = 'none';
     ta.style.resize = 'none';
@@ -569,8 +572,9 @@ export class TextTool implements Tool {
       // The canvas and the create editor set code lines 1.3 apart.
       ta.style.lineHeight = '1.3';
       ta.style.background = 'rgba(0,0,0,0.55)';
-      // Chrome in world units, as in createCodeTextarea.
-      ta.style.border = `${viewport.zoom}px dashed rgba(255,255,255,0.3)`;
+      // Chrome in world units, drawn like the block, as in createCodeTextarea.
+      ta.style.border = `${viewport.zoom}px solid rgba(255,255,255,0.15)`;
+      ta.style.borderRadius = `${6 * viewport.zoom}px`;
       ta.style.padding = `${10 * viewport.zoom}px`;
       ta.style.whiteSpace = 'pre';
       ta.style.wordBreak = 'normal';
