@@ -94,6 +94,9 @@ function git(...args: string[]): string {
  * under test is main's, so the fork point is reported; otherwise HEAD is.
  */
 function sourceCommit(): string {
+  // Allows fixture generation in environments where VCS access is prohibited.
+  if (process.env.MARKASSO_FIXTURES_COMMIT)
+    return process.env.MARKASSO_FIXTURES_COMMIT;
   let base: string;
   try {
     base = git('merge-base', 'HEAD', 'main');

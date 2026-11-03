@@ -68,6 +68,7 @@ import {
   withPath,
   writeFamily,
 } from './fixtures/common';
+import { buildDiagram } from './fixtures/diagram';
 import { buildDraw } from './fixtures/draw';
 import { buildFiles } from './fixtures/files';
 import { buildFreehand } from './fixtures/freehand';
@@ -75,6 +76,7 @@ import { buildGeometry } from './fixtures/geometry';
 import { buildHistory } from './fixtures/history';
 import { buildIconPackFamily } from './fixtures/icon_pack';
 import { buildLabels } from './fixtures/labels';
+import { buildLayout } from './fixtures/layout';
 import { beginLift, endLift, type LiftedCall } from './fixtures/lift';
 import { buildLive } from './fixtures/live';
 import { buildPresets } from './fixtures/presets';
@@ -2301,6 +2303,8 @@ it(GENERATOR_TEST, async () => {
     await buildSvg(),
     ...buildToolsM3(),
     buildPresets(),
+    ...buildLayout(),
+    await buildDiagram(),
     ...(await buildIconPackFamily()),
     buildToolsEraser(),
   ];
