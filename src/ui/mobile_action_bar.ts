@@ -14,6 +14,11 @@ import {
   arrowHeadStyleIcon,
 } from './arrow_head_icons';
 import {
+  CLOUD_ACTIONS,
+  cloudAction,
+  cloudActionAvailable,
+} from './cloud_boards';
+import {
   bindUndoTransaction,
   createColorPicker,
   loadCustomColor,
@@ -137,6 +142,21 @@ export function initMobileActionBar(
     <button class="mss-share-btn" id="mss-share-copylink">${IC_LINK}<span>${t('shareCopyLink')}</span></button>
     <div class="pp-mobile" id="mss-people"></div>
   `;
+  for (const action of CLOUD_ACTIONS) {
+    const button = document.createElement('button');
+    button.className = 'mss-share-btn';
+    button.textContent = t(action);
+    button.addEventListener('click', () => {
+      shareSheet.classList.remove('open');
+      cloudAction(history, action);
+    });
+    const sync = (): void => {
+      button.disabled = !cloudActionAvailable(history, action);
+    };
+    document.addEventListener('markasso-cloud-change', sync);
+    sync();
+    shareSheet.append(button);
+  }
   initPeopleList(shareSheet.querySelector<HTMLElement>('#mss-people')!);
 
   const shareCopyLinkBtn = shareSheet.querySelector<HTMLButtonElement>(
@@ -587,7 +607,7 @@ export function initMobileActionBar(
 
     undoBtn.disabled = !history.canUndo();
     redoBtn.disabled = !history.canRedo();
-    shareBtn.disabled = scene.elements.length === 0;
+    shareBtn.disabled = false;
 
     sep.style.display = hasSelection ? 'block' : 'none';
     propsBtn.style.display = 'flex';

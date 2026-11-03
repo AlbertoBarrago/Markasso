@@ -5,3 +5,43 @@
 @import "./styles/mobile.css";
 @import "./styles/library.css";
 @import "./styles/theme.css";
+
+.cloud-status {
+  position: fixed;
+  top: 72px;
+  right: 12px;
+  z-index: 80;
+  border: 1px solid var(--border, #666);
+  border-radius: 8px;
+  padding: 6px 12px;
+  background: var(--bg-island);
+  color: var(--text, #eee);
+  font: inherit;
+  max-width: min(85vw, 400px);
+}
+.cloud-status[hidden] {
+  display: none;
+}
+.cloud-dialog {
+  max-width: min(440px, 85vw);
+  border: 1px solid #777;
+  border-radius: 12px;
+  background: var(--bg-island);
+  color: var(--text, #eee);
+  padding: 24px;
+  font: inherit;
+}
+.cloud-dialog::backdrop {
+  background: #0009;
+}
+.cloud-dialog button,
+.cloud-dialog input,
+.cloud-dialog a {
+  display: block;
+  margin-top: 12px;
+  padding: 8px;
+  font: inherit;
+}
+.cloud-dialog a {
+  color: var(--text);
+}

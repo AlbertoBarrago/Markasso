@@ -100,6 +100,12 @@ export function getLiveRoomId(): string | null {
 
 export function buildLiveRoomUrl(roomId: string): string {
   const url = new URL(location.href);
+  // Cloud edit fragments must never be included in a public room invite.
+  if (/^\/b\//.test(url.pathname)) {
+    url.pathname = '/';
+    url.hash = '';
+    url.search = '';
+  }
   url.searchParams.set(LIVE_PARAM, roomId);
   return url.href;
 }
