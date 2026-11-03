@@ -291,3 +291,39 @@ describe('scheduled cleanup', () => {
     expect(env.SESSION_ROOMS.idFromName).toHaveBeenCalledWith('xyz789');
   });
 });
+
+describe('cloud feature gate', () => {
+  it.each([
+    undefined,
+    'false',
+    'TRUE',
+    '1',
+  ])('rejects all board methods with flag %s before accessing bindings', async (flag) => {
+    const env = new Proxy(
+      { CLOUD_ENABLED: flag },
+      {
+        get(target, key) {
+          if (key === 'CLOUD_ENABLED') return target.CLOUD_ENABLED;
+          throw new Error(`Unexpected binding access: ${String(key)}`);
+        },
+      },
+    ) as unknown as Env;
+    for (const path of [
+      '/api/board',
+      '/api/board/abc',
+      '/api/board/abc/extra',
+    ]) {
+      for (const method of ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']) {
+        const response = await worker.fetch(
+          new Request(`https://markasso.it${path}`, {
+            method,
+            headers: { Origin: 'https://untrusted.example' },
+          }) as WorkerRequest,
+          env,
+        );
+        expect(response.status).toBe(404);
+        expect(await response.json()).toEqual({ error: 'Not found' });
+      }
+    }
+  });
+});

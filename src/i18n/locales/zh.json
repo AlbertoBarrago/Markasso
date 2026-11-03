@@ -285,6 +285,7 @@
   "whatsNewTipsTitle": "停下时的提示。",
   "whatsNewTips": "稍作停顿后，会出现一条提示，推荐你还没用过的快捷键或功能。可在偏好设置中关闭。",
   "whatsNewDetails": "版本说明",
+  "cloudMenu": "云端",
   "cloudSave": "保存到云端",
   "cloudReadLink": "复制只读链接",
   "cloudEditLink": "复制编辑链接",

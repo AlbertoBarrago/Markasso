@@ -6,6 +6,7 @@ function setup() {
   const rows = new Map<string, Record<string, unknown>>();
   const objects = new Map<string, { text: string; uploaded: Date }>();
   const env = {
+    CLOUD_ENABLED: 'true',
     CLOUD_REQUIRES_LICENSE: 'false',
     BOARD_RATE_LIMITER: { limit: vi.fn(async () => ({ success: true })) },
     BOARDS_DB: {

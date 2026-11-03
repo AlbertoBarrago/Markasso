@@ -113,8 +113,11 @@ export class CloudClient {
     init: RequestInit = {},
   ): Promise<Record<string, unknown>> {
     let response: Response;
+    // Call the injected fetch as a plain function: invoking window.fetch as a
+    // method of this client throws "Illegal invocation" in browsers.
+    const request = this.request;
     try {
-      response = await this.request(path, {
+      response = await request(path, {
         ...init,
         cache: 'no-store',
         referrerPolicy: 'no-referrer',

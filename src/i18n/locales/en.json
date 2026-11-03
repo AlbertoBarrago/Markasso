@@ -285,6 +285,7 @@
   "whatsNewTipsTitle": "Tips when you pause.",
   "whatsNewTips": "After a short pause, a tip suggests a shortcut or a feature you have not used yet. Turn tips off in Preferences.",
   "whatsNewDetails": "Release notes",
+  "cloudMenu": "Cloud",
   "cloudSave": "Save to cloud",
   "cloudReadLink": "Copy read link",
   "cloudEditLink": "Copy edit link",

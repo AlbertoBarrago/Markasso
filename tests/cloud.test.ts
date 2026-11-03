@@ -12,6 +12,8 @@ import {
 } from '../src/io/cloud';
 import { initCloudBoards } from '../src/ui/cloud_boards';
 
+vi.mock('../src/config/features', () => ({ CLOUD_ENABLED: true }));
+
 vi.mock('../src/i18n', () => ({ t: (key: string) => key }));
 
 const id = 'Abc123def456';
@@ -602,5 +604,41 @@ describe('cloud compatibility with existing links', () => {
     await request;
     expect(ctx.client.id).toBeNull();
     expect(ctx.client.version).toBe(0);
+  });
+});
+
+describe('injected fetch', () => {
+  it('calls fetch as a plain function, like the browser requires', async () => {
+    const replies = [
+      response({ id, writeToken: token, version: 1 }, 201),
+      response(board()),
+      response({ version: 2 }),
+    ];
+    // window.fetch throws "Illegal invocation" when called with any other
+    // receiver; this stand-in reproduces that so the regression shows in Node.
+    const strictFetch = function (this: unknown): Promise<Response> {
+      if (this !== undefined && this !== globalThis)
+        throw new TypeError('Illegal invocation');
+      const reply = replies.shift();
+      if (!reply) throw new Error('unexpected request');
+      return Promise.resolve(reply);
+    } as typeof fetch;
+    const values = new Map<string, string>();
+    const client = new CloudClient(
+      {
+        getItem: (key) => values.get(key) ?? null,
+        setItem: (key, value) => void values.set(key, value),
+        removeItem: (key) => void values.delete(key),
+      },
+      strictFetch,
+    );
+    await client.create(scene);
+    expect(client.state).toBe('saved');
+    await client.open(new URL(`https://markasso.it/b/${id}#k=${token}`));
+    expect(client.version).toBe(1);
+    client.schedule(newer);
+    await client.flush();
+    expect(client.state).toBe('saved');
+    expect(client.version).toBe(2);
   });
 });

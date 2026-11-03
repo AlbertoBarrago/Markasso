@@ -1,3 +1,4 @@
+import { CLOUD_ENABLED } from './src/config/features';
 import type { Scene } from './src/core/scene';
 import { createScene } from './src/core/scene';
 import { fitToElements } from './src/core/viewport';
@@ -64,7 +65,9 @@ async function bootstrap(): Promise<void> {
     throw new Error('Missing required DOM elements');
   }
 
-  const cloudRoute = parseBoardUrl(new URL(location.href));
+  const cloudRoute = CLOUD_ENABLED
+    ? parseBoardUrl(new URL(location.href))
+    : null;
 
   // Check for share link in URL hash — takes priority over session
   let sharedElements: Awaited<ReturnType<typeof decodeScene>> = null;

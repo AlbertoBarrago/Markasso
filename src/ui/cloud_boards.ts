@@ -1,3 +1,4 @@
+import { CLOUD_ENABLED } from '../config/features';
 import { fitToElements } from '../core/viewport';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
@@ -13,7 +14,7 @@ import { exportMarkasso } from '../io/markasso';
 import { getLiveSessionUrl } from '../io/realtime';
 import { copyToClipboard, showShareToast } from './share_actions';
 
-export const CLOUD_ACTIONS = [
+const ALL_CLOUD_ACTIONS = [
   'cloudSave',
   'cloudReadLink',
   'cloudEditLink',
@@ -21,6 +22,7 @@ export const CLOUD_ACTIONS = [
   'cloudDuplicate',
   'cloudLicense',
 ] as const;
+export const CLOUD_ACTIONS = CLOUD_ENABLED ? ALL_CLOUD_ACTIONS : [];
 const controllers = new WeakMap<History, ReturnType<typeof createController>>();
 export function cloudLicenseStored(history: History): boolean {
   return controllers.get(history)?.hasLicense() ?? false;
@@ -352,6 +354,7 @@ function createController(history: History) {
   };
 }
 export async function initCloudBoards(history: History): Promise<void> {
+  if (!CLOUD_ENABLED) return;
   const controller = createController(history);
   controllers.set(history, controller);
   if (parseBoardUrl(new URL(location.href))) await controller.open();
