@@ -10,6 +10,9 @@ import {
   parseBoardUrl,
   TOKEN_KEY,
 } from '../src/io/cloud';
+import { initCloudBoards } from '../src/ui/cloud_boards';
+
+vi.mock('../src/i18n', () => ({ t: (key: string) => key }));
 
 const id = 'Abc123def456';
 const token = 'x'.repeat(43);
@@ -74,11 +77,7 @@ afterEach(() => {
 
 describe('cloud links and storage', () => {
   it('keeps the token only in edit and Mac fragments', () => {
-    const links = boardLinks(
-      'https://markasso.it/?live=old#s=snapshot',
-      id,
-      token,
-    );
+    const links = boardLinks('https://markasso.it', id, token);
     expect(links.read).toBe(`https://markasso.it/b/${id}`);
     expect(links.edit).toBe(`${links.read}#k=${token}`);
     expect(links.mac).toBe(`markasso://board/${id}#k=${token}`);
@@ -90,6 +89,25 @@ describe('cloud links and storage', () => {
     expect(boardLinks('https://markasso.it', id).mac).toBe(
       `markasso://board/${id}`,
     );
+  });
+  it.each([
+    'https://preview.markasso.workers.dev',
+    'http://localhost:8787',
+    'https://markasso.it:8443',
+  ])('preserves the origin in Mac links from %s', (origin) => {
+    for (const writeToken of [token, undefined]) {
+      const links = boardLinks(origin, id, writeToken);
+      expect(links.mac).toBe(
+        `markasso://open?url=${encodeURIComponent(links.edit)}`,
+      );
+      const mac = new URL(links.mac);
+      expect(mac.hash).toBe('');
+      expect(mac.searchParams.get('url')).toBe(links.edit);
+      expect(links.read).toBe(`${origin}/b/${id}`);
+      expect(links.edit).toBe(
+        links.read + (writeToken ? `#k=${writeToken}` : ''),
+      );
+    }
   });
   it('parses only valid board routes and tokens', () => {
     expect(
@@ -319,6 +337,77 @@ describe('conflicts', () => {
   });
 });
 
+describe('cloud board conflict UI', () => {
+  it('Take theirs preserves app state and viewport as one undoable step', async () => {
+    class Node extends EventTarget {
+      textContent = '';
+      children: Node[] = [];
+      append(...nodes: Node[]) {
+        this.children.push(...nodes);
+      }
+      setAttribute() {}
+      showModal() {}
+      close() {}
+      remove() {}
+    }
+    const body = new Node();
+    vi.stubGlobal('document', {
+      body,
+      activeElement: null,
+      documentElement: { getAttribute: () => null },
+      createElement: () => new Node(),
+      dispatchEvent: vi.fn(),
+    });
+    vi.stubGlobal('HTMLElement', Node);
+    vi.stubGlobal('window', {
+      addEventListener: vi.fn(),
+      matchMedia: () => ({ matches: false }),
+    });
+    vi.stubGlobal(
+      'location',
+      new URL(`https://markasso.it/b/${id}#k=${token}`),
+    );
+    const ctx = setup();
+    vi.stubGlobal('localStorage', ctx.storage);
+    vi.stubGlobal('fetch', ctx.fetcher);
+    ctx.fetcher.mockResolvedValueOnce(response(board()));
+    const appState = {
+      ...scene.appState,
+      activeTool: 'ellipse' as const,
+      gridVisible: false,
+      gridType: 'line' as const,
+      toolLocked: true,
+      strokeColor: '#123456',
+    };
+    const history = new History({ ...scene, appState });
+    await initCloudBoards(history);
+    expect(history.present.appState).toBe(appState);
+    expect(history.canUndo()).toBe(false);
+    history.dispatch({ type: 'PAN_VIEWPORT', dx: 120, dy: 80 });
+    history.dispatch({ type: 'DELETE_ELEMENTS', ids: ['rect'] });
+    const viewport = history.present.viewport;
+    ctx.fetcher.mockResolvedValueOnce(response({ version: 4 }, 409));
+    await vi.advanceTimersByTimeAsync(2000);
+    ctx.fetcher.mockResolvedValueOnce(
+      response({ ...board(5), elements: newer.elements }),
+    );
+    const modal = body.children[1]!;
+    modal.children[2]!.dispatchEvent(new Event('click'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(history.present.elements).toEqual(newer.elements);
+    expect(history.present.appState).toBe(appState);
+    expect(history.present.viewport).toBe(viewport);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(ctx.fetcher).toHaveBeenCalledTimes(3);
+    history.undo();
+    expect(history.present.elements).toEqual([]);
+    expect(history.present.appState).toEqual(appState);
+    expect(history.present.viewport).toBe(viewport);
+    history.undo();
+    expect(history.present.elements).toEqual(scene.elements);
+  });
+});
+
 describe('licence and failures', () => {
   it('402 on create can be retried with a stored licence; removal clears it', async () => {
     const ctx = setup();
@@ -440,6 +529,24 @@ describe('read-only history boundary', () => {
   it('replacing a snapshot clears undo, and a duplicate can be edited locally', () => {
     const history = new History(scene);
     history.dispatch({ type: 'DELETE_ELEMENTS', ids: ['rect'] });
+    const appState = {
+      ...history.present.appState,
+      activeTool: 'ellipse' as const,
+      gridVisible: false,
+      toolLocked: true,
+      strokeColor: '#123456',
+    };
+    const fresh = new History({ ...history.present, appState });
+    fresh.dispatch({ type: 'CREATE_ELEMENT', element });
+    fresh.undo();
+    const stateBeforeOpen = fresh.present.appState;
+    fresh.readOnly = true;
+    fresh.replaceScene(newer.elements, newer.viewport);
+    expect(fresh.present.appState).toBe(stateBeforeOpen);
+    expect(fresh.present.elements).toEqual(newer.elements);
+    expect(fresh.canUndo()).toBe(false);
+    fresh.readOnly = false;
+    expect(fresh.canRedo()).toBe(false);
     history.replaceScene(newer.elements, newer.viewport);
     expect(history.canUndo()).toBe(false);
     history.readOnly = false;

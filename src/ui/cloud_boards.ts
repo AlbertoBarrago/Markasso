@@ -132,13 +132,23 @@ function createController(history: History) {
     if (client.state === 'conflict') void resolveConflict();
     if (client.error === 402) void license();
   });
-  const load = (scene: CloudScene): void => {
+  const load = (scene: CloudScene, fresh = false): void => {
     loading = true;
-    history.replaceScene(
-      scene.elements,
-      scene.viewport ??
-        fitToElements(scene.elements, innerWidth, innerHeight, { maxZoom: 1 }),
-    );
+    if (fresh || history.readOnly) {
+      history.replaceScene(
+        scene.elements,
+        scene.viewport ??
+          fitToElements(scene.elements, innerWidth, innerHeight, {
+            maxZoom: 1,
+          }),
+      );
+    } else {
+      history.dispatch({
+        type: 'LOAD_SCENE',
+        elements: [...scene.elements],
+        viewport: history.present.viewport,
+      });
+    }
     previousElements = history.present.elements;
     loading = false;
   };
@@ -279,7 +289,7 @@ function createController(history: History) {
   async function open(): Promise<void> {
     history.readOnly = true;
     try {
-      load(await client.open(new URL(location.href)));
+      load(await client.open(new URL(location.href)), true);
       opened = true;
       openingFailed = false;
       history.readOnly = !client.editable;
@@ -323,7 +333,7 @@ function createController(history: History) {
         client.detach();
         opened = false;
         history.readOnly = false;
-        load(history.present);
+        load(history.present, true);
         window.history.replaceState(null, '', '/');
         indicator.hidden = true;
         document.dispatchEvent(new Event('markasso-cloud-change'));

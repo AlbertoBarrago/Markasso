@@ -23,10 +23,14 @@ export function boardLinks(
 ): { read: string; edit: string; mac: string } {
   const read = new URL(`/b/${id}`, origin).href;
   const fragment = token ? `#k=${encodeURIComponent(token)}` : '';
+  const edit = read + fragment;
   return {
     read,
-    edit: read + fragment,
-    mac: `markasso://board/${id}${fragment}`,
+    edit,
+    mac:
+      origin === 'https://markasso.it'
+        ? `markasso://board/${id}${fragment}`
+        : `markasso://open?url=${encodeURIComponent(edit)}`,
   };
 }
 export function parseBoardUrl(url: URL): { id: string; token?: string } | null {

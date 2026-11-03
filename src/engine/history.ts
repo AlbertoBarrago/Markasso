@@ -66,7 +66,12 @@ export class History {
     this.past = [];
     this.future = [];
     this.drag = null;
-    this._present = { ...createScene(), elements, viewport };
+    this._present = {
+      ...createScene(),
+      elements,
+      viewport,
+      appState: this._present.appState,
+    };
     this.notify();
   }
 
