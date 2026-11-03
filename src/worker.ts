@@ -6,6 +6,7 @@ import {
   buildIssueTitle,
   validateReport,
 } from './io/report_validation';
+import { boardRequest, purgeBoards } from './worker/boards';
 
 const ID_LENGTH = 8;
 const ID_CHARS =
@@ -369,7 +370,10 @@ type JsonBodyResult =
   | { readonly ok: true; readonly value: unknown }
   | { readonly ok: false; readonly status: number; readonly error: string };
 
-async function readJsonBody(request: Request): Promise<JsonBodyResult> {
+export async function readJsonBody(
+  request: Request,
+  maxBytes = MAX_REQUEST_BYTES,
+): Promise<JsonBodyResult> {
   if (
     !request.headers
       .get('Content-Type')
@@ -384,7 +388,7 @@ async function readJsonBody(request: Request): Promise<JsonBodyResult> {
   }
 
   const contentLength = request.headers.get('Content-Length');
-  if (contentLength !== null && Number(contentLength) > MAX_REQUEST_BYTES) {
+  if (contentLength !== null && Number(contentLength) > maxBytes) {
     return { ok: false, status: 413, error: 'Request body too large' };
   }
   if (!request.body) return { ok: false, status: 400, error: 'Invalid JSON' };
@@ -398,7 +402,7 @@ async function readJsonBody(request: Request): Promise<JsonBodyResult> {
       const { done, value } = await reader.read();
       if (done) break;
       received += value.byteLength;
-      if (received > MAX_REQUEST_BYTES) {
+      if (received > maxBytes) {
         await reader.cancel();
         return { ok: false, status: 413, error: 'Request body too large' };
       }
@@ -425,7 +429,9 @@ const worker = {
     const isApiRoute =
       url.pathname === '/api/share' ||
       url.pathname.startsWith('/api/share/') ||
-      url.pathname === '/api/report';
+      url.pathname === '/api/report' ||
+      url.pathname === '/api/board' ||
+      url.pathname.startsWith('/api/board/');
 
     if (isApiRoute && !isAllowedOrigin(request, url)) {
       return jsonResponse(request, url, { error: 'Origin not allowed' }, 403);
@@ -433,9 +439,30 @@ const worker = {
 
     if (request.method === 'OPTIONS' && isApiRoute) {
       const headers = apiHeaders(request, url);
-      headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      headers.set('Access-Control-Allow-Headers', 'Content-Type');
+      headers.set(
+        'Access-Control-Allow-Methods',
+        url.pathname.startsWith('/api/board')
+          ? 'GET, POST, PUT, DELETE, OPTIONS'
+          : 'GET, POST, OPTIONS',
+      );
+      headers.set(
+        'Access-Control-Allow-Headers',
+        url.pathname.startsWith('/api/board')
+          ? 'Content-Type, Authorization, If-Match, X-Markasso-License'
+          : 'Content-Type',
+      );
       return new Response(null, { status: 204, headers });
+    }
+
+    if (
+      url.pathname === '/api/board' ||
+      url.pathname.startsWith('/api/board/')
+    ) {
+      const response = await boardRequest(request, env);
+      for (const [key, value] of apiHeaders(request, url))
+        response.headers.set(key, value);
+      response.headers.set('Access-Control-Expose-Headers', 'ETag');
+      return response;
     }
 
     if (request.method === 'POST' && url.pathname === '/api/share') {
@@ -587,6 +614,11 @@ const worker = {
    * itself if it has been idle with no connected peers past the threshold.
    */
   async scheduled(_controller, env, _ctx): Promise<void> {
+    try {
+      await purgeBoards(env);
+    } catch {
+      console.log('[cron] board cleanup unavailable');
+    }
     const rooms: string[] = [];
     let cursor: string | null = null;
     do {

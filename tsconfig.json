@@ -14,5 +14,12 @@
     "types": ["vite/client"]
   },
   "include": ["src", "main.ts", "vite.config.ts", "tests"],
-  "exclude": ["src/worker.ts", "src/env.d.ts", "tests/worker.test.ts"]
+  "exclude": [
+    "src/worker.ts",
+    "src/worker",
+    "tests/boards.test.ts",
+    "tests/license.test.ts",
+    "src/env.d.ts",
+    "tests/worker.test.ts"
+  ]
 }

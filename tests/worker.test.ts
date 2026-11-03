@@ -257,6 +257,12 @@ describe('scheduled cleanup', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ deleted: true })))
       .mockResolvedValueOnce(new Response(JSON.stringify({ deleted: false })));
     const env = {
+      BOARDS_DB: {
+        prepare: () => ({
+          bind: () => ({ all: async () => ({ results: [] }) }),
+        }),
+      },
+      BOARDS_BUCKET: { list: async () => ({ objects: [], truncated: false }) },
       SHARE_LINKS: {
         list: vi.fn().mockResolvedValue({
           keys: [{ name: 'room:abc123' }, { name: 'room:xyz789' }],

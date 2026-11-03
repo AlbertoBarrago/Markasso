@@ -16,6 +16,8 @@
     "src/worker.ts",
     "src/env.d.ts",
     "tests/worker.test.ts",
+    "tests/boards.test.ts",
+    "tests/license.test.ts",
     "worker-configuration.d.ts"
   ]
 }
