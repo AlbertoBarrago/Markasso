@@ -82,6 +82,7 @@ import { beginSession, endSession, type Session } from './fixtures/recording';
 import { buildReducer } from './fixtures/reducer';
 import { buildSelection } from './fixtures/selection';
 import { buildShapes } from './fixtures/shapes';
+import { buildShare } from './fixtures/share';
 import { buildStencils } from './fixtures/stencils';
 import { buildSvg } from './fixtures/svg';
 import { buildText } from './fixtures/text';
@@ -2303,6 +2304,7 @@ it(GENERATOR_TEST, async () => {
     buildPresets(),
     ...(await buildIconPackFamily()),
     buildToolsEraser(),
+    await buildShare(),
   ];
   for (const family of families) {
     const files = writeFamily(family);
