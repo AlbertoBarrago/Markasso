@@ -4,6 +4,18 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.16.2] - 2026-11-03
+
+### Fixed
+- **Report category dropdown.** The chevron sits 12 px from the right edge, centered vertically, with room reserved for the selected text in both themes.
+- **Code block editing.** The editor matches the code block's appearance, preserves its size and line height, and scales its padding, border and minimum width with zoom.
+- **Menus on narrow screens.** Submenus expand inline when they do not fit beside the panel. The Preferences shortcut no longer opens the menu over a modal dialog.
+
+### Added
+- **Native port verification tools.** Fixture generators, a `.markasso` round-trip corpus and a compatibility checker support validation of the native macOS port.
+
+---
+
 ## [1.16.1] - 2026-10-28
 
 ### Fixed
