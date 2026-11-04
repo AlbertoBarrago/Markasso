@@ -48,6 +48,15 @@ export class CloudClient {
   version = 0;
   state: CloudState = 'saved';
   error = 0;
+  /** Epoch ms of the last successful response from the board API, or null before any. */
+  lastSyncedAt: number | null = null;
+  /**
+   * Called when a request starts or ends, separately from the state callback:
+   * the status icon spins only while a request is in flight, and the state
+   * callback also drives dialogs that must not re-open on every request.
+   */
+  onActivity: () => void = () => {};
+  private requests = 0;
   private pending: CloudScene | null = null;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private busy = false;
@@ -60,6 +69,10 @@ export class CloudClient {
     private readonly request: typeof fetch = fetch,
     private readonly changed: () => void = () => {},
   ) {}
+  /** True while at least one request to the board API is in flight. */
+  get inFlight(): boolean {
+    return this.requests > 0;
+  }
   get editable(): boolean {
     return !!this.id && !!this.token;
   }
@@ -116,6 +129,8 @@ export class CloudClient {
     // Call the injected fetch as a plain function: invoking window.fetch as a
     // method of this client throws "Illegal invocation" in browsers.
     const request = this.request;
+    this.requests++;
+    this.onActivity();
     try {
       response = await request(path, {
         ...init,
@@ -124,7 +139,11 @@ export class CloudClient {
       });
     } catch {
       throw new CloudError(0);
+    } finally {
+      this.requests--;
+      this.onActivity();
     }
+    if (response.ok) this.lastSyncedAt = Date.now();
     if (!response.ok) {
       if (response.status === 409) {
         const data = (await response.json()) as { version?: number };

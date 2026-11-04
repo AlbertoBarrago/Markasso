@@ -347,6 +347,8 @@ describe('cloud board conflict UI', () => {
       append(...nodes: Node[]) {
         this.children.push(...nodes);
       }
+      dataset: Record<string, string> = {};
+      classList = { add() {}, toggle() {} };
       setAttribute() {}
       showModal() {}
       close() {}
@@ -358,6 +360,8 @@ describe('cloud board conflict UI', () => {
       activeElement: null,
       documentElement: { getAttribute: () => null },
       createElement: () => new Node(),
+      querySelector: () => null,
+      getElementById: () => null,
       dispatchEvent: vi.fn(),
     });
     vi.stubGlobal('HTMLElement', Node);

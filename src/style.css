@@ -6,21 +6,111 @@
 @import "./styles/library.css";
 @import "./styles/theme.css";
 
-.cloud-status {
-  position: fixed;
-  top: 72px;
-  right: 12px;
-  z-index: 80;
-  border: 1px solid var(--border, #666);
-  border-radius: 8px;
-  padding: 6px 12px;
-  background: var(--bg-island);
-  color: var(--text, #eee);
-  font: inherit;
-  max-width: min(85vw, 400px);
+.cloud-status-island {
+  padding: 4px;
 }
-.cloud-status[hidden] {
+.cloud-status-island[hidden] {
   display: none;
+}
+/* Fallback when the toolbar's top-right island is missing. */
+.cloud-status-island--floating {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 10;
+}
+.cloud-status {
+  color: var(--text);
+}
+.cloud-status[data-state="conflict"],
+.cloud-status[data-state="licence"],
+.cloud-status[data-state="tooLarge"],
+.cloud-status[data-state="failed"],
+.cloud-status[data-state="revoked"],
+.cloud-status[data-state="missing"] {
+  color: var(--accent);
+}
+.cloud-status[data-state="offline"] {
+  color: var(--text-muted);
+}
+/* Only the arrows inside the cloud turn, around their own centre. */
+.cloud-status--spinning .cloud-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cloud-spin 1s linear infinite;
+}
+@keyframes cloud-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cloud-status--spinning .cloud-spin {
+    animation: none;
+  }
+}
+.cloud-popover {
+  position: fixed;
+  z-index: 90;
+  width: min(280px, calc(100vw - 16px));
+  padding: 12px;
+  background: var(--bg-island);
+  border: 1px solid var(--island-border);
+  border-radius: var(--island-radius);
+  box-shadow: var(--island-shadow);
+  color: var(--text);
+  font-size: 13px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.cloud-popover p {
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+.cloud-popover-title {
+  font-weight: 600;
+}
+.cloud-popover-detail,
+.cloud-popover-meta {
+  color: var(--text-muted);
+}
+.cloud-popover-meta {
+  font-size: 12px;
+}
+.cloud-popover-action {
+  display: block;
+  width: 100%;
+  margin-top: 2px;
+  padding: 7px 8px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cloud-popover-actions {
+  margin-top: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--island-border);
+}
+.cloud-popover-action:hover,
+.cloud-popover-action:focus-visible {
+  background: var(--bg-hover);
+}
+.cloud-toast {
+  background: var(--bg-island);
+  border: 1px solid var(--island-border);
+  color: var(--text);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 .cloud-dialog {
   max-width: min(440px, 85vw);

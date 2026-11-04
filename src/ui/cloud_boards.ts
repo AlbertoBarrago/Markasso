@@ -12,6 +12,13 @@ import {
 } from '../io/cloud';
 import { exportMarkasso } from '../io/markasso';
 import { getLiveSessionUrl } from '../io/realtime';
+import {
+  type CloudPopoverAction,
+  cloudIconSvg,
+  cloudPopoverActions,
+  cloudStatus,
+  cloudStatusNeedsAttention,
+} from './cloud_status';
 import { copyToClipboard, showShareToast } from './share_actions';
 
 const ALL_CLOUD_ACTIONS = [
@@ -111,12 +118,40 @@ function errorKey(status: number): string {
     )[status] ?? 'cloudUnavailable'
   );
 }
+/** Shows a transient notice under the status button, e.g. that a board opened read-only. */
+function showCloudToast(message: string): void {
+  document.getElementById('cloud-toast')?.remove();
+  const toast = document.createElement('div');
+  toast.id = 'cloud-toast';
+  toast.className = 'share-toast cloud-toast';
+  toast.setAttribute('role', 'status');
+  toast.textContent = message;
+  document.body.append(toast);
+  setTimeout(() => toast.remove(), 5000);
+}
 function createController(history: History) {
+  // The status button lives in the top-right island next to the live chips,
+  // with the same chrome as the other island buttons.
+  const island = document.createElement('div');
+  island.className = 'tb-island cloud-status-island';
+  island.hidden = true;
   const indicator = document.createElement('button');
-  indicator.className = 'cloud-status';
-  indicator.hidden = true;
-  indicator.setAttribute('aria-live', 'polite');
-  document.body.append(indicator);
+  indicator.type = 'button';
+  indicator.className = 'tb-btn cloud-status';
+  indicator.setAttribute('aria-haspopup', 'dialog');
+  indicator.setAttribute('aria-expanded', 'false');
+  const announcer = document.createElement('span');
+  announcer.className = 'sr-only';
+  announcer.setAttribute('aria-live', 'polite');
+  island.append(indicator, announcer);
+  const topRight = document.querySelector('.tb-island-topright');
+  if (topRight) topRight.prepend(island);
+  else {
+    island.classList.add('cloud-status-island--floating');
+    document.body.append(island);
+  }
+  let popover: HTMLElement | null = null;
+  let openError = 0;
   let resolving = false;
   let loading = false;
   let previousElements = history.present.elements;
@@ -126,14 +161,135 @@ function createController(history: History) {
   let openingFailed = false;
   const client = new CloudClient(localStorage, fetch, () => {
     document.dispatchEvent(new Event('markasso-cloud-change'));
-    indicator.hidden = !client.id && client.state === 'saved';
-    indicator.textContent =
-      client.error && client.state !== 'conflict'
-        ? t(errorKey(client.error))
-        : t(`cloud${client.state[0]!.toUpperCase()}${client.state.slice(1)}`);
+    render();
     if (client.state === 'conflict') void resolveConflict();
     if (client.error === 402) void license();
   });
+  client.onActivity = () => render();
+  const currentStatus = () =>
+    cloudStatus(
+      openingFailed
+        ? {
+            state: [0, 429, 503].includes(openError) ? 'offline' : 'error',
+            error: openError,
+            inFlight: client.inFlight,
+            readOnly: false,
+          }
+        : {
+            state: client.state,
+            error: client.error,
+            inFlight: client.inFlight,
+            readOnly: history.readOnly && opened,
+          },
+    );
+  let announced = '';
+  function render(): void {
+    island.hidden =
+      !openingFailed && !client.id && client.state === 'saved' && !client.error;
+    const status = currentStatus();
+    const label = `${t('cloudStatusLabel')}: ${t(status.titleKey)}`;
+    indicator.innerHTML = cloudIconSvg(status.icon);
+    indicator.dataset.state = status.kind;
+    indicator.classList.toggle('cloud-status--spinning', status.spinning);
+    indicator.setAttribute('aria-label', label);
+    indicator.title = label;
+    const announcement = cloudStatusNeedsAttention(status.kind)
+      ? t(status.titleKey)
+      : '';
+    if (announcement !== announced) {
+      announced = announcement;
+      announcer.textContent = announcement;
+    }
+    if (popover) fillPopover(popover);
+    if (island.hidden) closePopover();
+  }
+  function fillPopover(panel: HTMLElement): void {
+    const status = currentStatus();
+    panel.replaceChildren();
+    const title = document.createElement('p');
+    title.className = 'cloud-popover-title';
+    title.textContent = t(status.titleKey);
+    const detail = document.createElement('p');
+    detail.className = 'cloud-popover-detail';
+    detail.textContent = t(status.detailKey);
+    panel.append(title, detail);
+    if (client.lastSyncedAt !== null) {
+      const meta = document.createElement('p');
+      meta.className = 'cloud-popover-meta';
+      meta.textContent = t('cloudLastSynced').replace(
+        '{time}',
+        new Date(client.lastSyncedAt).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      );
+      panel.append(meta);
+    }
+    const actions = cloudPopoverActions(status.kind, {
+      hasBoard: opened && !!client.id,
+      editable: client.editable,
+    });
+    const list = document.createElement('div');
+    list.className = 'cloud-popover-actions';
+    if (actions.length) panel.append(list);
+    for (const action of actions) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'cloud-popover-action';
+      button.dataset.action = action;
+      button.textContent = t(action);
+      button.addEventListener('click', () => {
+        closePopover();
+        void popoverAction(action).catch(() =>
+          dialog(t('cloudStorageError'), []),
+        );
+      });
+      list.append(button);
+    }
+  }
+  function openPopover(): void {
+    // The read-only toast sits where the popover opens; the popover says the same.
+    document.getElementById('cloud-toast')?.remove();
+    const panel = document.createElement('div');
+    panel.className = 'cloud-popover';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-label', t('cloudStatusLabel'));
+    const rect = island.getBoundingClientRect();
+    panel.style.top = `${Math.round(rect.bottom + 8)}px`;
+    panel.style.right = `${Math.max(8, Math.round(innerWidth - rect.right))}px`;
+    fillPopover(panel);
+    document.body.append(panel);
+    popover = panel;
+    indicator.setAttribute('aria-expanded', 'true');
+    panel.querySelector<HTMLButtonElement>('button')?.focus();
+    document.addEventListener('pointerdown', outside, true);
+    document.addEventListener('keydown', onPopoverKey, true);
+  }
+  function closePopover(): void {
+    if (!popover) return;
+    popover.remove();
+    popover = null;
+    indicator.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('pointerdown', outside, true);
+    document.removeEventListener('keydown', onPopoverKey, true);
+  }
+  function outside(event: Event): void {
+    const target = event.target as Node | null;
+    if (popover?.contains(target) || island.contains(target)) return;
+    closePopover();
+  }
+  function onPopoverKey(event: KeyboardEvent): void {
+    if (event.key !== 'Escape') return;
+    event.stopPropagation();
+    closePopover();
+    indicator.focus();
+  }
+  async function popoverAction(action: CloudPopoverAction): Promise<void> {
+    if (action === 'cloudResolve') return resolveConflict();
+    if (action === 'cloudLicense') return license();
+    if (action === 'cloudRetry') return openingFailed ? open() : client.retry();
+    return api.run(action);
+  }
   const load = (scene: CloudScene, fresh = false): void => {
     loading = true;
     if (fresh || history.readOnly) {
@@ -272,21 +428,8 @@ function createController(history: History) {
     if (client.editable && client.state === 'offline') void client.retry();
   });
   indicator.addEventListener('click', () => {
-    if (openingFailed) {
-      void open();
-      return;
-    }
-    if (history.readOnly && opened) {
-      cloudAction(history, 'cloudDuplicate');
-      return;
-    }
-    if (!client.id) {
-      void save();
-      return;
-    }
-    if (client.state === 'conflict') void resolveConflict();
-    else if (client.error === 402) void license();
-    else void client.retry();
+    if (popover) closePopover();
+    else openPopover();
   });
   async function open(): Promise<void> {
     history.readOnly = true;
@@ -294,21 +437,20 @@ function createController(history: History) {
       load(await client.open(new URL(location.href)), true);
       opened = true;
       openingFailed = false;
+      openError = 0;
       history.readOnly = !client.editable;
-      indicator.hidden = false;
-      if (history.readOnly) indicator.textContent = t('cloudReadOnly');
+      render();
+      if (history.readOnly) showCloudToast(t('cloudReadOnly'));
     } catch (error) {
       openingFailed = true;
+      openError = error instanceof CloudError ? error.status : 503;
       client.detach();
-      indicator.hidden = false;
-      indicator.textContent = t(
-        errorKey(error instanceof CloudError ? error.status : 503),
-      );
-      await dialog(indicator.textContent, []);
+      render();
+      await dialog(t(errorKey(openError)), []);
     }
     document.dispatchEvent(new Event('markasso-cloud-change'));
   }
-  return {
+  const api = {
     open,
     hasLicense: () => !!client.license,
     available(action: (typeof CLOUD_ACTIONS)[number]): boolean {
@@ -337,7 +479,7 @@ function createController(history: History) {
         history.readOnly = false;
         load(history.present, true);
         window.history.replaceState(null, '', '/');
-        indicator.hidden = true;
+        render();
         document.dispatchEvent(new Event('markasso-cloud-change'));
         return;
       }
@@ -352,6 +494,7 @@ function createController(history: History) {
       showShareToast(await copyToClipboard(url), url);
     },
   };
+  return api;
 }
 export async function initCloudBoards(history: History): Promise<void> {
   if (!CLOUD_ENABLED) return;
