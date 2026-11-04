@@ -13,7 +13,7 @@ export function initStarCta(appEl: HTMLElement): { open: () => void } {
       <div class="star-card" role="dialog" aria-modal="true" aria-label="Support Markasso">
         <button class="star-close" aria-label="Close">&times;</button>
         <div class="star-logo">
-          <img src="markasso-logo-icon.svg" width="40" height="40" alt="Markasso" style="border-radius:6px">
+          <img src="/markasso-logo-icon.svg" width="40" height="40" alt="Markasso" style="border-radius:6px">
         </div>
         <h2 class="star-title">Love Markasso?</h2>
         <p class="star-desc">

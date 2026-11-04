@@ -32,7 +32,7 @@ export function initWelcome(appEl: HTMLElement, history: History): void {
   overlay.innerHTML = `
     <div class="wl-card" role="dialog" aria-modal="true" aria-label="${t('welcomeAria')}" aria-describedby="welcome-desc">
       <div class="wl-brand">
-        <img width="140" height="140" src="markasso-logo-icon.svg" alt="Markasso logo"/>
+        <img width="140" height="140" src="/markasso-logo-icon.svg" alt="Markasso logo"/>
         <span class="wl-name">Markasso</span>
       </div>
       <p class="wl-tagline" id="welcome-desc">
