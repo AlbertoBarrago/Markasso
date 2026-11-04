@@ -185,3 +185,160 @@ ol li + li {
 .hero .notice {
   margin-top: 20px;
 }
+
+/* ── Motion and terminal touches (src/site_fx.ts) ─────────────────────── */
+/* Space between the price line and the buttons. */
+#checkout {
+  position: relative;
+  margin-top: 28px;
+}
+/* Page content above the dot grid. */
+header,
+main {
+  position: relative;
+  z-index: 1;
+}
+/* The board's dot grid behind the page, drifting with the pointer. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -40px;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--text) 16%, transparent) 1px,
+    transparent 1.4px
+  );
+  background-size: 24px 24px;
+  transform: translate(var(--grid-x, 0), var(--grid-y, 0));
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+  mask-image: radial-gradient(ellipse at 30% 0%, #000 0%, transparent 75%);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.type-cursor {
+  display: inline-block;
+  margin-left: 0.04em;
+  color: var(--accent);
+  animation: cursor-blink 1.05s steps(1) infinite;
+}
+@keyframes cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}
+/* Hand-drawn arrow towards the main button, drawn after the title is typed. */
+.hand-arrow {
+  /* A flex item right after the buttons, lifted to point down at them. */
+  align-self: flex-start;
+  margin: -34px 0 0 -4px;
+  width: 140px;
+  height: 70px;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.hand-arrow path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.fx-typed .hand-arrow path {
+  transition: stroke-dashoffset 0.7s ease-out;
+  stroke-dashoffset: 0;
+}
+.fx-typed .hand-arrow .hand-arrow-head {
+  transition-delay: 0.6s;
+  transition-duration: 0.3s;
+}
+.fx-static .hand-arrow path {
+  stroke-dashoffset: 0;
+}
+@media (max-width: 640px) {
+  .hand-arrow {
+    display: none;
+  }
+}
+/* Primary button: a soft accent glow on hover. */
+.checkout-link {
+  transition:
+    background 0.15s,
+    box-shadow 0.2s,
+    transform 0.15s;
+}
+.checkout-link:hover {
+  box-shadow: 0 0 0 4px var(--accent-light), 0 8px 28px -8px var(--accent);
+  transform: translateY(-1px);
+}
+/* Blocks and their list items fade in when scrolled into view. */
+.fx [data-reveal] {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.fx [data-reveal] li {
+  opacity: 0;
+  transform: translateX(-8px);
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease;
+  transition-delay: calc(0.15s + var(--i, 0) * 0.08s);
+}
+.fx [data-reveal].is-visible,
+.fx [data-reveal].is-visible li {
+  opacity: 1;
+  transform: none;
+}
+/* Lists as terminal output: a "> " prompt instead of bullets. */
+ul.terminal {
+  list-style: none;
+  padding-left: 0;
+}
+ul.terminal li {
+  position: relative;
+  padding-left: 1.6em;
+}
+ul.terminal li + li {
+  margin-top: 6px;
+}
+ul.terminal li::before {
+  content: ">";
+  position: absolute;
+  left: 0;
+  font-family: "Roboto Mono", ui-monospace, monospace;
+  color: var(--accent);
+}
+/* Install steps numbered like a script: 01, 02, … */
+ol.steps {
+  list-style: none;
+  padding-left: 0;
+  counter-reset: step;
+}
+ol.steps li {
+  position: relative;
+  padding-left: 2.6em;
+  counter-increment: step;
+}
+ol.steps li::before {
+  content: counter(step, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  font-family: "Roboto Mono", ui-monospace, monospace;
+  color: var(--accent);
+}
+/* Screenshot: rises in with an accent glow. */
+.shot img {
+  box-shadow:
+    0 30px 80px -30px color-mix(in srgb, var(--accent) 55%, transparent),
+    0 0 0 1px var(--border);
+}
