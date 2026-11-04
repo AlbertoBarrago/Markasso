@@ -1,0 +1,146 @@
+html,
+body {
+  height: auto;
+  min-height: 100%;
+  overflow: auto;
+  line-height: 1.65;
+}
+html {
+  color-scheme: dark;
+}
+html[data-theme="light"] {
+  --canvas-bg: #ffffff;
+  color-scheme: light;
+}
+header,
+main {
+  width: min(100% - 48px, 880px);
+  margin-inline: auto;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding-block: 28px;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font:
+    500 1.125rem / 1.4 "Kode Mono",
+    monospace;
+  color: var(--text);
+}
+.brand img {
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+a {
+  color: var(--accent);
+  white-space: nowrap;
+  text-decoration: none;
+  text-underline-offset: 4px;
+}
+a:hover {
+  text-decoration: underline;
+}
+.hero {
+  padding-block: 56px 48px;
+}
+h1,
+h2 {
+  font-family: "Kode Mono", monospace;
+  font-weight: 500;
+  color: var(--accent);
+}
+h1 {
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+}
+.pitch {
+  max-width: 38em;
+  font-size: 1.25rem;
+  margin-block: 24px;
+}
+h2 {
+  font-size: 1.25rem;
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+section:not(.hero) {
+  padding-block: 28px;
+}
+.links-section,
+.comparison,
+main > section:last-child {
+  border-top: 1px solid var(--border);
+}
+p,
+li {
+  max-width: 65ch;
+}
+ul {
+  padding-left: 20px;
+}
+p + p,
+p + ul,
+ul + p {
+  margin-top: 16px;
+}
+.notice {
+  border-left: 3px solid var(--accent);
+  padding: 16px 20px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--accent-light);
+}
+.comparison {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 40px;
+}
+main {
+  padding-bottom: 64px;
+}
+.checkout-link,
+#checkout button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 12rem;
+  white-space: nowrap;
+  padding: 14px 28px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: none;
+}
+.checkout-link:hover {
+  background: var(--accent-light);
+  color: var(--text);
+}
+#checkout button:disabled {
+  background: var(--bg-island);
+  border-color: var(--border);
+  color: color-mix(in srgb, var(--text) 55%, var(--bg-island));
+  cursor: not-allowed;
+}
+@media (max-width: 580px) {
+  .comparison {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  header {
+    gap: 12px;
+  }
+  .hero {
+    padding-top: 32px;
+  }
+}
