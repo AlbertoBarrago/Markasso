@@ -2,6 +2,8 @@ import type { ActiveTool } from '../core/app_state';
 import { fitToElements } from '../core/viewport';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
+import { CLOUD_ENABLED } from '../config/features';
+import { LICENSE_KEY, LICENSE_PURCHASE_URL } from '../io/cloud';
 import { importMermaidText } from '../io/mermaid';
 import { PRESETS } from '../io/presets';
 import {
@@ -297,6 +299,10 @@ export function initToolbar(
   const agentIcon =
     '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="12" height="9" rx="2"/><path d="M10 4v3M8 11h.01M12 11h.01M2 11v2M18 11v2"/></svg>';
   const inviteAgentAction = addMoreItem(agentIcon, t('inviteAiAgent'), () => {
+    if (inviteAgentLocked()) {
+      window.open(LICENSE_PURCHASE_URL, '_blank', 'noopener');
+      return;
+    }
     const url = getLiveSessionUrl();
     if (!url) return;
     const prompt = buildLiveInvitePrompt(url);
@@ -305,9 +311,50 @@ export function initToolbar(
     );
   });
   inviteAgentAction.id = 'tb-invite-agent';
-  inviteAgentAction.setAttribute('aria-disabled', 'true');
-  onLiveReveal(() => inviteAgentAction.removeAttribute('aria-disabled'));
-  onLiveHide(() => inviteAgentAction.setAttribute('aria-disabled', 'true'));
+  // A greyed-out item alone does not say why: a note under the label (also
+  // exposed as title and aria-description) names what is missing. Outside a
+  // live session the item is disabled; inside one, when the cloud is on and
+  // no licence is stored, it stays clickable but leads to the /cloud page,
+  // since the room refuses agents without a licence (SessionRoom.awaitAgentAuth).
+  const inviteAgentNote = document.createElement('span');
+  inviteAgentNote.className = 'menu-item-note';
+  inviteAgentAction.querySelector('.menu-item-label')?.append(inviteAgentNote);
+  let liveActive = false;
+  function inviteAgentLocked(): boolean {
+    if (!CLOUD_ENABLED) return false;
+    try {
+      return !localStorage.getItem(LICENSE_KEY);
+    } catch {
+      return true;
+    }
+  }
+  function refreshInviteAgent(): void {
+    const note = !liveActive
+      ? t('inviteAiAgentNeedsLive')
+      : inviteAgentLocked()
+        ? t('inviteAiAgentLocked')
+        : '';
+    inviteAgentNote.textContent = note;
+    inviteAgentNote.hidden = !note;
+    if (liveActive) inviteAgentAction.removeAttribute('aria-disabled');
+    else inviteAgentAction.setAttribute('aria-disabled', 'true');
+    if (note) {
+      inviteAgentAction.title = note;
+      inviteAgentAction.setAttribute('aria-description', note);
+    } else {
+      inviteAgentAction.removeAttribute('title');
+      inviteAgentAction.removeAttribute('aria-description');
+    }
+  }
+  refreshInviteAgent();
+  onLiveReveal(() => {
+    liveActive = true;
+    refreshInviteAgent();
+  });
+  onLiveHide(() => {
+    liveActive = false;
+    refreshInviteAgent();
+  });
   async function startLiveSession(): Promise<void> {
     liveAction.setAttribute('aria-disabled', 'true');
     const roomId = generateRoomId();
@@ -351,6 +398,8 @@ export function initToolbar(
     morePanel.classList.toggle('open', open);
     moreToggle.setAttribute('aria-expanded', String(open));
     moreToggle.classList.toggle('open', open);
+    // The licence may have been entered since the menu was last built.
+    if (open) refreshInviteAgent();
     if (open) {
       const popup = document.getElementById('mobile-tools-popup');
       if (popup) {

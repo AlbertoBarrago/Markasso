@@ -76,6 +76,20 @@
 .menu-item-label {
   flex: 1;
 }
+/* Why a disabled item is unavailable; the item stays more legible than the
+   usual disabled opacity so the note can be read. */
+.menu-item-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.menu-item-note[hidden] {
+  display: none;
+}
+.menu-item[aria-disabled="true"]:has(.menu-item-note:not([hidden])) {
+  opacity: 0.6;
+}
 .menu-item--danger {
   color: var(--alert) !important;
 }
