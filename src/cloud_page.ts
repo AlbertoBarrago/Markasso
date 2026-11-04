@@ -4,6 +4,7 @@ import './styles/cloud-page.css';
 import { checkoutUrl } from './cloud_checkout';
 import { POLAR_LINKS } from './config/polar';
 import { t } from './i18n';
+import { initSiteFx } from './site_fx';
 
 const media = window.matchMedia('(prefers-color-scheme: light)');
 let theme: string | null = null;
@@ -61,3 +62,7 @@ if (new URLSearchParams(location.search).has('checkout_id')) {
       panel.append(link(portal, t('cloudWelcomePortal'), 'checkout-link'));
   }
 }
+
+// Last: the title is typed from its translated text and the arrow is drawn
+// next to the checkout buttons inserted above.
+initSiteFx();

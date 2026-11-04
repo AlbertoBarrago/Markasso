@@ -2,6 +2,7 @@ import './styles/base.css';
 import './styles/theme.css';
 import './styles/cloud-page.css';
 import { t } from './i18n';
+import { initSiteFx } from './site_fx';
 
 /**
  * The /mac page: static copy translated at load, plus the current Mac version
@@ -26,6 +27,8 @@ for (const element of document.querySelectorAll<HTMLElement>('[data-i18n]'))
   element.textContent = t(element.dataset.i18n!);
 for (const element of document.querySelectorAll<HTMLElement>('[data-i18n-alt]'))
   element.setAttribute('alt', t(element.dataset.i18nAlt!));
+// After translation: the title is typed from its translated text.
+initSiteFx();
 
 fetch('/download/mac.json')
   .then((response) => (response.ok ? response.json() : null))
