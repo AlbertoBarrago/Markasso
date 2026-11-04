@@ -47,37 +47,66 @@ export function cloudAction(
   void controllers
     .get(history)
     ?.run(action)
-    .catch(() => dialog(t('cloudStorageError'), []));
+    .catch(() => dialog(storageDialog()));
 }
 
-function dialog(
-  message: string,
-  choices: string[],
-  license = false,
-): Promise<string | null> {
+/** One button of a cloud dialog; `hint` turns it into a described option card. */
+interface DialogChoice {
+  key: string;
+  hint?: string;
+  primary?: boolean;
+}
+interface DialogOptions {
+  title: string;
+  message: string;
+  choices?: DialogChoice[];
+  /** Adds the licence key field and the purchase link; resolves with the typed key. */
+  license?: boolean;
+}
+
+/**
+ * Modal in the app's card style (the What's New card): kicker, title,
+ * description, then the actions. Without choices it is a notice with a single
+ * OK. Resolves with the chosen key, the typed licence key, or null on cancel.
+ */
+function dialog(options: DialogOptions): Promise<string | null> {
   return new Promise((resolve) => {
     const previous = document.activeElement;
     const modal = document.createElement('dialog');
     modal.className = 'cloud-dialog';
-    const heading = document.createElement('p');
-    heading.textContent = message;
-    heading.id = 'cloud-dialog-message';
-    modal.setAttribute('aria-labelledby', heading.id);
-    modal.append(heading);
+    const card = document.createElement('div');
+    card.className = 'cd-card';
+    const kicker = document.createElement('div');
+    kicker.className = 'cd-kicker';
+    kicker.textContent = t('cloudPageTitle');
+    const title = document.createElement('h2');
+    title.className = 'cd-title';
+    title.id = 'cloud-dialog-title';
+    title.textContent = options.title;
+    const message = document.createElement('p');
+    message.className = 'cd-desc';
+    message.id = 'cloud-dialog-message';
+    message.textContent = options.message;
+    modal.setAttribute('aria-labelledby', title.id);
+    modal.setAttribute('aria-describedby', message.id);
+    card.append(kicker, title, message);
+    modal.append(card);
     let input: HTMLInputElement | undefined;
-    if (license) {
+    if (options.license) {
       input = document.createElement('input');
+      input.className = 'cd-input';
       input.type = 'password';
       input.autocomplete = 'off';
       input.placeholder = t('cloudKey');
       input.setAttribute('aria-label', t('cloudKey'));
-      modal.append(input);
+      input.autofocus = true;
       const purchase = document.createElement('a');
+      purchase.className = 'cd-link';
       purchase.href = LICENSE_PURCHASE_URL;
       purchase.rel = 'noreferrer';
       purchase.target = '_blank';
       purchase.textContent = t('cloudBuy');
-      modal.append(purchase);
+      card.append(input, purchase);
     }
     const finish = (value: string | null): void => {
       modal.close();
@@ -85,16 +114,56 @@ function dialog(
       if (previous instanceof HTMLElement) previous.focus();
       resolve(value);
     };
-    for (const key of choices) {
-      const button = document.createElement('button');
-      button.textContent = t(key);
-      button.addEventListener('click', () => finish(input ? input.value : key));
-      modal.append(button);
+    const choices = options.choices ?? [];
+    const described = choices.filter((choice) => choice.hint);
+    if (described.length) {
+      const list = document.createElement('div');
+      list.className = 'cd-options';
+      described.forEach((choice, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'cd-option';
+        button.dataset.choice = choice.key;
+        if (index === 0 && !input) button.autofocus = true;
+        const name = document.createElement('span');
+        name.className = 'cd-option-title';
+        name.textContent = t(choice.key);
+        const hint = document.createElement('span');
+        hint.className = 'cd-option-hint';
+        hint.textContent = t(choice.hint as string);
+        button.append(name, hint);
+        button.addEventListener('click', () => finish(choice.key));
+        list.append(button);
+      });
+      card.append(list);
     }
-    const cancel = document.createElement('button');
-    cancel.textContent = t('cloudCancel');
-    cancel.addEventListener('click', () => finish(null));
-    modal.append(cancel);
+    const actions = document.createElement('div');
+    actions.className = 'cd-actions';
+    const plain = choices.filter((choice) => !choice.hint);
+    if (!choices.length) plain.push({ key: 'cloudOk', primary: true });
+    else {
+      const cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.className = 'cd-cancel';
+      cancel.dataset.choice = 'cloudCancel';
+      cancel.textContent = t('cloudCancel');
+      cancel.addEventListener('click', () => finish(null));
+      actions.append(cancel);
+    }
+    for (const choice of plain) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = choice.primary ? 'cd-cta' : 'cd-secondary';
+      button.dataset.choice = choice.key;
+      if (choice.primary && !input && !described.length)
+        button.autofocus = true;
+      button.textContent = t(choice.key);
+      button.addEventListener('click', () =>
+        finish(input ? input.value : choices.length ? choice.key : null),
+      );
+      actions.append(button);
+    }
+    card.append(actions);
     modal.addEventListener('cancel', (event) => {
       event.preventDefault();
       finish(null);
@@ -103,21 +172,24 @@ function dialog(
     modal.showModal();
   });
 }
-function errorKey(status: number): string {
-  return (
-    (
-      {
-        0: 'cloudOffline',
-        401: 'cloudUnauthorized',
-        402: 'cloudLicenseNeeded',
-        404: 'cloudMissing',
-        413: 'cloudTooLarge',
-        429: 'cloudSlow',
-        503: 'cloudUnavailable',
-      } as Record<number, string>
-    )[status] ?? 'cloudUnavailable'
-  );
+/** Title and explanation for a failed request, matching the status icon's wording. */
+function errorDialog(status: number): DialogOptions {
+  const [title, message] = (
+    {
+      0: ['cloudStatusOffline', 'cloudDetailCheckConnection'],
+      401: ['cloudStatusRevoked', 'cloudDetailRevoked'],
+      402: ['cloudStatusLicence', 'cloudLicenseNeeded'],
+      404: ['cloudStatusMissing', 'cloudDetailMissing'],
+      413: ['cloudStatusTooLarge', 'cloudDetailTooLarge'],
+      429: ['cloudBusyTitle', 'cloudSlow'],
+    } as Record<number, [string, string]>
+  )[status] ?? ['cloudErrorTitle', 'cloudUnavailable'];
+  return { title: t(title), message: t(message) };
 }
+const storageDialog = (): DialogOptions => ({
+  title: t('cloudStorageTitle'),
+  message: t('cloudStorageDetail'),
+});
 /** Shows a transient notice under the status button, e.g. that a board opened read-only. */
 function showCloudToast(message: string): void {
   document.getElementById('cloud-toast')?.remove();
@@ -240,9 +312,7 @@ function createController(history: History) {
       button.textContent = t(action);
       button.addEventListener('click', () => {
         closePopover();
-        void popoverAction(action).catch(() =>
-          dialog(t('cloudStorageError'), []),
-        );
+        void popoverAction(action).catch(() => dialog(storageDialog()));
       });
       list.append(button);
     }
@@ -321,11 +391,12 @@ function createController(history: History) {
   async function license(): Promise<void> {
     if (resolving) return;
     resolving = true;
-    const value = await dialog(
-      t('cloudLicenseNeeded'),
-      ['cloudStoreKey'],
-      true,
-    );
+    const value = await dialog({
+      title: t('cloudLicense'),
+      message: t('cloudLicenseNeeded'),
+      choices: [{ key: 'cloudStoreKey', primary: true }],
+      license: true,
+    });
     resolving = false;
     if (value?.trim()) {
       try {
@@ -336,18 +407,22 @@ function createController(history: History) {
         } else if (client.editable && client.error === 402)
           await client.retry();
       } catch {
-        await dialog(t('cloudStorageError'), []);
+        await dialog(storageDialog());
       }
     }
   }
   async function resolveConflict(): Promise<void> {
     if (resolving) return;
     resolving = true;
-    const choice = await dialog(t('cloudConflictMessage'), [
-      'cloudKeepMine',
-      'cloudTakeTheirs',
-      'cloudSaveCopy',
-    ]);
+    const choice = await dialog({
+      title: t('cloudConflictTitle'),
+      message: t('cloudConflictDetail'),
+      choices: [
+        { key: 'cloudKeepMine', hint: 'cloudKeepMineHint' },
+        { key: 'cloudTakeTheirs', hint: 'cloudTakeTheirsHint' },
+        { key: 'cloudSaveCopy', hint: 'cloudSaveCopyHint' },
+      ],
+    });
     resolving = false;
     try {
       if (choice === 'cloudKeepMine') await client.keepMine();
@@ -364,8 +439,7 @@ function createController(history: History) {
       }
     } catch (error) {
       await dialog(
-        t(errorKey(error instanceof CloudError ? error.status : 503)),
-        [],
+        errorDialog(error instanceof CloudError ? error.status : 503),
       );
     }
     if (client.state === 'conflict' && choice) void resolveConflict();
@@ -382,12 +456,20 @@ function createController(history: History) {
       getLiveSessionUrl() ||
       new URL(location.href).searchParams.has('live')
     ) {
-      await dialog(t('cloudLeaveLive'), []);
+      await dialog({
+        title: t('cloudLeaveLiveTitle'),
+        message: t('cloudLeaveLive'),
+      });
       return;
     }
     if (creating) return;
     creating = true;
-    if ((await dialog(t('cloudPublicNotice'), ['cloudSave'])) !== 'cloudSave') {
+    const confirmed = await dialog({
+      title: t('cloudSaveTitle'),
+      message: t('cloudPublicDetail'),
+      choices: [{ key: 'cloudSave', primary: true }],
+    });
+    if (confirmed !== 'cloudSave') {
       creating = false;
       document.dispatchEvent(new Event('markasso-cloud-change'));
       return;
@@ -405,8 +487,7 @@ function createController(history: History) {
       if (!(error instanceof CloudError && error.status === 402)) {
         retryCreate = false;
         await dialog(
-          t(errorKey(error instanceof CloudError ? error.status : 503)),
-          [],
+          errorDialog(error instanceof CloudError ? error.status : 503),
         );
       }
     } finally {
@@ -446,7 +527,7 @@ function createController(history: History) {
       openError = error instanceof CloudError ? error.status : 503;
       client.detach();
       render();
-      await dialog(t(errorKey(openError)), []);
+      await dialog(errorDialog(openError));
     }
     document.dispatchEvent(new Event('markasso-cloud-change'));
   }
@@ -466,8 +547,11 @@ function createController(history: History) {
       if (action === 'cloudLicense') {
         if (client.license) {
           if (
-            (await dialog(t('cloudKeyStored'), ['cloudRemoveKey'])) ===
-            'cloudRemoveKey'
+            (await dialog({
+              title: t('cloudLicense'),
+              message: t('cloudKeyStored'),
+              choices: [{ key: 'cloudRemoveKey' }],
+            })) === 'cloudRemoveKey'
           )
             client.setLicense('');
         } else await license();

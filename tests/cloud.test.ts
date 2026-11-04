@@ -10,7 +10,7 @@ import {
   parseBoardUrl,
   TOKEN_KEY,
 } from '../src/io/cloud';
-import { initCloudBoards } from '../src/ui/cloud_boards';
+import { cloudAction, initCloudBoards } from '../src/ui/cloud_boards';
 
 vi.mock('../src/config/features', () => ({ CLOUD_ENABLED: true }));
 
@@ -397,8 +397,11 @@ describe('cloud board conflict UI', () => {
     ctx.fetcher.mockResolvedValueOnce(
       response({ ...board(5), elements: newer.elements }),
     );
-    const modal = body.children[1]!;
-    modal.children[2]!.dispatchEvent(new Event('click'));
+    const find = (node: Node, choice: string): Node | undefined =>
+      node.dataset.choice === choice
+        ? node
+        : node.children.map((child) => find(child, choice)).find(Boolean);
+    find(body, 'cloudTakeTheirs')!.dispatchEvent(new Event('click'));
     await vi.advanceTimersByTimeAsync(0);
     expect(history.present.elements).toEqual(newer.elements);
     expect(history.present.appState).toBe(appState);
@@ -644,5 +647,81 @@ describe('injected fetch', () => {
     await client.flush();
     expect(client.state).toBe('saved');
     expect(client.version).toBe(2);
+  });
+});
+
+describe('cloud dialog', () => {
+  class Node extends EventTarget {
+    textContent = '';
+    className = '';
+    autofocus = false;
+    children: Node[] = [];
+    dataset: Record<string, string> = {};
+    classList = { add() {}, toggle() {} };
+    focus = vi.fn();
+    showModal = vi.fn();
+    close = vi.fn();
+    remove = vi.fn();
+    append(...nodes: Node[]) {
+      this.children.push(...nodes);
+    }
+    prepend(...nodes: Node[]) {
+      this.children.unshift(...nodes);
+    }
+    setAttribute() {}
+  }
+  const all = (node: Node): Node[] => [
+    node,
+    ...node.children.flatMap((child) => all(child)),
+  ];
+  async function openSaveDialog() {
+    const body = new Node();
+    const previous = new Node();
+    vi.stubGlobal('HTMLElement', Node);
+    vi.stubGlobal('document', {
+      body,
+      activeElement: previous,
+      documentElement: { getAttribute: () => null },
+      createElement: () => new Node(),
+      querySelector: () => null,
+      getElementById: () => null,
+      dispatchEvent: vi.fn(),
+    });
+    vi.stubGlobal('window', {
+      addEventListener: vi.fn(),
+      matchMedia: () => ({ matches: false }),
+    });
+    vi.stubGlobal('location', new URL('https://markasso.it/'));
+    const ctx = setup();
+    vi.stubGlobal('localStorage', ctx.storage);
+    vi.stubGlobal('fetch', ctx.fetcher);
+    const history = new History(scene);
+    await initCloudBoards(history);
+    cloudAction(history, 'cloudSave');
+    await vi.advanceTimersByTimeAsync(0);
+    const modal = body.children.find((node) =>
+      node.className.includes('cloud-dialog'),
+    )!;
+    return { modal, previous, ctx, nodes: all(modal) };
+  }
+  it('has a title, one primary action and focuses it', async () => {
+    const { modal, nodes } = await openSaveDialog();
+    expect(modal.showModal).toHaveBeenCalled();
+    expect(nodes.find((n) => n.className === 'cd-title')?.textContent).toBe(
+      'cloudSaveTitle',
+    );
+    const primary = nodes.filter((n) => n.className === 'cd-cta');
+    expect(primary).toHaveLength(1);
+    expect(primary[0]!.dataset.choice).toBe('cloudSave');
+    expect(primary[0]!.autofocus).toBe(true);
+    expect(nodes.some((n) => n.dataset.choice === 'cloudCancel')).toBe(true);
+  });
+  it('treats Escape as cancel and returns focus', async () => {
+    const { modal, previous, ctx } = await openSaveDialog();
+    modal.dispatchEvent(new Event('cancel', { cancelable: true }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(modal.remove).toHaveBeenCalled();
+    expect(previous.focus).toHaveBeenCalled();
+    expect(ctx.fetcher).not.toHaveBeenCalled();
   });
 });

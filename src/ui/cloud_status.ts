@@ -58,7 +58,7 @@ const DETAIL: Record<CloudStatusKind, string> = {
   saved: 'cloudDetailSaved',
   pending: 'cloudDetailPending',
   syncing: 'cloudDetailSyncing',
-  conflict: 'cloudConflictMessage',
+  conflict: 'cloudConflictDetail',
   offline: 'cloudDetailOffline',
   readOnly: 'cloudDetailReadOnly',
   revoked: 'cloudDetailRevoked',
