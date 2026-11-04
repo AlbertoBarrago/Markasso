@@ -46,7 +46,7 @@ function createEnv(
     ASSETS: {
       fetch: vi.fn().mockResolvedValue(new Response('asset')),
     },
-    REPORT_REPO: 'AlbertoBarrago/Markasso',
+    REPORT_REPO: 'AlbertoBarrago/markasso',
     GITHUB_TOKEN: 'test-token',
   } as unknown as Env;
 }
@@ -155,7 +155,7 @@ describe('report worker', () => {
     expect(payload.url).toBe('https://github.com/x/y/issues/1');
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://api.github.com/repos/AlbertoBarrago/Markasso/issues',
+      'https://api.github.com/repos/AlbertoBarrago/markasso/issues',
       expect.objectContaining({ method: 'POST' }),
     );
     expect(env.SHARE_LINKS.put).toHaveBeenCalledWith(

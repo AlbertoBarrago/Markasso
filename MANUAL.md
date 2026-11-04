@@ -386,7 +386,7 @@ Choose **Menu → Connect AI agent**, or `⌘K` then **Connect AI agent**, for t
 
 Claude Desktop, Gemini CLI and LM Studio take the same `npx -y @markasso/mcp@latest` command in their `mcpServers` configuration. Then ask the agent to draw, for example "Draw the architecture of a checkout service with icons and give me a share link".
 
-**Drawing together with an agent:** start a live session, then choose **⋯ More tools → Invite AI agent**. A prompt with the session link is copied: paste it into your agent and it joins the board, visible in the participant list. Anyone with a live link can edit the board, the agent included, and labels written by others are content the agent reads: keep that in mind when the agent has other powerful tools. Full tool list and security notes: [mcp/README.md](https://github.com/AlbertoBarrago/Markasso/blob/main/mcp/README.md).
+**Drawing together with an agent:** start a live session, then choose **⋯ More tools → Invite AI agent**. A prompt with the session link is copied: paste it into your agent and it joins the board, visible in the participant list. Anyone with a live link can edit the board, the agent included, and labels written by others are content the agent reads: keep that in mind when the agent has other powerful tools. Full tool list and security notes: [mcp/README.md](https://github.com/AlbertoBarrago/markasso/blob/main/mcp/README.md).
 
 ---
 

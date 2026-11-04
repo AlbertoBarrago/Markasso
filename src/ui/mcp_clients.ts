@@ -9,7 +9,7 @@
 export const MCP_PACKAGE = '@markasso/mcp@latest';
 
 export const MCP_DOCS_URL =
-  'https://github.com/AlbertoBarrago/Markasso/blob/main/mcp/README.md';
+  'https://github.com/AlbertoBarrago/markasso/blob/main/mcp/README.md';
 
 export interface McpClient {
   readonly id: string;

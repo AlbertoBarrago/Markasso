@@ -6,7 +6,7 @@ interface __BaseEnv_Env {
 	SHARE_RATE_LIMITER: RateLimit;
 	REPORT_RATE_LIMITER: RateLimit;
 	ASSETS: Fetcher;
-	REPORT_REPO: "AlbertoBarrago/Markasso";
+	REPORT_REPO: "AlbertoBarrago/markasso";
 	SESSION_ROOMS: DurableObjectNamespace<import("./src/worker").SessionRoom>;
 }
 declare namespace Cloudflare {
