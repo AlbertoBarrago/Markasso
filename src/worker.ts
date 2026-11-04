@@ -426,6 +426,11 @@ export async function readJsonBody(
 const worker = {
   async fetch(request, env): Promise<Response> {
     const url = new URL(request.url);
+    const isBoardRoute =
+      url.pathname === '/api/board' || url.pathname.startsWith('/api/board/');
+    if (isBoardRoute && env.CLOUD_ENABLED !== 'true') {
+      return jsonResponse(request, url, { error: 'Not found' }, 404);
+    }
     const isApiRoute =
       url.pathname === '/api/share' ||
       url.pathname.startsWith('/api/share/') ||
@@ -615,7 +620,7 @@ const worker = {
    */
   async scheduled(_controller, env, _ctx): Promise<void> {
     try {
-      await purgeBoards(env);
+      if (env.CLOUD_ENABLED === 'true') await purgeBoards(env);
     } catch {
       console.log('[cron] board cleanup unavailable');
     }

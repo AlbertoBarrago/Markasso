@@ -1,11 +1,14 @@
+import { CLOUD_ENABLED } from './src/config/features';
 import type { Scene } from './src/core/scene';
 import { createScene } from './src/core/scene';
 import { fitToElements } from './src/core/viewport';
 import { History } from './src/engine/history';
+import { parseBoardUrl } from './src/io/cloud';
 import { getLiveRoomId, joinLiveSession } from './src/io/realtime';
 import { initSession, loadSession } from './src/io/session';
 import { decodeScene, isShareHash } from './src/io/share';
 import { initCanvasView } from './src/ui/canvas_view';
+import { initCloudBoards } from './src/ui/cloud_boards';
 import { initCommandPalette } from './src/ui/command_palette';
 import { initContextPanel } from './src/ui/context_panel';
 import { initElementSearch } from './src/ui/element_search';
@@ -62,9 +65,13 @@ async function bootstrap(): Promise<void> {
     throw new Error('Missing required DOM elements');
   }
 
+  const cloudRoute = CLOUD_ENABLED
+    ? parseBoardUrl(new URL(location.href))
+    : null;
+
   // Check for share link in URL hash — takes priority over session
   let sharedElements: Awaited<ReturnType<typeof decodeScene>> = null;
-  if (isShareHash(location.hash)) {
+  if (!cloudRoute && isShareHash(location.hash)) {
     sharedElements = await decodeScene(location.hash);
     if (sharedElements) {
       // Remove hash from URL without reloading to keep the URL clean after load
@@ -82,7 +89,7 @@ async function bootstrap(): Promise<void> {
       { maxZoom: 1 },
     );
     baseScene = { ...createScene(), elements: sharedElements, viewport: vp };
-  } else if (session) {
+  } else if (session && !cloudRoute) {
     const base = createScene();
     baseScene = {
       ...base,
@@ -99,6 +106,8 @@ async function bootstrap(): Promise<void> {
     baseScene = createScene();
   }
   const hist = new History(baseScene);
+
+  await initCloudBoards(hist);
 
   // Restore persisted UI settings before first paint
   applySettings(appEl, loadSettings());
@@ -134,12 +143,14 @@ async function bootstrap(): Promise<void> {
   initSession(hist);
   // People arriving through a shared or live link see the board first; the
   // notice stays unseen and shows on their next plain visit.
-  const invited = sharedElements !== null || getLiveRoomId() !== null;
+  const invited =
+    !!cloudRoute || sharedElements !== null || getLiveRoomId() !== null;
   const showedWhatsNew = !invited && initWhatsNew(appEl);
-  if (!showedWhatsNew && !session && !sharedElements) initWelcome(appEl, hist);
+  if (!invited && !showedWhatsNew && !session && !sharedElements)
+    initWelcome(appEl, hist);
 
   // Join a live session if the URL points to one (…?live=roomId)
-  if (getLiveRoomId()) {
+  if (!cloudRoute && getLiveRoomId()) {
     joinLiveSession(hist, {
       onStatus: (connected) => {
         setLiveUI(connected);

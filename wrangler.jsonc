@@ -65,10 +65,76 @@
     { "binding": "BOARDS_BUCKET", "bucket_name": "markasso-boards" }
   ],
   "vars": {
+    "CLOUD_ENABLED": "false",
     "CLOUD_REQUIRES_LICENSE": "false",
     "REPORT_REPO": "AlbertoBarrago/Markasso"
   },
   "triggers": {
     "crons": ["0 12 * * *"]
+  },
+  "env": {
+    "nightly": {
+      "name": "markasso-nightly",
+      "workers_dev": true,
+      "routes": [],
+      "vars": {
+        "CLOUD_ENABLED": "true",
+        "CLOUD_REQUIRES_LICENSE": "false",
+        "REPORT_REPO": "AlbertoBarrago/Markasso"
+      },
+      "d1_databases": [
+        {
+          "binding": "BOARDS_DB",
+          "database_name": "markasso-nightly-boards",
+          "database_id": "7d42221b-5805-4417-b347-9bd89e40de89"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "BOARDS_BUCKET",
+          "bucket_name": "markasso-nightly-boards"
+        }
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "SESSION_ROOMS",
+            "class_name": "SessionRoom"
+          }
+        ]
+      },
+      "kv_namespaces": [
+        {
+          "binding": "SHARE_LINKS",
+          "id": "4cef1423e03b489fa3d3dded05a6eb6d"
+        }
+      ],
+      "ratelimits": [
+        {
+          "name": "BOARD_RATE_LIMITER",
+          "namespace_id": "27081603",
+          "simple": {
+            "limit": 30,
+            "period": 60
+          }
+        },
+        {
+          "name": "SHARE_RATE_LIMITER",
+          "namespace_id": "27081601",
+          "simple": {
+            "limit": 30,
+            "period": 60
+          }
+        },
+        {
+          "name": "REPORT_RATE_LIMITER",
+          "namespace_id": "27081602",
+          "simple": {
+            "limit": 3,
+            "period": 60
+          }
+        }
+      ]
+    }
   }
 }

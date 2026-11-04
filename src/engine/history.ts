@@ -59,6 +59,22 @@ interface DragState {
  * a live session peers apply the same patch and edits made by others survive.
  */
 export class History {
+  readOnly = false;
+
+  /** Replace a document snapshot without retaining undo entries from another board. */
+  replaceScene(elements: Scene['elements'], viewport: Scene['viewport']): void {
+    this.past = [];
+    this.future = [];
+    this.drag = null;
+    this._present = {
+      ...createScene(),
+      elements,
+      viewport,
+      appState: this._present.appState,
+    };
+    this.notify();
+  }
+
   private past: UndoEntry[] = [];
   private _present: Scene;
   private future: UndoEntry[] = [];
@@ -79,6 +95,7 @@ export class History {
   /** Call at the start of a drag (move/resize/rotate). Every command until
    *  endDrag folds into one undo step, so the drag undoes in a single Ctrl+Z. */
   beginDrag(): void {
+    if (this.readOnly) return;
     if (this.drag) return;
     this.drag = {
       change: emptyChange(),
@@ -136,6 +153,7 @@ export class History {
    *  people's actions must not pollute your undo history) and does NOT
    *  re-broadcast it via onCommand (avoids echo loops). */
   applyRemote(command: Command): void {
+    if (this.readOnly) return;
     // `isRemote` keeps per-user appState defaults (colors, stroke width, font)
     // local: remote clients apply the element changes but never inherit the
     // sender's default style.
@@ -148,6 +166,7 @@ export class History {
   /** Reset the scene to a fresh board, then replay a list of commands (used when
    *  joining a live room: the room's log is authoritative). Does not touch undo. */
   resetForLiveReplay(commands: readonly Command[], keepViewport = true): void {
+    if (this.readOnly) return;
     const viewport = this._present.viewport;
     this.past = [];
     this.future = [];
@@ -158,6 +177,12 @@ export class History {
   }
 
   dispatch(command: Command): void {
+    if (
+      this.readOnly &&
+      (!isEphemeralCommand(command.type) ||
+        command.type === 'SET_JUST_CREATED_TEXT')
+    )
+      return;
     // APPLY_STYLE targets the local selection; bake those ids into the command
     // so a shared session applies the style to the SAME elements on every
     // client (never to each peer's own selection).
@@ -186,6 +211,7 @@ export class History {
   }
 
   undo(): void {
+    if (this.readOnly) return;
     if (this.drag) {
       this.cancelDrag();
       return;
@@ -197,6 +223,7 @@ export class History {
   }
 
   redo(): void {
+    if (this.readOnly) return;
     if (this.drag) {
       this.cancelDrag();
       return;
@@ -208,10 +235,10 @@ export class History {
   }
 
   canUndo(): boolean {
-    return this.past.length > 0;
+    return !this.readOnly && this.past.length > 0;
   }
   canRedo(): boolean {
-    return this.future.length > 0;
+    return !this.readOnly && this.future.length > 0;
   }
 
   subscribe(listener: Listener): () => void {

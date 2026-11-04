@@ -9,6 +9,11 @@ import { exportMarkasso } from '../io/markasso';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 import type { SelectTool } from '../tools/select_tool';
+import {
+  CLOUD_ACTIONS,
+  cloudAction,
+  cloudActionAvailable,
+} from './cloud_boards';
 import { insertStencil } from './library_insert';
 import { SHAPE_KIND_LABEL_KEYS, shapeKindIcon } from './shape_icons';
 import { GENERIC_ICON_LABEL_KEYS, genericIconSvg } from './stencil_icons';
@@ -393,6 +398,16 @@ export function initCommandPalette(
       icon: `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2" width="14" height="16" rx="2"/><path d="M7 7h6M7 10h6M7 13h4"/></svg>`,
       execute: () => exportMarkasso(history.present),
     });
+    for (const action of CLOUD_ACTIONS.filter((action) =>
+      cloudActionAvailable(history, action),
+    ))
+      items.push({
+        id: `action:${action}`,
+        label: t(action),
+        category: 'action',
+        icon: '☁',
+        execute: () => cloudAction(history, action),
+      });
     items.push({
       id: 'action:share-link',
       label: t('shareLink'),

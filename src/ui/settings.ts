@@ -7,6 +7,12 @@ import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 import { invalidateThemeCache } from '../rendering/theme_cache';
+import {
+  CLOUD_ACTIONS,
+  cloudAction,
+  cloudActionAvailable,
+  cloudLicenseStored,
+} from './cloud_boards';
 import { copyToClipboard, showShareToast } from './share_actions';
 
 // ── Theme ─────────────────────────────────────────────────────────────────
@@ -301,6 +307,7 @@ export function initSettings(
           item('menu-share-reddit', ICONS.reddit, t('shareReddit')) +
           item('menu-share-bluesky', ICONS.bluesky, t('shareBluesky')),
       )}
+      ${CLOUD_ACTIONS.length ? parentItem('menu-cloud', ICONS.link, t('cloudMenu'), CLOUD_ACTIONS.map((action) => item(`menu-${action}`, ICONS.link, t(action))).join('')) : ''}
       ${item('menu-clear', ICONS.trash, t('clearCanvas'), 'menu-item--danger')}
       ${separator}
       ${parentItem(
@@ -613,6 +620,25 @@ export function initSettings(
     el.setAttribute('aria-checked', String(checked));
   }
   function syncPanel(): void {
+    const licenseItem = panel.querySelector('#menu-cloudLicense');
+    if (licenseItem) {
+      licenseItem.querySelector('.menu-item-label')!.textContent =
+        `${t('cloudLicense')} · ${cloudLicenseStored(history) ? t('cloudSaved') : '-'}`;
+      licenseItem.setAttribute(
+        'title',
+        t(
+          cloudLicenseStored(history) ? 'cloudKeyStored' : 'cloudLicenseNeeded',
+        ),
+      );
+    }
+    for (const action of CLOUD_ACTIONS) {
+      panel
+        .querySelector(`#menu-${action}`)!
+        .setAttribute(
+          'aria-disabled',
+          String(!cloudActionAvailable(history, action)),
+        );
+    }
     const { gridVisible, gridType } = history.present.appState;
     setChecked(
       panel.querySelector('#sp-zoom-controls')!,
@@ -711,6 +737,9 @@ export function initSettings(
   onActivate('#menu-export-html', () => exportHTML(history.present));
 
   // ── Share ────────────────────────────────────────────────────────────────
+  for (const action of CLOUD_ACTIONS)
+    onActivate(`#menu-${action}`, () => cloudAction(history, action));
+
   onActivate('#menu-share-copy', async () => {
     const url = await buildShareUrl(history.present.elements);
     const ok = await copyToClipboard(url);

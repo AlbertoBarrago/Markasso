@@ -154,7 +154,8 @@ export async function buildShareUrl(
   }
 
   const encoded = await encodeScene(elements);
-  return `${location.origin}${location.pathname}${SHORT_PREFIX}${encoded}`;
+  const path = /^\/b\//.test(location.pathname) ? '/' : location.pathname;
+  return `${location.origin}${path}${SHORT_PREFIX}${encoded}`;
 }
 
 export function getShareHash(): string {
