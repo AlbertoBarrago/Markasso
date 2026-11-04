@@ -836,6 +836,14 @@ export function initToolbar(
   peopleIsland.append(peopleTrigger, peoplePanel);
 
   topRight.append(peopleIsland, nameIsland);
+  // Cloud boards start before the toolbar (main.ts) and park their status
+  // button in a fixed fallback island at this same corner, where it would sit
+  // on top of the live chips. Adopt it so the corner lays out as one row.
+  const cloudStatus = document.querySelector('.cloud-status-island--floating');
+  if (cloudStatus) {
+    cloudStatus.classList.remove('cloud-status-island--floating');
+    topRight.prepend(cloudStatus);
+  }
 
   // Top-left: menu button (settings.ts) | coffee (star_cta.ts)
   const topLeft = div('tb-island-topleft');
