@@ -59,6 +59,8 @@
   "moveToolbar": "Mover a barra de ferramentas",
   "moreTools": "Mais ferramentas",
   "startLiveSession": "Iniciar sessão ao vivo",
+  "leaveLiveSession": "Sair da sessão ao vivo",
+  "liveLeft": "Você saiu da sessão ao vivo. O quadro fica aqui como cópia.",
   "inviteAiAgent": "Convidar agente de IA",
   "inviteAiAgentNeedsLive": "Inicie primeiro uma sessão ao vivo",
   "inviteAiAgentLocked": "Com Markasso Cloud",

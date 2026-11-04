@@ -142,7 +142,22 @@ let activeSession: {
   self: PeerInfo;
   send: (msg: unknown) => void;
   emitPeers: () => void;
+  leave: () => void;
 } | null = null;
+
+/**
+ * Leaves the live session this tab is in: closes the socket without
+ * reconnecting, stops relaying commands and the cursor, clears the remote
+ * cursors and people, and drops `?live=` from the address so a reload does
+ * not rejoin. The board stays as it is, as a local copy. Other peers stay in
+ * the room. Returns false when there was no session to leave.
+ */
+export function leaveLiveSession(): boolean {
+  const session = activeSession;
+  if (!session) return false;
+  session.leave();
+  return true;
+}
 
 /** Subscribers (the people list UIs) notified whenever presence changes. */
 const peerListeners = new Set<(others: PeerInfo[], self: PeerInfo) => void>();
@@ -218,6 +233,7 @@ export function joinLiveSession(
   let ready = false;
   let reconnectAttempt = 0;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let left = false;
 
   function send(msg: unknown): void {
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
@@ -229,7 +245,40 @@ export function joinLiveSession(
     for (const cb of peerListeners) cb(others, self);
   };
 
-  activeSession = { roomId, self, send, emitPeers };
+  function leave(): void {
+    left = true;
+    ready = false;
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    const socket = ws;
+    ws = null;
+    if (socket) {
+      // Detach first: the close handler would otherwise schedule a reconnect.
+      socket.onclose = null;
+      socket.onerror = null;
+      socket.onmessage = null;
+      try {
+        socket.close(1000, 'left');
+      } catch {
+        /* already closing */
+      }
+    }
+    history.setOnCommand(undefined);
+    setLocalCursorSender(null);
+    clearCursors();
+    peers.clear();
+    emitPeers();
+    if (activeSession?.leave === leave) activeSession = null;
+    const url = new URL(location.href);
+    if (url.searchParams.has(LIVE_PARAM)) {
+      url.searchParams.delete(LIVE_PARAM);
+      window.history.replaceState(window.history.state, '', url);
+    }
+  }
+
+  activeSession = { roomId, self, send, emitPeers, leave };
 
   // When connected, our own pointer moves broadcast through this sender.
   // Registered once: it survives reconnects since `send` always targets the
@@ -252,7 +301,7 @@ export function joinLiveSession(
   }
 
   function scheduleReconnect(): void {
-    if (reconnectTimer) return;
+    if (left || reconnectTimer) return;
     const delay = Math.min(
       RECONNECT_BASE_MS * 2 ** reconnectAttempt,
       RECONNECT_MAX_MS,
@@ -265,6 +314,7 @@ export function joinLiveSession(
   }
 
   function connect(): void {
+    if (left) return;
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = `${proto}//${location.host}/session/ws?room=${encodeURIComponent(roomId)}&clientId=${encodeURIComponent(getClientId())}`;
     const socket = new WebSocket(url);

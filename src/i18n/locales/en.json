@@ -64,6 +64,8 @@
   "moveToolbar": "Move toolbar",
   "moreTools": "More tools",
   "startLiveSession": "Start live session",
+  "leaveLiveSession": "Leave live session",
+  "liveLeft": "You left the live session. The board stays here as a copy.",
   "inviteAiAgent": "Invite AI agent",
   "inviteAiAgentNeedsLive": "Start a live session first",
   "inviteAiAgentLocked": "With Markasso Cloud",
