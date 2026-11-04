@@ -9,6 +9,8 @@ import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 import { invalidateThemeCache } from '../rendering/theme_cache';
 import {
   CLOUD_ACTIONS,
+  CLOUD_GROUPS,
+  cloudSeparators,
   cloudAction,
   cloudActionAvailable,
   cloudLicenseStored,
@@ -121,6 +123,30 @@ function p(d: string): string {
 }
 
 const ICONS = {
+  // Cloud submenu: one distinct glyph per action instead of the shared link.
+  cloud: svg(
+    p('M6 15.5H5a3.5 3.5 0 01-.5-6.97A5 5 0 0114.3 7 3.5 3.5 0 0115 14H6z'),
+  ),
+  cloudSave: svg(
+    p('M6 15.5H5a3.5 3.5 0 01-.5-6.97A5 5 0 0114.3 7 3.5 3.5 0 0115 14h-1') +
+      p('M10 10.5v6M7.5 13L10 10.5l2.5 2.5'),
+  ),
+  cloudReadLink: svg(
+    p('M1.5 10S4.5 4.5 10 4.5 18.5 10 18.5 10 15.5 15.5 10 15.5 1.5 10 1.5 10z') +
+      '<circle cx="10" cy="10" r="2.5"/>',
+  ),
+  cloudEditLink: svg(p('M13.5 3.5l3 3L7 16H4v-3z') + p('M11.5 5.5l3 3')),
+  cloudMac: svg('<rect x="4" y="4.5" width="12" height="8.5" rx="1"/>' + p('M2 16h16')),
+  cloudDuplicate: svg(
+    '<rect x="7" y="7" width="9" height="9" rx="1.5"/>' +
+      p('M13 7V5.5A1.5 1.5 0 0011.5 4h-6A1.5 1.5 0 004 5.5v6A1.5 1.5 0 005.5 13H7'),
+  ),
+  cloudLicense: svg(
+    '<circle cx="7" cy="13" r="3.5"/>' + p('M9.5 10.5L16 4M13.5 6.5l2 2M15.5 4.5L17 6'),
+  ),
+  cloudSubscription: svg(
+    '<rect x="2.5" y="5" width="15" height="10" rx="1.5"/>' + p('M2.5 8.5h15M5.5 12h3'),
+  ),
   gear: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.33 4.32c.43-1.76 2.93-1.76 3.35 0a1.72 1.72 0 0 0 2.57 1.07c1.54-.94 3.31.83 2.37 2.37a1.72 1.72 0 0 0 1.06 2.57c1.76.43 1.76 2.93 0 3.35a1.72 1.72 0 0 0-1.07 2.57c.94 1.54-.83 3.31-2.37 2.37a1.72 1.72 0 0 0-2.57 1.06c-.43 1.76-2.93 1.76-3.35 0a1.72 1.72 0 0 0-2.57-1.07c-1.54.94-3.31-.83-2.37-2.37a1.72 1.72 0 0 0-1.06-2.57c-1.76-.43-1.76-2.93 0-3.35a1.72 1.72 0 0 0 1.07-2.57c-.94-1.54.83-3.31 2.37-2.37 1 .61 2.3.07 2.57-1.06z"/><circle cx="12" cy="12" r="3"/></svg>`,
   open: svg(
     p('M2 9a2 2 0 012-2h4l2-2h6a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2z'),
@@ -286,6 +312,42 @@ export function initSettings(
   const kbd = (key: string): string =>
     `<kbd class="menu-item-kbd" aria-hidden="true">${key}</kbd>`;
 
+  /**
+   * The Cloud submenu: the licence note, then three groups (saving, the open
+   * board, the account) split by separators that syncPanel hides when a
+   * group around them is empty.
+   */
+  const cloudSubmenu = (): string => {
+    const groups = CLOUD_GROUPS.map((group) =>
+      group
+        .filter((action) => (CLOUD_ACTIONS as readonly string[]).includes(action))
+        .map((action) =>
+          item(
+            `menu-${action}`,
+            ICONS[action],
+            t(action),
+            '',
+            action === 'cloudLicense'
+              ? `<span class="menu-item-hint" id="menu-cloudLicense-hint" aria-hidden="true"></span>`
+              : action === 'cloudSubscription'
+                ? hint('↗')
+                : '',
+          ),
+        )
+        .join(''),
+    );
+    return (
+      `<li role="presentation" class="menu-cloud-note" id="menu-cloud-note">${t('cloudMenuNote')}</li>` +
+      groups
+        .map((html, i) =>
+          i === 0
+            ? html
+            : `<li role="separator" class="menu-divider" id="menu-cloud-sep-${i}"></li>${html}`,
+        )
+        .join('')
+    );
+  };
+
   panel.innerHTML = `
     <ul class="menu-body" role="menu" id="menu-list" aria-labelledby="menu-btn">
       ${item('menu-open', ICONS.open, t('menuOpen'))}
@@ -307,7 +369,7 @@ export function initSettings(
           item('menu-share-reddit', ICONS.reddit, t('shareReddit')) +
           item('menu-share-bluesky', ICONS.bluesky, t('shareBluesky')),
       )}
-      ${CLOUD_ACTIONS.length ? parentItem('menu-cloud', ICONS.link, t('cloudMenu'), `<li role="presentation" class="menu-cloud-note" id="menu-cloud-note">${t('cloudMenuNote')}</li>` + CLOUD_ACTIONS.map((action) => item(`menu-${action}`, ICONS.link, t(action))).join('')) : ''}
+      ${CLOUD_ACTIONS.length ? parentItem('menu-cloud', ICONS.cloud, t('cloudMenu'), cloudSubmenu()) : ''}
       ${item('menu-clear', ICONS.trash, t('clearCanvas'), 'menu-item--danger')}
       ${separator}
       ${parentItem(
@@ -622,8 +684,10 @@ export function initSettings(
   function syncPanel(): void {
     const licenseItem = panel.querySelector('#menu-cloudLicense');
     if (licenseItem) {
-      licenseItem.querySelector('.menu-item-label')!.textContent =
-        `${t('cloudLicense')} · ${cloudLicenseStored(history) ? t('cloudSaved') : '-'}`;
+      const active = cloudLicenseStored(history);
+      panel.querySelector('#menu-cloudLicense-hint')!.textContent = active
+        ? t('cloudLicenseActive')
+        : '';
       licenseItem.setAttribute(
         'title',
         t(
@@ -639,6 +703,16 @@ export function initSettings(
       panel.querySelector(`#menu-${action}`)!.closest('li')!.hidden =
         !cloudActionAvailable(history, action);
     }
+    const shown = CLOUD_GROUPS.map((group) =>
+      group.some(
+        (action) =>
+          (CLOUD_ACTIONS as readonly string[]).includes(action) && cloudActionAvailable(history, action),
+      ),
+    );
+    cloudSeparators(shown).forEach((visible, i) => {
+      const sep = panel.querySelector<HTMLElement>(`#menu-cloud-sep-${i}`);
+      if (sep) sep.hidden = !visible;
+    });
     const { gridVisible, gridType } = history.present.appState;
     setChecked(
       panel.querySelector('#sp-zoom-controls')!,

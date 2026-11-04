@@ -103,6 +103,8 @@ describe.each([false, true])('cloud UI enabled=%s', (enabled) => {
     )!.innerHTML;
     expect(menu.includes('id="menu-cloud"')).toBe(enabled);
     expect(menu.includes('id="menu-cloud-note"')).toBe(enabled);
+    expect(menu.includes('id="menu-cloud-sep-1"')).toBe(enabled);
+    expect(menu.includes('id="menu-cloud-sep-2"')).toBe(enabled);
     const actions = [
       'cloudSave',
       'cloudReadLink',
@@ -125,9 +127,22 @@ describe.each([false, true])('cloud UI enabled=%s', (enabled) => {
       'share sheet ready',
     );
     const mobile = nodes.find((node) => node.id === 'mobile-share-sheet')!;
-    // The licence note comes first, then one button per cloud action.
+    // The licence note, then the three groups split by two dividers ('').
     expect(mobile.children.map((node) => node.textContent)).toEqual(
-      enabled ? ['cloudMenuNote', ...actions] : [],
+      enabled
+        ? [
+            'cloudMenuNote',
+            'cloudSave',
+            '',
+            'cloudReadLink',
+            'cloudEditLink',
+            'cloudMac',
+            'cloudDuplicate',
+            '',
+            'cloudLicense',
+            'cloudSubscription',
+          ]
+        : [],
     );
 
     const { initCommandPalette } = await import('../src/ui/command_palette');

@@ -15,7 +15,9 @@ import {
 } from './arrow_head_icons';
 import {
   CLOUD_ACTIONS,
+  CLOUD_GROUPS,
   cloudAction,
+  cloudSeparators,
   cloudActionAvailable,
   cloudLicenseStored,
 } from './cloud_boards';
@@ -144,32 +146,48 @@ export function initMobileActionBar(
     <div class="pp-mobile" id="mss-people"></div>
   `;
   if (CLOUD_ACTIONS.length) {
-    // Same rule as the menu (settings.ts): a note until a licence is stored,
-    // and only the cloud actions that can be used right now.
+    // Same layout and rules as the Cloud submenu (settings.ts): a note until a
+    // licence is stored, the CLOUD_GROUPS split by dividers, and only the
+    // actions that can be used right now.
     const note = document.createElement('p');
     note.className = 'mss-cloud-note';
     note.textContent = t('cloudMenuNote');
-    const sync = (): void => {
-      note.hidden = cloudLicenseStored(history);
-    };
-    document.addEventListener('markasso-cloud-change', sync);
-    sync();
     shareSheet.append(note);
-  }
-  for (const action of CLOUD_ACTIONS) {
-    const button = document.createElement('button');
-    button.className = 'mss-share-btn';
-    button.textContent = t(action);
-    button.addEventListener('click', () => {
-      shareSheet.classList.remove('open');
-      cloudAction(history, action);
+    const groups = CLOUD_GROUPS.map((group, i) => {
+      const divider =
+        i === 0 ? null : document.createElement('div');
+      if (divider) {
+        divider.className = 'mss-divider';
+        divider.setAttribute('role', 'separator');
+        shareSheet.append(divider);
+      }
+      const buttons = group.map((action) => {
+        const button = document.createElement('button');
+        button.className = 'mss-share-btn';
+        button.textContent = t(action);
+        button.addEventListener('click', () => {
+          shareSheet.classList.remove('open');
+          cloudAction(history, action);
+        });
+        shareSheet.append(button);
+        return { action, button };
+      });
+      return { divider, buttons };
     });
     const sync = (): void => {
-      button.hidden = !cloudActionAvailable(history, action);
+      note.hidden = cloudLicenseStored(history);
+      const shown = groups.map(({ buttons }) => {
+        for (const { action, button } of buttons)
+          button.hidden = !cloudActionAvailable(history, action);
+        return buttons.some(({ button }) => !button.hidden);
+      });
+      const separators = cloudSeparators(shown);
+      groups.forEach(({ divider }, i) => {
+        if (divider) divider.hidden = !separators[i];
+      });
     };
     document.addEventListener('markasso-cloud-change', sync);
     sync();
-    shareSheet.append(button);
   }
   initPeopleList(shareSheet.querySelector<HTMLElement>('#mss-people')!);
 

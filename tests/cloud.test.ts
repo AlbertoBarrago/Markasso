@@ -14,6 +14,7 @@ import {
 import {
   cloudAction,
   cloudActionAvailable,
+  cloudSeparators,
   initCloudBoards,
 } from '../src/ui/cloud_boards';
 
@@ -795,5 +796,20 @@ describe('licence check', () => {
       'https://markasso-nightly.example.dev/cloud',
     );
     expect(cloudPageUrl('https://markasso.it')).toBe('https://markasso.it/cloud');
+  });
+});
+
+describe('cloud menu separators', () => {
+  it.each([
+    // [groups with an item] -> [separator before each group]
+    [[true, true, true], [false, true, true]],
+    // Licence but no open board: one line between saving and the account.
+    [[true, false, true], [false, false, true]],
+    // No licence: only the account group, no line at all.
+    [[false, false, true], [false, false, false]],
+    // An open board without a licence: board group then account.
+    [[false, true, true], [false, false, true]],
+  ])('%j -> %j', (shown, expected) => {
+    expect(cloudSeparators(shown)).toEqual(expected);
   });
 });

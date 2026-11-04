@@ -314,3 +314,7 @@
 .menu-cloud-note[hidden] {
   display: none;
 }
+/* Cloud submenu labels stay on one line; the submenu grows to fit them. */
+#menu-cloud-sub .menu-item-label {
+  white-space: nowrap;
+}
