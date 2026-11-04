@@ -4,6 +4,13 @@ All notable changes to `@markasso/mcp` are documented here. The MCP server is ve
 
 ---
 
+## [0.5.1] - 2026-11-04
+
+### Fixed
+- **Node keys as the model wrote them.** A node added as "Client" can be connected, updated, removed or laid out as "Client" as well as "client": tools first match the exact key, then the key as `diagram_add_nodes` normalizes it.
+
+---
+
 ## [0.5.0] - 2026-11-04
 
 ### Added
