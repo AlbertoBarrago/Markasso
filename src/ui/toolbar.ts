@@ -12,6 +12,7 @@ import {
   getLiveName,
   getLiveSessionUrl,
   joinLiveSession,
+  leaveLiveSession,
   onLivePeers,
   setLiveName,
 } from '../io/realtime';
@@ -289,11 +290,29 @@ export function initToolbar(
   const liveIcon =
     '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2"/><path d="M6.5 6.5a5 5 0 000 7M13.5 6.5a5 5 0 010 7M4 4a8.5 8.5 0 000 12M16 4a8.5 8.5 0 010 12"/></svg>';
   const liveAction = addMoreItem(liveIcon, t('startLiveSession'), () => {
-    void startLiveSession();
+    if (getLiveSessionUrl()) leaveLive();
+    else void startLiveSession();
   });
   liveAction.id = 'tb-start-live';
-  onLiveReveal(() => liveAction.setAttribute('aria-disabled', 'true'));
-  onLiveHide(() => liveAction.removeAttribute('aria-disabled'));
+  const liveLabel = liveAction.querySelector('.menu-item-label')!;
+  // One item toggles between starting and leaving. It follows whether this
+  // tab is in a session, not whether the socket is connected: during a
+  // reconnect the session still exists and can be left.
+  function refreshLiveAction(): void {
+    liveLabel.textContent = t(
+      getLiveSessionUrl() ? 'leaveLiveSession' : 'startLiveSession',
+    );
+    liveAction.removeAttribute('aria-disabled');
+  }
+  function leaveLive(): void {
+    if (!leaveLiveSession()) return;
+    document.getElementById('live-status-toast')?.remove();
+    setLiveUI(false);
+    showShareToast(true, '', t('liveLeft'));
+    refreshLiveAction();
+  }
+  onLiveReveal(refreshLiveAction);
+  onLiveHide(refreshLiveAction);
   // Copies a prompt that makes an MCP-enabled agent join this room; enabled
   // only while a live session is connected, the reverse of liveAction.
   const agentIcon =
@@ -370,6 +389,7 @@ export function initToolbar(
         showLiveStatusToast(connected);
       },
     });
+    refreshLiveAction();
   }
 
   const menuItems = (): HTMLButtonElement[] =>
@@ -399,7 +419,10 @@ export function initToolbar(
     moreToggle.setAttribute('aria-expanded', String(open));
     moreToggle.classList.toggle('open', open);
     // The licence may have been entered since the menu was last built.
-    if (open) refreshInviteAgent();
+    if (open) {
+      refreshInviteAgent();
+      refreshLiveAction();
+    }
     if (open) {
       const popup = document.getElementById('mobile-tools-popup');
       if (popup) {

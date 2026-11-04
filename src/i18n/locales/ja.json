@@ -59,6 +59,8 @@
   "moveToolbar": "ツールバーを移動",
   "moreTools": "その他のツール",
   "startLiveSession": "ライブセッションを開始",
+  "leaveLiveSession": "ライブセッションを退出",
+  "liveLeft": "ライブセッションを退出しました。ボードはコピーとしてここに残ります。",
   "inviteAiAgent": "AIエージェントを招待",
   "inviteAiAgentNeedsLive": "先にライブセッションを開始してください",
   "inviteAiAgentLocked": "Markasso Cloudで利用可能",

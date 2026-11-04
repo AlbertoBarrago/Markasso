@@ -59,6 +59,8 @@
   "moveToolbar": "Mover la barra de herramientas",
   "moreTools": "Más herramientas",
   "startLiveSession": "Iniciar sesión en directo",
+  "leaveLiveSession": "Salir de la sesión en directo",
+  "liveLeft": "Has salido de la sesión en directo. La pizarra se queda aquí como copia.",
   "inviteAiAgent": "Invitar agente de IA",
   "inviteAiAgentNeedsLive": "Primero inicia una sesión en directo",
   "inviteAiAgentLocked": "Con Markasso Cloud",

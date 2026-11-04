@@ -59,6 +59,8 @@
   "moveToolbar": "Déplacer la barre d'outils",
   "moreTools": "Autres outils",
   "startLiveSession": "Démarrer une session en direct",
+  "leaveLiveSession": "Quitter la session en direct",
+  "liveLeft": "Vous avez quitté la session en direct. Le tableau reste ici comme copie.",
   "inviteAiAgent": "Inviter un agent IA",
   "inviteAiAgentNeedsLive": "Démarrez d'abord une session en direct",
   "inviteAiAgentLocked": "Avec Markasso Cloud",
