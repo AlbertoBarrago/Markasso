@@ -6,9 +6,10 @@
   "assets": {
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    // Navigations to /download/* must reach the worker (counted redirect),
-    // not the single-page fallback.
-    "run_worker_first": ["/download/*"]
+    // Every path the worker answers must be listed: with this option set,
+    // anything else is served by the static assets (and the single-page
+    // fallback), so a missing prefix breaks that route.
+    "run_worker_first": ["/api/*", "/session/*", "/download/*"]
   },
   "durable_objects": {
     "bindings": [
