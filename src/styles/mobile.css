@@ -361,3 +361,11 @@
   line-height: 1.4;
   color: var(--text-muted);
 }
+.mss-divider {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--island-border);
+}
+.mss-divider[hidden] {
+  display: none;
+}

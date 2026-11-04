@@ -32,6 +32,24 @@ const ALL_CLOUD_ACTIONS = [
   'cloudSubscription',
 ] as const;
 export const CLOUD_ACTIONS = CLOUD_ENABLED ? ALL_CLOUD_ACTIONS : [];
+/**
+ * How menus group the cloud actions: saving, the open cloud board, the
+ * account. Every action appears in exactly one group, in this order.
+ */
+export const CLOUD_GROUPS: readonly (readonly (typeof ALL_CLOUD_ACTIONS)[number][])[] = [
+  ['cloudSave'],
+  ['cloudReadLink', 'cloudEditLink', 'cloudMac', 'cloudDuplicate'],
+  ['cloudLicense', 'cloudSubscription'],
+];
+/**
+ * Which separators to show, given which groups have a visible item. Entry i
+ * is the separator before group i (entry 0 is always false): it shows when
+ * group i has an item and some earlier group does too, so an empty group
+ * never leaves two lines in a row or a line at an edge.
+ */
+export function cloudSeparators(shown: readonly boolean[]): boolean[] {
+  return shown.map((visible, i) => visible && shown.slice(0, i).some(Boolean));
+}
 const controllers = new WeakMap<History, ReturnType<typeof createController>>();
 export function cloudLicenseStored(history: History): boolean {
   return controllers.get(history)?.hasLicense() ?? false;
