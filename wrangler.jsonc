@@ -29,6 +29,11 @@
   ],
   "ratelimits": [
     {
+      "name": "BOARD_RATE_LIMITER",
+      "namespace_id": "27081503",
+      "simple": { "limit": 30, "period": 60 }
+    },
+    {
       "name": "SHARE_RATE_LIMITER",
       "namespace_id": "27081501",
       "simple": {
@@ -47,7 +52,20 @@
       }
     }
   ],
+  // Owner setup: pnpm exec wrangler d1 create markasso-boards
+  // Owner setup: pnpm exec wrangler r2 bucket create markasso-boards
+  "d1_databases": [
+    {
+      "binding": "BOARDS_DB",
+      "database_name": "markasso-boards",
+      "database_id": "5be9bbd2-9544-46f5-948a-b42458866139"
+    }
+  ],
+  "r2_buckets": [
+    { "binding": "BOARDS_BUCKET", "bucket_name": "markasso-boards" }
+  ],
   "vars": {
+    "CLOUD_REQUIRES_LICENSE": "false",
     "REPORT_REPO": "AlbertoBarrago/Markasso"
   },
   "triggers": {

@@ -4,3 +4,12 @@
 interface Env {
   readonly GITHUB_TOKEN: string;
 }
+
+interface Env {
+  readonly BOARDS_DB: D1Database;
+  readonly BOARDS_BUCKET: R2Bucket;
+  readonly BOARD_RATE_LIMITER: RateLimit;
+  readonly CLOUD_REQUIRES_LICENSE: string;
+  readonly LEMON_STORE_ID: string;
+  readonly LEMON_PRODUCT_ID: string;
+}
