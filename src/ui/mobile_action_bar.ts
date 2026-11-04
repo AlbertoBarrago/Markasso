@@ -17,6 +17,7 @@ import {
   CLOUD_ACTIONS,
   cloudAction,
   cloudActionAvailable,
+  cloudLicenseStored,
 } from './cloud_boards';
 import {
   bindUndoTransaction,
@@ -142,6 +143,19 @@ export function initMobileActionBar(
     <button class="mss-share-btn" id="mss-share-copylink">${IC_LINK}<span>${t('shareCopyLink')}</span></button>
     <div class="pp-mobile" id="mss-people"></div>
   `;
+  if (CLOUD_ACTIONS.length) {
+    // Same rule as the menu (settings.ts): a note until a licence is stored,
+    // and only the cloud actions that can be used right now.
+    const note = document.createElement('p');
+    note.className = 'mss-cloud-note';
+    note.textContent = t('cloudMenuNote');
+    const sync = (): void => {
+      note.hidden = cloudLicenseStored(history);
+    };
+    document.addEventListener('markasso-cloud-change', sync);
+    sync();
+    shareSheet.append(note);
+  }
   for (const action of CLOUD_ACTIONS) {
     const button = document.createElement('button');
     button.className = 'mss-share-btn';
@@ -151,7 +165,7 @@ export function initMobileActionBar(
       cloudAction(history, action);
     });
     const sync = (): void => {
-      button.disabled = !cloudActionAvailable(history, action);
+      button.hidden = !cloudActionAvailable(history, action);
     };
     document.addEventListener('markasso-cloud-change', sync);
     sync();

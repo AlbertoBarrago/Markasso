@@ -351,3 +351,13 @@
     display: none;
   }
 }
+.mss-share-btn[hidden],
+.mss-cloud-note[hidden] {
+  display: none;
+}
+.mss-cloud-note {
+  margin: 4px 2px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}

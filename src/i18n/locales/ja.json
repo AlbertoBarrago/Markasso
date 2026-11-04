@@ -288,6 +288,7 @@
   "whatsNewTips": "少し手を止めると、まだ使っていないショートカットや機能をヒントで提案します。環境設定でオフにできます。",
   "whatsNewDetails": "リリースノート",
   "cloudMenu": "クラウド",
+  "cloudMenuNote": "Markasso Cloudで、WebとMacの間でボードを保存・同期できます。",
   "cloudSave": "クラウドに保存",
   "cloudReadLink": "閲覧リンクをコピー",
   "cloudEditLink": "編集リンクをコピー",

@@ -288,6 +288,7 @@
   "whatsNewTips": "Après une courte pause, une astuce propose un raccourci ou une fonction que vous n’avez pas encore utilisé. Désactivez-les dans les Préférences.",
   "whatsNewDetails": "Notes de version",
   "cloudMenu": "Cloud",
+  "cloudMenuNote": "Enregistrez et synchronisez vos tableaux entre le web et le Mac avec Markasso Cloud.",
   "cloudSave": "Enregistrer dans le cloud",
   "cloudReadLink": "Copier le lien de lecture",
   "cloudEditLink": "Copier le lien de modification",

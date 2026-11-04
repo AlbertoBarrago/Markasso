@@ -288,6 +288,7 @@
   "whatsNewTips": "Nach einer kurzen Pause schlägt ein Tipp eine Tastenkombination oder Funktion vor, die du noch nicht genutzt hast. Abschalten kannst du sie in den Einstellungen.",
   "whatsNewDetails": "Versionshinweise",
   "cloudMenu": "Cloud",
+  "cloudMenuNote": "Speichere und synchronisiere deine Boards zwischen Web und Mac mit Markasso Cloud.",
   "cloudSave": "In der Cloud speichern",
   "cloudReadLink": "Leselink kopieren",
   "cloudEditLink": "Bearbeitungslink kopieren",

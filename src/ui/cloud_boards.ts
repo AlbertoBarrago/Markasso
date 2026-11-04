@@ -423,6 +423,7 @@ function createController(history: History) {
       await dialog(storageDialog());
       return;
     }
+    document.dispatchEvent(new Event('markasso-cloud-change'));
     if (status === 'valid') {
       launchConfetti();
       showShareToast(true, '', t('cloudKeyActive'));
@@ -563,7 +564,9 @@ function createController(history: History) {
       if (action === 'cloudLicense' || action === 'cloudSubscription')
         return true;
       if (creating) return false;
-      if (action === 'cloudSave') return !history.readOnly;
+      // Creating or updating a cloud board needs a licence: without one the
+      // action is hidden and the menu points to the licence and pricing.
+      if (action === 'cloudSave') return !history.readOnly && !!client.license;
       if (!opened || !client.id) return false;
       return action !== 'cloudEditLink' || client.editable;
     },
@@ -582,8 +585,10 @@ function createController(history: History) {
               message: t('cloudKeyStored'),
               choices: [{ key: 'cloudRemoveKey' }],
             })) === 'cloudRemoveKey'
-          )
+          ) {
             client.setLicense('');
+            document.dispatchEvent(new Event('markasso-cloud-change'));
+          }
         } else await license();
         return;
       }

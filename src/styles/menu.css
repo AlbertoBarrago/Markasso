@@ -303,3 +303,14 @@
   pointer-events: none;
   z-index: 10000;
 }
+/* Cloud submenu note shown until a licence is stored (settings.ts). */
+.menu-cloud-note {
+  max-width: 240px;
+  padding: 6px 10px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+.menu-cloud-note[hidden] {
+  display: none;
+}

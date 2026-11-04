@@ -288,6 +288,7 @@
   "whatsNewTips": "After a short pause, a tip suggests a shortcut or a feature you have not used yet. Turn tips off in Preferences.",
   "whatsNewDetails": "Release notes",
   "cloudMenu": "Cloud",
+  "cloudMenuNote": "Save and sync your boards between the web and the Mac with Markasso Cloud.",
   "cloudSave": "Save to cloud",
   "cloudReadLink": "Copy read link",
   "cloudEditLink": "Copy edit link",
