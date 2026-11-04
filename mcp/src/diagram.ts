@@ -253,10 +253,26 @@ export class Diagram {
     return byId;
   }
 
+  /**
+   * The node a caller's key names: exact keys first, then the key as addNodes
+   * normalizes it (a model that added "Client" may keep writing "Client").
+   */
+  private findId(key: string): string | undefined {
+    const normalized = slugify(key);
+    for (const candidate of normalized && normalized !== key
+      ? [key, normalized]
+      : [key]) {
+      const known = this.keys.get(candidate);
+      if (known && this.elements.some((el) => el.id === known)) return known;
+      for (const [id, k] of this.nodeKeys()) if (k === candidate) return id;
+    }
+    return undefined;
+  }
+
+  /** `findId`, or the error the model can act on. */
   private idOf(key: string): string {
-    const known = this.keys.get(key);
-    if (known && this.elements.some((el) => el.id === known)) return known;
-    for (const [id, k] of this.nodeKeys()) if (k === key) return id;
+    const id = this.findId(key);
+    if (id !== undefined) return id;
     throw new DiagramError(
       `Unknown node "${key}". Call diagram_read to see the keys.`,
     );
@@ -607,14 +623,17 @@ export class Diagram {
 
   /**
    * Arranges nodes in layers following their connections (all nodes, or
-   * only `keys`) in one undoable step. Returns how many nodes moved.
+   * only `keys`, resolved like the other tools; unknown ones are ignored) in
+   * one undoable step. Returns how many nodes moved.
    */
   layout(direction: LayoutDirection, keys?: ReadonlyArray<string>): number {
     const nodeKeys = this.nodeKeys();
-    const wanted = keys ? new Set(keys) : null;
+    const wanted = keys
+      ? new Set(keys.flatMap((key) => this.findId(key) ?? []))
+      : null;
     const nodes = this.elements.filter((el) => {
       const key = nodeKeys.get(el.id);
-      return key !== undefined && (!wanted || wanted.has(key));
+      return key !== undefined && (!wanted || wanted.has(el.id));
     });
     if (nodes.length === 0) return 0;
     const ids = new Set(nodes.map((el) => el.id));

@@ -191,6 +191,63 @@ export async function buildDiagram(): Promise<Family> {
     ] as Partial<NodeSpec>[]
   ).entries())
     await add(`node validation ${i}`, 'addNodes', [[{ key: 'a', ...spec }]]);
+  const originalKeys: Step[] = [
+    {
+      fn: 'addNodes',
+      args: [
+        [
+          { key: 'Client' },
+          { key: 'Server' },
+          { key: 'API gateway' },
+          { key: 'Città' },
+        ],
+      ],
+    },
+  ];
+  const originalConnection: Step = {
+    fn: 'connect',
+    args: [[{ from: 'Client', to: 'Server' }]],
+  };
+  await add(
+    'connect original keys',
+    'connect',
+    originalConnection.args,
+    originalKeys,
+  );
+  await add(
+    'update original spaces',
+    'update',
+    ['Orders DB', { label: 'Updated orders' }],
+    sample,
+  );
+  await add(
+    'update original accents',
+    'update',
+    ['Città', { label: 'Updated city' }],
+    originalKeys,
+  );
+  await add('remove original key', 'remove', [['API gateway']], originalKeys);
+  await add(
+    'layout original keys',
+    'layout',
+    ['TB', ['Client', 'Server', 'Città']],
+    [...originalKeys, originalConnection],
+  );
+  await add(
+    'disconnect original keys',
+    'disconnect',
+    [[{ from: 'Client', to: 'Server' }]],
+    [...originalKeys, originalConnection],
+  );
+  await add(
+    'edge update original keys',
+    'updateEdge',
+    [{ from: 'Client', to: 'Server' }, { label: 'calls' }],
+    [...originalKeys, originalConnection],
+  );
+  await add('layout unknown key', 'layout', ['TB', ['Missing Città']], sample);
+  await add('unknown original key', 'update', ['Missing Città', {}], sample);
+  await add('unknown empty slug', 'update', ['你好', {}], sample);
   await add('empty nodes', 'addNodes', [[]]);
   await add('duplicate batch', 'addNodes', [[{ key: 'API' }, { key: 'api' }]]);
   await add('duplicate existing', 'addNodes', [[{ key: 'api' }]], sample);
@@ -429,6 +486,17 @@ export async function buildDiagram(): Promise<Family> {
     { ...base, id: 'bbbb2222', type: 'rectangle', label: 'Billing service' },
     { ...base, id: 'cccc3333', type: 'ellipse' },
   ];
+  const longKey = 'a'.repeat(40);
+  await add(
+    'exact key shadows truncated slug',
+    'update',
+    [`${longKey}-2`, { label: 'Exact match' }],
+    [],
+    [
+      { ...foreign[0]!, label: longKey },
+      { ...foreign[1]!, label: longKey },
+    ],
+  );
   await add('foreign keys', 'nodeKeys', [], [], foreign);
   await add('sample keys', 'nodeKeys', [], sample);
   const arrow: Element = {
