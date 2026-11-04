@@ -19,6 +19,8 @@
     "src/worker",
     "tests/boards.test.ts",
     "tests/license.test.ts",
+    "tests/live_gate.test.ts",
+    "tests/polar_fake.ts",
     "src/env.d.ts",
     "tests/worker.test.ts"
   ]

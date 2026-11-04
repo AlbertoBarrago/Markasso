@@ -164,4 +164,29 @@ describe('LiveLink', () => {
     await diagram.addNodes([{ key: 'api' }]);
     expect(socket.sent).toHaveLength(sentBefore);
   });
+
+  it('authenticates first when MARKASSO_LICENSE is set', async () => {
+    process.env.MARKASSO_LICENSE = ' MKC-AAAAA-BBBBB-CCCCC-DDDDD-EEEEE ';
+    try {
+      const { socket } = await join(new Diagram([]), []);
+      expect(socket.sent[0]).toEqual({
+        type: 'auth',
+        license: 'MKC-AAAAA-BBBBB-CCCCC-DDDDD-EEEEE',
+      });
+      expect(socket.sent[1]).toMatchObject({ type: 'presence' });
+    } finally {
+      delete process.env.MARKASSO_LICENSE;
+    }
+  });
+
+  it('explains a missing licence when the room refuses the agent', async () => {
+    const pending = LiveLink.join(
+      new Diagram([]),
+      'https://markasso.it/?live=room-123',
+      'Claude',
+    );
+    await new Promise((r) => setTimeout(r, 0));
+    FakeSocket.last!.receive({ type: 'error', error: 'licence required' });
+    await expect(pending).rejects.toThrow(/Markasso Cloud licence/);
+  });
 });

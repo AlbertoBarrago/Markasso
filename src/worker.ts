@@ -7,6 +7,7 @@ import {
   validateReport,
 } from './io/report_validation';
 import { boardRequest, purgeBoards } from './worker/boards';
+import { licenseKeyValid } from './worker/license';
 
 const ID_LENGTH = 8;
 const ID_CHARS =
@@ -41,6 +42,12 @@ const MAX_PEERS = 20;
 const CMD_WINDOW_MS = 5000;
 const MAX_CMD_PER_WINDOW = 200;
 const MAX_MSG_BYTES = 512 * 1024;
+/** How long a gated agent has to send its `auth` message after connecting. */
+const AGENT_AUTH_TIMEOUT_MS = 5000;
+/** Set by the Worker on the request it forwards to a room; never trusted from clients. */
+const PEER_KIND_HEADER = 'X-Markasso-Peer';
+/** WebSocket close code for a live agent without a valid licence. */
+const CLOSE_LICENCE_REQUIRED = 4402;
 /** A room is "inactive" when it has no connected peers and no activity for this long. */
 const INACTIVE_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 /** KV prefix used to enumerate live rooms for the daily cleanup cron. */
@@ -156,6 +163,87 @@ export class SessionRoom {
 
     const clientId = this.resolveClientId(url.searchParams.get('clientId'));
 
+    if (
+      request.headers.get(PEER_KIND_HEADER) === 'agent' &&
+      this.env.LIVE_AGENT_REQUIRES_LICENSE === 'true'
+    ) {
+      this.awaitAgentAuth(server, clientId);
+    } else {
+      await this.admit(server, clientId);
+    }
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  /**
+   * Holds a non-browser peer (an MCP agent) outside the room until its first
+   * message, `{ type: 'auth', license }`, proves a valid Markasso Cloud
+   * licence. Nothing of the room is sent before that. Messages that arrive
+   * while the licence is checked are replayed once the peer is admitted.
+   */
+  private awaitAgentAuth(server: WebSocket, clientId: string): void {
+    const queued: string[] = [];
+    let state: 'waiting' | 'checking' | 'done' = 'waiting';
+    const refuse = (code: number, error: string): void => {
+      state = 'done';
+      try {
+        server.send(JSON.stringify({ type: 'error', error }));
+        server.close(code, error);
+      } catch {
+        /* already closing */
+      }
+    };
+    const timer = setTimeout(
+      () => refuse(CLOSE_LICENCE_REQUIRED, 'licence required'),
+      AGENT_AUTH_TIMEOUT_MS,
+    );
+    server.addEventListener('message', (event) => {
+      const data = String(event.data);
+      if (state === 'checking') {
+        if (queued.length < 50 && data.length <= MAX_MSG_BYTES)
+          queued.push(data);
+        return;
+      }
+      if (state !== 'waiting') return;
+      clearTimeout(timer);
+      let license: string | null = null;
+      try {
+        const msg = JSON.parse(data) as { type?: unknown; license?: unknown };
+        if (msg.type === 'auth' && typeof msg.license === 'string')
+          license = msg.license;
+      } catch {
+        /* not an auth message: refused below */
+      }
+      state = 'checking';
+      void licenseKeyValid(license, this.env).then(
+        async (valid) => {
+          if (!valid) return refuse(CLOSE_LICENCE_REQUIRED, 'licence required');
+          state = 'done';
+          await this.admit(server, clientId);
+          for (const raw of queued) this.receive(clientId, raw);
+        },
+        (error: unknown) => {
+          console.log('[live] licence lookup failed', error);
+          refuse(1011, 'licence service unavailable');
+        },
+      );
+    });
+    server.addEventListener('close', () => clearTimeout(timer));
+  }
+
+  /** Parses one raw socket message from an admitted peer. */
+  private receive(clientId: string, raw: string): void {
+    if (raw.length > MAX_MSG_BYTES) return;
+    let msg: unknown;
+    try {
+      msg = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    this.handleMessage(clientId, msg);
+  }
+
+  /** Registers a socket as a room peer and sends it the room state. */
+  private async admit(server: WebSocket, clientId: string): Promise<void> {
     // A reconnect with the same clientId replaces any stale live socket so a
     // peer never ends up with two identities in the same room.
     for (const [sock, id] of this.sockets) {
@@ -188,14 +276,7 @@ export class SessionRoom {
     this.broadcast({ type: 'presence', peers: this.peerList() });
 
     server.addEventListener('message', (event) => {
-      if (String(event.data).length > MAX_MSG_BYTES) return;
-      let msg: unknown;
-      try {
-        msg = JSON.parse(String(event.data));
-      } catch {
-        return;
-      }
-      this.handleMessage(clientId, msg);
+      this.receive(clientId, String(event.data));
     });
     server.addEventListener('close', () => {
       this.dropPeer(server, clientId);
@@ -203,8 +284,6 @@ export class SessionRoom {
     server.addEventListener('error', () => {
       this.dropPeer(server, clientId);
     });
-
-    return new Response(null, { status: 101, webSocket: client });
   }
 
   private handleMessage(clientId: string, msg: unknown): void {
@@ -607,7 +686,16 @@ const worker = {
         return jsonResponse(request, url, { error: 'Invalid room' }, 400);
       }
       const id = env.SESSION_ROOMS.idFromName(room);
-      return env.SESSION_ROOMS.get(id).fetch(request);
+      // Browsers always send the app's Origin on the WebSocket handshake; any
+      // other peer (the MCP server, a script) is an agent and may have to
+      // authenticate (see SessionRoom.awaitAgentAuth). The header is always
+      // overwritten, so a client cannot claim to be a browser through it.
+      const headers = new Headers(request.headers);
+      headers.set(
+        PEER_KIND_HEADER,
+        request.headers.get('Origin') === url.origin ? 'browser' : 'agent',
+      );
+      return env.SESSION_ROOMS.get(id).fetch(new Request(request, { headers }));
     }
 
     return env.ASSETS.fetch(request);

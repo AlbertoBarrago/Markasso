@@ -18,6 +18,8 @@
     "tests/worker.test.ts",
     "tests/boards.test.ts",
     "tests/license.test.ts",
+    "tests/live_gate.test.ts",
+    "tests/polar_fake.ts",
     "worker-configuration.d.ts"
   ]
 }

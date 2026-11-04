@@ -1,86 +1,115 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { licenseGate, sha256 } from '../src/worker/license';
+import {
+  licenseGate,
+  licenseKeyValid,
+  normalizeLicenseKey,
+  sha256,
+} from '../src/worker/license';
+import { BENEFIT, ORG, mockPolar, polarEnv } from './polar_fake';
 
-function setup() {
-  const cache = new Map<string, string>();
-  const env = {
-    CLOUD_REQUIRES_LICENSE: 'true',
-    LEMON_STORE_ID: '1',
-    LEMON_PRODUCT_ID: '4',
-    SHARE_LINKS: {
-      get: async (key: string) => cache.get(key) ?? null,
-      put: vi.fn(async (key: string, value: string) => {
-        cache.set(key, value);
-      }),
-    },
-  } as unknown as Env;
-  const request = new Request('https://markasso.example/api/board', {
-    headers: { 'X-Markasso-License': 'test-license' },
+const KEY = 'MKC_1C285B2D-6CE6-4BC7-B8BE-ADB6A7E304DA';
+const request = (license?: string) =>
+  new Request('https://markasso.example/api/board', {
+    headers: license ? { 'X-Markasso-License': license } : {},
   });
-  return { cache, env, request };
-}
-afterEach(() => vi.restoreAllMocks());
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
+describe('normalizeLicenseKey', () => {
+  it('trims pasted keys and rejects anything that cannot be a key', () => {
+    expect(normalizeLicenseKey(`  ${KEY}\n`)).toBe(KEY);
+    expect(normalizeLicenseKey('short')).toBeNull();
+    expect(normalizeLicenseKey('MKC key with spaces')).toBeNull();
+    expect(normalizeLicenseKey(null)).toBeNull();
+  });
+});
+
 describe('license gate', () => {
   it('bypasses when off and requires a key when on', async () => {
-    const { env } = setup();
-    expect(await licenseGate(new Request('https://example.com'), env)).toBe(
-      402,
-    );
+    const { env } = polarEnv();
+    expect(await licenseGate(request(), env)).toBe(402);
     expect(
-      await licenseGate(new Request('https://example.com'), {
-        ...env,
-        CLOUD_REQUIRES_LICENSE: 'false',
-      }),
+      await licenseGate(request(), { ...env, CLOUD_REQUIRES_LICENSE: 'false' }),
     ).toBeNull();
   });
-  it.each([
-    [true, 'active', 1, 4, null],
-    [false, 'active', 1, 4, 402],
-    [true, 'disabled', 1, 4, 402],
-    [true, 'active', 2, 4, 402],
-    [true, 'active', 1, 5, 402],
-  ])('checks validity, status and ownership (%s %s %s %s)', async (valid, status, store_id, product_id, expected) => {
-    const { env, request } = setup();
-    const upstream = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      Response.json({
-        valid,
-        license_key: { status },
-        meta: { store_id, product_id },
-      }),
+
+  it('asks Polar with the organization and benefit, then caches', async () => {
+    const { env } = polarEnv();
+    const polar = mockPolar([KEY]);
+    expect(await licenseGate(request(KEY), env)).toBeNull();
+    expect(await licenseGate(request(` ${KEY} `), env)).toBeNull();
+    expect(polar).toHaveBeenCalledOnce();
+    const [url, init] = polar.mock.calls[0]!;
+    expect(url).toBe('https://api.polar.sh/v1/license-keys/validate');
+    expect(new Headers(init?.headers).get('Authorization')).toBe(
+      'Bearer polar_oat_test',
     );
-    expect(await licenseGate(request, env)).toBe(expected);
-    expect(await licenseGate(request, env)).toBe(expected);
-    expect(upstream).toHaveBeenCalledOnce();
-    const options = upstream.mock.calls[0]?.[1];
-    expect(options?.body?.toString()).toBe('license_key=test-license');
-    expect(env.SHARE_LINKS.put).toHaveBeenCalledWith(
-      await sha256('test-license').then((s) => `license:${s}`),
-      expect.not.stringContaining('test-license'),
-      { expirationTtl: expected === null ? 604800 : 600 },
+    expect(JSON.parse(String(init?.body))).toEqual({
+      key: KEY,
+      organization_id: ORG,
+      benefit_id: BENEFIT,
+    });
+  });
+
+  it('uses the sandbox API when configured', async () => {
+    const { env } = polarEnv({ POLAR_API_URL: 'https://sandbox-api.polar.sh' });
+    const polar = mockPolar([KEY]);
+    await licenseKeyValid(KEY, env);
+    expect(polar.mock.calls[0]![0]).toBe(
+      'https://sandbox-api.polar.sh/v1/license-keys/validate',
     );
   });
-  it('uses stale valid cache only for seven days during outages', async () => {
-    const { cache, env, request } = setup();
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
-    expect(await licenseGate(request, env)).toBe(503);
-    const key = `license:${await sha256('test-license')}`;
+
+  it('refuses revoked or unknown keys and keys of another benefit', async () => {
+    mockPolar([]);
+    expect(await licenseGate(request(KEY), polarEnv().env)).toBe(402);
+    vi.restoreAllMocks();
+    mockPolar([KEY], '33333333-3333-4333-8333-333333333333');
+    expect(await licenseGate(request(KEY), polarEnv().env)).toBe(402);
+  });
+
+  it('notices a revocation once the cached answer expires', async () => {
+    vi.useFakeTimers();
+    const { env } = polarEnv();
+    mockPolar([KEY]);
+    expect(await licenseKeyValid(KEY, env)).toBe(true);
+    vi.restoreAllMocks();
+    mockPolar([]);
+    vi.advanceTimersByTime(5 * 3600 * 1000);
+    expect(await licenseKeyValid(KEY, env)).toBe(true);
+    vi.advanceTimersByTime(2 * 3600 * 1000);
+    expect(await licenseKeyValid(KEY, env)).toBe(false);
+  });
+
+  it('keeps a recently valid key working while Polar is down, then gives up', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const { env } = polarEnv();
+    mockPolar([KEY]);
+    expect(await licenseKeyValid(KEY, env)).toBe(true);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 502 }));
+    vi.advanceTimersByTime(3 * 86400 * 1000);
+    expect(await licenseGate(request(KEY), env)).toBeNull();
+    vi.advanceTimersByTime(5 * 86400 * 1000);
+    expect(await licenseGate(request(KEY), env)).toBe(503);
+  });
+
+  it('never reuses an answer cached for another organization or benefit', async () => {
+    const { env, cache } = polarEnv();
     cache.set(
-      key,
-      JSON.stringify({
-        valid: true,
-        checkedAt: Date.now() - 2 * 86400000,
-        scope: '1:4',
-      }),
+      `license:${await sha256(KEY)}`,
+      JSON.stringify({ valid: true, checkedAt: Date.now(), scope: 'other:scope' }),
     );
-    expect(await licenseGate(request, env)).toBeNull();
-    cache.set(
-      key,
-      JSON.stringify({
-        valid: true,
-        checkedAt: Date.now() - 8 * 86400000,
-        scope: '1:4',
-      }),
-    );
-    expect(await licenseGate(request, env)).toBe(503);
+    mockPolar([]);
+    expect(await licenseKeyValid(KEY, env)).toBe(false);
+  });
+
+  it('answers 503 when Polar is not configured', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const { env } = polarEnv({ POLAR_ACCESS_TOKEN: undefined });
+    expect(await licenseGate(request(KEY), env)).toBe(503);
   });
 });

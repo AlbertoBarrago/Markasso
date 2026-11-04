@@ -4,6 +4,13 @@ All notable changes to `@markasso/mcp` are documented here. The MCP server is ve
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Licence for live drawing.** `live_join` sends the key in `MARKASSO_LICENSE` (if set) as its first message, and explains how to get a Markasso Cloud licence when a live room refuses agents without one. Everything else stays free.
+
+---
+
 ## [0.4.2] - 2026-10-28
 
 ### Fixed

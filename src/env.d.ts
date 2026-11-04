@@ -3,6 +3,8 @@
 // the generated worker-configuration.d.ts, which gets overwritten on every run.
 interface Env {
   readonly GITHUB_TOKEN: string;
+  /** Polar organization access token with the `license_keys:write` scope. */
+  readonly POLAR_ACCESS_TOKEN?: string;
 }
 
 interface Env {
@@ -11,6 +13,11 @@ interface Env {
   readonly BOARD_RATE_LIMITER: RateLimit;
   readonly CLOUD_ENABLED?: string;
   readonly CLOUD_REQUIRES_LICENSE: string;
-  readonly LEMON_STORE_ID: string;
-  readonly LEMON_PRODUCT_ID: string;
+  readonly POLAR_ORGANIZATION_ID?: string;
+  /** The "License Keys" benefit of the Markasso Cloud product. */
+  readonly POLAR_BENEFIT_ID?: string;
+  /** `https://sandbox-api.polar.sh` on the nightly; production API otherwise. */
+  readonly POLAR_API_URL?: string;
+  /** Non-browser live peers (MCP agents) need a licence when 'true'. */
+  readonly LIVE_AGENT_REQUIRES_LICENSE?: string;
 }
