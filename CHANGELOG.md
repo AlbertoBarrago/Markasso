@@ -4,6 +4,23 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.17.0] - 2026-11-04
+
+### Added
+- **Markasso Cloud.** Boards in sync between the web and the Mac app, and AI agents drawing with you in live sessions, for 5 € a month or 48 € a year, without an account. Sold through Polar: the licence key arrives by email and lives in the Polar customer portal. **Menu → Cloud** saves a board to the cloud and copies its read and edit links; reading cloud boards stays free. The `/cloud` page has the plans, the checkout and what happens after paying.
+- **Licence check with confetti.** A pasted key is checked before it is stored: a valid one celebrates, a wrong or expired one is refused with a clear message. Without a licence the Cloud menu shows a short note, the licence entry and **Subscription and pricing**; the cloud actions appear once a key is stored.
+- **AI agents in live sessions need a licence.** Agents (non-browser peers) join a live room only with a valid Markasso Cloud key, sent by the MCP server from `MARKASSO_LICENSE`. Live sessions between people stay free. **Invite AI agent** says why it is unavailable.
+- **Leave a live session.** During a session, **⋯ More tools → Leave live session** closes it for you: the board stays as a local copy and a reload no longer rejoins.
+- **Markasso for Mac.** The `/mac` page presents the native app (macOS 26 or later, Apple Silicon and Intel) with a download link that always serves the latest build, and the install steps for a build that is not notarized yet. Mac users see a small banner, and the menu has a **Markasso for Mac** item.
+- **Support.** `assistenza@markasso.it` on the `/cloud` page and in the licence messages.
+
+### Changed
+- **Cloud menu.** Grouped with separators (saving, the open board, the account), one icon per action, the licence state shown as **Active**.
+- **What's new.** The notice presents Markasso Cloud, the Mac app and leaving a live session, and sits in the upper part of the screen.
+- **Repository links.** They point to the renamed `AlbertoBarrago/markasso` repository.
+
+---
+
 ## [1.16.2] - 2026-11-03
 
 ### Fixed
