@@ -25,9 +25,11 @@ const SANDBOX: PolarLinks = {
 };
 
 const PRODUCTION: PolarLinks = {
-  monthly: '',
-  yearly: '',
-  portal: '',
+  monthly:
+    'https://buy.polar.sh/polar_cl_DmNorprlToSocMfXle37mJwQ7wlgr2CBUJkob2cyaUR',
+  yearly:
+    'https://buy.polar.sh/polar_cl_wAogWKKmDuPcP2MLw9rbDeR7Luk881qk4oxKf45Z64f',
+  portal: 'https://polar.sh/markasso/portal',
 };
 
 export const POLAR_LINKS: PolarLinks =
