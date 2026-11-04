@@ -8,6 +8,7 @@ import {
 } from './io/report_validation';
 import { boardRequest, purgeBoards } from './worker/boards';
 import { licenseCheck, licenseKeyValid } from './worker/license';
+import { macDownload } from './worker/mac_download';
 
 const ID_LENGTH = 8;
 const ID_CHARS =
@@ -549,6 +550,13 @@ const worker = {
         response.headers.set(key, value);
       response.headers.set('Access-Control-Expose-Headers', 'ETag');
       return response;
+    }
+
+    if (
+      (request.method === 'GET' || request.method === 'HEAD') &&
+      (url.pathname === '/download/mac' || url.pathname === '/download/mac.json')
+    ) {
+      return macDownload(request, env);
     }
 
     if (request.method === 'POST' && isLicenceRoute) {

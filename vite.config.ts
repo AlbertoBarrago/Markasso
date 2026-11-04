@@ -18,9 +18,11 @@ export default defineConfig(({ mode }) => {
       client: {
         build: {
           rollupOptions: {
-            input: cloudEnabled
-              ? { app: 'index.html', cloud: 'cloud/index.html' }
-              : { app: 'index.html' },
+            input: {
+              app: 'index.html',
+              mac: 'mac/index.html',
+              ...(cloudEnabled ? { cloud: 'cloud/index.html' } : {}),
+            },
           },
         },
       },

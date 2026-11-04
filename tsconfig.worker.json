@@ -19,6 +19,7 @@
     "tests/boards.test.ts",
     "tests/license.test.ts",
     "tests/live_gate.test.ts",
+    "tests/mac_download.test.ts",
     "tests/polar_fake.ts",
     "worker-configuration.d.ts"
   ]

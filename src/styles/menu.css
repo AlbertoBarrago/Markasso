@@ -318,3 +318,45 @@
 #menu-cloud-sub .menu-item-label {
   white-space: nowrap;
 }
+/* "Markasso for Mac" banner (mac_banner.ts): top centre, between the corner islands. */
+.mac-banner {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 6px 6px 14px;
+  border: 1px solid var(--island-border, var(--border));
+  border-radius: 999px;
+  background: var(--bg-island);
+  color: var(--text);
+  font-size: 13px;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
+}
+.mac-banner a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+.mac-banner-close {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+.mac-banner-close:hover {
+  background: var(--bg-hover);
+}
+@media (max-width: 700px) {
+  .mac-banner {
+    display: none;
+  }
+}

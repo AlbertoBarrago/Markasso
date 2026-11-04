@@ -165,3 +165,23 @@ main {
   display: inline-block;
   margin-top: 8px;
 }
+/* /mac page */
+.shot {
+  margin: 0 0 48px;
+}
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+ol {
+  padding-left: 1.4em;
+}
+ol li + li {
+  margin-top: 6px;
+}
+.hero .notice {
+  margin-top: 20px;
+}
