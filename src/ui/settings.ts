@@ -425,6 +425,7 @@ export function initSettings(
       )}
       ${separator}
       ${item('menu-guide', ICONS.guide, t('guide'))}
+      ${item('menu-mac', ICONS.cloudMac, t('menuMac'))}
       ${item('menu-mcp', ICONS.agent, t('connectAiAgent'))}
       ${item('menu-report', ICONS.report, t('reportProblem'))}
       ${separator}
@@ -846,6 +847,7 @@ export function initSettings(
   );
 
   onActivate('#menu-guide', openGuide);
+  onActivate('#menu-mac', () => window.open('/mac/', '_blank', 'noopener'));
   onActivate('#menu-mcp', openMcpSetup);
   onActivate('#menu-report', openReportForm);
   // The link opens itself; this only closes the menu.

@@ -6,15 +6,15 @@ const STORAGE_KEY = 'markasso-whats-new-version';
  * Release whose highlights are shown. Bump it only when the list below
  * changes, so patch releases don't reopen the same notice.
  */
-const WHATS_NEW_ID = '1.16';
-const RELEASE_URL =
-  'https://github.com/AlbertoBarrago/markasso/releases/tag/v1.16.0';
+const WHATS_NEW_ID = '1.17';
+const RELEASE_URL = 'https://github.com/AlbertoBarrago/markasso/releases';
 
-const HIGHLIGHTS = [
-  ['whatsNewAgentsTitle', 'whatsNewAgents'],
-  ['whatsNewAgentLiveTitle', 'whatsNewAgentLive'],
-  ['whatsNewTipsTitle', 'whatsNewTips'],
-] as const;
+/** [title, text, optional link]: the link opens in a new tab. */
+const HIGHLIGHTS: readonly (readonly [string, string, string?])[] = [
+  ['whatsNewCloudTitle', 'whatsNewCloud', '/cloud/'],
+  ['whatsNewMacTitle', 'whatsNewMac', '/mac/'],
+  ['whatsNewLeaveTitle', 'whatsNewLeave'],
+];
 
 /**
  * Shows the release highlights once per WHATS_NEW_ID.
@@ -32,7 +32,7 @@ export function initWhatsNew(appEl: HTMLElement): boolean {
       <h2 class="wn-title">${t('whatsNewTitle')}</h2>
       <p class="wn-desc" id="whats-new-desc">${t('whatsNewDesc')}</p>
       <ul class="wn-list">
-        ${HIGHLIGHTS.map(([title, text]) => `<li><strong>${t(title)}</strong> ${t(text)}</li>`).join('')}
+        ${HIGHLIGHTS.map(([title, text, href]) => `<li><strong>${t(title)}</strong> ${t(text)}${href ? ` <a class="wn-more" href="${href}" target="_blank" rel="noopener">${t('whatsNewMore')}</a>` : ''}</li>`).join('')}
       </ul>
       <div class="wn-actions">
         <a class="wn-link" href="${RELEASE_URL}" target="_blank" rel="noopener noreferrer">${t('whatsNewDetails')}</a>

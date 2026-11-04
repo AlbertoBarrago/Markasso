@@ -170,8 +170,11 @@
   inset: 0;
   z-index: 520;
   display: flex;
-  align-items: center;
+  /* Upper part of the screen rather than the middle: the card reads as an
+     announcement and leaves the toolbar area below it free. */
+  align-items: flex-start;
   justify-content: center;
+  padding-top: max(16px, 10vh);
   pointer-events: all;
   animation: wl-in 0.25s ease both;
 }
@@ -182,7 +185,7 @@
 
 .wn-card {
   width: min(460px, calc(100vw - 32px));
-  max-height: calc(100dvh - 32px);
+  max-height: calc(100dvh - max(16px, 10vh) - 16px);
   overflow-y: auto;
   touch-action: pan-y;
   padding: 28px;
@@ -2012,4 +2015,18 @@ select.report-input {
   .mcp-tab {
     min-height: 44px;
   }
+}
+/* Card text colour with an accent underline: the accent alone is too dark
+   to read as small text on the card. */
+.wn-more {
+  color: var(--text);
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.wn-more:hover {
+  color: var(--accent);
 }

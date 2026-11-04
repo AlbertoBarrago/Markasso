@@ -26,6 +26,7 @@ import { applySettings, initSettings, loadSettings } from './src/ui/settings';
 import { showLiveStatusToast } from './src/ui/share_actions';
 import { initShortcuts } from './src/ui/shortcuts';
 import { initShortcutsHelp } from './src/ui/shortcuts_help';
+import { initMacBanner } from './src/ui/mac_banner';
 import { initStarCta } from './src/ui/star_cta';
 import { initToolbar } from './src/ui/toolbar';
 import { initWelcome } from './src/ui/welcome';
@@ -146,8 +147,11 @@ async function bootstrap(): Promise<void> {
   const invited =
     !!cloudRoute || sharedElements !== null || getLiveRoomId() !== null;
   const showedWhatsNew = !invited && initWhatsNew(appEl);
-  if (!invited && !showedWhatsNew && !session && !sharedElements)
-    initWelcome(appEl, hist);
+  const showedWelcome = !invited && !showedWhatsNew && !session && !sharedElements;
+  if (showedWelcome) initWelcome(appEl, hist);
+  // One announcement at a time: the What's New card already presents the Mac
+  // app, so the Mac banner waits for a visit without a card.
+  if (!showedWhatsNew && !showedWelcome) initMacBanner();
 
   // Join a live session if the URL points to one (…?live=roomId)
   if (!cloudRoute && getLiveRoomId()) {
