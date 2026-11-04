@@ -153,6 +153,72 @@ describe('Diagram', () => {
   });
 });
 
+describe('caller node keys', () => {
+  it('connects, edits, lays out and removes nodes using their original keys', async () => {
+    const d = new Diagram();
+    expect(
+      await d.addNodes([
+        { key: 'Client' },
+        { key: 'Orders DB' },
+        { key: 'Città' },
+      ]),
+    ).toEqual(['client', 'orders-db', 'citta']);
+    const [client, orders, city] = d.elements;
+    d.connect([{ from: 'Client', to: 'Orders DB' }]);
+    expect(d.elements[3]).toMatchObject({
+      startElementId: client!.id,
+      endElementId: orders!.id,
+    });
+    d.update('Città', { label: 'Updated city' });
+    expect(d.elements[2]).toMatchObject({ label: 'Updated city' });
+    d.updateEdge({ from: 'Client', to: 'Orders DB' }, { label: 'calls' });
+    expect(d.elements[3]).toMatchObject({ label: 'calls' });
+    expect(d.layout('TB', ['Client', 'Orders DB', 'Città'])).toBe(3);
+    expect(d.elements[1]!.y).toBeGreaterThan(d.elements[0]!.y);
+    expect(d.disconnect([{ from: 'Client', to: 'Orders DB' }])).toBe(1);
+    expect(d.remove(['Città'])).toBe(1);
+    expect(d.elements.some((el) => el.id === city!.id)).toBe(false);
+    expect([...d.nodeKeys().values()]).toEqual(['client', 'orders-db']);
+  });
+
+  it('prefers an exact derived key over its truncated slug', async () => {
+    const source = new Diagram();
+    const key = 'a'.repeat(40);
+    await source.addNodes([{ key }]);
+    const first = source.elements[0]!;
+    const d = new Diagram([first, { ...first, id: 'duplicate', x: 500 }]);
+    d.update(`${key}-2`, { color: 'red' });
+    expect(d.elements[0]).toEqual(first);
+    expect(d.elements[1]).toMatchObject({
+      id: 'duplicate',
+      strokeColor: '#ff6b6b',
+    });
+    expect(d.layout('TB', [`${key}-2`])).toBe(1);
+    expect(d.remove([`${key}-2`])).toBe(1);
+    expect(d.elements).toEqual([first]);
+  });
+
+  it.each([
+    'Missing Città',
+    '你好',
+  ])('preserves the unknown key %s in errors', async (key) => {
+    const d = await sample();
+    for (const resolve of [
+      () => d.connect([{ from: key, to: 'api' }]),
+      () => d.update(key, {}),
+      () => d.remove([key]),
+      () => d.disconnect([{ from: 'api', to: key }]),
+    ]) {
+      expect(resolve).toThrow(DiagramError);
+      expect(resolve).toThrow(
+        `Unknown node "${key}". Call diagram_read to see the keys.`,
+      );
+    }
+    // layout ignores keys it does not know, as before.
+    expect(d.layout('TB', [key])).toBe(0);
+  });
+});
+
 describe('connectors follow moved nodes', () => {
   /** Straight connector ends in the exported SVG, in scene coordinates. */
   function exportedLine(d: Diagram): number[] {
