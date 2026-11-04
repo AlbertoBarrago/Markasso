@@ -65,9 +65,11 @@
     { "binding": "BOARDS_BUCKET", "bucket_name": "markasso-boards" }
   ],
   "vars": {
-    "CLOUD_ENABLED": "false",
-    "CLOUD_REQUIRES_LICENSE": "false",
-    "LIVE_AGENT_REQUIRES_LICENSE": "false",
+    "CLOUD_ENABLED": "true",
+    "CLOUD_REQUIRES_LICENSE": "true",
+    "LIVE_AGENT_REQUIRES_LICENSE": "true",
+    "POLAR_BENEFIT_ID": "41f5e208-6182-41d1-9bea-834cc314b4c7",
+    "POLAR_ORGANIZATION_ID": "92c40ea2-436a-4363-ac72-9a821ab3e44a",
     "REPORT_REPO": "AlbertoBarrago/markasso"
   },
   "triggers": {
