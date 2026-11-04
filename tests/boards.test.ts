@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import worker from '../src/worker';
 import { purgeBoards } from '../src/worker/boards';
+import { mockPolar, polarEnv } from './polar_fake';
 
 function setup() {
   const rows = new Map<string, Record<string, unknown>>();
@@ -183,40 +184,32 @@ describe('cloud boards', () => {
     const { env, call, create } = setup();
     const b = await create();
     const auth = { Authorization: `Bearer ${b.writeToken}`, 'If-Match': '"1"' };
+    const key = 'MKC_1C285B2D-6CE6-4BC7-B8BE-ADB6A7E304DA';
+    const { env: polar } = polarEnv();
     Object.assign(env, {
       CLOUD_REQUIRES_LICENSE: 'true',
-      LEMON_STORE_ID: '1',
-      LEMON_PRODUCT_ID: '4',
-      SHARE_LINKS: { get: async () => null, put: async () => {} },
+      POLAR_ACCESS_TOKEN: polar.POLAR_ACCESS_TOKEN,
+      POLAR_ORGANIZATION_ID: polar.POLAR_ORGANIZATION_ID,
+      POLAR_BENEFIT_ID: polar.POLAR_BENEFIT_ID,
+      SHARE_LINKS: polar.SHARE_LINKS,
     });
+    const polarApi = mockPolar([key]);
     expect((await call('POST')).status).toBe(402);
     expect((await call('PUT', `/${b.id}`, auth)).status).toBe(402);
+    expect(
+      (await call('POST', '', { 'X-Markasso-License': 'MKC_00000000-0000-4000-8000-000000000000' }))
+        .status,
+    ).toBe(402);
     expect((await call('GET', `/${b.id}`)).status).toBe(200);
-    const upstream = vi
-      .spyOn(globalThis, 'fetch')
-      .mockImplementation(async () =>
-        Response.json({
-          valid: true,
-          license_key: { status: 'active' },
-          meta: { store_id: 1, product_id: 4 },
-        }),
-      );
-    try {
-      expect(
-        (
-          await call('PUT', `/${b.id}`, {
-            ...auth,
-            'X-Markasso-License': 'license',
-          })
-        ).status,
-      ).toBe(200);
-      expect(
-        (await call('POST', '', { 'X-Markasso-License': 'license' })).status,
-      ).toBe(201);
-    } finally {
-      upstream.mockRestore();
-    }
+    expect(
+      (await call('PUT', `/${b.id}`, { ...auth, 'X-Markasso-License': key }))
+        .status,
+    ).toBe(200);
+    expect((await call('POST', '', { 'X-Markasso-License': key })).status).toBe(
+      201,
+    );
     expect((await call('POST', `/${b.id}/token`, auth)).status).toBe(200);
+    polarApi.mockRestore();
   });
   it('allows only one simultaneous write and keeps the winning scene', async () => {
     const { create, call, objects } = setup();

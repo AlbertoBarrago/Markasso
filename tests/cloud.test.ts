@@ -5,12 +5,17 @@ import { History } from '../src/engine/history';
 import {
   boardLinks,
   CloudClient,
+  cloudPageUrl,
   CloudError,
   LICENSE_KEY,
   parseBoardUrl,
   TOKEN_KEY,
 } from '../src/io/cloud';
-import { cloudAction, initCloudBoards } from '../src/ui/cloud_boards';
+import {
+  cloudAction,
+  cloudActionAvailable,
+  initCloudBoards,
+} from '../src/ui/cloud_boards';
 
 vi.mock('../src/config/features', () => ({ CLOUD_ENABLED: true }));
 
@@ -693,6 +698,8 @@ describe('cloud dialog', () => {
     });
     vi.stubGlobal('location', new URL('https://markasso.it/'));
     const ctx = setup();
+    // Save to cloud is offered only once a licence is stored.
+    ctx.values.set(LICENSE_KEY, 'MKC-TEST-KEY');
     vi.stubGlobal('localStorage', ctx.storage);
     vi.stubGlobal('fetch', ctx.fetcher);
     const history = new History(scene);
@@ -716,6 +723,39 @@ describe('cloud dialog', () => {
     expect(primary[0]!.autofocus).toBe(true);
     expect(nodes.some((n) => n.dataset.choice === 'cloudCancel')).toBe(true);
   });
+  it('offers Save to cloud only with a stored licence', async () => {
+    const body = new Node();
+    vi.stubGlobal('HTMLElement', Node);
+    vi.stubGlobal('document', {
+      body,
+      activeElement: null,
+      documentElement: { getAttribute: () => null },
+      createElement: () => new Node(),
+      querySelector: () => null,
+      getElementById: () => null,
+      dispatchEvent: vi.fn(),
+    });
+    vi.stubGlobal('window', {
+      addEventListener: vi.fn(),
+      matchMedia: () => ({ matches: false }),
+    });
+    vi.stubGlobal('location', new URL('https://markasso.it/'));
+    const ctx = setup();
+    vi.stubGlobal('localStorage', ctx.storage);
+    vi.stubGlobal('fetch', ctx.fetcher);
+    const history = new History(scene);
+    await initCloudBoards(history);
+    expect(cloudActionAvailable(history, 'cloudSave')).toBe(false);
+    expect(cloudActionAvailable(history, 'cloudLicense')).toBe(true);
+    expect(cloudActionAvailable(history, 'cloudSubscription')).toBe(true);
+    cloudAction(history, 'cloudSave');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(
+      body.children.some((node) => node.className.includes('cloud-dialog')),
+    ).toBe(false);
+    ctx.values.set(LICENSE_KEY, 'MKC-TEST-KEY');
+    expect(cloudActionAvailable(history, 'cloudSave')).toBe(true);
+  });
   it('treats Escape as cancel and returns focus', async () => {
     const { modal, previous, ctx } = await openSaveDialog();
     modal.dispatchEvent(new Event('cancel', { cancelable: true }));
@@ -723,5 +763,37 @@ describe('cloud dialog', () => {
     expect(modal.remove).toHaveBeenCalled();
     expect(previous.focus).toHaveBeenCalled();
     expect(ctx.fetcher).not.toHaveBeenCalled();
+  });
+});
+
+describe('licence check', () => {
+  it('asks the worker without storing the key', async () => {
+    const ctx = setup();
+    ctx.fetcher.mockResolvedValueOnce(response({ valid: true }));
+    expect(await ctx.client.checkLicense('  MKC-KEY-1234  ')).toBe('valid');
+    const [url, init] = ctx.fetcher.mock.calls[0]!;
+    expect(url).toBe('/api/licence/check');
+    expect(init?.method).toBe('POST');
+    expect(init?.headers).toEqual({ 'X-Markasso-License': 'MKC-KEY-1234' });
+    expect(ctx.values.has(LICENSE_KEY)).toBe(false);
+  });
+
+  it('tells a rejected key from an unanswered check', async () => {
+    const ctx = setup();
+    ctx.fetcher.mockResolvedValueOnce(response({ valid: false }));
+    expect(await ctx.client.checkLicense('MKC-KEY-1234')).toBe('invalid');
+    ctx.fetcher.mockResolvedValueOnce(response({}, 503));
+    expect(await ctx.client.checkLicense('MKC-KEY-1234')).toBe('unknown');
+    ctx.fetcher.mockResolvedValueOnce(response({}, 429));
+    expect(await ctx.client.checkLicense('MKC-KEY-1234')).toBe('unknown');
+    ctx.fetcher.mockRejectedValueOnce(new TypeError('offline'));
+    expect(await ctx.client.checkLicense('MKC-KEY-1234')).toBe('unknown');
+  });
+
+  it('links to the cloud page of the current deployment', () => {
+    expect(cloudPageUrl('https://markasso-nightly.example.dev')).toBe(
+      'https://markasso-nightly.example.dev/cloud',
+    );
+    expect(cloudPageUrl('https://markasso.it')).toBe('https://markasso.it/cloud');
   });
 });

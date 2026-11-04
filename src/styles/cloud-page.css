@@ -144,3 +144,24 @@ main {
     padding-top: 32px;
   }
 }
+.price {
+  margin-top: 4px;
+  color: var(--text-muted);
+}
+#checkout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.licence {
+  padding: 20px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+}
+.licence .checkout-link {
+  margin-top: 4px;
+}
+.manage-link {
+  display: inline-block;
+  margin-top: 8px;
+}

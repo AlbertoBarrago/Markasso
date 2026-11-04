@@ -7,7 +7,7 @@ import {
   CloudClient,
   CloudError,
   type CloudScene,
-  LICENSE_PURCHASE_URL,
+  cloudPageUrl,
   parseBoardUrl,
 } from '../io/cloud';
 import { exportMarkasso } from '../io/markasso';
@@ -19,6 +19,7 @@ import {
   cloudStatus,
   cloudStatusNeedsAttention,
 } from './cloud_status';
+import { launchConfetti } from './confetti';
 import { copyToClipboard, showShareToast } from './share_actions';
 
 const ALL_CLOUD_ACTIONS = [
@@ -28,6 +29,7 @@ const ALL_CLOUD_ACTIONS = [
   'cloudMac',
   'cloudDuplicate',
   'cloudLicense',
+  'cloudSubscription',
 ] as const;
 export const CLOUD_ACTIONS = CLOUD_ENABLED ? ALL_CLOUD_ACTIONS : [];
 const controllers = new WeakMap<History, ReturnType<typeof createController>>();
@@ -102,7 +104,7 @@ function dialog(options: DialogOptions): Promise<string | null> {
       input.autofocus = true;
       const purchase = document.createElement('a');
       purchase.className = 'cd-link';
-      purchase.href = LICENSE_PURCHASE_URL;
+      purchase.href = cloudPageUrl();
       purchase.rel = 'noreferrer';
       purchase.target = '_blank';
       purchase.textContent = t('cloudBuy');
@@ -388,27 +390,51 @@ function createController(history: History) {
         boardLinks(location.origin, client.id, client.token).edit,
       );
   };
+  /**
+   * Asks for a licence key and checks it with the worker before storing it.
+   * A rejected key is never stored: the user gets the reason and can retry.
+   * When the check cannot be done (offline, licence service down) the key is
+   * stored anyway and the next cloud write decides, as before the check.
+   */
   async function license(): Promise<void> {
     if (resolving) return;
     resolving = true;
-    const value = await dialog({
-      title: t('cloudLicense'),
-      message: t('cloudLicenseNeeded'),
-      choices: [{ key: 'cloudStoreKey', primary: true }],
-      license: true,
-    });
-    resolving = false;
-    if (value?.trim()) {
-      try {
-        client.setLicense(value);
-        if (retryCreate) {
-          retryCreate = false;
-          await save();
-        } else if (client.editable && client.error === 402)
-          await client.retry();
-      } catch {
-        await dialog(storageDialog());
+    let value: string | null = null;
+    let status: 'valid' | 'invalid' | 'unknown' = 'unknown';
+    try {
+      for (;;) {
+        value = await dialog({
+          title: t('cloudLicense'),
+          message: t('cloudLicenseNeeded'),
+          choices: [{ key: 'cloudStoreKey', primary: true }],
+          license: true,
+        });
+        if (!value?.trim()) return;
+        status = await client.checkLicense(value);
+        if (status !== 'invalid') break;
+        await dialog({ title: t('cloudLicense'), message: t('cloudKeyInvalid') });
       }
+    } finally {
+      resolving = false;
+    }
+    try {
+      client.setLicense(value);
+    } catch {
+      await dialog(storageDialog());
+      return;
+    }
+    document.dispatchEvent(new Event('markasso-cloud-change'));
+    if (status === 'valid') {
+      launchConfetti();
+      showShareToast(true, '', t('cloudKeyActive'));
+    } else showShareToast(true, '', t('cloudKeyUnchecked'));
+    try {
+      if (retryCreate) {
+        retryCreate = false;
+        await save();
+      } else if (client.editable && client.error === 402) await client.retry();
+    } catch {
+      await dialog(storageDialog());
     }
   }
   async function resolveConflict(): Promise<void> {
@@ -535,15 +561,22 @@ function createController(history: History) {
     open,
     hasLicense: () => !!client.license,
     available(action: (typeof CLOUD_ACTIONS)[number]): boolean {
-      if (action === 'cloudLicense') return true;
+      if (action === 'cloudLicense' || action === 'cloudSubscription')
+        return true;
       if (creating) return false;
-      if (action === 'cloudSave') return !history.readOnly;
+      // Creating or updating a cloud board needs a licence: without one the
+      // action is hidden and the menu points to the licence and pricing.
+      if (action === 'cloudSave') return !history.readOnly && !!client.license;
       if (!opened || !client.id) return false;
       return action !== 'cloudEditLink' || client.editable;
     },
     async run(action: (typeof CLOUD_ACTIONS)[number]): Promise<void> {
       if (!this.available(action)) return;
       if (action === 'cloudSave') return save();
+      if (action === 'cloudSubscription') {
+        window.open(cloudPageUrl(), '_blank', 'noopener');
+        return;
+      }
       if (action === 'cloudLicense') {
         if (client.license) {
           if (
@@ -552,8 +585,10 @@ function createController(history: History) {
               message: t('cloudKeyStored'),
               choices: [{ key: 'cloudRemoveKey' }],
             })) === 'cloudRemoveKey'
-          )
+          ) {
             client.setLicense('');
+            document.dispatchEvent(new Event('markasso-cloud-change'));
+          }
         } else await license();
         return;
       }

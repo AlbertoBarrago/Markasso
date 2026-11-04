@@ -3,7 +3,13 @@ import type { Viewport } from '../core/viewport';
 import type { Element } from '../elements/element';
 import { validateElements, validateViewport } from './element_validation';
 
-export const LICENSE_PURCHASE_URL = 'https://markasso.it/cloud';
+/**
+ * The /cloud page of the deployment the web app runs on, so the nightly links
+ * to its own page (and the Polar sandbox) instead of production.
+ */
+export function cloudPageUrl(origin = location.origin): string {
+  return new URL('/cloud', origin).href;
+}
 export const TOKEN_KEY = 'markasso-cloud-tokens';
 export const LICENSE_KEY = 'markasso-cloud-license';
 export type CloudState = 'saved' | 'saving' | 'offline' | 'conflict' | 'error';
@@ -86,6 +92,25 @@ export class CloudClient {
   setLicense(key: string): void {
     if (key.trim()) this.storage.setItem(LICENSE_KEY, key.trim());
     else this.storage.removeItem(LICENSE_KEY);
+  }
+  /**
+   * Asks the worker whether `key` is a valid licence, without storing it.
+   * `unknown` means the answer could not be obtained (offline, rate limited,
+   * licence service down): callers may store the key and let the next save
+   * decide.
+   */
+  async checkLicense(key: string): Promise<'valid' | 'invalid' | 'unknown'> {
+    try {
+      const response = await this.request('/api/licence/check', {
+        method: 'POST',
+        headers: { 'X-Markasso-License': key.trim() },
+      });
+      if (!response.ok) return 'unknown';
+      const data = (await response.json()) as { valid?: unknown };
+      return data.valid === true ? 'valid' : 'invalid';
+    } catch {
+      return 'unknown';
+    }
   }
   private tokens(): Record<string, string> {
     try {

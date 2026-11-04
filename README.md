@@ -521,8 +521,19 @@ binding uses the existing migration to create a namespace for the nightly
 worker. Rate limit namespaces are also separate. Configure the nightly
 `GITHUB_TOKEN` secret only if issue reporting is needed.
 
-To enable cloud in production later, build with `VITE_CLOUD_ENABLED=true` and
-set the production worker variable `CLOUD_ENABLED` to `"true"`. Provision the
-production D1/R2 resources, replace its D1 placeholder, and apply the database
-migration first. `CLOUD_REQUIRES_LICENSE` independently controls licence checks;
-if enabled, configure the Lemon Squeezy store and product variables as well.
+To enable cloud in production, build with `VITE_CLOUD_ENABLED=true` and set
+the production worker variable `CLOUD_ENABLED` to `"true"`. The production D1
+and R2 resources exist, with `migrations/0001_boards.sql` applied.
+
+Licences are sold through Polar (merchant of record). The Markasso Cloud
+product has a monthly and a yearly price and a "License Keys" benefit: Polar
+emails buyers a link to its customer portal, where the key is, and revokes the
+key when the subscription ends. Put the two checkout links and the customer
+portal link in `src/config/polar.ts` (success URL
+`https://markasso.it/cloud?checkout_id={CHECKOUT_ID}`), set the worker
+variables `POLAR_ORGANIZATION_ID` and `POLAR_BENEFIT_ID` (plus
+`POLAR_API_URL=https://sandbox-api.polar.sh` on the nightly), and the secret
+`POLAR_ACCESS_TOKEN` (an organization access token with `license_keys:write`)
+with `wrangler secret put`. `CLOUD_REQUIRES_LICENSE` gates cloud board writes
+and `LIVE_AGENT_REQUIRES_LICENSE` gates AI agents (non-browser peers) in live
+sessions; the MCP server sends its key from `MARKASSO_LICENSE`.

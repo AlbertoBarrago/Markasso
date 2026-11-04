@@ -76,6 +76,20 @@
 .menu-item-label {
   flex: 1;
 }
+/* Why a disabled item is unavailable; the item stays more legible than the
+   usual disabled opacity so the note can be read. */
+.menu-item-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.menu-item-note[hidden] {
+  display: none;
+}
+.menu-item[aria-disabled="true"]:has(.menu-item-note:not([hidden])) {
+  opacity: 0.6;
+}
 .menu-item--danger {
   color: var(--alert) !important;
 }
@@ -279,4 +293,24 @@
 /* Keep the reset percentage with its label in every language. */
 #sp-reset-zoom .menu-item-label {
   white-space: nowrap;
+}
+/* Licence-approved celebration (src/ui/confetti.ts): above dialogs and toasts. */
+.confetti-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 10000;
+}
+/* Cloud submenu note shown until a licence is stored (settings.ts). */
+.menu-cloud-note {
+  max-width: 240px;
+  padding: 6px 10px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+.menu-cloud-note[hidden] {
+  display: none;
 }

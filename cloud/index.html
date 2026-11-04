@@ -4,11 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Markasso Cloud</title>
-    <meta name="description" content="Your boards in sync between the browser and the Mac app. No account. A cloud licence unlocks creating and saving cloud boards." />
+    <meta name="description" content="Your boards in sync between the browser and the Mac app, and AI agents drawing with you live. No account. 5 EUR a month or 48 EUR a year." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://markasso.it/cloud/" />
     <meta property="og:title" content="Markasso Cloud" />
-    <meta property="og:description" content="Your boards in sync between the browser and the Mac app. No account. A cloud licence unlocks creating and saving cloud boards." />
+    <meta property="og:description" content="Your boards in sync between the browser and the Mac app, and AI agents drawing with you live. No account. 5 EUR a month or 48 EUR a year." />
     <meta property="og:image" content="https://markasso.it/og-image.png" />
     <meta property="og:site_name" content="Markasso" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -27,8 +27,13 @@
     <main>
       <section class="hero">
         <h1 data-i18n="cloudPageTitle">Markasso Cloud</h1>
-        <p class="pitch" data-i18n="cloudPagePitch">Your boards in sync between the browser and the Mac app. No account.</p>
+        <p class="pitch" data-i18n="cloudPagePitch">Your boards in sync between the browser and the Mac app, and AI agents drawing with you live. No account.</p>
+        <p class="price" data-i18n="cloudPagePrice">5 € a month, or 48 € a year</p>
         <div id="checkout"><button type="button" disabled data-i18n="cloudPageSoon">Available soon</button></div>
+      </section>
+      <section id="welcome" class="licence" hidden>
+        <h2 data-i18n="cloudWelcomeTitle">Thanks for subscribing</h2>
+        <p data-i18n="cloudWelcomeKey">Your licence key is in the Polar customer portal: open it from your purchase email or from the link below, then paste the key in menu &gt; Cloud licence.</p>
       </section>
       <section class="links-section">
         <h2 data-i18n="cloudPageHow">Links are the keys</h2>
@@ -41,24 +46,30 @@
           <ul>
             <li data-i18n="cloudPageApps">The web app and the Mac app</li>
             <li data-i18n="cloudPageFiles">.markasso files</li>
+            <li data-i18n="cloudPageLive">Live sessions with people</li>
+            <li data-i18n="cloudPageMcp">AI agents drawing on your own boards (MCP)</li>
             <li data-i18n="cloudPageReading">Reading cloud boards</li>
             <li data-i18n="cloudPageSharing">Share links</li>
           </ul>
         </section>
         <section>
-          <h2 data-i18n="cloudPagePaid">With a cloud licence</h2>
-          <p data-i18n="cloudPageUnlock">Create and save cloud boards from the web and the Mac app. No account needed.</p>
+          <h2 data-i18n="cloudPagePaid">With Markasso Cloud</h2>
+          <ul>
+            <li data-i18n="cloudPageUnlock">Create and save cloud boards from the web and the Mac app</li>
+            <li data-i18n="cloudPageAgents">Invite AI agents into your live sessions</li>
+          </ul>
         </section>
       </div>
       <section>
-        <h2 data-i18n="cloudPageAfter">After buying</h2>
-        <p data-i18n="cloudPageEmail">Lemon Squeezy emails your licence key after purchase. Paste the same key in both apps:</p>
+        <h2 data-i18n="cloudPageAfter">After subscribing</h2>
+        <p data-i18n="cloudPageKeyShown">Polar emails you a link to your customer portal, where your licence key is. Use the same key:</p>
         <ul>
           <li data-i18n="cloudPageWeb">Web: menu &gt; Cloud licence</li>
           <li data-i18n="cloudPageMac">Mac: Markasso &gt; Settings &gt; Cloud licence</li>
+          <li data-i18n="cloudPageAgent">AI agents: MARKASSO_LICENSE in the MCP server's environment</li>
         </ul>
-        <p data-i18n="cloudPageLost">Lost your key? Find it in your Lemon Squeezy receipt email or in My orders.</p>
-        <a href="https://app.lemonsqueezy.com/my-orders" target="_blank" rel="noopener" data-i18n="cloudPageOrders">My orders on Lemon Squeezy</a>
+        <p data-i18n="cloudPageLost">Lost your key? It is always in your Polar customer portal.</p>
+        <div id="manage"></div>
       </section>
     </main>
   </body>

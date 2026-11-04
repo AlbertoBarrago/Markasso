@@ -307,7 +307,7 @@ export function initSettings(
           item('menu-share-reddit', ICONS.reddit, t('shareReddit')) +
           item('menu-share-bluesky', ICONS.bluesky, t('shareBluesky')),
       )}
-      ${CLOUD_ACTIONS.length ? parentItem('menu-cloud', ICONS.link, t('cloudMenu'), CLOUD_ACTIONS.map((action) => item(`menu-${action}`, ICONS.link, t(action))).join('')) : ''}
+      ${CLOUD_ACTIONS.length ? parentItem('menu-cloud', ICONS.link, t('cloudMenu'), `<li role="presentation" class="menu-cloud-note" id="menu-cloud-note">${t('cloudMenuNote')}</li>` + CLOUD_ACTIONS.map((action) => item(`menu-${action}`, ICONS.link, t(action))).join('')) : ''}
       ${item('menu-clear', ICONS.trash, t('clearCanvas'), 'menu-item--danger')}
       ${separator}
       ${parentItem(
@@ -631,13 +631,13 @@ export function initSettings(
         ),
       );
     }
+    // Unavailable cloud actions are hidden, not greyed out: without a licence
+    // the submenu shows a short note, the licence entry and the pricing link.
+    const cloudNote = panel.querySelector<HTMLElement>('#menu-cloud-note');
+    if (cloudNote) cloudNote.hidden = cloudLicenseStored(history);
     for (const action of CLOUD_ACTIONS) {
-      panel
-        .querySelector(`#menu-${action}`)!
-        .setAttribute(
-          'aria-disabled',
-          String(!cloudActionAvailable(history, action)),
-        );
+      panel.querySelector(`#menu-${action}`)!.closest('li')!.hidden =
+        !cloudActionAvailable(history, action);
     }
     const { gridVisible, gridType } = history.present.appState;
     setChecked(

@@ -21,11 +21,16 @@ type ServerMsg =
   | { type: 'init'; self: string; commands: Command[]; peers: PeerInfo[] }
   | { type: 'apply'; command: Command; from: string }
   | { type: 'presence'; peers: PeerInfo[] }
-  | { type: 'cursor' };
+  | { type: 'cursor' }
+  | { type: 'error'; error: string };
 
 const ROOM_ID = /^[a-zA-Z0-9_-]{3,64}$/;
 const AGENT_COLOR = '#c77dff';
 const JOIN_TIMEOUT_MS = 10_000;
+/** Close code the room uses for an agent without a valid licence. */
+const CLOSE_LICENCE_REQUIRED = 4402;
+const LICENCE_MESSAGE =
+  'Drawing live with an AI agent needs a Markasso Cloud licence. Get one at https://markasso.it/cloud, then set MARKASSO_LICENSE in this MCP server\'s environment.';
 
 export class LiveError extends Error {
   override name = 'LiveError';
@@ -128,6 +133,10 @@ export class LiveLink {
       }, JOIN_TIMEOUT_MS);
 
       socket.addEventListener('open', () => {
+        // Must be the first message: rooms that require a licence for agents
+        // admit the peer only after checking it, and ignore it otherwise.
+        const license = process.env.MARKASSO_LICENSE?.trim();
+        if (license) this.send({ type: 'auth', license });
         this.send({ type: 'presence', name: this.name, color: AGENT_COLOR });
       });
 
@@ -169,13 +178,29 @@ export class LiveLink {
           if (isSessionCommand(msg.command)) history.applyRemote(msg.command);
         } else if (msg.type === 'presence') {
           this.peers = msg.peers;
+        } else if (msg.type === 'error' && !this.open) {
+          clearTimeout(timer);
+          reject(
+            new LiveError(
+              msg.error === 'licence required'
+                ? LICENCE_MESSAGE
+                : `The live room refused to join: ${msg.error}.`,
+            ),
+          );
         }
       });
 
-      socket.addEventListener('close', () => {
+      socket.addEventListener('close', (event) => {
         clearTimeout(timer);
+        // A no-op when the error message above already rejected.
         if (!this.open)
-          reject(new LiveError('The live room closed the connection.'));
+          reject(
+            new LiveError(
+              event.code === CLOSE_LICENCE_REQUIRED
+                ? LICENCE_MESSAGE
+                : 'The live room closed the connection.',
+            ),
+          );
         this.open = false;
         history.setOnCommand(undefined);
       });
