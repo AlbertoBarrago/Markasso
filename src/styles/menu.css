@@ -294,3 +294,12 @@
 #sp-reset-zoom .menu-item-label {
   white-space: nowrap;
 }
+/* Licence-approved celebration (src/ui/confetti.ts): above dialogs and toasts. */
+.confetti-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 10000;
+}

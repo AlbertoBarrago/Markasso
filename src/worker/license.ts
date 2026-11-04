@@ -149,3 +149,32 @@ export async function licenseGate(
     return 503;
   }
 }
+
+/**
+ * POST /api/licence/check with `X-Markasso-License`: lets the apps confirm a
+ * pasted key before storing it. Rate limited per client address like board
+ * writes, so it cannot be used to probe keys in bulk.
+ */
+export async function licenseCheck(request: Request, env: Env): Promise<Response> {
+  const limited = await env.BOARD_RATE_LIMITER.limit({
+    key: `licence:${request.headers.get('CF-Connecting-IP') ?? 'unknown'}`,
+  });
+  if (!limited.success)
+    return Response.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': '60' } },
+    );
+  try {
+    const valid = await licenseKeyValid(
+      request.headers.get('X-Markasso-License'),
+      env,
+    );
+    return Response.json({ valid });
+  } catch (error) {
+    console.log('[license] check failed', error);
+    return Response.json(
+      { error: 'Licence service unavailable' },
+      { status: 503 },
+    );
+  }
+}

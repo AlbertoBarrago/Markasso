@@ -7,7 +7,7 @@ import {
   validateReport,
 } from './io/report_validation';
 import { boardRequest, purgeBoards } from './worker/boards';
-import { licenseKeyValid } from './worker/license';
+import { licenseCheck, licenseKeyValid } from './worker/license';
 
 const ID_LENGTH = 8;
 const ID_CHARS =
@@ -507,13 +507,15 @@ const worker = {
     const url = new URL(request.url);
     const isBoardRoute =
       url.pathname === '/api/board' || url.pathname.startsWith('/api/board/');
-    if (isBoardRoute && env.CLOUD_ENABLED !== 'true') {
+    const isLicenceRoute = url.pathname === '/api/licence/check';
+    if ((isBoardRoute || isLicenceRoute) && env.CLOUD_ENABLED !== 'true') {
       return jsonResponse(request, url, { error: 'Not found' }, 404);
     }
     const isApiRoute =
       url.pathname === '/api/share' ||
       url.pathname.startsWith('/api/share/') ||
       url.pathname === '/api/report' ||
+      isLicenceRoute ||
       url.pathname === '/api/board' ||
       url.pathname.startsWith('/api/board/');
 
@@ -546,6 +548,14 @@ const worker = {
       for (const [key, value] of apiHeaders(request, url))
         response.headers.set(key, value);
       response.headers.set('Access-Control-Expose-Headers', 'ETag');
+      return response;
+    }
+
+    if (request.method === 'POST' && isLicenceRoute) {
+      const response = await licenseCheck(request, env);
+      for (const [key, value] of apiHeaders(request, url))
+        response.headers.set(key, value);
+      response.headers.set('Cache-Control', 'no-store');
       return response;
     }
 

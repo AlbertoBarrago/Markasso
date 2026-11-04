@@ -5,6 +5,7 @@ import { History } from '../src/engine/history';
 import {
   boardLinks,
   CloudClient,
+  cloudPageUrl,
   CloudError,
   LICENSE_KEY,
   parseBoardUrl,
@@ -723,5 +724,37 @@ describe('cloud dialog', () => {
     expect(modal.remove).toHaveBeenCalled();
     expect(previous.focus).toHaveBeenCalled();
     expect(ctx.fetcher).not.toHaveBeenCalled();
+  });
+});
+
+describe('licence check', () => {
+  it('asks the worker without storing the key', async () => {
+    const ctx = setup();
+    ctx.fetcher.mockResolvedValueOnce(response({ valid: true }));
+    expect(await ctx.client.checkLicense('  MKC-KEY-1234  ')).toBe('valid');
+    const [url, init] = ctx.fetcher.mock.calls[0]!;
+    expect(url).toBe('/api/licence/check');
+    expect(init?.method).toBe('POST');
+    expect(init?.headers).toEqual({ 'X-Markasso-License': 'MKC-KEY-1234' });
+    expect(ctx.values.has(LICENSE_KEY)).toBe(false);
+  });
+
+  it('tells a rejected key from an unanswered check', async () => {
+    const ctx = setup();
+    ctx.fetcher.mockResolvedValueOnce(response({ valid: false }));
+    expect(await ctx.client.checkLicense('MKC-KEY-1234')).toBe('invalid');
+    ctx.fetcher.mockResolvedValueOnce(response({}, 503));
+    expect(await ctx.client.checkLicense('MKC-KEY-1234')).toBe('unknown');
+    ctx.fetcher.mockResolvedValueOnce(response({}, 429));
+    expect(await ctx.client.checkLicense('MKC-KEY-1234')).toBe('unknown');
+    ctx.fetcher.mockRejectedValueOnce(new TypeError('offline'));
+    expect(await ctx.client.checkLicense('MKC-KEY-1234')).toBe('unknown');
+  });
+
+  it('links to the cloud page of the current deployment', () => {
+    expect(cloudPageUrl('https://markasso-nightly.example.dev')).toBe(
+      'https://markasso-nightly.example.dev/cloud',
+    );
+    expect(cloudPageUrl('https://markasso.it')).toBe('https://markasso.it/cloud');
   });
 });

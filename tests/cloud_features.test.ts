@@ -31,6 +31,7 @@ describe('cloud build flag', () => {
             'cloudMac',
             'cloudDuplicate',
             'cloudLicense',
+            'cloudSubscription',
           ]
         : [],
     );

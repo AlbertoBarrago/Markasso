@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  licenseCheck,
   licenseGate,
   licenseKeyValid,
   normalizeLicenseKey,
@@ -111,5 +112,36 @@ describe('license gate', () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
     const { env } = polarEnv({ POLAR_ACCESS_TOKEN: undefined });
     expect(await licenseGate(request(KEY), env)).toBe(503);
+  });
+});
+
+describe('licenseCheck', () => {
+  const check = (env: Env, license?: string) =>
+    licenseCheck(
+      new Request('https://markasso.example/api/licence/check', {
+        method: 'POST',
+        headers: license ? { 'X-Markasso-License': license } : {},
+      }),
+      env,
+    );
+  const limiter = (success: boolean) => ({
+    BOARD_RATE_LIMITER: { limit: vi.fn(async () => ({ success })) },
+  });
+
+  it('reports whether a key is valid', async () => {
+    const { env } = polarEnv(limiter(true));
+    mockPolar([KEY]);
+    expect(await (await check(env, KEY)).json()).toEqual({ valid: true });
+    expect(
+      await (await check(env, 'MKC_00000000-0000-4000-8000-000000000000')).json(),
+    ).toEqual({ valid: false });
+    expect(await (await check(env)).json()).toEqual({ valid: false });
+  });
+
+  it('is rate limited and reports an unreachable Polar as 503', async () => {
+    expect((await check(polarEnv(limiter(false)).env, KEY)).status).toBe(429);
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 502 }));
+    expect((await check(polarEnv(limiter(true)).env, KEY)).status).toBe(503);
   });
 });

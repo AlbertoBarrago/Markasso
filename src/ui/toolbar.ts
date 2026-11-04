@@ -3,7 +3,7 @@ import { fitToElements } from '../core/viewport';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
 import { CLOUD_ENABLED } from '../config/features';
-import { LICENSE_KEY, LICENSE_PURCHASE_URL } from '../io/cloud';
+import { cloudPageUrl, LICENSE_KEY } from '../io/cloud';
 import { importMermaidText } from '../io/mermaid';
 import { PRESETS } from '../io/presets';
 import {
@@ -300,7 +300,7 @@ export function initToolbar(
     '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="12" height="9" rx="2"/><path d="M10 4v3M8 11h.01M12 11h.01M2 11v2M18 11v2"/></svg>';
   const inviteAgentAction = addMoreItem(agentIcon, t('inviteAiAgent'), () => {
     if (inviteAgentLocked()) {
-      window.open(LICENSE_PURCHASE_URL, '_blank', 'noopener');
+      window.open(cloudPageUrl(), '_blank', 'noopener');
       return;
     }
     const url = getLiveSessionUrl();

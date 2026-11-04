@@ -109,6 +109,7 @@ describe.each([false, true])('cloud UI enabled=%s', (enabled) => {
       'cloudMac',
       'cloudDuplicate',
       'cloudLicense',
+      'cloudSubscription',
     ];
     for (const action of actions)
       expect(menu.includes(`id="menu-${action}"`)).toBe(enabled);
