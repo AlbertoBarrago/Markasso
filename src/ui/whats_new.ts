@@ -8,7 +8,7 @@ const STORAGE_KEY = 'markasso-whats-new-version';
  */
 const WHATS_NEW_ID = '1.16';
 const RELEASE_URL =
-  'https://github.com/AlbertoBarrago/Markasso/releases/tag/v1.16.0';
+  'https://github.com/AlbertoBarrago/markasso/releases/tag/v1.16.0';
 
 const HIGHLIGHTS = [
   ['whatsNewAgentsTitle', 'whatsNewAgents'],

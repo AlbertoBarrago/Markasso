@@ -386,7 +386,7 @@ Scegli **Menu → Collega un agente AI**, oppure `⌘K` e poi **Collega un agent
 
 Claude Desktop, Gemini CLI e LM Studio usano lo stesso comando `npx -y @markasso/mcp@latest` nella configurazione `mcpServers`. Poi chiedi all’agente di disegnare, per esempio "Disegna l’architettura di un servizio di checkout con le icone e dammi un link di condivisione".
 
-**Disegnare insieme a un agente:** avvia una sessione live, poi scegli **⋯ Altri strumenti → Invita agente AI**. Viene copiato un prompt con il link della sessione: incollalo nel tuo agente e l’agente entra nella lavagna, visibile nell’elenco dei partecipanti. Chiunque abbia un link live può modificare la lavagna, agente compreso, e le etichette scritte da altri sono contenuto che l’agente legge: tienilo presente se l’agente ha altri strumenti potenti. Elenco completo degli strumenti e note di sicurezza: [mcp/README.md](https://github.com/AlbertoBarrago/Markasso/blob/main/mcp/README.md).
+**Disegnare insieme a un agente:** avvia una sessione live, poi scegli **⋯ Altri strumenti → Invita agente AI**. Viene copiato un prompt con il link della sessione: incollalo nel tuo agente e l’agente entra nella lavagna, visibile nell’elenco dei partecipanti. Chiunque abbia un link live può modificare la lavagna, agente compreso, e le etichette scritte da altri sono contenuto che l’agente legge: tienilo presente se l’agente ha altri strumenti potenti. Elenco completo degli strumenti e note di sicurezza: [mcp/README.md](https://github.com/AlbertoBarrago/markasso/blob/main/mcp/README.md).
 
 ---
 

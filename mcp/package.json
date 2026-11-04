@@ -5,11 +5,11 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AlbertoBarrago/Markasso.git",
+    "url": "git+https://github.com/AlbertoBarrago/markasso.git",
     "directory": "mcp"
   },
-  "homepage": "https://github.com/AlbertoBarrago/Markasso/tree/main/mcp#readme",
-  "bugs": "https://github.com/AlbertoBarrago/Markasso/issues",
+  "homepage": "https://github.com/AlbertoBarrago/markasso/tree/main/mcp#readme",
+  "bugs": "https://github.com/AlbertoBarrago/markasso/issues",
   "keywords": [
     "mcp",
     "model-context-protocol",

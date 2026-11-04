@@ -68,7 +68,7 @@
     "CLOUD_ENABLED": "false",
     "CLOUD_REQUIRES_LICENSE": "false",
     "LIVE_AGENT_REQUIRES_LICENSE": "false",
-    "REPORT_REPO": "AlbertoBarrago/Markasso"
+    "REPORT_REPO": "AlbertoBarrago/markasso"
   },
   "triggers": {
     "crons": ["0 12 * * *"]
@@ -85,7 +85,7 @@
         "POLAR_API_URL": "https://sandbox-api.polar.sh",
         "POLAR_BENEFIT_ID": "0a8c91ba-a63c-40a9-bebb-82536ad5dbb3",
         "POLAR_ORGANIZATION_ID": "819b2bb5-7bd5-4d88-99d6-b7cf2efe6b40",
-        "REPORT_REPO": "AlbertoBarrago/Markasso"
+        "REPORT_REPO": "AlbertoBarrago/markasso"
       },
       "d1_databases": [
         {
