@@ -3,7 +3,7 @@ import { defineConfig, loadEnv } from 'vite';
 
 export default defineConfig(({ mode }) => {
   // The /cloud licence page is built only with the cloud on (VITE_CLOUD_ENABLED,
-  // src/config/features.ts). The shell wins (`pnpm build:nightly` sets it),
+  // src/config/features.ts). The shell wins,
   // otherwise `.env.production` turns it on for production builds. `loadEnv`
   // is needed because Vite loads `.env` files into the app after this config,
   // not into `process.env`.

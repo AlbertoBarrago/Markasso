@@ -4,8 +4,8 @@ import type { Element } from '../elements/element';
 import { validateElements, validateViewport } from './element_validation';
 
 /**
- * The /cloud page of the deployment the web app runs on, so the nightly links
- * to its own page (and the Polar sandbox) instead of production.
+ * The /cloud page of the deployment the web app runs on, so a test deployment
+ * links to its own page instead of production.
  */
 export function cloudPageUrl(origin = location.origin): string {
   return new URL('/cloud', origin).href;
