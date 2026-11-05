@@ -535,7 +535,7 @@ const worker = {
       headers.set(
         'Access-Control-Allow-Headers',
         url.pathname.startsWith('/api/board')
-          ? 'Content-Type, Authorization, If-Match, X-Markasso-License'
+          ? 'Content-Type, Authorization, If-Match, If-None-Match, X-Markasso-License'
           : 'Content-Type',
       );
       return new Response(null, { status: 204, headers });
