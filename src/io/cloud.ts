@@ -14,6 +14,15 @@ export const TOKEN_KEY = 'markasso-cloud-tokens';
 export const LICENSE_KEY = 'markasso-cloud-license';
 export type CloudState = 'saved' | 'saving' | 'offline' | 'conflict' | 'error';
 export type CloudScene = { elements: readonly Element[]; viewport?: Viewport };
+/** A validated board snapshot and the server version it was read at. */
+export type CloudBoard = { scene: CloudScene; version: number };
+/**
+ * Result of a background remote check: `skipped` when the client was not in a
+ * state to check (or the board changed meanwhile), `unchanged` when the server
+ * has nothing newer, `failed` when the request failed (the state says why), or
+ * the newer board, which the caller applies before raising `version`.
+ */
+export type CloudCheck = 'skipped' | 'unchanged' | 'failed' | CloudBoard;
 export class CloudError extends Error {
   constructor(
     public readonly status: number,
@@ -66,6 +75,7 @@ export class CloudClient {
   private pending: CloudScene | null = null;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private busy = false;
+  private checking = false;
   private generation = 0;
   constructor(
     private readonly storage: Pick<
@@ -78,6 +88,14 @@ export class CloudClient {
   /** True while at least one request to the board API is in flight. */
   get inFlight(): boolean {
     return this.requests > 0;
+  }
+  /** True while local changes are waiting to be written (debounced, offline or paused). */
+  get unsaved(): boolean {
+    return !!this.pending;
+  }
+  /** True while a PUT of local changes is in flight. */
+  get writing(): boolean {
+    return this.busy;
   }
   get editable(): boolean {
     return !!this.id && !!this.token;
@@ -149,16 +167,24 @@ export class CloudClient {
     this.error = error;
     this.changed();
   }
+  /**
+   * Sends a request to the board API and returns its JSON body, or null for a
+   * 304 Not Modified. A `silent` request is not counted in `inFlight` and does
+   * not call `onActivity`, so background checks never spin the status icon.
+   */
   private async send(
     path: string,
     init: RequestInit = {},
-  ): Promise<Record<string, unknown>> {
+    { silent = false }: { silent?: boolean } = {},
+  ): Promise<Record<string, unknown> | null> {
     let response: Response;
     // Call the injected fetch as a plain function: invoking window.fetch as a
     // method of this client throws "Illegal invocation" in browsers.
     const request = this.request;
-    this.requests++;
-    this.onActivity();
+    if (!silent) {
+      this.requests++;
+      this.onActivity();
+    }
     try {
       response = await request(path, {
         ...init,
@@ -168,10 +194,13 @@ export class CloudClient {
     } catch {
       throw new CloudError(0);
     } finally {
-      this.requests--;
-      this.onActivity();
+      if (!silent) {
+        this.requests--;
+        this.onActivity();
+      }
     }
-    if (response.ok) this.lastSyncedAt = Date.now();
+    if (response.ok || response.status === 304) this.lastSyncedAt = Date.now();
+    if (response.status === 304) return null;
     if (!response.ok) {
       if (response.status === 409) {
         const data = (await response.json()) as { version?: number };
@@ -195,14 +224,15 @@ export class CloudClient {
   async create(scene: CloudScene): Promise<void> {
     this.notify('saving');
     try {
-      const data = await this.send('/api/board', {
-        method: 'POST',
-        headers: this.headers(),
-        body: JSON.stringify({
-          elements: scene.elements,
-          ...(scene.viewport ? { viewport: scene.viewport } : {}),
-        }),
-      });
+      const data =
+        (await this.send('/api/board', {
+          method: 'POST',
+          headers: this.headers(),
+          body: JSON.stringify({
+            elements: scene.elements,
+            ...(scene.viewport ? { viewport: scene.viewport } : {}),
+          }),
+        })) ?? {};
       if (
         typeof data.id !== 'string' ||
         !/^[a-zA-Z0-9]{12}$/.test(data.id) ||
@@ -235,18 +265,74 @@ export class CloudClient {
     return scene;
   }
   async read(): Promise<CloudScene> {
-    const data = await this.send(`/api/board/${this.id}`);
-    const elements = validateElements(data.elements);
-    const viewport = validateViewport(data.viewport);
+    const board = parseBoard(await this.send(`/api/board/${this.id}`));
+    this.version = board.version;
+    return board.scene;
+  }
+  /**
+   * Background check for changes another peer saved: a silent conditional GET
+   * with `If-None-Match` on the current version. It runs only on an open board
+   * with nothing unsaved and no request in flight, and returns `skipped`
+   * otherwise. It never raises `version`: the caller applies the returned
+   * board (possibly later, after a drag ends) and then sets `version`, so a
+   * deferred apply cannot leave the client claiming a scene it does not show.
+   * Works with a server that ignores `If-None-Match` by comparing versions.
+   */
+  async check(): Promise<CloudCheck> {
     if (
-      !elements ||
-      !Number.isInteger(data.version) ||
-      (data.version as number) < 1 ||
-      (data.viewport !== undefined && !viewport)
+      !this.id ||
+      this.checking ||
+      this.busy ||
+      this.pending ||
+      this.inFlight ||
+      (this.state !== 'saved' && this.state !== 'offline')
     )
-      throw new CloudError(503);
-    this.version = data.version as number;
-    return { elements, ...(viewport ? { viewport } : {}) };
+      return 'skipped';
+    this.checking = true;
+    const generation = this.generation;
+    const version = this.version;
+    // The outcome only touches the state when no save started meanwhile:
+    // otherwise the save owns the state and reports its own result.
+    const idle = () =>
+      generation === this.generation &&
+      !this.busy &&
+      !this.pending &&
+      (this.state === 'saved' || this.state === 'offline');
+    try {
+      const data = await this.send(
+        `/api/board/${this.id}`,
+        { headers: { 'If-None-Match': `"${version}"` } },
+        { silent: true },
+      );
+      if (generation !== this.generation) return 'skipped';
+      const board = data && parseBoard(data);
+      if (idle() && this.state === 'offline') this.notify('saved');
+      return board && board.version > version ? board : 'unchanged';
+    } catch (error) {
+      if (!idle()) return 'skipped';
+      const status = error instanceof CloudError ? error.status : 503;
+      // A missing board shows as such; any other failure of a background
+      // read is treated as transient, so it never pauses autosaving the way
+      // an error state would. The next check is the retry.
+      this.failed(
+        status === 404 || [0, 429, 503].includes(status)
+          ? error
+          : new CloudError(503),
+      );
+      return 'failed';
+    } finally {
+      this.checking = false;
+    }
+  }
+  /**
+   * Enters the conflict state for a remote change found by `check()` while
+   * local edits were unsaved, as a 409 on save would: autosave pauses, the
+   * server version is recorded so Keep mine overwrites it.
+   */
+  markConflict(serverVersion: number): void {
+    if (this.timer) clearTimeout(this.timer);
+    if (serverVersion > this.version) this.version = serverVersion;
+    this.notify('conflict', 409);
   }
   schedule(scene: Pick<Scene, 'elements' | 'viewport'>): void {
     if (!this.editable) return;
@@ -273,19 +359,20 @@ export class CloudClient {
     const generation = this.generation;
     this.notify('saving');
     try {
-      const data = await this.send(`/api/board/${this.id}`, {
-        method: 'PUT',
-        headers: {
-          ...this.headers(),
-          Authorization: `Bearer ${this.token}`,
-          'If-Match': `"${this.version}"`,
-        },
-        body: JSON.stringify({
-          elements: scene.elements,
-          ...(scene.viewport ? { viewport: scene.viewport } : {}),
-        }),
-        keepalive,
-      });
+      const data =
+        (await this.send(`/api/board/${this.id}`, {
+          method: 'PUT',
+          headers: {
+            ...this.headers(),
+            Authorization: `Bearer ${this.token}`,
+            'If-Match': `"${this.version}"`,
+          },
+          body: JSON.stringify({
+            elements: scene.elements,
+            ...(scene.viewport ? { viewport: scene.viewport } : {}),
+          }),
+          keepalive,
+        })) ?? {};
       if (generation !== this.generation) return;
       if (
         !Number.isInteger(data.version) ||
@@ -361,4 +448,21 @@ export class CloudClient {
     this.token = undefined;
     this.version = 0;
   }
+}
+/** Validates a board response like the web and the MCP do; throws a 503 when it is not a board. */
+function parseBoard(data: Record<string, unknown> | null): CloudBoard {
+  const elements = validateElements(data?.elements);
+  const viewport = validateViewport(data?.viewport);
+  if (
+    !data ||
+    !elements ||
+    !Number.isInteger(data.version) ||
+    (data.version as number) < 1 ||
+    (data.viewport !== undefined && !viewport)
+  )
+    throw new CloudError(503);
+  return {
+    scene: { elements, ...(viewport ? { viewport } : {}) },
+    version: data.version as number,
+  };
 }
