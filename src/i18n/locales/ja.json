@@ -406,5 +406,10 @@
   "macBanner": "Markasso for Macが登場しました。",
   "macBannerLink": "入手",
   "macBannerDismiss": "閉じる",
-  "menuMac": "Markasso for Mac"
+  "menuMac": "Markasso for Mac",
+  "importFailedTitle": "インポートに失敗しました",
+  "markassoInvalidFile": "このファイルは有効な .markasso ファイルではないようです。",
+  "markassoUnreadableFile": "ファイルを読み込めませんでした。破損している可能性があります。",
+  "mermaidParseFailed": "Mermaid 図を解析できませんでした。",
+  "mermaidNoElements": "この図から要素を作成できませんでした。"
 }

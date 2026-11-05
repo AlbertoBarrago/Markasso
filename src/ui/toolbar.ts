@@ -16,6 +16,7 @@ import {
   onLivePeers,
   setLiveName,
 } from '../io/realtime';
+import { showImportError } from './import_error';
 import { toggleLibrary } from './library_panel';
 import { onLiveHide, onLiveReveal, setLiveUI } from './live_name';
 import { buildLiveInvitePrompt } from './mcp_clients';
@@ -734,7 +735,8 @@ export function initToolbar(
     mermaidInsertBtn.disabled = true;
     mermaidInsertBtn.textContent = `${t('mermaidInsert')}…`;
     try {
-      if (await importMermaidText(code, history)) hideMermaidDialog();
+      if (await importMermaidText(code, history, showImportError))
+        hideMermaidDialog();
     } finally {
       mermaidInsertBtn.disabled = false;
       mermaidInsertBtn.textContent = t('mermaidInsert');

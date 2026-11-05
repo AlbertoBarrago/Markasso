@@ -17,6 +17,7 @@ import {
   cloudSeparators,
 } from './cloud_boards';
 import { dialog } from './dialog';
+import { showImportError } from './import_error';
 import { copyToClipboard, showShareToast } from './share_actions';
 
 // ── Theme ─────────────────────────────────────────────────────────────────
@@ -274,7 +275,7 @@ export function initSettings(
   document.body.appendChild(fileInput);
   fileInput.addEventListener('change', () => {
     const f = fileInput.files?.[0];
-    if (f) importMarkasso(f, history);
+    if (f) importMarkasso(f, history, showImportError);
     fileInput.value = '';
     close();
   });

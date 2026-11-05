@@ -406,5 +406,10 @@
   "macBanner": "Markasso Mac 版来了。",
   "macBannerLink": "获取",
   "macBannerDismiss": "关闭",
-  "menuMac": "Markasso Mac 版"
+  "menuMac": "Markasso Mac 版",
+  "importFailedTitle": "导入失败",
+  "markassoInvalidFile": "此文件似乎不是有效的 .markasso 文件。",
+  "markassoUnreadableFile": "无法读取该文件，文件可能已损坏。",
+  "mermaidParseFailed": "无法解析该 Mermaid 图表。",
+  "mermaidNoElements": "无法从此图表创建任何元素。"
 }

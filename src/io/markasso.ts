@@ -37,7 +37,15 @@ export function exportMarkasso(scene: {
 
 // ── Import ──────────────────────────────────────────────────────────────────
 
-export function importMarkasso(file: File, history: History): void {
+/**
+ * Loads a .markasso file into the board. Problems are passed to `onError` as
+ * an i18n key, so this module stays free of UI code.
+ */
+export function importMarkasso(
+  file: File,
+  history: History,
+  onError: (messageKey: string) => void,
+): void {
   const reader = new FileReader();
   reader.onload = (ev) => {
     const raw = ev.target?.result as string;
@@ -45,7 +53,7 @@ export function importMarkasso(file: File, history: History): void {
     try {
       const validated = validateMarkassoFile(JSON.parse(raw) as unknown);
       if (!validated) {
-        alert('This file does not appear to be a valid .markasso file.');
+        onError('markassoInvalidFile');
         return;
       }
       const viewport: Viewport =
@@ -61,7 +69,7 @@ export function importMarkasso(file: File, history: History): void {
         viewport,
       });
     } catch {
-      alert('Failed to read .markasso file. The file may be corrupted.');
+      onError('markassoUnreadableFile');
     }
   };
   reader.readAsText(file);

@@ -406,5 +406,10 @@
   "macBanner": "Markasso for Mac is here.",
   "macBannerLink": "Get it",
   "macBannerDismiss": "Dismiss",
-  "menuMac": "Markasso for Mac"
+  "menuMac": "Markasso for Mac",
+  "importFailedTitle": "Import failed",
+  "markassoInvalidFile": "This file does not appear to be a valid .markasso file.",
+  "markassoUnreadableFile": "The file could not be read. It may be corrupted.",
+  "mermaidParseFailed": "The Mermaid diagram could not be parsed.",
+  "mermaidNoElements": "No elements could be created from this diagram."
 }

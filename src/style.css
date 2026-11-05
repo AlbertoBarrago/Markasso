@@ -175,6 +175,9 @@
   font-size: 14px;
   line-height: 1.55;
   color: var(--text);
+  /* Keeps the blank line before a parser's own error message. */
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 .cd-input {
   width: 100%;
