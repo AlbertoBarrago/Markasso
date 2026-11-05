@@ -143,6 +143,51 @@ function setup() {
 }
 
 describe('cloud boards', () => {
+  it('answers 304 to a matching If-None-Match without reading R2', async () => {
+    const { call, create, env } = setup();
+    const board = await create();
+    const path = `/${board.id}`;
+    const get = vi.spyOn(env.BOARDS_BUCKET, 'get');
+    for (const tag of ['"1"', 'W/"1"', '"7", "1"', '*']) {
+      const response = await call('GET', path, { 'If-None-Match': tag });
+      expect(response.status).toBe(304);
+      expect(response.headers.get('ETag')).toBe('"1"');
+      expect(response.headers.get('Cache-Control')).toBe('no-store');
+      expect(response.headers.get('Access-Control-Expose-Headers')).toBe(
+        'ETag',
+      );
+      expect(await response.text()).toBe('');
+    }
+    expect(get).not.toHaveBeenCalled();
+    const stale = await call('GET', path, { 'If-None-Match': '"0"' });
+    expect(stale.status).toBe(200);
+    expect(stale.headers.get('ETag')).toBe('"1"');
+    expect(await stale.json()).toMatchObject({ version: 1, id: board.id });
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(
+      (
+        await call('GET', path, {
+          'If-None-Match': '"1"',
+          Origin: 'https://markasso.example',
+        })
+      ).headers.get('Access-Control-Allow-Origin'),
+    ).toBe('https://markasso.example');
+    expect(
+      (await call('GET', '/AAAAAAAAAAAA', { 'If-None-Match': '"1"' })).status,
+    ).toBe(404);
+  });
+  it('allows If-None-Match in the board preflight', async () => {
+    const { call } = setup();
+    const response = await call('OPTIONS', '/AAAAAAAAAAAA', {
+      Origin: 'https://markasso.example',
+      'Access-Control-Request-Method': 'GET',
+      'Access-Control-Request-Headers': 'if-none-match',
+    });
+    expect(response.status).toBe(204);
+    expect(response.headers.get('Access-Control-Allow-Headers')).toContain(
+      'If-None-Match',
+    );
+  });
   it('creates, reads with ETag, writes, rejects stale and missing versions, rotates and deletes', async () => {
     const { call, create, rows, objects } = setup();
     const board = await create();

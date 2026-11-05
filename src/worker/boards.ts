@@ -42,6 +42,17 @@ function json(body: unknown, status = 200): Response {
     headers: { 'Cache-Control': 'no-store' },
   });
 }
+/**
+ * `If-None-Match` uses the weak comparison (RFC 9110, 13.1.2): a `W/` prefix
+ * is ignored, a list matches when any entry does, and `*` matches any board.
+ */
+function notModified(header: string | null, etag: string): boolean {
+  if (header === null) return false;
+  return header
+    .split(',')
+    .map((tag) => tag.trim().replace(/^W\//, ''))
+    .some((tag) => tag === '*' || tag === etag);
+}
 async function getBoard(env: Env, id: string): Promise<Board | null> {
   return env.BOARDS_DB.prepare('SELECT * FROM boards WHERE id = ?')
     .bind(id)
@@ -96,6 +107,14 @@ async function handle(request: Request, env: Env): Promise<Response> {
   const board = create ? null : await getBoard(env, id);
   if (!create && !board) return json({ error: 'Not found' }, 404);
   if (board && request.method === 'GET') {
+    const etag = `"${board.version}"`;
+    // Clients poll for remote changes with the ETag they hold: the D1 row is
+    // enough to answer, so an unchanged board never touches R2.
+    if (notModified(request.headers.get('If-None-Match'), etag))
+      return new Response(null, {
+        status: 304,
+        headers: { 'Cache-Control': 'no-store', ETag: etag },
+      });
     const object = await env.BOARDS_BUCKET.get(board.scene_key);
     if (!object) return json({ error: 'Board service unavailable' }, 503);
     const scene = await object.json<Record<string, unknown>>();
@@ -105,7 +124,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
       version: board.version,
       updatedAt: board.updated_at,
     });
-    response.headers.set('ETag', `"${board.version}"`);
+    response.headers.set('ETag', etag);
     return response;
   }
   if (board) {
