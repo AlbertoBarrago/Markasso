@@ -18,6 +18,7 @@ import { initIdleTips } from './src/ui/idle_tips';
 import { initImageImport } from './src/ui/image_import';
 import { initLibraryPanel } from './src/ui/library_panel';
 import { setLiveUI } from './src/ui/live_name';
+import { initMacBanner } from './src/ui/mac_banner';
 import { initMcpSetup } from './src/ui/mcp_setup';
 import { initMinimap } from './src/ui/minimap';
 import { initMobileActionBar } from './src/ui/mobile_action_bar';
@@ -26,7 +27,6 @@ import { applySettings, initSettings, loadSettings } from './src/ui/settings';
 import { showLiveStatusToast } from './src/ui/share_actions';
 import { initShortcuts } from './src/ui/shortcuts';
 import { initShortcutsHelp } from './src/ui/shortcuts_help';
-import { initMacBanner } from './src/ui/mac_banner';
 import { initStarCta } from './src/ui/star_cta';
 import { initToolbar } from './src/ui/toolbar';
 import { initWelcome } from './src/ui/welcome';
@@ -147,7 +147,8 @@ async function bootstrap(): Promise<void> {
   const invited =
     !!cloudRoute || sharedElements !== null || getLiveRoomId() !== null;
   const showedWhatsNew = !invited && initWhatsNew(appEl);
-  const showedWelcome = !invited && !showedWhatsNew && !session && !sharedElements;
+  const showedWelcome =
+    !invited && !showedWhatsNew && !session && !sharedElements;
   if (showedWelcome) initWelcome(appEl, hist);
   // One announcement at a time: the What's New card already presents the Mac
   // app, so the Mac banner waits for a visit without a card.

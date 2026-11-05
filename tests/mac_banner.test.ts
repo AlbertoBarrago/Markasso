@@ -8,13 +8,31 @@ const SAFARI_MAC =
 
 describe('isMacDesktop', () => {
   it('detects a Mac from client hints or the user agent', () => {
-    expect(isMacDesktop({ userAgent: '', maxTouchPoints: 0, userAgentData: { platform: 'macOS' } })).toBe(true);
-    expect(isMacDesktop({ userAgent: SAFARI_MAC, maxTouchPoints: 0 })).toBe(true);
+    expect(
+      isMacDesktop({
+        userAgent: '',
+        maxTouchPoints: 0,
+        userAgentData: { platform: 'macOS' },
+      }),
+    ).toBe(true);
+    expect(isMacDesktop({ userAgent: SAFARI_MAC, maxTouchPoints: 0 })).toBe(
+      true,
+    );
   });
 
   it('rules out iPads (Macintosh user agent with touch) and other systems', () => {
-    expect(isMacDesktop({ userAgent: SAFARI_MAC, maxTouchPoints: 5 })).toBe(false);
-    expect(isMacDesktop({ userAgent: 'Windows NT 10.0', maxTouchPoints: 0 })).toBe(false);
-    expect(isMacDesktop({ userAgent: SAFARI_MAC, maxTouchPoints: 0, userAgentData: { platform: 'Windows' } })).toBe(false);
+    expect(isMacDesktop({ userAgent: SAFARI_MAC, maxTouchPoints: 5 })).toBe(
+      false,
+    );
+    expect(
+      isMacDesktop({ userAgent: 'Windows NT 10.0', maxTouchPoints: 0 }),
+    ).toBe(false);
+    expect(
+      isMacDesktop({
+        userAgent: SAFARI_MAC,
+        maxTouchPoints: 0,
+        userAgentData: { platform: 'Windows' },
+      }),
+    ).toBe(false);
   });
 });

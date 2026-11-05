@@ -5,7 +5,14 @@
  * last piece has fallen. Skipped entirely under `prefers-reduced-motion`.
  */
 
-const COLORS = ['#c42059', '#f2a0bb', '#ffd166', '#06d6a0', '#4cc9f0', '#ffffff'];
+const COLORS = [
+  '#c42059',
+  '#f2a0bb',
+  '#ffd166',
+  '#06d6a0',
+  '#4cc9f0',
+  '#ffffff',
+];
 const PIECES = 150;
 const DURATION_MS = 2600;
 const GRAVITY = 0.32;
@@ -79,7 +86,12 @@ export function launchConfetti(): void {
       ctx.rotate(p.rotation);
       ctx.fillStyle = p.color;
       // Flat rectangles that "flip" by scaling one axis with the rotation.
-      ctx.fillRect(-p.size / 2, -p.size / 4, p.size, (p.size / 2) * Math.cos(p.rotation * 2));
+      ctx.fillRect(
+        -p.size / 2,
+        -p.size / 4,
+        p.size,
+        (p.size / 2) * Math.cos(p.rotation * 2),
+      );
       ctx.restore();
     }
     if (visible && elapsed < DURATION_MS) requestAnimationFrame(frame);

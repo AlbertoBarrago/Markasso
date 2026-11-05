@@ -197,8 +197,11 @@ describe('cloud boards', () => {
     expect((await call('POST')).status).toBe(402);
     expect((await call('PUT', `/${b.id}`, auth)).status).toBe(402);
     expect(
-      (await call('POST', '', { 'X-Markasso-License': 'MKC_00000000-0000-4000-8000-000000000000' }))
-        .status,
+      (
+        await call('POST', '', {
+          'X-Markasso-License': 'MKC_00000000-0000-4000-8000-000000000000',
+        })
+      ).status,
     ).toBe(402);
     expect((await call('GET', `/${b.id}`)).status).toBe(200);
     expect(

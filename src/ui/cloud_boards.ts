@@ -36,11 +36,12 @@ export const CLOUD_ACTIONS = CLOUD_ENABLED ? ALL_CLOUD_ACTIONS : [];
  * How menus group the cloud actions: saving, the open cloud board, the
  * account. Every action appears in exactly one group, in this order.
  */
-export const CLOUD_GROUPS: readonly (readonly (typeof ALL_CLOUD_ACTIONS)[number][])[] = [
-  ['cloudSave'],
-  ['cloudReadLink', 'cloudEditLink', 'cloudMac', 'cloudDuplicate'],
-  ['cloudLicense', 'cloudSubscription'],
-];
+export const CLOUD_GROUPS: readonly (readonly (typeof ALL_CLOUD_ACTIONS)[number][])[] =
+  [
+    ['cloudSave'],
+    ['cloudReadLink', 'cloudEditLink', 'cloudMac', 'cloudDuplicate'],
+    ['cloudLicense', 'cloudSubscription'],
+  ];
 /**
  * Which separators to show, given which groups have a visible item. Entry i
  * is the separator before group i (entry 0 is always false): it shows when
@@ -430,7 +431,10 @@ function createController(history: History) {
         if (!value?.trim()) return;
         status = await client.checkLicense(value);
         if (status !== 'invalid') break;
-        await dialog({ title: t('cloudLicense'), message: t('cloudKeyInvalid') });
+        await dialog({
+          title: t('cloudLicense'),
+          message: t('cloudKeyInvalid'),
+        });
       }
     } finally {
       resolving = false;

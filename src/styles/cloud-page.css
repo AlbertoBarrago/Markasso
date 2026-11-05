@@ -275,7 +275,9 @@ body::before {
     transform 0.15s;
 }
 .checkout-link:hover {
-  box-shadow: 0 0 0 4px var(--accent-light), 0 8px 28px -8px var(--accent);
+  box-shadow:
+    0 0 0 4px var(--accent-light),
+    0 8px 28px -8px var(--accent);
   transform: translateY(-1px);
 }
 /* Blocks and their list items fade in when scrolled into view. */

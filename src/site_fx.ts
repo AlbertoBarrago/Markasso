@@ -60,8 +60,14 @@ function driftGrid(): void {
       frame = 0;
       const x = (event.clientX / window.innerWidth - 0.5) * -28;
       const y = (event.clientY / window.innerHeight - 0.5) * -28;
-      document.documentElement.style.setProperty('--grid-x', `${x.toFixed(1)}px`);
-      document.documentElement.style.setProperty('--grid-y', `${y.toFixed(1)}px`);
+      document.documentElement.style.setProperty(
+        '--grid-x',
+        `${x.toFixed(1)}px`,
+      );
+      document.documentElement.style.setProperty(
+        '--grid-y',
+        `${y.toFixed(1)}px`,
+      );
     });
   });
 }

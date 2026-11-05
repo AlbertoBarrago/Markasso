@@ -25,7 +25,12 @@ class FakeSocket {
     this.readyState = FakeSocket.OPEN;
     this.onopen?.();
     this.onmessage?.({
-      data: JSON.stringify({ type: 'init', self: 'me', commands: [], peers: [] }),
+      data: JSON.stringify({
+        type: 'init',
+        self: 'me',
+        commands: [],
+        peers: [],
+      }),
     });
   }
   send(data: string): void {

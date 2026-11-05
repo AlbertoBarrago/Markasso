@@ -105,7 +105,10 @@ export async function resolveMacBuild(env: Env): Promise<MacBuild> {
 }
 
 /** Adds one download for today and `version`. Never blocks the download. */
-export async function countMacDownload(env: Env, version: string): Promise<void> {
+export async function countMacDownload(
+  env: Env,
+  version: string,
+): Promise<void> {
   try {
     await env.BOARDS_DB.prepare(
       `INSERT INTO downloads (day, version, count) VALUES (?, ?, 1)
@@ -119,7 +122,10 @@ export async function countMacDownload(env: Env, version: string): Promise<void>
 }
 
 /** GET /download/mac (counted 302) and GET /download/mac.json (no count). */
-export async function macDownload(request: Request, env: Env): Promise<Response> {
+export async function macDownload(
+  request: Request,
+  env: Env,
+): Promise<Response> {
   const build = await resolveMacBuild(env);
   const url = new URL(request.url);
   if (url.pathname === '/download/mac.json')

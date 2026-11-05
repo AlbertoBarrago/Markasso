@@ -51,7 +51,11 @@ afterEach(() => {
 
 describe('allowedMacDownload', () => {
   it('accepts only zips under the Markasso updates folder', () => {
-    expect(allowedMacDownload('https://albz.it/updates/markasso/Markasso-0.9.2-3.zip')).toBe(true);
+    expect(
+      allowedMacDownload(
+        'https://albz.it/updates/markasso/Markasso-0.9.2-3.zip',
+      ),
+    ).toBe(true);
     for (const url of [
       'http://albz.it/updates/markasso/Markasso-0.9.2-3.zip',
       'https://evil.example/updates/markasso/Markasso.zip',
@@ -70,7 +74,9 @@ describe('allowedMacDownload', () => {
 describe('latestFromAppcast', () => {
   it('reads the first item', () => {
     expect(
-      latestFromAppcast(appcast('https://albz.it/updates/markasso/Markasso-0.9.2-3.zip')),
+      latestFromAppcast(
+        appcast('https://albz.it/updates/markasso/Markasso-0.9.2-3.zip'),
+      ),
     ).toEqual({
       url: 'https://albz.it/updates/markasso/Markasso-0.9.2-3.zip',
       version: '0.9.2',
@@ -78,7 +84,9 @@ describe('latestFromAppcast', () => {
   });
 
   it('refuses a first item pointing elsewhere', () => {
-    expect(latestFromAppcast(appcast('https://evil.example/Markasso.zip'))).toBeNull();
+    expect(
+      latestFromAppcast(appcast('https://evil.example/Markasso.zip')),
+    ).toBeNull();
     expect(latestFromAppcast('<rss></rss>')).toBeNull();
   });
 });
@@ -87,7 +95,9 @@ describe('macDownload', () => {
   it('redirects to the latest build and counts it per day and version', async () => {
     const { env, counts } = setup();
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(appcast('https://albz.it/updates/markasso/Markasso-0.9.2-3.zip')),
+      new Response(
+        appcast('https://albz.it/updates/markasso/Markasso-0.9.2-3.zip'),
+      ),
     );
     const res = await get(env);
     expect(res.status).toBe(302);
@@ -104,7 +114,9 @@ describe('macDownload', () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(
-        new Response(appcast('https://albz.it/updates/markasso/Markasso-0.9.2-3.zip')),
+        new Response(
+          appcast('https://albz.it/updates/markasso/Markasso-0.9.2-3.zip'),
+        ),
       );
     expect(await (await get(env, '/download/mac.json')).json()).toEqual({
       url: 'https://albz.it/updates/markasso/Markasso-0.9.2-3.zip',
@@ -120,11 +132,15 @@ describe('macDownload', () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
     const { env } = setup();
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(appcast('https://albz.it/updates/markasso/Markasso-0.9.2-3.zip')),
+      new Response(
+        appcast('https://albz.it/updates/markasso/Markasso-0.9.2-3.zip'),
+      ),
     );
     await get(env);
     vi.advanceTimersByTime(10 * 60 * 1000);
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 500 }));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('', { status: 500 }),
+    );
     expect((await get(env)).headers.get('Location')).toBe(
       'https://albz.it/updates/markasso/Markasso-0.9.2-3.zip',
     );

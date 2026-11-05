@@ -6,7 +6,7 @@ import {
   normalizeLicenseKey,
   sha256,
 } from '../src/worker/license';
-import { BENEFIT, ORG, mockPolar, polarEnv } from './polar_fake';
+import { BENEFIT, mockPolar, ORG, polarEnv } from './polar_fake';
 
 const KEY = 'MKC_1C285B2D-6CE6-4BC7-B8BE-ADB6A7E304DA';
 const request = (license?: string) =>
@@ -91,7 +91,9 @@ describe('license gate', () => {
     const { env } = polarEnv();
     mockPolar([KEY]);
     expect(await licenseKeyValid(KEY, env)).toBe(true);
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 502 }));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('', { status: 502 }),
+    );
     vi.advanceTimersByTime(3 * 86400 * 1000);
     expect(await licenseGate(request(KEY), env)).toBeNull();
     vi.advanceTimersByTime(5 * 86400 * 1000);
@@ -102,7 +104,11 @@ describe('license gate', () => {
     const { env, cache } = polarEnv();
     cache.set(
       `license:${await sha256(KEY)}`,
-      JSON.stringify({ valid: true, checkedAt: Date.now(), scope: 'other:scope' }),
+      JSON.stringify({
+        valid: true,
+        checkedAt: Date.now(),
+        scope: 'other:scope',
+      }),
     );
     mockPolar([]);
     expect(await licenseKeyValid(KEY, env)).toBe(false);
@@ -133,7 +139,9 @@ describe('licenseCheck', () => {
     mockPolar([KEY]);
     expect(await (await check(env, KEY)).json()).toEqual({ valid: true });
     expect(
-      await (await check(env, 'MKC_00000000-0000-4000-8000-000000000000')).json(),
+      await (
+        await check(env, 'MKC_00000000-0000-4000-8000-000000000000')
+      ).json(),
     ).toEqual({ valid: false });
     expect(await (await check(env)).json()).toEqual({ valid: false });
   });
@@ -141,7 +149,9 @@ describe('licenseCheck', () => {
   it('is rate limited and reports an unreachable Polar as 503', async () => {
     expect((await check(polarEnv(limiter(false)).env, KEY)).status).toBe(429);
     vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 502 }));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('', { status: 502 }),
+    );
     expect((await check(polarEnv(limiter(true)).env, KEY)).status).toBe(503);
   });
 });

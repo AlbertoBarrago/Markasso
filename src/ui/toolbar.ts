@@ -1,8 +1,8 @@
+import { CLOUD_ENABLED } from '../config/features';
 import type { ActiveTool } from '../core/app_state';
 import { fitToElements } from '../core/viewport';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
-import { CLOUD_ENABLED } from '../config/features';
 import { cloudPageUrl, LICENSE_KEY } from '../io/cloud';
 import { importMermaidText } from '../io/mermaid';
 import { PRESETS } from '../io/presets';

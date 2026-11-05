@@ -28,18 +28,20 @@ export function polarEnv(extra: Record<string, unknown> = {}) {
 /** Mocks Polar's validate endpoint: 200 granted for `granted`, 404 otherwise. */
 export function mockPolar(granted: Iterable<string>, benefitId = BENEFIT) {
   const keys = new Set(granted);
-  return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
-    if (!String(input).endsWith('/v1/license-keys/validate'))
-      throw new Error(`unexpected fetch ${String(input)}`);
-    const body = JSON.parse(String(init?.body)) as { key: string };
-    return keys.has(body.key)
-      ? Response.json({
-          status: 'granted',
-          key: body.key,
-          benefit_id: benefitId,
-          organization_id: ORG,
-          expires_at: null,
-        })
-      : Response.json({ error: 'ResourceNotFound' }, { status: 404 });
-  });
+  return vi
+    .spyOn(globalThis, 'fetch')
+    .mockImplementation(async (input, init) => {
+      if (!String(input).endsWith('/v1/license-keys/validate'))
+        throw new Error(`unexpected fetch ${String(input)}`);
+      const body = JSON.parse(String(init?.body)) as { key: string };
+      return keys.has(body.key)
+        ? Response.json({
+            status: 'granted',
+            key: body.key,
+            benefit_id: benefitId,
+            organization_id: ORG,
+            expires_at: null,
+          })
+        : Response.json({ error: 'ResourceNotFound' }, { status: 404 });
+    });
 }

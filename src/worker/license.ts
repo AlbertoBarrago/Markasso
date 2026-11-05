@@ -42,8 +42,15 @@ export function normalizeLicenseKey(raw: string | null): string | null {
  * Polar's answer for unknown, revoked, disabled or expired keys, and for a
  * benefit mismatch. Throws on configuration or upstream failures.
  */
-export async function validateWithPolar(key: string, env: Env): Promise<boolean> {
-  if (!env.POLAR_ACCESS_TOKEN || !env.POLAR_ORGANIZATION_ID || !env.POLAR_BENEFIT_ID)
+export async function validateWithPolar(
+  key: string,
+  env: Env,
+): Promise<boolean> {
+  if (
+    !env.POLAR_ACCESS_TOKEN ||
+    !env.POLAR_ORGANIZATION_ID ||
+    !env.POLAR_BENEFIT_ID
+  )
     throw new Error('Polar is not configured');
   const response = await fetch(
     `${env.POLAR_API_URL || POLAR_API}/v1/license-keys/validate`,
@@ -109,7 +116,12 @@ export async function licenseKeyValid(
   try {
     valid = await validateWithPolar(key, env);
   } catch (error) {
-    if (cached?.scope === scope && cached.valid && ageS >= 0 && ageS <= STALE_GRACE_S) {
+    if (
+      cached?.scope === scope &&
+      cached.valid &&
+      ageS >= 0 &&
+      ageS <= STALE_GRACE_S
+    ) {
       console.log('[license] Polar unavailable, using a recent answer', error);
       return true;
     }
@@ -155,7 +167,10 @@ export async function licenseGate(
  * pasted key before storing it. Rate limited per client address like board
  * writes, so it cannot be used to probe keys in bulk.
  */
-export async function licenseCheck(request: Request, env: Env): Promise<Response> {
+export async function licenseCheck(
+  request: Request,
+  env: Env,
+): Promise<Response> {
   const limited = await env.BOARD_RATE_LIMITER.limit({
     key: `licence:${request.headers.get('CF-Connecting-IP') ?? 'unknown'}`,
   });

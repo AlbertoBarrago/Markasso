@@ -17,9 +17,9 @@ import {
   CLOUD_ACTIONS,
   CLOUD_GROUPS,
   cloudAction,
-  cloudSeparators,
   cloudActionAvailable,
   cloudLicenseStored,
+  cloudSeparators,
 } from './cloud_boards';
 import {
   bindUndoTransaction,
@@ -154,8 +154,7 @@ export function initMobileActionBar(
     note.textContent = t('cloudMenuNote');
     shareSheet.append(note);
     const groups = CLOUD_GROUPS.map((group, i) => {
-      const divider =
-        i === 0 ? null : document.createElement('div');
+      const divider = i === 0 ? null : document.createElement('div');
       if (divider) {
         divider.className = 'mss-divider';
         divider.setAttribute('role', 'separator');

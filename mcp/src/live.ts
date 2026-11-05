@@ -30,7 +30,7 @@ const JOIN_TIMEOUT_MS = 10_000;
 /** Close code the room uses for an agent without a valid licence. */
 const CLOSE_LICENCE_REQUIRED = 4402;
 const LICENCE_MESSAGE =
-  'Drawing live with an AI agent needs a Markasso Cloud licence. Get one at https://markasso.it/cloud, then set MARKASSO_LICENSE in this MCP server\'s environment.';
+  "Drawing live with an AI agent needs a Markasso Cloud licence. Get one at https://markasso.it/cloud, then set MARKASSO_LICENSE in this MCP server's environment.";
 
 export class LiveError extends Error {
   override name = 'LiveError';

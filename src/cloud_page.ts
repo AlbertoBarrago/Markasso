@@ -25,7 +25,11 @@ for (const element of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
   element.textContent = t(element.dataset.i18n!);
 }
 
-function link(href: string, label: string, className: string): HTMLAnchorElement {
+function link(
+  href: string,
+  label: string,
+  className: string,
+): HTMLAnchorElement {
   const a = document.createElement('a');
   a.className = className;
   a.href = href;
@@ -42,7 +46,8 @@ const plans = [
 const buttons = plans.flatMap(([url, label]) =>
   url ? [link(url, t(label), 'checkout-link')] : [],
 );
-if (buttons.length) document.getElementById('checkout')?.replaceChildren(...buttons);
+if (buttons.length)
+  document.getElementById('checkout')?.replaceChildren(...buttons);
 
 const portal = checkoutUrl(POLAR_LINKS.portal);
 const manage = document.getElementById('manage');

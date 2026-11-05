@@ -554,7 +554,8 @@ const worker = {
 
     if (
       (request.method === 'GET' || request.method === 'HEAD') &&
-      (url.pathname === '/download/mac' || url.pathname === '/download/mac.json')
+      (url.pathname === '/download/mac' ||
+        url.pathname === '/download/mac.json')
     ) {
       return macDownload(request, env);
     }

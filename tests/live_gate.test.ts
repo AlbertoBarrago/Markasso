@@ -9,7 +9,10 @@ const OTHER = 'MKC_9D3E1F7A-0B2C-4D5E-8F90-123456789ABC';
 class FakeServerSocket {
   readonly sent: Record<string, unknown>[] = [];
   closed: { code: number; reason: string } | null = null;
-  private listeners = new Map<string, Array<(event: { data?: string }) => void>>();
+  private listeners = new Map<
+    string,
+    Array<(event: { data?: string }) => void>
+  >();
   addEventListener(type: string, cb: (event: { data?: string }) => void): void {
     this.listeners.set(type, [...(this.listeners.get(type) ?? []), cb]);
   }
@@ -66,12 +69,15 @@ describe('live agent licence gate', () => {
     server.receive({ type: 'presence', name: 'Claude', color: '#c77dff' });
     await settled(server);
     expect(server.closed).toBeNull();
-    expect(server.sent[0]).toMatchObject({ type: 'init', self: 'agent-client-1' });
+    expect(server.sent[0]).toMatchObject({
+      type: 'init',
+      self: 'agent-client-1',
+    });
     // The presence sent during the check is replayed once the agent is in.
     await vi.waitFor(() =>
-      expect(server.sent.filter((m) => m.type === 'presence').at(-1)?.peers).toEqual([
-        { id: 'agent-client-1', name: 'Claude', color: '#c77dff' },
-      ]),
+      expect(
+        server.sent.filter((m) => m.type === 'presence').at(-1)?.peers,
+      ).toEqual([{ id: 'agent-client-1', name: 'Claude', color: '#c77dff' }]),
     );
   });
 
@@ -127,7 +133,10 @@ describe('live peer classification', () => {
     expect(await forward({})).toBe('agent');
     expect(await forward({ Origin: 'https://evil.example' })).toBe('agent');
     expect(
-      await forward({ Origin: 'https://evil.example', 'X-Markasso-Peer': 'browser' }),
+      await forward({
+        Origin: 'https://evil.example',
+        'X-Markasso-Peer': 'browser',
+      }),
     ).toBe('agent');
   });
 });
