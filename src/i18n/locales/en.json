@@ -273,6 +273,7 @@
   "libraryImportSkipped": "{count} files skipped.",
   "libraryImportError": "Import failed.",
   "libraryDeletePack": "Delete pack",
+  "libraryDeletePackTitle": "Delete icon pack?",
   "libraryDeletePackConfirm": "Delete the “{name}” icon pack from this browser? Diagrams that already use its icons keep them.",
   "libraryStorageError": "Icon packs can't be stored in this browser.",
   "libraryDownloadFrom": "Download:",

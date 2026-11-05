@@ -270,6 +270,7 @@
   "libraryImportSkipped": "{count} archivos omitidos.",
   "libraryImportError": "No se pudo importar.",
   "libraryDeletePack": "Eliminar paquete",
+  "libraryDeletePackTitle": "¿Eliminar el paquete de iconos?",
   "libraryDeletePackConfirm": "¿Eliminar el paquete “{name}” de este navegador? Los diagramas que ya usan sus iconos los conservan.",
   "libraryStorageError": "No se pueden guardar paquetes de iconos en este navegador.",
   "libraryDownloadFrom": "Descargar:",

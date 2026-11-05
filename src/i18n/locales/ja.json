@@ -270,6 +270,7 @@
   "libraryImportSkipped": "{count} 個のファイルをスキップしました。",
   "libraryImportError": "インポートに失敗しました。",
   "libraryDeletePack": "パックを削除",
+  "libraryDeletePackTitle": "アイコンパックを削除しますか？",
   "libraryDeletePackConfirm": "このブラウザからアイコンパック「{name}」を削除しますか？既にそのアイコンを使っている図はそのまま残ります。",
   "libraryStorageError": "このブラウザではアイコンパックを保存できません。",
   "libraryDownloadFrom": "ダウンロード：",
