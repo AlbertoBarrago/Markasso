@@ -779,6 +779,19 @@ describe('licence check', () => {
     expect(ctx.values.has(LICENSE_KEY)).toBe(false);
   });
 
+  it('calls fetch without the client as receiver', async () => {
+    // The browser's fetch throws "Illegal invocation" when called as a method
+    // of another object; this stand-in does the same.
+    const ctx = setup();
+    const strictFetch = vi.fn(function (this: unknown) {
+      if (this !== undefined && this !== globalThis)
+        throw new TypeError('Illegal invocation');
+      return Promise.resolve(response({ valid: true }));
+    }) as unknown as typeof fetch;
+    const client = new CloudClient(ctx.storage, strictFetch);
+    expect(await client.checkLicense('MKC-KEY-1234')).toBe('valid');
+  });
+
   it('tells a rejected key from an unanswered check', async () => {
     const ctx = setup();
     ctx.fetcher.mockResolvedValueOnce(response({ valid: false }));

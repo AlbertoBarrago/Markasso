@@ -100,8 +100,11 @@ export class CloudClient {
    * decide.
    */
   async checkLicense(key: string): Promise<'valid' | 'invalid' | 'unknown'> {
+    // Detached on purpose: `this.request(...)` would call the browser's fetch
+    // with the CloudClient as receiver, which throws "Illegal invocation".
+    const request = this.request;
     try {
-      const response = await this.request('/api/licence/check', {
+      const response = await request('/api/licence/check', {
         method: 'POST',
         headers: { 'X-Markasso-License': key.trim() },
       });
