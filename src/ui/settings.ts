@@ -16,6 +16,7 @@ import {
   cloudLicenseStored,
   cloudSeparators,
 } from './cloud_boards';
+import { dialog } from './dialog';
 import { copyToClipboard, showShareToast } from './share_actions';
 
 // ── Theme ─────────────────────────────────────────────────────────────────
@@ -813,13 +814,26 @@ export function initSettings(
   // ── File actions ─────────────────────────────────────────────────────────
   onActivate('#menu-open', () => fileInput.click());
   onActivate('#menu-save', () => exportMarkasso(history.present));
-  const askBackground = (): boolean => confirm('Include white background?');
-  onActivate('#menu-export-png', () =>
-    exportPNG(history.present, askBackground()),
-  );
-  onActivate('#menu-export-svg', () =>
-    exportSVG(history.present, askBackground()),
-  );
+  /** Asks whether the image keeps the canvas background; null when cancelled. */
+  const askBackground = async (): Promise<boolean | null> => {
+    const choice = await dialog({
+      title: t('exportBackgroundTitle'),
+      message: t('exportBackgroundMessage'),
+      choices: [
+        { key: 'exportTransparent' },
+        { key: 'exportWithBackground', primary: true },
+      ],
+    });
+    return choice === null ? null : choice === 'exportWithBackground';
+  };
+  const exportImage = async (
+    run: (scene: typeof history.present, withBackground: boolean) => void,
+  ): Promise<void> => {
+    const withBackground = await askBackground();
+    if (withBackground !== null) run(history.present, withBackground);
+  };
+  onActivate('#menu-export-png', () => exportImage(exportPNG));
+  onActivate('#menu-export-svg', () => exportImage(exportSVG));
   onActivate('#menu-export-html', () => exportHTML(history.present));
 
   // ── Share ────────────────────────────────────────────────────────────────
