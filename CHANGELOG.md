@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.18.1] - 2026-11-05
+
+### Changed
+- **What's new.** The notice opens once more for 1.18 and presents Markasso's own dialogs next to Markasso Cloud and the Mac app.
+
+---
+
 ## [1.18.0] - 2026-11-05
 
 ### Changed
