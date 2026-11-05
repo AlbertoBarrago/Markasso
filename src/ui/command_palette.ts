@@ -17,6 +17,7 @@ import {
 } from './cloud_boards';
 import { insertStencil } from './library_insert';
 import { SHAPE_KIND_LABEL_KEYS, shapeKindIcon } from './shape_icons';
+import { copyToClipboard, showShareToast } from './share_actions';
 import { GENERIC_ICON_LABEL_KEYS, genericIconSvg } from './stencil_icons';
 
 interface PaletteItem {
@@ -416,11 +417,7 @@ export function initCommandPalette(
       icon: `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="5" r="2"/><circle cx="5" cy="10" r="2"/><circle cx="15" cy="15" r="2"/><path d="M7 9l6-3M7 11l6 3"/></svg>`,
       execute: async () => {
         const url = await buildShareUrl(history.present.elements);
-        try {
-          await navigator.clipboard.writeText(url);
-        } catch {
-          prompt(t('shareLink'), url);
-        }
+        showShareToast(await copyToClipboard(url), url);
       },
     });
     items.push({

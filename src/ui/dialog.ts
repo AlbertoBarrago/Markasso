@@ -21,13 +21,7 @@ export interface DialogChoice {
 export interface DialogField {
   /** Accessible name, also the placeholder. */
   label: string;
-  value?: string;
   type?: 'text' | 'password';
-  /**
-   * Shows a value to copy (e.g. a link): selected on focus, and the dialog
-   * resolves with the chosen key instead of the field's text.
-   */
-  readOnly?: boolean;
 }
 
 export interface DialogOptions {
@@ -86,12 +80,6 @@ export function dialog(options: DialogOptions): Promise<string | null> {
       input.autocomplete = 'off';
       input.placeholder = field.label;
       input.setAttribute('aria-label', field.label);
-      if (field.value !== undefined) input.value = field.value;
-      if (field.readOnly) {
-        input.readOnly = true;
-        const target = input;
-        input.addEventListener('focus', () => target.select());
-      }
       input.autofocus = true;
       card.append(input);
     }
@@ -104,7 +92,6 @@ export function dialog(options: DialogOptions): Promise<string | null> {
       link.textContent = options.link.label;
       card.append(link);
     }
-    const editable = !!input && !options.field?.readOnly;
 
     const finish = (value: string | null): void => {
       modal.close();
@@ -161,9 +148,7 @@ export function dialog(options: DialogOptions): Promise<string | null> {
         button.autofocus = true;
       button.textContent = t(choice.key);
       button.addEventListener('click', () =>
-        finish(
-          editable && input ? input.value : choices.length ? choice.key : null,
-        ),
+        finish(input ? input.value : choices.length ? choice.key : null),
       );
       actions.append(button);
     }

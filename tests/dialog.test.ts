@@ -16,12 +16,10 @@ class Node extends EventTarget {
   value = '';
   placeholder = '';
   autocomplete = '';
-  readOnly = false;
   autofocus = false;
   children: Node[] = [];
   dataset: Record<string, string> = {};
   focus = vi.fn();
-  select = vi.fn();
   showModal = vi.fn();
   close = vi.fn();
   remove = vi.fn();
@@ -116,21 +114,6 @@ describe('dialog', () => {
     input.value = 'MKC-KEY';
     button('store').dispatchEvent(new Event('click'));
     expect(await result).toBe('MKC-KEY');
-  });
-
-  it('shows a read-only value to copy and resolves with the choice', async () => {
-    const result = dialog({
-      title: 'T',
-      message: 'M',
-      field: { label: 'Link', value: 'https://markasso.it/#x', readOnly: true },
-    });
-    const input = all(modal()).find((n) => n.className === 'cd-input')!;
-    expect(input.readOnly).toBe(true);
-    expect(input.value).toBe('https://markasso.it/#x');
-    input.dispatchEvent(new Event('focus'));
-    expect(input.select).toHaveBeenCalled();
-    button('dialogOk').dispatchEvent(new Event('click'));
-    expect(await result).toBeNull();
   });
 });
 
