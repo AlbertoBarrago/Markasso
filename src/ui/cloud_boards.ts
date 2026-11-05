@@ -20,6 +20,10 @@ import {
   cloudStatusNeedsAttention,
 } from './cloud_status';
 import { launchConfetti } from './confetti';
+import {
+  dialog as appDialog,
+  type DialogOptions as BaseDialogOptions,
+} from './dialog';
 import { copyToClipboard, showShareToast } from './share_actions';
 
 const ALL_CLOUD_ACTIONS = [
@@ -71,126 +75,23 @@ export function cloudAction(
     .catch(() => dialog(storageDialog()));
 }
 
-/** One button of a cloud dialog; `hint` turns it into a described option card. */
-interface DialogChoice {
-  key: string;
-  hint?: string;
-  primary?: boolean;
-}
-interface DialogOptions {
-  title: string;
-  message: string;
-  choices?: DialogChoice[];
+type DialogOptions = Omit<BaseDialogOptions, 'kicker' | 'field' | 'link'> & {
   /** Adds the licence key field and the purchase link; resolves with the typed key. */
   license?: boolean;
-}
+};
 
-/**
- * Modal in the app's card style (the What's New card): kicker, title,
- * description, then the actions. Without choices it is a notice with a single
- * OK. Resolves with the chosen key, the typed licence key, or null on cancel.
- */
+/** The shared app dialog with the "Markasso Cloud" kicker and the licence field. */
 function dialog(options: DialogOptions): Promise<string | null> {
-  return new Promise((resolve) => {
-    const previous = document.activeElement;
-    const modal = document.createElement('dialog');
-    modal.className = 'cloud-dialog';
-    const card = document.createElement('div');
-    card.className = 'cd-card';
-    const kicker = document.createElement('div');
-    kicker.className = 'cd-kicker';
-    kicker.textContent = t('cloudPageTitle');
-    const title = document.createElement('h2');
-    title.className = 'cd-title';
-    title.id = 'cloud-dialog-title';
-    title.textContent = options.title;
-    const message = document.createElement('p');
-    message.className = 'cd-desc';
-    message.id = 'cloud-dialog-message';
-    message.textContent = options.message;
-    modal.setAttribute('aria-labelledby', title.id);
-    modal.setAttribute('aria-describedby', message.id);
-    card.append(kicker, title, message);
-    modal.append(card);
-    let input: HTMLInputElement | undefined;
-    if (options.license) {
-      input = document.createElement('input');
-      input.className = 'cd-input';
-      input.type = 'password';
-      input.autocomplete = 'off';
-      input.placeholder = t('cloudKey');
-      input.setAttribute('aria-label', t('cloudKey'));
-      input.autofocus = true;
-      const purchase = document.createElement('a');
-      purchase.className = 'cd-link';
-      purchase.href = cloudPageUrl();
-      purchase.rel = 'noreferrer';
-      purchase.target = '_blank';
-      purchase.textContent = t('cloudBuy');
-      card.append(input, purchase);
-    }
-    const finish = (value: string | null): void => {
-      modal.close();
-      modal.remove();
-      if (previous instanceof HTMLElement) previous.focus();
-      resolve(value);
-    };
-    const choices = options.choices ?? [];
-    const described = choices.filter((choice) => choice.hint);
-    if (described.length) {
-      const list = document.createElement('div');
-      list.className = 'cd-options';
-      described.forEach((choice, index) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'cd-option';
-        button.dataset.choice = choice.key;
-        if (index === 0 && !input) button.autofocus = true;
-        const name = document.createElement('span');
-        name.className = 'cd-option-title';
-        name.textContent = t(choice.key);
-        const hint = document.createElement('span');
-        hint.className = 'cd-option-hint';
-        hint.textContent = t(choice.hint as string);
-        button.append(name, hint);
-        button.addEventListener('click', () => finish(choice.key));
-        list.append(button);
-      });
-      card.append(list);
-    }
-    const actions = document.createElement('div');
-    actions.className = 'cd-actions';
-    const plain = choices.filter((choice) => !choice.hint);
-    if (!choices.length) plain.push({ key: 'cloudOk', primary: true });
-    else {
-      const cancel = document.createElement('button');
-      cancel.type = 'button';
-      cancel.className = 'cd-cancel';
-      cancel.dataset.choice = 'cloudCancel';
-      cancel.textContent = t('cloudCancel');
-      cancel.addEventListener('click', () => finish(null));
-      actions.append(cancel);
-    }
-    for (const choice of plain) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = choice.primary ? 'cd-cta' : 'cd-secondary';
-      button.dataset.choice = choice.key;
-      if (choice.primary && !input && !described.length)
-        button.autofocus = true;
-      button.textContent = t(choice.key);
-      button.addEventListener('click', () =>
-        finish(input ? input.value : choices.length ? choice.key : null),
-      );
-      actions.append(button);
-    }
-    card.append(actions);
-    modal.addEventListener('cancel', (event) => {
-      event.preventDefault();
-      finish(null);
-    });
-    document.body.append(modal);
-    modal.showModal();
+  const { license, ...rest } = options;
+  return appDialog({
+    kicker: t('cloudPageTitle'),
+    ...rest,
+    ...(license
+      ? {
+          field: { label: t('cloudKey'), type: 'password' as const },
+          link: { href: cloudPageUrl(), label: t('cloudBuy') },
+        }
+      : {}),
   });
 }
 /** Title and explanation for a failed request, matching the status icon's wording. */

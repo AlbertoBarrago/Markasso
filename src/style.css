@@ -112,8 +112,8 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
-/* Cloud dialogs follow the What's New card: kicker, title, text, actions. */
-.cloud-dialog {
+/* App dialogs (src/ui/dialog.ts) follow the What's New card: kicker, title, text, actions. */
+.app-dialog {
   /* The global reset zeroes margins; auto margins restore the native centring. */
   position: fixed;
   inset: 0;
@@ -126,7 +126,7 @@
   max-height: none;
   overflow: visible;
 }
-.cloud-dialog::backdrop {
+.app-dialog::backdrop {
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
@@ -272,6 +272,9 @@
 }
 .cd-cta:hover {
   opacity: 0.88;
+}
+.cd-cta.cd-danger {
+  background: var(--alert);
 }
 .cd-secondary {
   border: 1px solid var(--island-border);
