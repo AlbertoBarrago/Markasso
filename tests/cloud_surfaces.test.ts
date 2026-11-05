@@ -146,7 +146,7 @@ describe.each([false, true])('cloud UI enabled=%s', (enabled) => {
     );
 
     const { initCommandPalette } = await import('../src/ui/command_palette');
-    initCommandPalette(history, {} as SelectTool, noop);
+    initCommandPalette(history, {} as SelectTool, noop, noop);
     keydown({ key: 'k', ctrlKey: true, preventDefault: noop });
     const palette = nodes.find((node) => node.id === 'cmd-palette-overlay')!;
     const list = palette.querySelector('#cmd-list');

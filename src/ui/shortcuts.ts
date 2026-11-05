@@ -8,8 +8,13 @@ import { fitToElements } from '../core/viewport';
 import { cloneElementsWithOffset } from '../elements/clone';
 import type { History } from '../engine/history';
 import { validateElements } from '../io/element_validation';
+import { exportMarkasso } from '../io/markasso';
 import type { SelectTool } from '../tools/select_tool';
-import { isFocusInPanel, isModalDialogOpen } from './keyboard_utils';
+import {
+  fileShortcut,
+  isFocusInPanel,
+  isModalDialogOpen,
+} from './keyboard_utils';
 import { toggleLibrary } from './library_panel';
 import { toggleMinimap } from './settings';
 import { zoomIn, zoomOut } from './toolbar';
@@ -62,6 +67,7 @@ export function initShortcuts(
   history: History,
   selectTool: SelectTool,
   openPreferences: () => void,
+  openFile: () => void,
 ): void {
   let pasteCount = 0;
   const shortcuts = new Map<string, () => void>([
@@ -99,6 +105,16 @@ export function initShortcuts(
       // The menu would open on top of the dialog, behind its overlay.
       if (isModalDialogOpen()) return;
       openPreferences();
+      return;
+    }
+    // Checked before the text-field guard on purpose: the browser's own
+    // Open/Save would otherwise win while a label is being edited.
+    const fileAction = fileShortcut(e);
+    if (fileAction) {
+      e.preventDefault();
+      if (isModalDialogOpen()) return;
+      if (fileAction === 'open') openFile();
+      else exportMarkasso(history.present);
       return;
     }
     // Don't capture shortcuts when typing in an input/textarea/select/contenteditable

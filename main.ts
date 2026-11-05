@@ -119,7 +119,7 @@ async function bootstrap(): Promise<void> {
   const guide = initGuide(appEl);
   const mcpSetup = initMcpSetup(appEl);
   const starCta = initStarCta(appEl);
-  const { openPreferences } = initSettings(
+  const { openPreferences, openFile } = initSettings(
     appEl,
     toolbar,
     hist,
@@ -133,8 +133,8 @@ async function bootstrap(): Promise<void> {
     selectTool.activateFormatPainter(source),
   );
   initMobileActionBar(workspace, hist);
-  initShortcuts(hist, selectTool, openPreferences);
-  initCommandPalette(hist, selectTool, () => mcpSetup.open());
+  initShortcuts(hist, selectTool, openPreferences, openFile);
+  initCommandPalette(hist, selectTool, () => mcpSetup.open(), openFile);
   initMinimap(workspace, hist);
   initElementSearch(workspace, hist);
   initLibraryPanel(workspace, hist, canvas);
