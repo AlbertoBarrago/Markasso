@@ -45,11 +45,26 @@ export function loadSession(): SessionData | null {
 
 // ── Init (called after all UI is wired up) ──────────────────────────────────
 
+/** The debounced save still waiting to run, if any (see flushSession). */
+let pendingSave: (() => void) | null = null;
+let pendingTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Runs the pending debounced save right away. Call it before reloading the
+ * page, otherwise the last DEBOUNCE_MS of edits would be lost.
+ */
+export function flushSession(): void {
+  if (pendingTimer !== null) clearTimeout(pendingTimer);
+  pendingTimer = null;
+  const save = pendingSave;
+  pendingSave = null;
+  save?.();
+}
+
 export function initSession(history: History): void {
-  let timer: ReturnType<typeof setTimeout> | null = null;
   history.subscribe((scene) => {
-    if (timer !== null) clearTimeout(timer);
-    timer = setTimeout(() => {
+    if (pendingTimer !== null) clearTimeout(pendingTimer);
+    pendingSave = () => {
       if (scene.elements.length === 0) {
         localStorage.removeItem(STORAGE_KEY);
         return;
@@ -75,7 +90,8 @@ export function initSession(history: History): void {
           showQuotaWarning();
         }
       }
-    }, DEBOUNCE_MS);
+    };
+    pendingTimer = setTimeout(flushSession, DEBOUNCE_MS);
   });
 }
 
