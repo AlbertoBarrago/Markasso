@@ -805,8 +805,8 @@ describe('licence check', () => {
   });
 
   it('links to the cloud page of the current deployment', () => {
-    expect(cloudPageUrl('https://markasso-nightly.example.dev')).toBe(
-      'https://markasso-nightly.example.dev/cloud',
+    expect(cloudPageUrl('https://markasso-preview.example.dev')).toBe(
+      'https://markasso-preview.example.dev/cloud',
     );
     expect(cloudPageUrl('https://markasso.it')).toBe(
       'https://markasso.it/cloud',

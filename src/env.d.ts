@@ -16,7 +16,7 @@ interface Env {
   readonly POLAR_ORGANIZATION_ID?: string;
   /** The "License Keys" benefit of the Markasso Cloud product. */
   readonly POLAR_BENEFIT_ID?: string;
-  /** `https://sandbox-api.polar.sh` on the nightly; production API otherwise. */
+  /** Polar API base, e.g. `https://sandbox-api.polar.sh` for a test deployment; production API otherwise. */
   readonly POLAR_API_URL?: string;
   /** Non-browser live peers (MCP agents) need a licence when 'true'. */
   readonly LIVE_AGENT_REQUIRES_LICENSE?: string;

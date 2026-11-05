@@ -499,31 +499,14 @@ MIT · © 2026 Alberto Barrago. Bundled third-party material (Kubernetes icons, 
 
 _Draw things. Ship things. Touch grass._
 
-### Cloud builds and nightly
+### Cloud builds
 
-Cloud boards default to off in both the web build and worker. Production keeps
-`VITE_CLOUD_ENABLED` unset and `CLOUD_ENABLED` set to `"false"`: cloud actions
-are hidden and board API routes return 404.
-
-Nightly is a separate, manually built testing environment, not a scheduled CI
-release. `pnpm build:nightly` enables the web UI and selects the Wrangler
-`nightly` environment for the Vite Cloudflare plugin. After building,
-`pnpm deploy:nightly` deploys `markasso-nightly` to workers.dev with no production
-routes. Cloud boards are enabled there without requiring a licence.
-
-Before deploying nightly, create a D1 database named `markasso-nightly-boards`,
-an R2 bucket named `markasso-nightly-boards`, and a separate KV namespace for
-`SHARE_LINKS`. Replace the nightly D1 and KV placeholder IDs in
-`wrangler.jsonc` and apply `migrations/0001_boards.sql` to the nightly database.
-Binding identifiers stay the same because the worker uses them; the bound
-resources are separate from production. The `SESSION_ROOMS` Durable Object
-binding uses the existing migration to create a namespace for the nightly
-worker. Rate limit namespaces are also separate. Configure the nightly
-`GITHUB_TOKEN` secret only if issue reporting is needed.
-
-To enable cloud in production, build with `VITE_CLOUD_ENABLED=true` and set
-the production worker variable `CLOUD_ENABLED` to `"true"`. The production D1
-and R2 resources exist, with `migrations/0001_boards.sql` applied.
+Production builds turn cloud boards on (`VITE_CLOUD_ENABLED=true` in
+`.env.production`, worker variable `CLOUD_ENABLED` set to `"true"`). With
+either off, cloud actions are hidden and board API routes return 404. The
+production D1 and R2 resources exist, with `migrations/0001_boards.sql`
+applied. There is no separate testing environment: changes are tested
+locally (`pnpm dev`, `wrangler dev`) and then released.
 
 Licences are sold through Polar (merchant of record). The Markasso Cloud
 product has a monthly and a yearly price and a "License Keys" benefit: Polar
@@ -532,7 +515,7 @@ key when the subscription ends. Put the two checkout links and the customer
 portal link in `src/config/polar.ts` (success URL
 `https://markasso.it/cloud?checkout_id={CHECKOUT_ID}`), set the worker
 variables `POLAR_ORGANIZATION_ID` and `POLAR_BENEFIT_ID` (plus
-`POLAR_API_URL=https://sandbox-api.polar.sh` on the nightly), and the secret
+`POLAR_API_URL=https://sandbox-api.polar.sh` for a test deployment), and the secret
 `POLAR_ACCESS_TOKEN` (an organization access token with `license_keys:write`)
 with `wrangler secret put`. `CLOUD_REQUIRES_LICENSE` gates cloud board writes
 and `LIVE_AGENT_REQUIRES_LICENSE` gates AI agents (non-browser peers) in live
