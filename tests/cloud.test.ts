@@ -345,6 +345,287 @@ describe('conflicts', () => {
   });
 });
 
+describe('remote check', () => {
+  it('checks silently and reports the same version as unchanged', async () => {
+    const ctx = setup();
+    await editable(ctx);
+    const activity = vi.fn();
+    ctx.client.onActivity = activity;
+    ctx.fetcher.mockResolvedValueOnce(response(board(1)));
+    const before = ctx.client.lastSyncedAt;
+    vi.advanceTimersByTime(1000);
+    expect(await ctx.client.check()).toBe('unchanged');
+    expect(activity).not.toHaveBeenCalled();
+    expect(ctx.fetcher.mock.calls[1]?.[0]).toBe(`/api/board/${id}`);
+    expect(ctx.client.state).toBe('saved');
+    expect(ctx.client.lastSyncedAt).toBeGreaterThan(before!);
+  });
+  it('compares versions when the server answers 200', async () => {
+    const ctx = setup();
+    await editable(ctx);
+    ctx.fetcher.mockResolvedValueOnce(response(board(1)));
+    expect(await ctx.client.check()).toBe('unchanged');
+    ctx.fetcher.mockResolvedValueOnce(
+      response({ ...board(3), elements: newer.elements }),
+    );
+    expect(await ctx.client.check()).toEqual({
+      scene: { elements: newer.elements, viewport: scene.viewport },
+      version: 3,
+    });
+    // The caller raises the version once the board is applied.
+    expect(ctx.client.version).toBe(1);
+    expect(ctx.client.state).toBe('saved');
+  });
+  it('checks read-only boards too', async () => {
+    const ctx = setup();
+    ctx.fetcher.mockResolvedValueOnce(response(board()));
+    await ctx.client.open(new URL(`https://markasso.it/b/${id}`));
+    ctx.fetcher.mockResolvedValueOnce(response(board(2)));
+    expect(await ctx.client.check()).toMatchObject({ version: 2 });
+  });
+  it('shows a deleted board as missing', async () => {
+    const ctx = setup();
+    await editable(ctx);
+    ctx.fetcher.mockResolvedValueOnce(response({}, 404));
+    expect(await ctx.client.check()).toBe('failed');
+    expect(ctx.client.state).toBe('error');
+    expect(ctx.client.error).toBe(404);
+  });
+  it('goes offline on a network error and back to saved on the next check', async () => {
+    const ctx = setup();
+    await editable(ctx);
+    const activity = vi.fn();
+    ctx.client.onActivity = activity;
+    ctx.fetcher.mockRejectedValueOnce(new TypeError('network'));
+    expect(await ctx.client.check()).toBe('failed');
+    expect(ctx.client.state).toBe('offline');
+    expect(ctx.client.error).toBe(0);
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(ctx.fetcher).toHaveBeenCalledTimes(2);
+    ctx.fetcher.mockResolvedValueOnce(response(board(1)));
+    expect(await ctx.client.check()).toBe('unchanged');
+    expect(ctx.client.state).toBe('saved');
+    expect(ctx.client.error).toBe(0);
+    expect(activity).not.toHaveBeenCalled();
+  });
+  it.each([429, 503])('treats %s as offline', async (status) => {
+    const ctx = setup();
+    await editable(ctx);
+    ctx.fetcher.mockResolvedValueOnce(response({}, status));
+    expect(await ctx.client.check()).toBe('failed');
+    expect(ctx.client.state).toBe('offline');
+  });
+  it('treats an invalid board as offline, not as a paused error', async () => {
+    const ctx = setup();
+    await editable(ctx);
+    ctx.fetcher.mockResolvedValueOnce(response({ elements: 'x', version: 2 }));
+    expect(await ctx.client.check()).toBe('failed');
+    expect(ctx.client.state).toBe('offline');
+  });
+  it('is a no-op without a board, with unsaved changes or in conflict', async () => {
+    const ctx = setup();
+    expect(await ctx.client.check()).toBe('skipped');
+    await editable(ctx);
+    ctx.client.schedule(newer);
+    expect(await ctx.client.check()).toBe('skipped');
+    const other = setup();
+    await conflict(other);
+    expect(await other.client.check()).toBe('skipped');
+    expect(ctx.fetcher).toHaveBeenCalledTimes(1);
+    expect(other.fetcher).toHaveBeenCalledTimes(2);
+  });
+  it('is a no-op while a save, a read or another check is in flight', async () => {
+    const ctx = setup();
+    await editable(ctx);
+    let finish!: (value: Response) => void;
+    const hold = () =>
+      new Promise<Response>((resolve) => {
+        finish = resolve;
+      });
+    ctx.fetcher.mockImplementationOnce(hold);
+    ctx.client.schedule(newer);
+    const saving = ctx.client.flush();
+    expect(ctx.client.writing).toBe(true);
+    expect(await ctx.client.check()).toBe('skipped');
+    finish(response({ version: 2 }));
+    await saving;
+    ctx.fetcher.mockImplementationOnce(hold);
+    const reading = ctx.client.read();
+    expect(await ctx.client.check()).toBe('skipped');
+    finish(response(board(2)));
+    await reading;
+    ctx.fetcher.mockImplementationOnce(hold);
+    const checking = ctx.client.check();
+    expect(await ctx.client.check()).toBe('skipped');
+    finish(response(board(1)));
+    expect(await checking).toBe('unchanged');
+    expect(ctx.fetcher).toHaveBeenCalledTimes(4);
+  });
+  it('ignores a check answered after the board was detached', async () => {
+    const ctx = setup();
+    await editable(ctx);
+    let finish!: (value: Response) => void;
+    ctx.fetcher.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const checking = ctx.client.check();
+    ctx.client.detach();
+    finish(response({}, 404));
+    expect(await checking).toBe('skipped');
+    expect(ctx.client.state).toBe('saved');
+  });
+  it('a remote conflict records the server version so Keep mine overwrites it', async () => {
+    const ctx = setup();
+    await editable(ctx);
+    ctx.client.schedule(newer);
+    ctx.client.markConflict(4);
+    expect(ctx.client.state).toBe('conflict');
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(ctx.fetcher).toHaveBeenCalledTimes(1);
+    ctx.fetcher.mockResolvedValueOnce(response({ version: 5 }));
+    await ctx.client.keepMine();
+    expect(ctx.fetcher.mock.calls[1]?.[1]?.headers).toMatchObject({
+      'If-Match': '"4"',
+    });
+    expect(ctx.client.state).toBe('saved');
+  });
+});
+
+describe('remote check UI', () => {
+  class Node extends EventTarget {
+    textContent = '';
+    children: Node[] = [];
+    append(...nodes: Node[]) {
+      this.children.push(...nodes);
+    }
+    dataset: Record<string, string> = {};
+    classList = { add() {}, toggle() {} };
+    setAttribute() {}
+    showModal() {}
+    close() {}
+    remove() {}
+  }
+  async function openBoard() {
+    const body = new Node();
+    const doc = {
+      body,
+      activeElement: null as { tagName: string } | null,
+      visibilityState: 'visible',
+      documentElement: { getAttribute: () => null },
+      createElement: () => new Node(),
+      querySelector: () => null,
+      getElementById: () => null,
+      dispatchEvent: vi.fn(),
+    };
+    vi.stubGlobal('document', doc);
+    vi.stubGlobal('HTMLElement', Node);
+    const win = new EventTarget();
+    vi.stubGlobal(
+      'window',
+      Object.assign(win, { matchMedia: () => ({ matches: false }) }),
+    );
+    vi.stubGlobal(
+      'location',
+      new URL(`https://markasso.it/b/${id}#k=${token}`),
+    );
+    const ctx = setup();
+    vi.stubGlobal('localStorage', ctx.storage);
+    vi.stubGlobal('fetch', ctx.fetcher);
+    ctx.fetcher.mockResolvedValueOnce(response(board()));
+    const history = new History(scene);
+    await initCloudBoards(history);
+    const find = (node: Node, choice: string): Node | undefined =>
+      node.dataset.choice === choice
+        ? node
+        : node.children.map((child) => find(child, choice)).find(Boolean);
+    return { ctx, history, doc, win, find: (c: string) => find(body, c) };
+  }
+  const pointer = (type: string) =>
+    Object.assign(new Event(type), { pointerId: 1 });
+  it('applies a remote board as one undoable step without saving it back', async () => {
+    const { ctx, history } = await openBoard();
+    const viewport = history.present.viewport;
+    ctx.fetcher.mockResolvedValueOnce(
+      response({ ...board(2), elements: newer.elements }),
+    );
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(ctx.fetcher).toHaveBeenCalledTimes(2);
+    expect(history.present.elements).toEqual(newer.elements);
+    expect(history.present.viewport).toBe(viewport);
+    ctx.fetcher.mockImplementation(async () => response(board(2)));
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(ctx.fetcher).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(25000);
+    expect(ctx.fetcher).toHaveBeenCalledTimes(3);
+    expect(history.present.elements).toEqual(newer.elements);
+    history.undo();
+    expect(history.present.elements).toEqual(scene.elements);
+  });
+  it('does not poll while hidden and checks on return, throttled', async () => {
+    const { ctx, doc, win } = await openBoard();
+    ctx.fetcher.mockImplementation(async () => response(board()));
+    doc.visibilityState = 'hidden';
+    win.dispatchEvent(new Event('visibilitychange'));
+    await vi.advanceTimersByTimeAsync(120000);
+    expect(ctx.fetcher).toHaveBeenCalledTimes(1);
+    doc.visibilityState = 'visible';
+    win.dispatchEvent(new Event('visibilitychange'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ctx.fetcher).toHaveBeenCalledTimes(2);
+    doc.visibilityState = 'hidden';
+    win.dispatchEvent(new Event('visibilitychange'));
+    doc.visibilityState = 'visible';
+    win.dispatchEvent(new Event('visibilitychange'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ctx.fetcher).toHaveBeenCalledTimes(2);
+  });
+  it('defers applying while a pointer is pressed or a text is edited', async () => {
+    const { ctx, history, doc, win } = await openBoard();
+    win.dispatchEvent(pointer('pointerdown'));
+    ctx.fetcher.mockResolvedValueOnce(
+      response({ ...board(2), elements: newer.elements }),
+    );
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(history.present.elements).toEqual(scene.elements);
+    doc.activeElement = { tagName: 'TEXTAREA' };
+    win.dispatchEvent(pointer('pointerup'));
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(history.present.elements).toEqual(scene.elements);
+    doc.activeElement = null;
+    await vi.advanceTimersByTimeAsync(300);
+    expect(history.present.elements).toEqual(newer.elements);
+  });
+  it('turns a local edit made during the check into a conflict', async () => {
+    const { ctx, history, find } = await openBoard();
+    let finish!: (value: Response) => void;
+    ctx.fetcher.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    await vi.advanceTimersByTimeAsync(30000);
+    history.dispatch({ type: 'DELETE_ELEMENTS', ids: ['rect'] });
+    finish(response({ ...board(4), elements: newer.elements }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(history.present.elements).toEqual([]);
+    expect(find('cloudKeepMine')).toBeDefined();
+    // Autosave paused: the debounced save never ran.
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(ctx.fetcher).toHaveBeenCalledTimes(2);
+    ctx.fetcher.mockResolvedValueOnce(response({ version: 5 }));
+    find('cloudKeepMine')!.dispatchEvent(new Event('click'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ctx.fetcher.mock.calls[2]?.[1]?.method).toBe('PUT');
+    expect(ctx.fetcher.mock.calls[2]?.[1]?.headers).toMatchObject({
+      'If-Match': '"4"',
+    });
+  });
+});
+
 describe('cloud board conflict UI', () => {
   it('Take theirs preserves app state and viewport as one undoable step', async () => {
     class Node extends EventTarget {

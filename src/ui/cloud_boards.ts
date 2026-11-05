@@ -12,6 +12,7 @@ import {
 } from '../io/cloud';
 import { exportMarkasso } from '../io/markasso';
 import { getLiveSessionUrl } from '../io/realtime';
+import { RemoteCheckSchedule, remoteDecision } from './cloud_remote_check';
 import {
   type CloudPopoverAction,
   cloudIconSvg,
@@ -281,7 +282,12 @@ function createController(history: History) {
   async function popoverAction(action: CloudPopoverAction): Promise<void> {
     if (action === 'cloudResolve') return resolveConflict();
     if (action === 'cloudLicense') return license();
-    if (action === 'cloudRetry') return openingFailed ? open() : client.retry();
+    if (action === 'cloudRetry') {
+      if (openingFailed) return open();
+      // Offline after a failed background check: nothing to save, so retry the check.
+      if (client.state === 'offline' && !client.unsaved) return checkRemote();
+      return client.retry();
+    }
     return api.run(action);
   }
   const load = (scene: CloudScene, fresh = false): void => {
@@ -430,6 +436,7 @@ function createController(history: History) {
     try {
       await client.create(snapshot);
       opened = true;
+      remoteChecks.start();
       retryCreate = false;
       updateUrl();
       if (history.present.elements !== snapshot.elements)
@@ -453,11 +460,109 @@ function createController(history: History) {
       client.schedule(scene);
     }
   });
+  /**
+   * Remote change check. Pointer presses are tracked with capture listeners on
+   * window, so tools and the canvas need no hooks: a press that changes the
+   * scene ends with pointerup or pointercancel. Text, label and stencil
+   * editors are textareas that commit on blur, so an editor is open exactly
+   * while a textarea has focus.
+   */
+  const pressed = new Set<number>();
+  window.addEventListener(
+    'pointerdown',
+    (event: PointerEvent) => pressed.add(event.pointerId),
+    true,
+  );
+  for (const type of ['pointerup', 'pointercancel'] as const)
+    window.addEventListener(
+      type,
+      (event: PointerEvent) => pressed.delete(event.pointerId),
+      true,
+    );
+  // A release outside the window may never reach the page.
+  window.addEventListener('blur', () => pressed.clear());
+  const interacting = (): boolean =>
+    pressed.size > 0 || document.activeElement?.tagName === 'TEXTAREA';
+  /** A newer remote board waiting for a drag or a text edit to end. */
+  let remote: {
+    scene: CloudScene;
+    version: number;
+    id: string;
+    base: number;
+    elements: typeof history.present.elements;
+  } | null = null;
+  let remoteTimer: ReturnType<typeof setTimeout> | undefined;
+  async function checkRemote(): Promise<void> {
+    if (!opened || remote || resolving || !client.id) return;
+    const id = client.id;
+    const base = client.version;
+    const elements = history.present.elements;
+    const result = await client.check();
+    if (typeof result === 'string') return;
+    remote = { ...result, id, base, elements };
+    settleRemote();
+  }
+  /**
+   * Applies, defers or turns into a conflict the pending remote board. A
+   * local edit made after the check started (during the request or while
+   * deferred) means the remote board must not replace it: the client enters
+   * the conflict state like a 409 on save, which opens the conflict dialog.
+   */
+  function settleRemote(): void {
+    clearTimeout(remoteTimer);
+    if (!remote) return;
+    const decision = remoteDecision({
+      boardChanged:
+        !opened ||
+        client.id !== remote.id ||
+        (client.state !== 'saved' &&
+          client.state !== 'offline' &&
+          client.state !== 'saving'),
+      stale: client.version >= remote.version,
+      interacting: interacting(),
+      writing: client.writing,
+      unsaved: client.unsaved,
+      elementsChanged:
+        history.present.elements !== remote.elements ||
+        client.version !== remote.base,
+    });
+    if (decision === 'defer') {
+      remoteTimer = setTimeout(settleRemote, 300);
+      return;
+    }
+    const { scene, version } = remote;
+    remote = null;
+    if (decision === 'conflict') client.markConflict(version);
+    if (decision !== 'apply') return;
+    // Keep the viewer's viewport: a remote save must not move the view.
+    load({ elements: scene.elements, viewport: history.present.viewport });
+    client.version = version;
+    render();
+  }
+  const remoteChecks = new RemoteCheckSchedule(() => void checkRemote(), {
+    now: () => Date.now(),
+    visible: () => document.visibilityState === 'visible',
+    setInterval: (run, ms) => setInterval(run, ms),
+    clearInterval: (handle) =>
+      clearInterval(handle as ReturnType<typeof setInterval>),
+  });
+  /** Stops checks and forgets a deferred remote board, e.g. when the board is detached. */
+  function stopRemoteChecks(): void {
+    remoteChecks.stop();
+    clearTimeout(remoteTimer);
+    remote = null;
+  }
+  // visibilitychange bubbles from document to window.
+  window.addEventListener('visibilitychange', () =>
+    remoteChecks.visibilityChanged(),
+  );
   window.addEventListener('pagehide', () => {
     void client.flush(true);
   });
   window.addEventListener('online', () => {
-    if (client.editable && client.state === 'offline') void client.retry();
+    if (client.state !== 'offline') return;
+    if (client.unsaved) void client.retry();
+    else void checkRemote();
   });
   indicator.addEventListener('click', () => {
     if (popover) closePopover();
@@ -468,6 +573,7 @@ function createController(history: History) {
     try {
       load(await client.open(new URL(location.href)), true);
       opened = true;
+      remoteChecks.start();
       openingFailed = false;
       openError = 0;
       history.readOnly = !client.editable;
@@ -476,6 +582,7 @@ function createController(history: History) {
     } catch (error) {
       openingFailed = true;
       openError = error instanceof CloudError ? error.status : 503;
+      stopRemoteChecks();
       client.detach();
       render();
       await dialog(errorDialog(openError));
@@ -521,6 +628,7 @@ function createController(history: History) {
         return;
       }
       if (action === 'cloudDuplicate') {
+        stopRemoteChecks();
         client.detach();
         opened = false;
         history.readOnly = false;
