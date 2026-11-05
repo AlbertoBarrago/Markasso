@@ -37,13 +37,14 @@ const ALL_CLOUD_ACTIONS = [
 ] as const;
 export const CLOUD_ACTIONS = CLOUD_ENABLED ? ALL_CLOUD_ACTIONS : [];
 /**
- * How menus group the cloud actions: saving, the open cloud board, the
- * account. Every action appears in exactly one group, in this order.
+ * How menus group the cloud actions: saving, the hand-off to the Mac app,
+ * the open cloud board, the account. Every action appears in exactly one group, in this order.
  */
 export const CLOUD_GROUPS: readonly (readonly (typeof ALL_CLOUD_ACTIONS)[number][])[] =
   [
     ['cloudSave'],
-    ['cloudReadLink', 'cloudEditLink', 'cloudMac', 'cloudDuplicate'],
+    ['cloudMac'],
+    ['cloudReadLink', 'cloudEditLink', 'cloudDuplicate'],
     ['cloudLicense', 'cloudSubscription'],
   ];
 /**

@@ -127,16 +127,17 @@ describe.each([false, true])('cloud UI enabled=%s', (enabled) => {
       'share sheet ready',
     );
     const mobile = nodes.find((node) => node.id === 'mobile-share-sheet')!;
-    // The licence note, then the three groups split by two dividers ('').
+    // The licence note, then the four groups split by three dividers ('').
     expect(mobile.children.map((node) => node.textContent)).toEqual(
       enabled
         ? [
             'cloudMenuNote',
             'cloudSave',
             '',
+            'cloudMac',
+            '',
             'cloudReadLink',
             'cloudEditLink',
-            'cloudMac',
             'cloudDuplicate',
             '',
             'cloudLicense',
