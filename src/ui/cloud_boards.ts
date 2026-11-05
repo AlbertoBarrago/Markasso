@@ -24,6 +24,7 @@ import {
   dialog as appDialog,
   type DialogOptions as BaseDialogOptions,
 } from './dialog';
+import { isMacDesktop } from './mac_banner';
 import { copyToClipboard, showShareToast } from './share_actions';
 
 const ALL_CLOUD_ACTIONS = [
@@ -492,6 +493,9 @@ function createController(history: History) {
       // action is hidden and the menu points to the licence and pricing.
       if (action === 'cloudSave') return !history.readOnly && !!client.license;
       if (!opened || !client.id) return false;
+      // The markasso:// hand-off only works where the Mac app can be
+      // installed: on phones, tablets and other desktops it would do nothing.
+      if (action === 'cloudMac') return isMacDesktop(navigator);
       return action !== 'cloudEditLink' || client.editable;
     },
     async run(action: (typeof CLOUD_ACTIONS)[number]): Promise<void> {

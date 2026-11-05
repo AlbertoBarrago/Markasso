@@ -757,6 +757,45 @@ describe('cloud dialog', () => {
     ctx.values.set(LICENSE_KEY, 'MKC-TEST-KEY');
     expect(cloudActionAvailable(history, 'cloudSave')).toBe(true);
   });
+  it('offers Open in Mac app only on a Mac desktop', async () => {
+    vi.stubGlobal('HTMLElement', Node);
+    vi.stubGlobal('document', {
+      body: new Node(),
+      activeElement: null,
+      documentElement: { getAttribute: () => null },
+      createElement: () => new Node(),
+      querySelector: () => null,
+      getElementById: () => null,
+      dispatchEvent: vi.fn(),
+    });
+    vi.stubGlobal('window', {
+      addEventListener: vi.fn(),
+      matchMedia: () => ({ matches: false }),
+      history: { replaceState: vi.fn() },
+    });
+    vi.stubGlobal(
+      'location',
+      new URL(`https://markasso.it/b/${id}#k=${token}`),
+    );
+    const ctx = setup();
+    ctx.fetcher.mockResolvedValueOnce(response(board()));
+    vi.stubGlobal('localStorage', ctx.storage);
+    vi.stubGlobal('fetch', ctx.fetcher);
+    const history = new History(scene);
+    await initCloudBoards(history);
+    expect(cloudActionAvailable(history, 'cloudReadLink')).toBe(true);
+    const mac = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)';
+    vi.stubGlobal('navigator', { userAgent: mac, maxTouchPoints: 0 });
+    expect(cloudActionAvailable(history, 'cloudMac')).toBe(true);
+    // iPadOS reports a Mac user agent, but with a touch screen.
+    vi.stubGlobal('navigator', { userAgent: mac, maxTouchPoints: 5 });
+    expect(cloudActionAvailable(history, 'cloudMac')).toBe(false);
+    vi.stubGlobal('navigator', {
+      userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8)',
+      maxTouchPoints: 5,
+    });
+    expect(cloudActionAvailable(history, 'cloudMac')).toBe(false);
+  });
   it('treats Escape as cancel and returns focus', async () => {
     const { modal, previous, ctx } = await openSaveDialog();
     modal.dispatchEvent(new Event('cancel', { cancelable: true }));
