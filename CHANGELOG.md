@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.18.3] - 2026-11-05
+
+### Added
+- **New version notice.** When a new version of Markasso is deployed, an open tab shows a notice with a **Reload the page** button. It checks when you come back to the tab and every 15 minutes while it is visible. Your board is saved before the reload.
+
+---
+
 ## [1.18.2] - 2026-11-05
 
 ### Fixed
