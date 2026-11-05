@@ -4,6 +4,14 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.18.2] - 2026-11-05
+
+### Fixed
+- **Open and Save shortcuts.** **Ctrl+O / ⌘O** opens a `.markasso` file in the board and **Ctrl+S / ⌘S** saves it. Before, Chrome kept its own shortcuts: Open showed the file as raw JSON in a new tab and Save downloaded the web page.
+- **Open from the command palette.** New **Open file** entry next to Save.
+
+---
+
 ## [1.18.1] - 2026-11-05
 
 ### Changed

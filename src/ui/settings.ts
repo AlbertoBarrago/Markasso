@@ -247,7 +247,7 @@ export function initSettings(
   openGuide: () => void,
   openSupport: () => void,
   openMcpSetup: () => void,
-): { openPreferences: () => void } {
+): { openPreferences: () => void; openFile: () => void } {
   let current = loadSettings();
   applySettings(appEl, current);
 
@@ -1042,7 +1042,15 @@ export function initSettings(
   history.subscribe(syncPanel);
   const preferencesItem = panel.querySelector<HTMLElement>('#menu-prefs')!;
   preferencesItem.setAttribute('aria-keyshortcuts', 'Meta+, Control+,');
+  panel
+    .querySelector('#menu-open')!
+    .setAttribute('aria-keyshortcuts', 'Meta+O Control+O');
+  panel
+    .querySelector('#menu-save')!
+    .setAttribute('aria-keyshortcuts', 'Meta+S Control+S');
   return {
+    /** Same picker as the menu's Open item, shared with Cmd+O and the palette. */
+    openFile: () => fileInput.click(),
     openPreferences: () => {
       open('first');
       preferencesItem.scrollIntoView({ block: 'nearest' });

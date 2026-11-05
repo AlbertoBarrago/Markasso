@@ -87,6 +87,7 @@ export function initCommandPalette(
   history: History,
   _selectTool: SelectTool,
   openMcpSetup: () => void,
+  openFile: () => void,
 ): void {
   // ── DOM ──────────────────────────────────────────────────────────────────
   const overlay = document.createElement('div');
@@ -391,6 +392,14 @@ export function initCommandPalette(
       category: 'action',
       icon: `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M7 9l3 3 3-3"/><path d="M4 14v1.5A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5V14"/></svg>`,
       execute: () => exportHTML(history.present),
+    });
+    items.push({
+      id: 'action:open-markasso',
+      label: t('openFile'),
+      hint: 'Ctrl+O',
+      category: 'action',
+      icon: `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5V15a1.5 1.5 0 001.5 1.5h11A1.5 1.5 0 0017 15V8a1.5 1.5 0 00-1.5-1.5H10L8.5 4.5h-4A1.5 1.5 0 003 6v.5z"/></svg>`,
+      execute: openFile,
     });
     items.push({
       id: 'action:save-markasso',

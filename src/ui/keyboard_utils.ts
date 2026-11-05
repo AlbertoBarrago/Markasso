@@ -31,3 +31,19 @@ export function isModalDialogOpen(): boolean {
     (el) => el.getClientRects().length > 0,
   );
 }
+
+/**
+ * Maps Cmd/Ctrl+O and Cmd/Ctrl+S to the board's file actions. Without this the
+ * browser keeps its own meaning for them: Chrome's Cmd+O opens a native file
+ * dialog that shows a `.markasso` file as raw JSON in a new tab, and Cmd+S
+ * saves the page HTML instead of the board.
+ */
+export function fileShortcut(
+  e: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'>,
+): 'open' | 'save' | null {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return null;
+  const key = e.key.toLowerCase();
+  if (key === 'o') return 'open';
+  if (key === 's') return 'save';
+  return null;
+}
