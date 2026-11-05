@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.17.3] - 2026-11-05
+
+### Changed
+- **Maintenance.** No visible changes: unused helpers and stale translation keys are removed, and the codebase is formatted consistently.
+
+---
+
 ## [1.17.2] - 2026-11-05
 
 ### Fixed
