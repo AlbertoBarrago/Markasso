@@ -127,12 +127,19 @@ export interface MermaidTheme {
 
 // ── Public API ─────────────────────────────────────────────────────────────────
 
-export function importMermaid(file: File, history: History): void {
+/** Reports a failed import: an i18n key plus the parser's own message, if any. */
+export type MermaidErrorHandler = (messageKey: string, detail?: string) => void;
+
+export function importMermaid(
+  file: File,
+  history: History,
+  onError: MermaidErrorHandler,
+): void {
   const reader = new FileReader();
   reader.onload = (ev) => {
     const raw = ev.target?.result as string;
     if (!raw) return;
-    void importMermaidText(raw, history);
+    void importMermaidText(raw, history, onError);
   };
   reader.readAsText(file);
 }
@@ -142,12 +149,13 @@ export function importMermaid(file: File, history: History): void {
  * a single group of native elements. Diagram types the converter cannot map
  * to shapes (gantt, pie, gitGraph, ...) arrive as one SVG image element.
  *
- * Resolves `true` when something was inserted; failures are reported to the
- * user via `alert` and resolve `false`.
+ * Resolves `true` when something was inserted; failures go to `onError` and
+ * resolve `false`.
  */
 export async function importMermaidText(
   text: string,
   history: History,
+  onError: MermaidErrorHandler,
 ): Promise<boolean> {
   const isDark =
     document.documentElement.getAttribute('data-theme') !== 'light';
@@ -172,8 +180,10 @@ export async function importMermaidText(
     result = await parseMermaidToExcalidraw(text, config);
   } catch (err) {
     console.error('[Markasso] Mermaid import error:', err);
-    const reason = err instanceof Error ? `\n\n${err.message}` : '';
-    alert(`Failed to parse the Mermaid diagram.${reason}`);
+    onError(
+      'mermaidParseFailed',
+      err instanceof Error ? err.message : undefined,
+    );
     return false;
   }
 
@@ -183,7 +193,7 @@ export async function importMermaidText(
     theme,
   );
   if (elements.length === 0) {
-    alert('No elements could be created from this diagram.');
+    onError('mermaidNoElements');
     return false;
   }
   await preloadImages(elements);

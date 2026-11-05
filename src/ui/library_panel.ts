@@ -18,6 +18,7 @@ import type { History } from '../engine/history';
 import { t } from '../i18n';
 import type { ImportedIcon, ImportedPack } from '../io/icon_pack';
 import { deleteIconPack, listIconPacks } from '../io/icon_pack_store';
+import { confirmDialog } from './dialog';
 import { insertShape, insertStencil } from './library_insert';
 import { SHAPE_KIND_LABEL_KEYS, shapeKindIcon } from './shape_icons';
 import { GENERIC_ICON_LABEL_KEYS, genericIconSvg } from './stencil_icons';
@@ -291,13 +292,13 @@ export function initLibraryPanel(
   }
 
   async function removePack(pack: ImportedPack): Promise<void> {
-    if (
-      !window.confirm(
-        t('libraryDeletePackConfirm').replace('{name}', pack.name),
-      )
-    ) {
-      return;
-    }
+    const confirmed = await confirmDialog({
+      title: t('libraryDeletePackTitle'),
+      message: t('libraryDeletePackConfirm').replace('{name}', pack.name),
+      confirmKey: 'delete',
+      danger: true,
+    });
+    if (!confirmed) return;
     try {
       await deleteIconPack(pack.id);
       importedPacks = importedPacks.filter((p) => p.id !== pack.id);

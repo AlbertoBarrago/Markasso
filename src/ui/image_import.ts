@@ -2,6 +2,7 @@ import type { ImageElement } from '../elements/element';
 import type { History } from '../engine/history';
 import { importMarkasso } from '../io/markasso';
 import { importMermaid, importMermaidText } from '../io/mermaid';
+import { showImportError } from './import_error';
 
 /**
  * Pasted text is treated as Mermaid only when it opens with a diagram keyword
@@ -53,11 +54,11 @@ export function initImageImport(
     if (!files) return;
     for (const file of Array.from(files)) {
       if (file.name.endsWith('.markasso')) {
-        importMarkasso(file, history);
+        importMarkasso(file, history, showImportError);
         break;
       }
       if (file.name.endsWith('.mmd') || file.name.endsWith('.mermaid')) {
-        importMermaid(file, history);
+        importMermaid(file, history, showImportError);
         break;
       }
       if (file.type.startsWith('image/')) {
@@ -78,7 +79,7 @@ export function initImageImport(
         item.getAsString((text) => {
           const trimmed = text.trimStart();
           if (MERMAID_HEADER.test(trimmed)) {
-            void importMermaidText(trimmed, history);
+            void importMermaidText(trimmed, history, showImportError);
           }
         });
         return;

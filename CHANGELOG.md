@@ -4,6 +4,20 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.18.0] - 2026-11-05
+
+### Changed
+- **Markasso's own dialogs.** Confirmations and notices use the app's card dialog instead of the browser's popups, translated and themed, with Escape to cancel. Destructive actions are drawn in red and start on Cancel.
+- **Clear canvas.** The menu and the command palette ask the same way, and the dialog says the truth: **Ctrl+Z / ⌘Z** brings everything back.
+- **Image export.** PNG and SVG exports ask for **Transparent** or **With background**, and can now be cancelled.
+- **Icon packs.** Deleting an imported pack asks in the same dialog.
+- **Share from the command palette.** Copies the link with the same confirmation as the menu, showing the link to copy when the clipboard is unavailable.
+
+### Fixed
+- **Import errors.** An invalid `.markasso` file or a Mermaid diagram that cannot be parsed is reported in your language, with the parser's own message under it.
+
+---
+
 ## [1.17.3] - 2026-11-05
 
 ### Changed

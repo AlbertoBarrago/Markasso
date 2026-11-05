@@ -7,6 +7,7 @@ import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 import { invalidateThemeCache } from '../rendering/theme_cache';
+import { clearCanvas } from './clear_canvas';
 import {
   CLOUD_ACTIONS,
   CLOUD_GROUPS,
@@ -15,6 +16,8 @@ import {
   cloudLicenseStored,
   cloudSeparators,
 } from './cloud_boards';
+import { dialog } from './dialog';
+import { showImportError } from './import_error';
 import { copyToClipboard, showShareToast } from './share_actions';
 
 // ── Theme ─────────────────────────────────────────────────────────────────
@@ -272,7 +275,7 @@ export function initSettings(
   document.body.appendChild(fileInput);
   fileInput.addEventListener('change', () => {
     const f = fileInput.files?.[0];
-    if (f) importMarkasso(f, history);
+    if (f) importMarkasso(f, history, showImportError);
     fileInput.value = '';
     close();
   });
@@ -812,13 +815,26 @@ export function initSettings(
   // ── File actions ─────────────────────────────────────────────────────────
   onActivate('#menu-open', () => fileInput.click());
   onActivate('#menu-save', () => exportMarkasso(history.present));
-  const askBackground = (): boolean => confirm('Include white background?');
-  onActivate('#menu-export-png', () =>
-    exportPNG(history.present, askBackground()),
-  );
-  onActivate('#menu-export-svg', () =>
-    exportSVG(history.present, askBackground()),
-  );
+  /** Asks whether the image keeps the canvas background; null when cancelled. */
+  const askBackground = async (): Promise<boolean | null> => {
+    const choice = await dialog({
+      title: t('exportBackgroundTitle'),
+      message: t('exportBackgroundMessage'),
+      choices: [
+        { key: 'exportTransparent' },
+        { key: 'exportWithBackground', primary: true },
+      ],
+    });
+    return choice === null ? null : choice === 'exportWithBackground';
+  };
+  const exportImage = async (
+    run: (scene: typeof history.present, withBackground: boolean) => void,
+  ): Promise<void> => {
+    const withBackground = await askBackground();
+    if (withBackground !== null) run(history.present, withBackground);
+  };
+  onActivate('#menu-export-png', () => exportImage(exportPNG));
+  onActivate('#menu-export-svg', () => exportImage(exportSVG));
   onActivate('#menu-export-html', () => exportHTML(history.present));
 
   // ── Share ────────────────────────────────────────────────────────────────
@@ -867,14 +883,8 @@ export function initSettings(
     .querySelector<HTMLElement>('#menu-clear')!
     .addEventListener('click', (e) => {
       if (isDisabled(e.currentTarget as Element)) return;
-      if (confirm('Clear the canvas? This cannot be undone.')) {
-        history.dispatch({
-          type: 'LOAD_SCENE',
-          elements: [],
-          viewport: history.present.viewport,
-        });
-        close();
-      }
+      close();
+      void clearCanvas(history);
     });
 
   // ── Preferences ──────────────────────────────────────────────────────────

@@ -708,7 +708,7 @@ describe('cloud dialog', () => {
     cloudAction(history, 'cloudSave');
     await vi.advanceTimersByTimeAsync(0);
     const modal = body.children.find((node) =>
-      node.className.includes('cloud-dialog'),
+      node.className.includes('app-dialog'),
     )!;
     return { modal, previous, ctx, nodes: all(modal) };
   }
@@ -722,7 +722,7 @@ describe('cloud dialog', () => {
     expect(primary).toHaveLength(1);
     expect(primary[0]!.dataset.choice).toBe('cloudSave');
     expect(primary[0]!.autofocus).toBe(true);
-    expect(nodes.some((n) => n.dataset.choice === 'cloudCancel')).toBe(true);
+    expect(nodes.some((n) => n.dataset.choice === 'dialogCancel')).toBe(true);
   });
   it('offers Save to cloud only with a stored licence', async () => {
     const body = new Node();
@@ -752,7 +752,7 @@ describe('cloud dialog', () => {
     cloudAction(history, 'cloudSave');
     await vi.advanceTimersByTimeAsync(0);
     expect(
-      body.children.some((node) => node.className.includes('cloud-dialog')),
+      body.children.some((node) => node.className.includes('app-dialog')),
     ).toBe(false);
     ctx.values.set(LICENSE_KEY, 'MKC-TEST-KEY');
     expect(cloudActionAvailable(history, 'cloudSave')).toBe(true);
