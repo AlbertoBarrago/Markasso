@@ -86,9 +86,9 @@ function drawArrow(): void {
 function revealOnScroll(reduced: boolean): void {
   const blocks = [...document.querySelectorAll<HTMLElement>('[data-reveal]')];
   for (const block of blocks)
-    block
-      .querySelectorAll<HTMLElement>('li')
-      .forEach((li, i) => li.style.setProperty('--i', String(i)));
+    block.querySelectorAll<HTMLElement>('li').forEach((li, i) => {
+      li.style.setProperty('--i', String(i));
+    });
   if (reduced || !('IntersectionObserver' in window)) {
     for (const block of blocks) block.classList.add('is-visible');
     return;
