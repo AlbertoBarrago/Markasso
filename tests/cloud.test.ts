@@ -346,17 +346,21 @@ describe('conflicts', () => {
 });
 
 describe('remote check', () => {
-  it('checks silently and reports the same version as unchanged', async () => {
+  const notModified = () => new Response(null, { status: 304 });
+  it('sends If-None-Match silently and reports 304 as unchanged', async () => {
     const ctx = setup();
     await editable(ctx);
     const activity = vi.fn();
     ctx.client.onActivity = activity;
-    ctx.fetcher.mockResolvedValueOnce(response(board(1)));
+    ctx.fetcher.mockResolvedValueOnce(notModified());
     const before = ctx.client.lastSyncedAt;
     vi.advanceTimersByTime(1000);
     expect(await ctx.client.check()).toBe('unchanged');
     expect(activity).not.toHaveBeenCalled();
     expect(ctx.fetcher.mock.calls[1]?.[0]).toBe(`/api/board/${id}`);
+    expect(ctx.fetcher.mock.calls[1]?.[1]?.headers).toEqual({
+      'If-None-Match': '"1"',
+    });
     expect(ctx.client.state).toBe('saved');
     expect(ctx.client.lastSyncedAt).toBeGreaterThan(before!);
   });
@@ -402,7 +406,7 @@ describe('remote check', () => {
     expect(ctx.client.error).toBe(0);
     await vi.advanceTimersByTimeAsync(60000);
     expect(ctx.fetcher).toHaveBeenCalledTimes(2);
-    ctx.fetcher.mockResolvedValueOnce(response(board(1)));
+    ctx.fetcher.mockResolvedValueOnce(notModified());
     expect(await ctx.client.check()).toBe('unchanged');
     expect(ctx.client.state).toBe('saved');
     expect(ctx.client.error).toBe(0);
@@ -457,7 +461,7 @@ describe('remote check', () => {
     ctx.fetcher.mockImplementationOnce(hold);
     const checking = ctx.client.check();
     expect(await ctx.client.check()).toBe('skipped');
-    finish(response(board(1)));
+    finish(notModified());
     expect(await checking).toBe('unchanged');
     expect(ctx.fetcher).toHaveBeenCalledTimes(4);
   });
@@ -555,18 +559,20 @@ describe('remote check UI', () => {
     expect(ctx.fetcher).toHaveBeenCalledTimes(2);
     expect(history.present.elements).toEqual(newer.elements);
     expect(history.present.viewport).toBe(viewport);
-    ctx.fetcher.mockImplementation(async () => response(board(2)));
+    ctx.fetcher.mockResolvedValue(new Response(null, { status: 304 }));
     await vi.advanceTimersByTimeAsync(5000);
     expect(ctx.fetcher).toHaveBeenCalledTimes(2);
     await vi.advanceTimersByTimeAsync(25000);
     expect(ctx.fetcher).toHaveBeenCalledTimes(3);
-    expect(history.present.elements).toEqual(newer.elements);
+    expect(ctx.fetcher.mock.calls[2]?.[1]?.headers).toEqual({
+      'If-None-Match': '"2"',
+    });
     history.undo();
     expect(history.present.elements).toEqual(scene.elements);
   });
   it('does not poll while hidden and checks on return, throttled', async () => {
     const { ctx, doc, win } = await openBoard();
-    ctx.fetcher.mockImplementation(async () => response(board()));
+    ctx.fetcher.mockResolvedValue(new Response(null, { status: 304 }));
     doc.visibilityState = 'hidden';
     win.dispatchEvent(new Event('visibilitychange'));
     await vi.advanceTimersByTimeAsync(120000);

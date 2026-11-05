@@ -168,15 +168,15 @@ export class CloudClient {
     this.changed();
   }
   /**
-   * Sends a request to the board API and returns its JSON body. A `silent`
-   * request is not counted in `inFlight` and does not call `onActivity`, so
-   * background checks never spin the status icon.
+   * Sends a request to the board API and returns its JSON body, or null for a
+   * 304 Not Modified. A `silent` request is not counted in `inFlight` and does
+   * not call `onActivity`, so background checks never spin the status icon.
    */
   private async send(
     path: string,
     init: RequestInit = {},
     { silent = false }: { silent?: boolean } = {},
-  ): Promise<Record<string, unknown>> {
+  ): Promise<Record<string, unknown> | null> {
     let response: Response;
     // Call the injected fetch as a plain function: invoking window.fetch as a
     // method of this client throws "Illegal invocation" in browsers.
@@ -199,7 +199,8 @@ export class CloudClient {
         this.onActivity();
       }
     }
-    if (response.ok) this.lastSyncedAt = Date.now();
+    if (response.ok || response.status === 304) this.lastSyncedAt = Date.now();
+    if (response.status === 304) return null;
     if (!response.ok) {
       if (response.status === 409) {
         const data = (await response.json()) as { version?: number };
@@ -223,14 +224,15 @@ export class CloudClient {
   async create(scene: CloudScene): Promise<void> {
     this.notify('saving');
     try {
-      const data = await this.send('/api/board', {
-        method: 'POST',
-        headers: this.headers(),
-        body: JSON.stringify({
-          elements: scene.elements,
-          ...(scene.viewport ? { viewport: scene.viewport } : {}),
-        }),
-      });
+      const data =
+        (await this.send('/api/board', {
+          method: 'POST',
+          headers: this.headers(),
+          body: JSON.stringify({
+            elements: scene.elements,
+            ...(scene.viewport ? { viewport: scene.viewport } : {}),
+          }),
+        })) ?? {};
       if (
         typeof data.id !== 'string' ||
         !/^[a-zA-Z0-9]{12}$/.test(data.id) ||
@@ -268,12 +270,13 @@ export class CloudClient {
     return board.scene;
   }
   /**
-   * Background check for changes another peer saved: a silent GET compared
-   * with the current version. It runs only on an open board
+   * Background check for changes another peer saved: a silent conditional GET
+   * with `If-None-Match` on the current version. It runs only on an open board
    * with nothing unsaved and no request in flight, and returns `skipped`
    * otherwise. It never raises `version`: the caller applies the returned
    * board (possibly later, after a drag ends) and then sets `version`, so a
    * deferred apply cannot leave the client claiming a scene it does not show.
+   * Works with a server that ignores `If-None-Match` by comparing versions.
    */
   async check(): Promise<CloudCheck> {
     if (
@@ -298,11 +301,11 @@ export class CloudClient {
     try {
       const data = await this.send(
         `/api/board/${this.id}`,
-        {},
+        { headers: { 'If-None-Match': `"${version}"` } },
         { silent: true },
       );
       if (generation !== this.generation) return 'skipped';
-      const board = parseBoard(data);
+      const board = data && parseBoard(data);
       if (idle() && this.state === 'offline') this.notify('saved');
       return board && board.version > version ? board : 'unchanged';
     } catch (error) {
@@ -356,19 +359,20 @@ export class CloudClient {
     const generation = this.generation;
     this.notify('saving');
     try {
-      const data = await this.send(`/api/board/${this.id}`, {
-        method: 'PUT',
-        headers: {
-          ...this.headers(),
-          Authorization: `Bearer ${this.token}`,
-          'If-Match': `"${this.version}"`,
-        },
-        body: JSON.stringify({
-          elements: scene.elements,
-          ...(scene.viewport ? { viewport: scene.viewport } : {}),
-        }),
-        keepalive,
-      });
+      const data =
+        (await this.send(`/api/board/${this.id}`, {
+          method: 'PUT',
+          headers: {
+            ...this.headers(),
+            Authorization: `Bearer ${this.token}`,
+            'If-Match': `"${this.version}"`,
+          },
+          body: JSON.stringify({
+            elements: scene.elements,
+            ...(scene.viewport ? { viewport: scene.viewport } : {}),
+          }),
+          keepalive,
+        })) ?? {};
       if (generation !== this.generation) return;
       if (
         !Number.isInteger(data.version) ||
