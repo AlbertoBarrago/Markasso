@@ -157,10 +157,3 @@ export async function buildShareUrl(
   const path = /^\/b\//.test(location.pathname) ? '/' : location.pathname;
   return `${location.origin}${path}${SHORT_PREFIX}${encoded}`;
 }
-
-export function getShareHash(): string {
-  return location.hash;
-}
-
-/** @deprecated use isShareHash() */
-export const SHARE_HASH_PREFIX = SHORT_PREFIX;

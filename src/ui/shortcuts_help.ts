@@ -150,10 +150,6 @@ function open(appEl: HTMLElement): void {
   appEl.appendChild(overlayEl);
 }
 
-export function isShortcutsHelpOpen(): boolean {
-  return overlayEl !== null;
-}
-
 export function initShortcutsHelp(appEl: HTMLElement): void {
   window.addEventListener('keydown', (e) => {
     if (e.key === '?' && !e.ctrlKey && !e.metaKey) {

@@ -67,21 +67,12 @@ const VENDOR_PACK_PAGES = [
 /** MIME type of library drags, so foreign drops (files, text) are ignored. */
 const DRAG_TYPE = 'application/x-markasso-library-item';
 
-const visibilityListeners = new Set<(open: boolean) => void>();
 let toggleImpl: ((open?: boolean) => void) | null = null;
 let currentlyOpen = false;
 
 /** Opens, closes or (without argument) toggles the library sidebar. */
 export function toggleLibrary(open?: boolean): void {
   toggleImpl?.(open);
-}
-
-/** Subscribes to open/close changes (e.g. to sync a toolbar button). */
-export function onLibraryVisibilityChange(
-  listener: (open: boolean) => void,
-): () => void {
-  visibilityListeners.add(listener);
-  return () => visibilityListeners.delete(listener);
 }
 
 function shapeItem(kind: ShapeKind): LibraryItem {
@@ -540,7 +531,6 @@ export function initLibraryPanel(
     panel.classList.toggle('open', open);
     document.body.classList.toggle('library-open', open);
     writeStorage(OPEN_KEY, open ? '1' : '0');
-    for (const listener of visibilityListeners) listener(open);
   }
 
   toggleImpl = (open) => {
