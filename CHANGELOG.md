@@ -4,6 +4,14 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.17.2] - 2026-11-05
+
+### Fixed
+- **Licence check.** A valid key pasted in **Menu → Cloud → Licence** is confirmed right away with confetti, instead of always waiting for the next save to be checked. First shipped in 1.17.1, whose GitHub release was not published.
+- **Release pipeline.** The lint step passes again on the site animations.
+
+---
+
 ## [1.17.1] - 2026-11-05
 
 ### Fixed
