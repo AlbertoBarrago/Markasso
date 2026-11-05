@@ -1,4 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createScene } from '../src/core/scene';
+import type { Element } from '../src/elements/element';
+import { History } from '../src/engine/history';
+import { clearCanvas } from '../src/ui/clear_canvas';
 import { confirmDialog, dialog, notice } from '../src/ui/dialog';
 
 vi.mock('../src/i18n', () => ({ t: (key: string) => key }));
@@ -127,5 +131,53 @@ describe('dialog', () => {
     expect(input.select).toHaveBeenCalled();
     button('dialogOk').dispatchEvent(new Event('click'));
     expect(await result).toBeNull();
+  });
+});
+
+describe('clear canvas', () => {
+  const element: Element = {
+    id: 'rect',
+    type: 'rectangle',
+    x: 0,
+    y: 0,
+    width: 20,
+    height: 10,
+    strokeColor: '#000000',
+    fillColor: 'transparent',
+    strokeWidth: 1,
+    opacity: 1,
+    roughness: 0,
+  };
+  const board = () =>
+    new History({
+      ...createScene(),
+      elements: [element, { ...element, id: 'b' }],
+    });
+
+  beforeEach(() => vi.stubGlobal('navigator', { platform: 'MacIntel' }));
+
+  it('keeps the canvas on Cancel', async () => {
+    const history = board();
+    const result = clearCanvas(history);
+    expect(button('clearCanvasConfirm').className).toBe('cd-cta cd-danger');
+    button('dialogCancel').dispatchEvent(new Event('click'));
+    expect(await result).toBe(false);
+    expect(history.present.elements).toHaveLength(2);
+  });
+
+  it('clears everything in one undoable step', async () => {
+    const history = board();
+    const result = clearCanvas(history);
+    button('clearCanvasConfirm').dispatchEvent(new Event('click'));
+    expect(await result).toBe(true);
+    expect(history.present.elements).toHaveLength(0);
+    history.undo();
+    expect(history.present.elements.map((e) => e.id)).toEqual(['rect', 'b']);
+  });
+
+  it('does not ask when the canvas is already empty', async () => {
+    const history = new History(createScene());
+    expect(await clearCanvas(history)).toBe(false);
+    expect(body.children).toHaveLength(0);
   });
 });

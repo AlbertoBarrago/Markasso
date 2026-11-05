@@ -9,6 +9,7 @@ import { exportMarkasso } from '../io/markasso';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 import type { SelectTool } from '../tools/select_tool';
+import { clearCanvas } from './clear_canvas';
 import {
   CLOUD_ACTIONS,
   cloudAction,
@@ -427,13 +428,7 @@ export function initCommandPalette(
       label: t('clearCanvas'),
       category: 'action',
       icon: `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h14"/><path d="M5 17l-2-4 9-8 4 4-7 8H5z"/><path d="M12 5l4 4"/></svg>`,
-      execute: () => {
-        if (history.present.elements.length === 0) return;
-        if (confirm('Clear the canvas?')) {
-          const ids = history.present.elements.map((e) => e.id);
-          history.dispatch({ type: 'DELETE_ELEMENTS', ids });
-        }
-      },
+      execute: () => void clearCanvas(history),
     });
 
     return items;

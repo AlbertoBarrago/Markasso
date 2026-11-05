@@ -7,6 +7,7 @@ import { exportMarkasso, importMarkasso } from '../io/markasso';
 import { buildShareUrl } from '../io/share';
 import { exportHTML, exportPNG, exportSVG } from '../rendering/export';
 import { invalidateThemeCache } from '../rendering/theme_cache';
+import { clearCanvas } from './clear_canvas';
 import {
   CLOUD_ACTIONS,
   CLOUD_GROUPS,
@@ -867,14 +868,8 @@ export function initSettings(
     .querySelector<HTMLElement>('#menu-clear')!
     .addEventListener('click', (e) => {
       if (isDisabled(e.currentTarget as Element)) return;
-      if (confirm('Clear the canvas? This cannot be undone.')) {
-        history.dispatch({
-          type: 'LOAD_SCENE',
-          elements: [],
-          viewport: history.present.viewport,
-        });
-        close();
-      }
+      close();
+      void clearCanvas(history);
     });
 
   // ── Preferences ──────────────────────────────────────────────────────────
