@@ -29,6 +29,7 @@ import { initShortcuts } from './src/ui/shortcuts';
 import { initShortcutsHelp } from './src/ui/shortcuts_help';
 import { initStarCta } from './src/ui/star_cta';
 import { initToolbar } from './src/ui/toolbar';
+import { initUpdateBanner } from './src/ui/update_banner';
 import { initWelcome } from './src/ui/welcome';
 import { initWhatsNew } from './src/ui/whats_new';
 
@@ -153,6 +154,7 @@ async function bootstrap(): Promise<void> {
   // One announcement at a time: the What's New card already presents the Mac
   // app, so the Mac banner waits for a visit without a card.
   if (!showedWhatsNew && !showedWelcome) initMacBanner();
+  initUpdateBanner();
 
   // Join a live session if the URL points to one (…?live=roomId)
   if (!cloudRoute && getLiveRoomId()) {

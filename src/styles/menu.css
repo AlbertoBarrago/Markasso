@@ -360,3 +360,84 @@
     display: none;
   }
 }
+/* "New version available" notice (update_banner.ts): same slot as the Mac
+   banner, which it replaces while shown. */
+.update-banner {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 32px);
+  padding: 8px 8px 8px 14px;
+  border: 1px solid var(--island-border, var(--border));
+  border-radius: 14px;
+  background: var(--bg-island);
+  color: var(--text);
+  font-size: 14px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
+  animation: update-banner-in 0.25s ease-out;
+}
+.update-banner-icon {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.update-banner-text {
+  line-height: 1.35;
+}
+.update-banner-reload {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.update-banner-reload:hover {
+  opacity: 0.88;
+}
+.update-banner-close {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+}
+.update-banner-close:hover {
+  background: var(--bg-hover);
+}
+@keyframes update-banner-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+}
+@media (max-width: 700px) {
+  /* Below the corner islands, which share the top row on narrow screens. */
+  .update-banner {
+    top: 72px;
+    width: calc(100vw - 32px);
+    font-size: 13px;
+  }
+  .update-banner-text {
+    flex: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .update-banner {
+    animation: none;
+  }
+}
