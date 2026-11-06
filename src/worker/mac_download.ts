@@ -3,7 +3,11 @@
  * (`/download/mac.json`).
  *
  * The latest build is read from the Sparkle appcast the Mac release publishes,
- * so the web never needs a change when the Mac app ships. The answer is
+ * so the web never needs a change when the Mac app ships. The appcast's
+ * enclosure is the update archive meant for Sparkle (`Markasso-<v>-<build>.zip`,
+ * the app alone); first installs get the full package published next to it
+ * (`Markasso-<v>.zip`: the app plus `install.sh`, which clears the quarantine
+ * of the not notarized app). The answer is
  * cached in KV for a few minutes; if the appcast cannot be read, the last
  * known build (or a built-in one) is used, so the button always works.
  *
@@ -18,7 +22,7 @@ const APPCAST_URL = 'https://albz.it/updates/markasso/appcast.xml';
 const ALLOWED_PREFIX = 'https://albz.it/updates/markasso/';
 /** Used only when the appcast was never readable. */
 const FALLBACK: MacBuild = {
-  url: 'https://albz.it/updates/markasso/Markasso-0.9.2-3.zip',
+  url: 'https://albz.it/updates/markasso/Markasso-0.9.2.zip',
   version: '0.9.2',
 };
 const CACHE_KEY = 'mac:latest';
@@ -48,21 +52,38 @@ export function allowedMacDownload(url: string): boolean {
 }
 
 /**
- * The newest build in a Sparkle appcast: the first `<item>`'s enclosure URL
- * and short version. Null when the feed has no usable, allowed item.
+ * The full package (app plus `install.sh`) for `shortVersion`, or null when
+ * the version is not a plain `major.minor.patch`. The URL is derived, not
+ * checked: the Mac release publishes the full package together with the
+ * update archive, and a HEAD request on every cache refresh would add latency
+ * to the download for a case the release flow already rules out.
+ */
+export function fullPackageUrl(shortVersion: string): string | null {
+  if (!/^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(shortVersion)) return null;
+  const url = `${ALLOWED_PREFIX}Markasso-${shortVersion}.zip`;
+  return allowedMacDownload(url) ? url : null;
+}
+
+/**
+ * The newest build in a Sparkle appcast: the full package for the first
+ * `<item>`'s short version, or its enclosure (the update archive) when that
+ * version is missing or unusual. Null when the feed has no usable, allowed
+ * item.
  */
 export function latestFromAppcast(xml: string): MacBuild | null {
   const item = /<item\b[^>]*>([\s\S]*?)<\/item>/i.exec(xml)?.[1];
   if (!item) return null;
-  const url = /<enclosure\b[^>]*\burl="([^"]+)"/i
+  const enclosure = /<enclosure\b[^>]*\burl="([^"]+)"/i
     .exec(item)?.[1]
     ?.replace(/&amp;/g, '&');
-  if (!url || !allowedMacDownload(url)) return null;
-  const version =
+  if (!enclosure || !allowedMacDownload(enclosure)) return null;
+  const shortVersion =
     /<sparkle:shortVersionString>\s*([^<\s]+)\s*</i.exec(item)?.[1] ??
-    /sparkle:shortVersionString="([^"]+)"/i.exec(item)?.[1] ??
-    /Markasso-(\d+(?:\.\d+)*)/.exec(url)?.[1];
+    /sparkle:shortVersionString="([^"]+)"/i.exec(item)?.[1];
+  const version =
+    shortVersion ?? /Markasso-(\d+(?:\.\d+)*)/.exec(enclosure)?.[1];
   if (!version || !/^[0-9A-Za-z.+-]{1,32}$/.test(version)) return null;
+  const url = (shortVersion && fullPackageUrl(shortVersion)) || enclosure;
   return { url, version };
 }
 

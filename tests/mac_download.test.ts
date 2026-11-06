@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   allowedMacDownload,
+  fullPackageUrl,
   latestFromAppcast,
   macDownload,
 } from '../src/worker/mac_download';
@@ -71,13 +72,53 @@ describe('allowedMacDownload', () => {
   });
 });
 
+describe('fullPackageUrl', () => {
+  it('builds the full package URL only for plain versions', () => {
+    expect(fullPackageUrl('0.9.10')).toBe(
+      'https://albz.it/updates/markasso/Markasso-0.9.10.zip',
+    );
+    for (const version of ['0.9', '0.9.10-beta', '1.0.0+5', '../1.0.0', ''])
+      expect(fullPackageUrl(version), version).toBeNull();
+  });
+});
+
 describe('latestFromAppcast', () => {
-  it('reads the first item', () => {
+  it('offers the full package of the first item, not its update archive', () => {
     expect(
       latestFromAppcast(
-        appcast('https://albz.it/updates/markasso/Markasso-0.9.2-3.zip'),
+        appcast(
+          'https://albz.it/updates/markasso/Markasso-0.9.10-11.zip',
+          '0.9.10',
+        ),
       ),
     ).toEqual({
+      url: 'https://albz.it/updates/markasso/Markasso-0.9.10.zip',
+      version: '0.9.10',
+    });
+  });
+
+  it('falls back to the enclosure for an unexpected short version', () => {
+    expect(
+      latestFromAppcast(
+        appcast(
+          'https://albz.it/updates/markasso/Markasso-1.0.0-beta-12.zip',
+          '1.0.0-beta',
+        ),
+      ),
+    ).toEqual({
+      url: 'https://albz.it/updates/markasso/Markasso-1.0.0-beta-12.zip',
+      version: '1.0.0-beta',
+    });
+  });
+
+  it('falls back to the enclosure when the short version is missing', () => {
+    const xml = appcast(
+      'https://albz.it/updates/markasso/Markasso-0.9.2-3.zip',
+    ).replace(
+      '<sparkle:shortVersionString>0.9.2</sparkle:shortVersionString>',
+      '',
+    );
+    expect(latestFromAppcast(xml)).toEqual({
       url: 'https://albz.it/updates/markasso/Markasso-0.9.2-3.zip',
       version: '0.9.2',
     });
@@ -102,7 +143,7 @@ describe('macDownload', () => {
     const res = await get(env);
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toBe(
-      'https://albz.it/updates/markasso/Markasso-0.9.2-3.zip',
+      'https://albz.it/updates/markasso/Markasso-0.9.2.zip',
     );
     await get(env);
     const today = new Date().toISOString().slice(0, 10);
@@ -119,7 +160,7 @@ describe('macDownload', () => {
         ),
       );
     expect(await (await get(env, '/download/mac.json')).json()).toEqual({
-      url: 'https://albz.it/updates/markasso/Markasso-0.9.2-3.zip',
+      url: 'https://albz.it/updates/markasso/Markasso-0.9.2.zip',
       version: '0.9.2',
     });
     expect((await get(env, '/download/mac', 'HEAD')).status).toBe(302);
@@ -142,7 +183,7 @@ describe('macDownload', () => {
       new Response('', { status: 500 }),
     );
     expect((await get(env)).headers.get('Location')).toBe(
-      'https://albz.it/updates/markasso/Markasso-0.9.2-3.zip',
+      'https://albz.it/updates/markasso/Markasso-0.9.2.zip',
     );
   });
 
