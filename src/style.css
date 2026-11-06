@@ -15,7 +15,7 @@
 /* Fallback when the toolbar's top-right island is missing. */
 .cloud-status-island--floating {
   position: fixed;
-  top: 12px;
+  top: 16px;
   right: 16px;
   z-index: 10;
 }

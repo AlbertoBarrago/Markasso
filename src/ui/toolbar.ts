@@ -43,8 +43,6 @@ const IC = {
   rombo: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l7 7-7 7-7-7z"/></svg>`,
   freehand: `<svg width="18" height="18" aria-hidden="true" focusable="false" role="img" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M12.8 3.4l3.8 3.8-7.9 7.9-3.8-3.8z"/><path d="M4.9 11.3c-1.2 1-1.8 2.2-1.8 3.6 0 1.2-.4 2-1.1 2.7 2 .2 4.3-.2 5.8-1.7l.9-.8"/><path d="M11.6 4.6l3.8 3.8"/></svg>`,
   text: `<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4h12v2.5H12v9.5H8V6.5H4z"/></svg>`,
-  undo: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h9a4 4 0 010 8H8"/><path d="M7 5L4 8l3 3"/></svg>`,
-  redo: `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8H7a4 4 0 000 8h5"/><path d="M13 5l3 3-3 3"/></svg>`,
   fit: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="2.5"/><path d="M1 5V2h3M12 2h3v3M15 11v3h-3M4 14H1v-3"/></svg>`,
   layers: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L2 6l8 4 8-4z"/><path d="M2 10l8 4 8-4"/><path d="M2 14l8 4 8-4"/></svg>`,
   hamburger: `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/></svg>`,
@@ -922,18 +920,8 @@ export function initToolbar(
     standaloneZoom,
     standalonePlus,
   );
-  const historyControls = div('tb-island');
-  historyControls.id = 'history-controls';
-  historyControls.setAttribute('role', 'group');
-  historyControls.setAttribute('aria-label', t('showHistoryControls'));
-  const standaloneUndo = mkBtn(IC.undo, t('undo'));
-  const standaloneRedo = mkBtn(IC.redo, t('redo'));
-  standaloneUndo.addEventListener('click', () => history.undo());
-  standaloneRedo.addEventListener('click', () => history.redo());
-  historyControls.append(standaloneUndo, standaloneRedo);
-  container.append(zoomControls, historyControls);
+  container.append(zoomControls);
   initTooltips(zoomControls);
-  initTooltips(historyControls);
   initToolbarDrag(centerPill, dragHandle);
 
   // ── Mobile: tools FAB + popup ─────────────────────────────────────────────
@@ -1042,8 +1030,6 @@ export function initToolbar(
     mobileLockBtn.classList.toggle('active', toolLocked);
     mobileLockBtn.setAttribute('aria-pressed', String(toolLocked));
     toolsFab.dataset.tool = activeTool;
-    standaloneUndo.disabled = !history.canUndo();
-    standaloneRedo.disabled = !history.canRedo();
     const zoomText = `${Math.round(history.present.viewport.zoom * 100)}%`;
     standaloneZoom.textContent = zoomText;
     // Locked-elements indicator

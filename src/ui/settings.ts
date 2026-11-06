@@ -49,7 +49,6 @@ export interface UISettings {
   bgColor: string;
   showMinimap: boolean;
   showZoomControls: boolean;
-  showHistoryControls: boolean;
   showTips: boolean;
 }
 
@@ -65,7 +64,6 @@ export function loadSettings(): UISettings {
     showMinimap: true,
     // Zoom and undo/redo stay in sight by default, as in Excalidraw.
     showZoomControls: true,
-    showHistoryControls: true,
     showTips: true,
   };
   try {
@@ -89,7 +87,6 @@ export function applySettings(appEl: HTMLElement, s: UISettings): void {
   invalidateThemeCache();
   appEl.classList.toggle('minimap-hidden', !s.showMinimap);
   appEl.classList.toggle('show-zoom-controls', s.showZoomControls);
-  appEl.classList.toggle('show-history-controls', s.showHistoryControls);
   appEl.classList.toggle('tips-hidden', !s.showTips);
 }
 
@@ -412,11 +409,6 @@ export function initSettings(
               'menuitemcheckbox',
               'id="sp-zoom-controls"',
               t('showZoomControls'),
-            ) +
-            checkItem(
-              'menuitemcheckbox',
-              'id="sp-history-controls"',
-              t('showHistoryControls'),
             )
           }</ul></li>` +
           separator +
@@ -732,10 +724,6 @@ export function initSettings(
       panel.querySelector('#sp-zoom-controls')!,
       current.showZoomControls,
     );
-    setChecked(
-      panel.querySelector('#sp-history-controls')!,
-      current.showHistoryControls,
-    );
     setChecked(panel.querySelector('#sp-tips-visible')!, current.showTips);
     setChecked(panel.querySelector('#sp-grid-visible')!, gridVisible);
     const gridTypes = panel.querySelector<HTMLElement>('#sp-grid-types')!;
@@ -910,7 +898,6 @@ export function initSettings(
   touch.addEventListener('change', syncCornerControls);
   for (const [selector, key] of [
     ['#sp-zoom-controls', 'showZoomControls'],
-    ['#sp-history-controls', 'showHistoryControls'],
     ['#sp-tips-visible', 'showTips'],
   ] as const) {
     panel.querySelector(selector)!.addEventListener('click', () => {
