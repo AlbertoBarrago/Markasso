@@ -4,7 +4,7 @@ All notable changes to `@markasso/mcp` are documented here. The MCP server is ve
 
 ---
 
-## [Unreleased]
+## [0.6.1] - 2026-11-06
 
 ### Fixed
 - **Titles no longer push the diagram off-center.** `diagram_layout` placed a text node that no connection touches (a title, a caption) beside the diagram as a group of its own, so the exported picture had a wide empty band on one side. Such text nodes now sit centered above the laid-out diagram, stacked in the order they were added. Connected text nodes are laid out as before.
