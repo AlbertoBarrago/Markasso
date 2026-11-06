@@ -130,7 +130,7 @@ function createController(history: History) {
   // The status button lives in the top-right island next to the live chips,
   // with the same chrome as the other island buttons.
   const island = document.createElement('div');
-  island.className = 'tb-island cloud-status-island';
+  island.className = 'panel tb-island cloud-status-island';
   island.hidden = true;
   const indicator = document.createElement('button');
   indicator.type = 'button';

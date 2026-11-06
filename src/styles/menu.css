@@ -3,11 +3,6 @@
   position: fixed;
   z-index: 200;
   width: 256px;
-  background: var(--bg-island);
-  border: 1px solid var(--island-border);
-  border-radius: var(--island-radius);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   opacity: 0;
   pointer-events: none;
   transform: scale(0.97) translateY(-4px);

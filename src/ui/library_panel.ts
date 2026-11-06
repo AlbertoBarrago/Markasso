@@ -222,6 +222,7 @@ export function initLibraryPanel(
 ): void {
   const panel = document.createElement('aside');
   panel.id = 'library-panel';
+  panel.className = 'panel';
   panel.setAttribute('aria-label', t('library'));
   panel.innerHTML = `
     <div class="lib-header">
