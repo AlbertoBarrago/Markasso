@@ -88,6 +88,9 @@
   "shareLinkCopied": "Link copiato!",
   "liveName": "Il tuo nome",
   "people": "Persone",
+  "peopleYou": "tu",
+  "peopleOnlyYou": "Persone: ci sei solo tu",
+  "peopleConnected": "Persone: {{count}} connesse",
   "shareLiveCopied": "Link live copiato!",
   "liveDisconnected": "Sessione live disconnessa — riconnessione…",
   "liveReconnected": "Sessione live riconnessa",
@@ -410,8 +413,5 @@
   "markassoInvalidFile": "Questo file non sembra un file .markasso valido.",
   "markassoUnreadableFile": "Impossibile leggere il file. Potrebbe essere danneggiato.",
   "mermaidParseFailed": "Impossibile interpretare il diagramma Mermaid.",
-  "mermaidNoElements": "Non è stato possibile creare elementi da questo diagramma.",
-  "peopleYou": "tu",
-  "peopleOnlyYou": "Persone: ci sei solo tu",
-  "peopleConnected": "Persone: {{count}} connesse"
+  "mermaidNoElements": "Non è stato possibile creare elementi da questo diagramma."
 }

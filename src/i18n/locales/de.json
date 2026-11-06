@@ -208,6 +208,9 @@
   "reportClose": "Schließen",
   "guideSearchPlaceholder": "Anleitung durchsuchen…",
   "people": "Personen",
+  "peopleYou": "du",
+  "peopleOnlyYou": "Personen: nur du bist hier",
+  "peopleConnected": "Personen: {{count}} verbunden",
   "shapes": "Flussdiagramm-Formen",
   "shapeKind": "Form",
   "hintShape": "Ziehen zum Zeichnen der gewählten Form. Eine andere in der Bibliothek wählen [[I]]",
@@ -410,8 +413,5 @@
   "markassoInvalidFile": "Diese Datei scheint keine gültige .markasso-Datei zu sein.",
   "markassoUnreadableFile": "Die Datei konnte nicht gelesen werden. Sie ist möglicherweise beschädigt.",
   "mermaidParseFailed": "Das Mermaid-Diagramm konnte nicht gelesen werden.",
-  "mermaidNoElements": "Aus diesem Diagramm konnten keine Elemente erstellt werden.",
-  "peopleYou": "du",
-  "peopleOnlyYou": "Personen: nur du bist hier",
-  "peopleConnected": "Personen: {{count}} verbunden"
+  "mermaidNoElements": "Aus diesem Diagramm konnten keine Elemente erstellt werden."
 }

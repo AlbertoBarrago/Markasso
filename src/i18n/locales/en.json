@@ -93,6 +93,9 @@
   "shareLinkCopied": "Link copied!",
   "liveName": "Your name",
   "people": "People",
+  "peopleYou": "you",
+  "peopleOnlyYou": "People: only you here",
+  "peopleConnected": "People: {{count}} connected",
   "shareLiveCopied": "Live link copied!",
   "liveDisconnected": "Live session disconnected — reconnecting…",
   "liveReconnected": "Live session reconnected",
@@ -410,8 +413,5 @@
   "markassoInvalidFile": "This file does not appear to be a valid .markasso file.",
   "markassoUnreadableFile": "The file could not be read. It may be corrupted.",
   "mermaidParseFailed": "The Mermaid diagram could not be parsed.",
-  "mermaidNoElements": "No elements could be created from this diagram.",
-  "peopleYou": "you",
-  "peopleOnlyYou": "People: only you here",
-  "peopleConnected": "People: {{count}} connected"
+  "mermaidNoElements": "No elements could be created from this diagram."
 }

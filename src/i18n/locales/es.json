@@ -208,6 +208,9 @@
   "reportClose": "Cerrar",
   "guideSearchPlaceholder": "Buscar en la guía…",
   "people": "Personas",
+  "peopleYou": "tú",
+  "peopleOnlyYou": "Personas: solo estás tú",
+  "peopleConnected": "Personas: {{count}} conectadas",
   "shapes": "Formas de diagrama",
   "shapeKind": "Forma",
   "hintShape": "Arrastrar para dibujar la forma seleccionada. Elige otra en la Biblioteca [[I]]",
@@ -410,8 +413,5 @@
   "markassoInvalidFile": "Este archivo no parece un archivo .markasso válido.",
   "markassoUnreadableFile": "No se pudo leer el archivo. Puede estar dañado.",
   "mermaidParseFailed": "No se pudo interpretar el diagrama Mermaid.",
-  "mermaidNoElements": "No se pudieron crear elementos a partir de este diagrama.",
-  "peopleYou": "tú",
-  "peopleOnlyYou": "Personas: solo estás tú",
-  "peopleConnected": "Personas: {{count}} conectadas"
+  "mermaidNoElements": "No se pudieron crear elementos a partir de este diagrama."
 }
