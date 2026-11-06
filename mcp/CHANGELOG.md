@@ -4,6 +4,13 @@ All notable changes to `@markasso/mcp` are documented here. The MCP server is ve
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- **Arrows no longer cross a node after a layout.** `diagram_layout` and `diagram_update` could leave a connector anchored to the wrong side of a moved node (its old center landing on the new border), so the arrow was drawn through it. Connector ends now face the other node again after every move or resize, and each `diagram_layout` or `diagram_update` call is a single undo step.
+
+---
+
 ## [0.5.1] - 2026-11-04
 
 ### Fixed

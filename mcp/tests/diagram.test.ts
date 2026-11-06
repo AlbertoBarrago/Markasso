@@ -5,6 +5,7 @@ import { DEFAULT_LABEL_FONT_FAMILY } from '../../src/elements/label_defaults';
 import {
   getConnectorBox,
   getElementBounds,
+  resolveArrowEndpoints,
 } from '../../src/rendering/draw_selection';
 import { sceneToSVG } from '../../src/rendering/export';
 import { getLabelWrapWidth } from '../../src/rendering/shape_geometry';
@@ -276,6 +277,81 @@ describe('connectors follow moved nodes', () => {
     expect(x2).toBeLessThanOrEqual(800);
     expect(y2).toBeGreaterThanOrEqual(400 - 0.5);
     expect(y2).toBeLessThanOrEqual(500);
+  });
+
+  /** Drawn ends of the connector from `from` to `to`, and both node boxes. */
+  function drawnEnds(d: Diagram, from: string, to: string) {
+    const keys = d.nodeKeys();
+    const idOf = (key: string) => [...keys].find(([, k]) => k === key)![0];
+    const line = d.elements.find(
+      (el) =>
+        el.type === 'line' &&
+        el.startElementId === idOf(from) &&
+        el.endElementId === idOf(to),
+    );
+    if (line?.type !== 'line') throw new Error('expected a line');
+    const box = (key: string) =>
+      getElementBounds(d.elements.find((el) => el.id === idOf(key))!);
+    return {
+      ends: resolveArrowEndpoints(line, d.elements),
+      a: box(from),
+      b: box(to),
+    };
+  }
+
+  it('after diagram_layout moves an old center onto a new border', async () => {
+    const d = new Diagram();
+    await d.addNodes([
+      { key: 'claude', kind: 'terminator', label: 'Claude Code' },
+      { key: 'mcp', label: 'Markasso MCP' },
+      { key: 'png', kind: 'document', label: 'canvas.png' },
+      { key: 'viewer', label: 'rex-canvas view' },
+      { key: 'pane', kind: 'terminator', label: 'Rex pane (kitty graphics)' },
+    ]);
+    const chainKeys = ['claude', 'mcp', 'png', 'viewer', 'pane'];
+    d.connect(chainKeys.slice(1).map((to, i) => ({ from: chainKeys[i]!, to })));
+    d.layout('LR');
+    // Every arrow leaves its source's right side and enters the target's
+    // left side: none is drawn through a node.
+    for (let i = 1; i < chainKeys.length; i++) {
+      const { ends, a, b } = drawnEnds(d, chainKeys[i - 1]!, chainKeys[i]!);
+      expect(ends.x).toBeCloseTo(a.x + a.w, 0);
+      expect(ends.x2).toBeCloseTo(b.x, 0);
+    }
+  });
+
+  it('folds a layout and its connector refresh into one undo step', async () => {
+    const d = await chain();
+    const before = d.elements;
+    d.layout('TB');
+    expect(d.elements).not.toEqual(before);
+    d.history.undo();
+    expect(d.elements).toEqual(before);
+  });
+
+  it('folds a node update into one undo step', async () => {
+    const d = await chain();
+    const before = d.elements;
+    d.update('b', { label: 'Renamed', x: 600, y: 400, width: 200 });
+    d.history.undo();
+    expect(d.elements).toEqual(before);
+  });
+
+  it('leaves pinned connector ends alone', async () => {
+    const d = await chain();
+    const line = d.elements.find((el) => el.type === 'line')!;
+    d.history.dispatch({
+      type: 'PATCH_ELEMENTS',
+      update: [{ id: line.id, set: { endAnchor: { x: 0.5, y: 0 } } }],
+    });
+    const pinned = d.elements.find((el) => el.type === 'line')!;
+    d.layout('TB');
+    const after = d.elements.find((el) => el.type === 'line')!;
+    if (after.type !== 'line' || pinned.type !== 'line')
+      throw new Error('expected a line');
+    expect([after.x2, after.y2]).toEqual([pinned.x2, pinned.y2]);
+    const a = getElementBounds(d.elements[0]!);
+    expect([after.x, after.y]).toEqual([a.x + a.w / 2, a.y + a.h / 2]);
   });
 
   it('snapshot stores the drawn ends of bound connectors', async () => {

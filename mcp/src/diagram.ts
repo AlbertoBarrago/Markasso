@@ -456,8 +456,13 @@ export class Diagram {
     return created.length;
   }
 
+  /** Changes a node in one undoable step. */
   update(key: string, patch: NodePatch): void {
     const id = this.idOf(key);
+    this.moving([id], () => this.applyNodePatch(id, patch));
+  }
+
+  private applyNodePatch(id: string, patch: NodePatch): void {
     const el = this.elements.find((e) => e.id === id)!;
     if (patch.label !== undefined) {
       this.dispatch(
@@ -618,7 +623,71 @@ export class Diagram {
       // (icon labels included).
       return { id, x: el.x + (p.x - b.x), y: el.y + (p.y - b.y) };
     });
-    if (moves.length > 0) this.dispatch({ type: 'ALIGN_ELEMENTS', moves });
+    if (moves.length === 0) return;
+    this.moving(
+      moves.map((m) => m.id),
+      () => this.dispatch({ type: 'ALIGN_ELEMENTS', moves }),
+    );
+  }
+
+  /**
+   * Runs `change`, which may move or resize the nodes `ids`, then points the
+   * floating ends of their connectors back at the nodes' centers, all in one
+   * undo step.
+   *
+   * A floating end keeps the point stored when it was connected, and the
+   * renderer treats a stored point lying on the shape's border as a spot the
+   * user picked (see resolveArrowEndpoints). Once a node moves, its old
+   * center can land exactly on its new border (a layout grid makes that
+   * common), and the arrow then sticks to the wrong side and crosses the
+   * node. A center is never on the border, so the end faces the other node
+   * again. Pinned ends (anchors) follow their node and are left alone.
+   */
+  private moving(ids: ReadonlyArray<string>, change: () => void): void {
+    // History folds every command between beginDrag and endDrag into one
+    // undo step, and still forwards each command to a live room.
+    this.history.beginDrag();
+    try {
+      change();
+      const update = this.freshEnds(new Set(ids));
+      if (update.length > 0) this.dispatch({ type: 'PATCH_ELEMENTS', update });
+    } finally {
+      this.history.endDrag();
+    }
+  }
+
+  /** Patches moving the floating ends bound to `ids` to the node centers. */
+  private freshEnds(
+    ids: ReadonlySet<string>,
+  ): Array<{ id: string; set: Partial<Element> }> {
+    const centers = new Map<string, { x: number; y: number }>();
+    for (const el of this.elements) {
+      if (!ids.has(el.id)) continue;
+      const b = getElementBounds(el);
+      centers.set(el.id, { x: b.x + b.w / 2, y: b.y + b.h / 2 });
+    }
+    return this.elements.filter(isConnector).flatMap((el) => {
+      const start =
+        el.startElementId && !el.startAnchor
+          ? centers.get(el.startElementId)
+          : undefined;
+      const end =
+        el.endElementId && !el.endAnchor
+          ? centers.get(el.endElementId)
+          : undefined;
+      const set: Record<string, number> = {};
+      if (start && (start.x !== el.x || start.y !== el.y)) {
+        set.x = start.x;
+        set.y = start.y;
+      }
+      if (end && (end.x !== el.x2 || end.y !== el.y2)) {
+        set.x2 = end.x;
+        set.y2 = end.y;
+      }
+      return Object.keys(set).length > 0
+        ? [{ id: el.id, set: set as Partial<Element> }]
+        : [];
+    });
   }
 
   /**
