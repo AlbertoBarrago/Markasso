@@ -13,7 +13,7 @@ const SHORTCUTS: {
   { icon: '⌘', label: t('commandPalette'), key: `${mod}K` },
   {
     icon: '⌕',
-    label: t('search'),
+    label: t('elementSearch'),
     key: `${mod}F`,
     iconClass: 'wl-shortcut-icon--search',
   },
