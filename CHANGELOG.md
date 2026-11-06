@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.18.5] - 2026-11-06
+
+### Fixed
+- **Mac download.** The Download for Mac button now gives the full package, with the install script that clears the macOS quarantine on first launch, instead of the update archive meant for the app's own updater.
+
+---
+
 ## [1.18.4] - 2026-11-06
 
 ### Added
