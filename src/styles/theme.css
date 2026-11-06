@@ -70,8 +70,7 @@
   color: var(--accent);
 }
 
-[data-theme="light"] .tb-island,
-[data-theme="light"] .settings-panel,
+[data-theme="light"] .panel,
 [data-theme="light"] .menu-sub:not(.menu-sub--inline),
 [data-theme="light"] #context-panel,
 [data-theme="light"] #mobile-actions,

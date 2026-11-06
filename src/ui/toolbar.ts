@@ -128,7 +128,7 @@ export function initToolbar(
   container.innerHTML = '';
 
   // ── Center-bottom: tool buttons pill ──────────────────────────────────────
-  const centerPill = div('tb-island tb-island-tools');
+  const centerPill = div('panel tb-island tb-island-tools');
   centerPill.setAttribute('role', 'toolbar');
   centerPill.setAttribute('aria-label', 'Drawing tools');
   const toolBtns = new Map<ActiveTool, HTMLButtonElement>();
@@ -185,7 +185,7 @@ export function initToolbar(
   moreToggle.id = 'tb-more-tools';
   moreToggle.setAttribute('aria-haspopup', 'menu');
   moreToggle.setAttribute('aria-expanded', 'false');
-  const morePanel = div('tb-tool-group-panel tb-more-panel');
+  const morePanel = div('panel tb-tool-group-panel tb-more-panel');
   morePanel.id = 'tb-more-panel';
   morePanel.setAttribute('role', 'menu');
   morePanel.setAttribute('aria-labelledby', moreToggle.id);
@@ -751,7 +751,7 @@ export function initToolbar(
   nameChip.setAttribute('aria-label', t('liveName'));
   // The chip stays top-right on its own island while sharing lives in the
   // main menu (settings.ts).
-  const nameIsland = div('tb-island tb-live-name-island');
+  const nameIsland = div('panel tb-island tb-live-name-island');
   nameIsland.style.display = 'none';
   const showNameChip = (): void => {
     nameIsland.style.display = '';
@@ -810,7 +810,7 @@ export function initToolbar(
 
   // ── Live participants (people list) ────────────────────────────────────────
   const peopleIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/><circle cx="17" cy="9.5" r="2.5"/><path d="M16 15.2c2 .3 3.7 1.5 4.5 3.6"/></svg>`;
-  const peopleIsland = div('tb-island tb-people-island');
+  const peopleIsland = div('panel tb-island tb-people-island');
   peopleIsland.style.position = 'relative';
   peopleIsland.style.display = 'none';
   const peopleTrigger = mkBtn(peopleIcon, t('people'));
@@ -870,7 +870,7 @@ export function initToolbar(
 
   // Top-left: menu button (settings.ts) | coffee (star_cta.ts)
   const topLeft = div('tb-island-topleft');
-  const tbLeft = div('tb-island tb-left');
+  const tbLeft = div('panel tb-island tb-left');
   topLeft.append(tbLeft);
 
   /**
@@ -901,7 +901,7 @@ export function initToolbar(
   window.addEventListener('resize', updateToolsLayout);
   initTooltips(centerPill);
   // Optional standalone controls share the same actions as the toolbar.
-  const zoomControls = div('tb-island');
+  const zoomControls = div('panel tb-island');
   zoomControls.id = 'zoom-controls';
   zoomControls.setAttribute('role', 'group');
   zoomControls.setAttribute('aria-label', t('zoomPanel'));

@@ -279,7 +279,7 @@ export function initSettings(
 
   // ── Panel ────────────────────────────────────────────────────────────────
   const panel = document.createElement('div');
-  panel.className = 'settings-panel';
+  panel.className = 'panel settings-panel';
   panel.setAttribute('aria-hidden', 'true');
   document.body.appendChild(panel);
 
