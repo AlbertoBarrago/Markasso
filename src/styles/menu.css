@@ -197,13 +197,13 @@
   border: none;
   background: none;
   cursor: pointer;
-  color: #f59e0b;
+  color: var(--coffee);
 }
 .menu-footer-coffee svg {
   margin-right: 4px;
 }
 .menu-footer-coffee:hover {
-  color: #fbbf24;
+  color: var(--accent);
 }
 
 .menu-section-label {

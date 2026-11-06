@@ -21,6 +21,7 @@
   --text: #000000;
   --false-white: #000000;
   --text-muted: #000000;
+  --coffee: #db8a00;
 }
 /* ── Theme toggle (Light / Dark / Device) ─────────────────────────────────── */
 .menu-theme-toggle {
