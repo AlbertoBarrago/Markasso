@@ -580,14 +580,14 @@ export function initToolbar(
     'display:none',
     'align-items:center',
     'justify-content:center',
-    'background:rgba(0,0,0,0.55)',
+    'background:var(--scrim)',
     'backdrop-filter:blur(4px)',
   ].join(';');
 
   const mermaidBox = document.createElement('div');
   mermaidBox.style.cssText = [
-    'background:rgba(22,22,34,0.98)',
-    'border:1px solid rgba(255,255,255,0.12)',
+    'background:var(--bg-island)',
+    'border:1px solid var(--island-border)',
     'border-radius:12px',
     'padding:20px',
     'display:flex',
@@ -595,7 +595,7 @@ export function initToolbar(
     'gap:12px',
     'width:420px',
     'max-width:calc(100vw - 32px)',
-    'box-shadow:0 8px 40px rgba(0,0,0,0.7)',
+    'box-shadow:var(--modal-shadow)',
   ].join(';');
 
   const mermaidHeader = document.createElement('div');
@@ -604,7 +604,7 @@ export function initToolbar(
 
   const mermaidTitle = document.createElement('h3');
   mermaidTitle.style.cssText =
-    'margin:0;font-size:14px;font-weight:600;color:#e2e2ef';
+    'margin:0;font-size:14px;font-weight:600;color:var(--text)';
   mermaidTitle.textContent = t('mermaidDialogTitle');
 
   const mermaidFileInput = document.createElement('input');
@@ -617,7 +617,7 @@ export function initToolbar(
   mermaidLoadBtn.style.cssText = [
     'background:none',
     'border:none',
-    'color:rgba(255,255,255,0.4)',
+    'color:var(--text-muted)',
     'font-size:12px',
     'cursor:pointer',
     'padding:2px 4px',
@@ -626,10 +626,10 @@ export function initToolbar(
   ].join(';');
   mermaidLoadBtn.textContent = t('mermaidLoadFile');
   mermaidLoadBtn.addEventListener('mouseenter', () => {
-    mermaidLoadBtn.style.color = 'rgba(255,255,255,0.7)';
+    mermaidLoadBtn.style.color = 'var(--text)';
   });
   mermaidLoadBtn.addEventListener('mouseleave', () => {
-    mermaidLoadBtn.style.color = 'rgba(255,255,255,0.4)';
+    mermaidLoadBtn.style.color = 'var(--text-muted)';
   });
   mermaidLoadBtn.addEventListener('click', () => mermaidFileInput.click());
 
@@ -652,10 +652,10 @@ export function initToolbar(
     'width:100%',
     'height:240px',
     'resize:vertical',
-    'background:rgba(0,0,0,0.3)',
-    'border:1px solid rgba(255,255,255,0.1)',
+    'background:var(--bg-hover)',
+    'border:1px solid var(--input-border)',
     'border-radius:8px',
-    'color:#e2e2ef',
+    'color:var(--text)',
     'font:13px/1.5 "Fira Code","Cascadia Code","JetBrains Mono",monospace',
     'padding:10px 12px',
     'box-sizing:border-box',
@@ -681,10 +681,10 @@ export function initToolbar(
 
   const mermaidCancelBtn = document.createElement('button');
   mermaidCancelBtn.style.cssText = [
-    'background:rgba(255,255,255,0.07)',
-    'border:1px solid rgba(255,255,255,0.1)',
+    'background:var(--bg-hover)',
+    'border:1px solid var(--island-border)',
     'border-radius:7px',
-    'color:#e2e2ef',
+    'color:var(--text)',
     'font-size:13px',
     'padding:7px 16px',
     'cursor:pointer',
@@ -694,7 +694,7 @@ export function initToolbar(
 
   const mermaidInsertBtn = document.createElement('button');
   mermaidInsertBtn.style.cssText = [
-    'background:#c42059',
+    'background:var(--accent)',
     'border:none',
     'border-radius:7px',
     'color:#fff',
@@ -773,10 +773,10 @@ export function initToolbar(
     input.value = getLiveName();
     input.setAttribute('aria-label', t('liveName'));
     input.style.cssText = [
-      'background:rgba(255,255,255,0.06)',
-      'border:1px solid rgba(255,255,255,0.2)',
+      'background:var(--bg-hover)',
+      'border:1px solid var(--input-border)',
       'border-radius:6px',
-      'color:#e7e7f2',
+      'color:var(--text)',
       'padding:4px 8px',
       'font-size:12px',
       'font-family:inherit',
@@ -822,8 +822,8 @@ export function initToolbar(
     'position:absolute',
     'right:0',
     'top:calc(100% + 6px)',
-    'background:rgba(26,26,40,0.98)',
-    'border:1px solid rgba(255,255,255,0.1)',
+    'background:var(--bg-island)',
+    'border:1px solid var(--island-border)',
     'border-radius:10px',
     'padding:8px',
     'display:none',
@@ -832,7 +832,7 @@ export function initToolbar(
     'min-width:200px',
     'max-height:320px',
     'overflow-y:auto',
-    'box-shadow:0 4px 24px rgba(0,0,0,0.6)',
+    'box-shadow:var(--modal-shadow)',
     'z-index:1000',
     'backdrop-filter:blur(16px)',
   ].join(';');

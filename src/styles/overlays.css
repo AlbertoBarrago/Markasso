@@ -32,11 +32,9 @@
 
 .wl-card {
   background: var(--bg-island);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--modal-border);
   border-radius: 16px;
-  box-shadow:
-    0 8px 48px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow: var(--modal-shadow);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   padding: 32px 36px 28px;
@@ -193,11 +191,9 @@
   flex-direction: column;
   gap: 16px;
   background: var(--bg-island);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--modal-border);
   border-radius: 16px;
-  box-shadow:
-    0 8px 48px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow: var(--modal-shadow);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 }
@@ -316,7 +312,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--scrim);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s;
@@ -408,7 +404,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--scrim);
   animation: sh-in 0.2s ease both;
 }
 #shortcuts-help.sh-out {
@@ -431,11 +427,9 @@
 
 .sh-card {
   background: var(--bg-island);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--modal-border);
   border-radius: 16px;
-  box-shadow:
-    0 8px 48px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow: var(--modal-shadow);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   width: min(560px, calc(100vw - 32px));
@@ -505,13 +499,13 @@
   grid-template-columns: 1fr 1fr;
   gap: 20px 32px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 .sh-body::-webkit-scrollbar {
   width: 4px;
 }
 .sh-body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 
@@ -676,7 +670,7 @@
   align-items: flex-start;
   justify-content: center;
   padding-top: clamp(60px, 12vh, 140px);
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--scrim);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   animation: cmd-in 0.15s ease both;
@@ -695,11 +689,9 @@
   width: min(560px, calc(100vw - 32px));
   max-height: min(480px, calc(100vh - 160px));
   background: var(--bg-island);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--modal-border);
   border-radius: 14px;
-  box-shadow:
-    0 12px 60px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow: var(--modal-shadow);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -751,7 +743,7 @@
 .cmd-list-wrapper {
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
   padding: 6px;
 }
 
@@ -759,7 +751,7 @@
   width: 4px;
 }
 .cmd-list-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 
@@ -867,7 +859,7 @@
   align-items: flex-start;
   justify-content: center;
   padding-top: clamp(60px, 12vh, 140px);
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--scrim);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   animation: cmd-in 0.15s ease both;
@@ -877,11 +869,9 @@
   width: min(480px, calc(100vw - 32px));
   max-height: min(400px, calc(100vh - 160px));
   background: var(--bg-island);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--modal-border);
   border-radius: 14px;
-  box-shadow:
-    0 12px 60px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow: var(--modal-shadow);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -929,7 +919,7 @@
 .el-search-list-wrapper {
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
   padding: 4px;
 }
 
@@ -937,7 +927,7 @@
   width: 4px;
 }
 .el-search-list-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 
@@ -1195,7 +1185,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--scrim);
   animation: star-in 0.2s ease both;
 }
 #star-modal.star-out {
@@ -1339,7 +1329,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--scrim);
   animation: star-in 0.2s ease both;
 }
 #report-modal.report-out {
@@ -1489,11 +1479,11 @@ select.report-input {
   background: var(--bg-hover);
 }
 .report-btn--primary {
-  background: #c42059;
+  background: var(--accent);
   color: #fff;
 }
 .report-btn--primary:hover {
-  background: #d6316b;
+  background: color-mix(in srgb, var(--accent) 88%, #fff);
 }
 .report-btn--primary:disabled {
   opacity: 0.6;
@@ -1541,7 +1531,7 @@ select.report-input {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--scrim);
   animation: star-in 0.2s ease both;
 }
 #guide-modal.guide-out {
@@ -1862,7 +1852,7 @@ select.report-input {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--scrim);
   animation: star-in 0.2s ease both;
 }
 #mcp-setup-modal.mcp-out {
