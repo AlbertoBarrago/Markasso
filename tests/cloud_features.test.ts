@@ -26,6 +26,7 @@ describe('cloud build flag', () => {
       value === 'true'
         ? [
             'cloudSave',
+            'cloudBoards',
             'cloudReadLink',
             'cloudEditLink',
             'cloudMac',

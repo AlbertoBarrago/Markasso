@@ -100,6 +100,38 @@ export function exportPNG(scene: Scene, withBackground = true): void {
   triggerDownload(url, 'markasso-export.png');
 }
 
+/**
+ * Small PNG of the whole board for the Boards panel (issue #100), fitted in
+ * maxWidth x maxHeight CSS pixels at 2x, on the current canvas background and
+ * theme. Resolves null for an empty board or when the canvas cannot encode.
+ */
+export function renderSceneThumbnail(
+  elements: ReadonlyArray<Element>,
+  maxWidth = 240,
+  maxHeight = 150,
+): Promise<Blob | null> {
+  if (elements.length === 0) return Promise.resolve(null);
+  const { minX, minY, maxX, maxY } = computeBounds(elements);
+  const PAD = 24;
+  const w = maxX - minX + PAD * 2;
+  const h = maxY - minY + PAD * 2;
+  // Never upscale a tiny board: a single note stays note sized.
+  const fit = Math.min(maxWidth / w, maxHeight / h, 1);
+  const scale = fit * 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(w * scale));
+  canvas.height = Math.max(1, Math.round(h * scale));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return Promise.resolve(null);
+  ctx.fillStyle = getCanvasBg();
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.scale(scale, scale);
+  ctx.translate(PAD - minX, PAD - minY);
+  for (const el of elements) drawElement(ctx, el, elements);
+  drawConnectorLabels(ctx, elements, getCanvasBg());
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+}
+
 // ── HTML embed export ──────────────────────────────────────────────────────────
 
 export function exportHTML(scene: Scene): void {

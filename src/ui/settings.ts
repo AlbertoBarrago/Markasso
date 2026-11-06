@@ -131,6 +131,10 @@ const ICONS = {
     p('M6 15.5H5a3.5 3.5 0 01-.5-6.97A5 5 0 0114.3 7 3.5 3.5 0 0115 14h-1') +
       p('M10 10.5v6M7.5 13L10 10.5l2.5 2.5'),
   ),
+  cloudBoards: svg(
+    '<rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/>' +
+      '<rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/>',
+  ),
   cloudReadLink: svg(
     p(
       'M1.5 10S4.5 4.5 10 4.5 18.5 10 18.5 10 15.5 15.5 10 15.5 1.5 10 1.5 10z',
