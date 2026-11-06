@@ -1,4 +1,5 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
 import type { Element } from '../../src/elements/element';
 import { validateElements } from '../../src/io/element_validation';
 
@@ -117,4 +118,29 @@ export async function saveMarkassoFile(
 ): Promise<void> {
   const file = { version: 1, elements };
   await writeFile(path, `${JSON.stringify(file, null, 2)}\n`, 'utf8');
+}
+
+/**
+ * Writes a file in one step for readers polling it (e.g. a live preview of
+ * an exported PNG): the data goes to a temporary file in the same directory,
+ * which is then renamed over `path`, so a reader sees the old file or the
+ * new one, never a partial write. Same directory keeps the rename atomic.
+ */
+export async function writeFileAtomic(
+  path: string,
+  data: string | Uint8Array,
+): Promise<void> {
+  const tmp = join(
+    dirname(path),
+    `.${basename(path)}.${process.pid}.${crypto.randomUUID().slice(0, 8)}.tmp`,
+  );
+  try {
+    await writeFile(tmp, data);
+    await rename(tmp, path);
+  } catch (error) {
+    // The original error is the one worth reporting; `force` already
+    // ignores a temp file that was never created.
+    await rm(tmp, { force: true });
+    throw error;
+  }
 }

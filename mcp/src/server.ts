@@ -12,14 +12,14 @@ import { version } from '../package.json';
 import { describeDiagram } from './describe';
 import { Diagram, NODE_COLORS, NODE_KINDS } from './diagram';
 import { LiveLink } from './live';
-import { svgToPng } from './png';
+import { exportPng } from './png';
 import {
   createShareLink,
   loadMarkassoFile,
   loadShareLink,
   saveMarkassoFile,
 } from './storage';
-import { findWarnings, formatWarnings, warningsSuffix } from './warnings';
+import { warningsSuffix } from './warnings';
 
 /**
  * Markasso MCP server (stdio). One current diagram at a time, edited either
@@ -468,7 +468,7 @@ server.registerTool(
   {
     title: 'Export PNG',
     description:
-      'Render the diagram as a PNG image, returned so you can look at it, and optionally saved to a file. Lists layout warnings (connections through nodes, overlaps, crossings) when there are any.',
+      'Render the diagram as a PNG image, returned so you can look at it, and optionally saved to a file. Lists layout warnings (connections through nodes, overlaps, crossings) when there are any. To only refresh a preview file, set path and returnImage: false.',
     inputSchema: {
       path: z
         .string()
@@ -476,39 +476,22 @@ server.registerTool(
         .optional()
         .describe('Absolute path ending in .png (optional)'),
       background: z.enum(['dark', 'transparent']).optional(),
+      returnImage: z
+        .boolean()
+        .optional()
+        .describe(
+          'Return the image (default true). false with a path only writes the file and answers in text.',
+        ),
     },
     annotations: { readOnlyHint: true },
   },
-  async ({
-    path,
-    background,
-  }: {
+  async (args: {
     path?: string | undefined;
     background?: 'dark' | 'transparent' | undefined;
+    returnImage?: boolean | undefined;
   }) => {
     try {
-      await diagram.loadUsedIconPacks();
-      const svg = sceneToSVG(diagram.elements, {
-        canvasColor: '#080808',
-        withBackground: (background ?? 'dark') === 'dark',
-      });
-      if (!svg) return text('The diagram is empty: nothing to export.');
-      const png = svgToPng(svg);
-      if (path) await writeFile(path, png);
-      const notes = [
-        path ? `Saved PNG to ${path}.` : '',
-        formatWarnings(findWarnings(diagram)),
-      ].filter(Boolean);
-      return {
-        content: [
-          {
-            type: 'image' as const,
-            data: png.toString('base64'),
-            mimeType: 'image/png',
-          },
-          ...notes.map((note) => ({ type: 'text' as const, text: note })),
-        ],
-      };
+      return { content: await exportPng(diagram, args) };
     } catch (error) {
       return failure(error);
     }

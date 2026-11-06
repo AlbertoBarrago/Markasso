@@ -91,7 +91,7 @@ Bump `version` in `mcp/package.json`, add the entry to `mcp/CHANGELOG.md`, merge
 | `icons_search` | Find generic architecture icons and Kubernetes icons |
 | `diagram_save` | Save as `.markasso` |
 | `diagram_export_svg` | Export an SVG image |
-| `diagram_export_png` | Render a PNG the agent can look at (optionally saved to a file), with layout warnings |
+| `diagram_export_png` | Render a PNG the agent can look at (optionally saved to a file), with layout warnings. With `path` and `returnImage: false` it only writes the file, for a live preview, and answers in text |
 | `diagram_share` | Publish and return a markasso.it link, with its expiry date |
 | `live_join` / `live_leave` | Draw on a live board in real time (link from ⋯ More tools → Start live session) |
 
