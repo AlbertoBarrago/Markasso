@@ -83,20 +83,27 @@ body {
   background: transparent;
 }
 
-/* ── Floating islands ──────────────────────────────────────────────── */
-.tb-island {
-  pointer-events: all;
-  touch-action: none;
+/* ── Panel surface ────────────────────────────────────────────────────
+   Shared look of every floating surface: toolbar islands, tool-group
+   popovers, the menu, the library sidebar and the guide card. Light-mode
+   overrides live in theme.css. */
+.panel {
   background: var(--bg-island);
   border: 1px solid var(--island-border);
   border-radius: var(--island-radius);
   box-shadow: var(--island-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* ── Floating islands ──────────────────────────────────────────────── */
+.tb-island {
+  pointer-events: all;
+  touch-action: none;
   display: flex;
   align-items: center;
   padding: 4px;
   gap: 2px;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   user-select: none;
 }
 
@@ -233,12 +240,6 @@ body.toolbar-placing * {
   display: none;
   gap: 2px;
   padding: 4px;
-  background: var(--bg-island);
-  border: 1px solid var(--island-border);
-  border-radius: var(--island-radius);
-  box-shadow: var(--island-shadow);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   z-index: 20;
 }
 .tb-island-tools--below .tb-tool-group-panel {

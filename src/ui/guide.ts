@@ -29,7 +29,7 @@ export function initGuide(appEl: HTMLElement): GuideHandle {
     modalEl = document.createElement('div');
     modalEl.id = 'guide-modal';
     modalEl.innerHTML = `
-      <div class="guide-card" role="dialog" aria-modal="true" aria-label="${t('guide')}">
+      <div class="panel guide-card" role="dialog" aria-modal="true" aria-label="${t('guide')}">
         <div class="guide-header">
           <h2 class="guide-title">${t('guide')}</h2>
           <input
