@@ -55,7 +55,7 @@ export function contrastColor(fill: string, fallback: string): string {
   return luminance > 0.55 ? '#111111' : '#ffffff';
 }
 
-function resolveStrokeColorForTheme(strokeColor: string): string {
+export function resolveStrokeColorForTheme(strokeColor: string): string {
   if (typeof document === 'undefined') return strokeColor;
   if (!getIsLightTheme()) return strokeColor;
   return strokeColor.toLowerCase() === '#e2e2ef' ? '#000000' : strokeColor;
