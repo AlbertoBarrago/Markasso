@@ -4,6 +4,19 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.20.0] - 2026-11-06
+
+### Added
+- **Boards panel for Markasso Cloud ([#100](https://github.com/AlbertoBarrago/markasso/issues/100)).** Cloud, then Boards lists the cloud boards created or opened in this browser, grouped by day, with search and thumbnails. From each row you can open a board, copy its read or edit link, rename it, remove it from the list, or delete it from the cloud. The list stays in your browser: nothing new is stored on the server.
+
+### Changed
+- **Live controls on the top right ([#102](https://github.com/AlbertoBarrago/markasso/issues/102)).** Start a live session and invite an AI agent from the top-right corner, next to People and your name, instead of the toolbar menu. Leave the session from the People panel, which now stays visible for the whole session.
+
+### Fixed
+- **Translations.** The People panel and the search entry on the welcome card now follow the app's language.
+
+---
+
 ## [1.19.0] - 2026-11-06
 
 ### Changed
