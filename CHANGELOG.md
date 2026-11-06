@@ -4,6 +4,17 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.18.4] - 2026-11-06
+
+### Added
+- **Cloud boards follow changes made elsewhere.** An open cloud board picks up what was saved in the Mac app or in another tab: when you come back to the tab, and every 30 seconds while it is visible. The change arrives as one step you can undo, and Markasso waits while you drag or type. If you changed the board here too, the conflict dialog asks which version to keep. Read-only boards follow the cloud as well.
+
+### Changed
+- **Lighter cloud checks.** When a board has not changed, the server says so without sending it again.
+- **Open in Mac app.** It has its own group in the cloud menu and only shows on Mac desktops.
+
+---
+
 ## [1.18.3] - 2026-11-05
 
 ### Added
