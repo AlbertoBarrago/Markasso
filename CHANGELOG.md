@@ -4,6 +4,22 @@ All notable changes to this project will be documented here.
 
 ---
 
+## [1.19.0] - 2026-11-06
+
+### Changed
+- **Zoom controls on the bottom right.** The zoom panel now sits in the bottom-right corner, under the minimap.
+- **Aligned top corners.** The settings button and the top-right controls sit at the same height as a toolbar docked at the top, as they already did at the bottom.
+- **Light theme, readable everywhere.** The Mermaid import dialog, the People panel, the live name field, modal backgrounds and scrollbars now follow the light theme. Secondary text is a dark grey again, so it stands apart from primary text, and warning and delete colors keep their contrast.
+- **Canvas in both themes.** The grid, the selection handles, snap and anchor highlights, the eraser trail, code blocks and the minimap now show on a light canvas too. Black drawn in the light theme is shown light in the dark theme (unless it sits on its own fill), just as the dark theme's default ink already turned black in the light theme.
+
+### Removed
+- **Undo/redo panel.** The floating undo and redo buttons and their setting are gone. Undo and redo stay on Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z, the command palette and the mobile bottom bar.
+
+### Fixed
+- **Text editing while you scroll ([#93](https://github.com/AlbertoBarrago/markasso/issues/93)).** The text being edited now moves and zooms with the canvas instead of staying stuck on screen, keeps the color the canvas draws it with, and no longer covers the toolbar and the style panel.
+
+---
+
 ## [1.18.5] - 2026-11-06
 
 ### Fixed
