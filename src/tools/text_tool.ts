@@ -2,11 +2,15 @@ import { getTextContentBox } from '../core/text_measure';
 import { measureTextWidth } from '../core/text_metrics';
 import { worldToScreen } from '../core/viewport';
 import type { TextElement } from '../elements/element';
+import { resolveStrokeColorForTheme } from '../rendering/draw_element';
+import { followViewport, TEXT_EDITOR_Z_INDEX } from './editor_overlay';
 import type { Tool, ToolContext } from './tool';
 
 export class TextTool implements Tool {
   private textarea: HTMLTextAreaElement | null = null;
   private commitFn: (() => void) | null = null;
+  /** Stops the open editor from tracking pan and zoom (see followViewport). */
+  private unfollow: (() => void) | null = null;
   /** ID of the text element currently being edited (to suppress canvas rendering). */
   editingId: string | null = null;
 
@@ -102,6 +106,8 @@ export class TextTool implements Tool {
   onCancel(_ctx: ToolContext): void {
     this.isDragging = false;
     if (this.textarea) {
+      this.unfollow?.();
+      this.unfollow = null;
       this.textarea.remove();
       this.textarea = null;
       this.commitFn = null;
@@ -152,7 +158,7 @@ export class TextTool implements Tool {
     ta.style.width = `${scaledWidth}px`;
     ta.style.height = `${scaledFont * 1.2}px`;
     ta.style.font = `${scaledFont}px ${appState.fontFamily}`;
-    ta.style.color = appState.strokeColor;
+    ta.style.color = resolveStrokeColorForTheme(appState.strokeColor);
     ta.style.caretColor = 'var(--accent, #7c63d4)';
     ta.style.lineHeight = '1.2';
     ta.style.padding = '0';
@@ -163,7 +169,7 @@ export class TextTool implements Tool {
     ta.style.resize = 'none';
     ta.style.overflow = 'hidden';
     ta.style.background = 'transparent';
-    ta.style.zIndex = '1000';
+    ta.style.zIndex = TEXT_EDITOR_Z_INDEX;
     ta.style.whiteSpace = 'pre-wrap';
     ta.style.wordBreak = 'break-word';
     ta.style.textAlign = appState.textAlign;
@@ -179,6 +185,8 @@ export class TextTool implements Tool {
       const content = ta.value.trim();
       const h = ta.offsetHeight / viewport.zoom;
       ta.remove();
+      unfollow();
+      if (this.unfollow === unfollow) this.unfollow = null;
       if (this.textarea === ta) {
         this.textarea = null;
         this.commitFn = null;
@@ -241,6 +249,8 @@ export class TextTool implements Tool {
     });
 
     document.body.appendChild(ta);
+    const unfollow = followViewport(ta, ctx.history, ctx.canvas);
+    this.unfollow = unfollow;
     ta.focus();
 
     this.textarea = ta;
@@ -266,7 +276,7 @@ export class TextTool implements Tool {
     ta.style.width = '4px';
     ta.style.height = `${scaledFont * 1.2}px`;
     ta.style.font = `${scaledFont}px ${appState.fontFamily}`;
-    ta.style.color = appState.strokeColor;
+    ta.style.color = resolveStrokeColorForTheme(appState.strokeColor);
     ta.style.caretColor = 'var(--accent, #7c63d4)';
     ta.style.lineHeight = '1.2';
     ta.style.padding = '0';
@@ -277,7 +287,7 @@ export class TextTool implements Tool {
     ta.style.resize = 'none';
     ta.style.overflow = 'hidden';
     ta.style.background = 'transparent';
-    ta.style.zIndex = '1000';
+    ta.style.zIndex = TEXT_EDITOR_Z_INDEX;
     ta.style.whiteSpace = 'pre';
     ta.style.overflowWrap = 'normal';
     ta.style.textAlign = appState.textAlign;
@@ -311,6 +321,8 @@ export class TextTool implements Tool {
       const h = ta.offsetHeight / viewport.zoom;
       mirror.remove();
       ta.remove();
+      unfollow();
+      if (this.unfollow === unfollow) this.unfollow = null;
       if (this.textarea === ta) {
         this.textarea = null;
         this.commitFn = null;
@@ -373,6 +385,8 @@ export class TextTool implements Tool {
     });
 
     document.body.appendChild(ta);
+    const unfollow = followViewport(ta, ctx.history, ctx.canvas);
+    this.unfollow = unfollow;
     ta.focus();
     grow();
 
@@ -408,7 +422,7 @@ export class TextTool implements Tool {
     ta.style.width = `${160 * z}px`;
     ta.style.height = `${scaledFont * 1.5}px`;
     ta.style.font = `${scaledFont}px "Courier New", monospace`;
-    ta.style.color = appState.strokeColor;
+    ta.style.color = resolveStrokeColorForTheme(appState.strokeColor);
     ta.style.caretColor = 'var(--accent, #7c63d4)';
     ta.style.lineHeight = '1.3';
     ta.style.padding = `${10 * z}px`;
@@ -422,7 +436,7 @@ export class TextTool implements Tool {
     ta.style.resize = 'none';
     ta.style.overflow = 'hidden';
     ta.style.background = 'rgba(0,0,0,0.55)';
-    ta.style.zIndex = '1000';
+    ta.style.zIndex = TEXT_EDITOR_Z_INDEX;
     ta.style.whiteSpace = 'pre';
     ta.style.overflowWrap = 'normal';
 
@@ -439,6 +453,8 @@ export class TextTool implements Tool {
       const w = ta.offsetWidth / viewport.zoom;
       const h = ta.offsetHeight / viewport.zoom;
       ta.remove();
+      unfollow();
+      if (this.unfollow === unfollow) this.unfollow = null;
       if (this.textarea === ta) {
         this.textarea = null;
         this.commitFn = null;
@@ -519,6 +535,8 @@ export class TextTool implements Tool {
     });
 
     document.body.appendChild(ta);
+    const unfollow = followViewport(ta, ctx.history, ctx.canvas);
+    this.unfollow = unfollow;
     ta.focus();
     grow();
 
@@ -548,7 +566,7 @@ export class TextTool implements Tool {
     ta.style.left = `${screenX + canvasRect.left}px`;
     ta.style.top = `${screenY + canvasRect.top}px`;
     ta.style.font = `${el.fontSize * viewport.zoom}px ${el.fontFamily}`;
-    ta.style.color = el.strokeColor;
+    ta.style.color = resolveStrokeColorForTheme(el.strokeColor);
     ta.style.caretColor = 'var(--accent, #7c63d4)';
     ta.style.lineHeight = '1.2';
     ta.style.margin = '0';
@@ -556,7 +574,7 @@ export class TextTool implements Tool {
     ta.style.boxShadow = 'none';
     ta.style.resize = 'none';
     ta.style.overflow = 'hidden';
-    ta.style.zIndex = '1000';
+    ta.style.zIndex = TEXT_EDITOR_Z_INDEX;
 
     let mirror: HTMLSpanElement | null = null;
     const scaledFont = el.fontSize * viewport.zoom;
@@ -638,6 +656,8 @@ export class TextTool implements Tool {
       const newWidth = ta.offsetWidth / viewport.zoom;
       mirror?.remove();
       ta.remove();
+      unfollow();
+      if (this.unfollow === unfollow) this.unfollow = null;
       if (this.textarea === ta) {
         this.textarea = null;
         this.commitFn = null;
@@ -706,6 +726,8 @@ export class TextTool implements Tool {
     });
 
     document.body.appendChild(ta);
+    const unfollow = followViewport(ta, ctx.history, ctx.canvas);
+    this.unfollow = unfollow;
     ta.focus();
     ta.select();
 
