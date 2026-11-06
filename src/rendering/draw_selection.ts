@@ -1,6 +1,23 @@
 import { normalizeRect } from '../core/geometry';
 import type { Viewport } from '../core/viewport';
 import { worldToScreen } from '../core/viewport';
+import { getCanvasInk } from './theme_cache';
+
+/** True when the canvas background is light (black ink, see getCanvasInk). */
+function onLightCanvas(): boolean {
+  return getCanvasInk() === '0,0,0';
+}
+
+/** Snap and anchor highlight: cyan on a dark canvas, a deeper blue on light. */
+function snapColor(): string {
+  return onLightCanvas() ? '#0b6fd0' : 'cyan';
+}
+
+/** Fill of resize/rotate handles: dark knobs on a dark canvas, white on light. */
+function handleFill(): string {
+  return onLightCanvas() ? '#ffffff' : '#1c1c2a';
+}
+
 import type {
   ArrowElement,
   ConnectorAnchor,
@@ -783,14 +800,18 @@ export function drawPortIndicators(
   ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
   ctx.setLineDash([]);
   ctx.lineWidth = 1.5;
-  ctx.strokeStyle = 'cyan';
+  const portColor = snapColor();
+  const portIdle = onLightCanvas()
+    ? 'rgba(255,255,255,0.9)'
+    : 'rgba(0,0,0,0.6)';
+  ctx.strokeStyle = portColor;
   for (const port of ports) {
     const [sx, sy] = worldToScreen(viewport, port.worldX, port.worldY);
     const isActive =
       activeAnchor !== undefined &&
       Math.abs(activeAnchor.x - port.anchor.x) < 1e-6 &&
       Math.abs(activeAnchor.y - port.anchor.y) < 1e-6;
-    ctx.fillStyle = isActive ? 'cyan' : 'rgba(0,0,0,0.6)';
+    ctx.fillStyle = isActive ? portColor : portIdle;
     ctx.beginPath();
     ctx.arc(sx, sy, isActive ? 5 : 4, 0, Math.PI * 2);
     ctx.fill();
@@ -799,7 +820,7 @@ export function drawPortIndicators(
   ctx.restore();
 }
 
-/** Draws a cyan snap indicator circle at the given world-space position. */
+/** Draws a snap indicator circle (see snapColor) at the given world-space position. */
 export function drawSnapIndicator(
   ctx: CanvasRenderingContext2D,
   worldX: number,
@@ -811,7 +832,7 @@ export function drawSnapIndicator(
   ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
   const [sx, sy] = worldToScreen(viewport, worldX, worldY);
-  ctx.strokeStyle = 'cyan';
+  ctx.strokeStyle = snapColor();
   ctx.lineWidth = 2;
   ctx.setLineDash([4, 3]);
   ctx.beginPath();
@@ -1035,7 +1056,7 @@ export function drawSelection(
       drawSelectedElementOutline(ctx, el, viewport, allElements);
   }
 
-  // Dashed selection rectangle — light blue works on dark canvas
+  // Dashed selection rectangle: this light blue reads on both canvases
   ctx.strokeStyle = 'rgba(120,180,255,0.8)';
   ctx.lineWidth = 1.5;
   ctx.setLineDash([6, 3]);
@@ -1044,7 +1065,7 @@ export function drawSelection(
 
   // Resize handles
   const handles = getHandlePositions(sx, sy, ex, ey);
-  ctx.fillStyle = '#1c1c2a';
+  ctx.fillStyle = handleFill();
   ctx.strokeStyle = 'rgba(120,180,255,0.9)';
   ctx.lineWidth = 1.5;
 
@@ -1082,7 +1103,7 @@ export function drawSelection(
 
     // Rotation handle circle
     ctx.strokeStyle = 'rgba(120,180,255,0.9)';
-    ctx.fillStyle = '#1c1c2a';
+    ctx.fillStyle = handleFill();
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.arc(mx, rotHandleY, ROTATION_HANDLE_R, 0, Math.PI * 2);
@@ -1127,8 +1148,8 @@ export function drawSelection(
       const [x1s, y1s] = worldToScreen(viewport, pts.x, pts.y);
       const [x2s, y2s] = worldToScreen(viewport, pts.x2, pts.y2);
 
-      ctx.fillStyle = 'cyan';
-      ctx.strokeStyle = '#1c1c2a';
+      ctx.fillStyle = snapColor();
+      ctx.strokeStyle = handleFill();
       ctx.lineWidth = 1.5;
 
       ctx.beginPath();
@@ -1164,7 +1185,7 @@ export function drawSelection(
 
           // Solid handle
           ctx.fillStyle = 'rgba(180, 160, 255, 0.9)';
-          ctx.strokeStyle = '#1c1c2a';
+          ctx.strokeStyle = handleFill();
           ctx.lineWidth = 1.5;
           ctx.beginPath();
           ctx.arc(scpx, scpy, 5, 0, Math.PI * 2);

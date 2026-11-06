@@ -331,3 +331,10 @@ function hslToHex(hue: number, saturation: number, lightness: number): string {
   };
   return `#${channel(1 / 3)}${channel(0)}${channel(-1 / 3)}`;
 }
+/**
+ * Stroke swatch background: the dark default ink follows the theme like the
+ * canvas does, so the light theme shows it black instead of near-white.
+ */
+export function strokeSwatchPreview(color: string): string {
+  return color.toLowerCase() === '#e2e2ef' ? 'var(--default-ink)' : color;
+}

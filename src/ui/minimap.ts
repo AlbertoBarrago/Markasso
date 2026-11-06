@@ -1,4 +1,5 @@
 import type { History } from '../engine/history';
+import { resolveStrokeColorForTheme } from '../rendering/draw_element';
 import {
   getElementBounds,
   resolveArrowEndpoints,
@@ -131,7 +132,10 @@ export function initMinimap(workspace: HTMLElement, history: History): void {
 
     visible.forEach((el, i) => {
       const b = bounds[i]!;
-      ctx.strokeStyle = el.strokeColor;
+      ctx.strokeStyle = resolveStrokeColorForTheme(
+        el.strokeColor,
+        el.fillColor,
+      );
       ctx.lineWidth = Math.max(0.5, (el.strokeWidth ?? 1) * k * 0.5);
 
       if (el.type === 'line' || el.type === 'arrow') {

@@ -2,7 +2,10 @@ import { getTextContentBox } from '../core/text_measure';
 import { measureTextWidth } from '../core/text_metrics';
 import { worldToScreen } from '../core/viewport';
 import type { TextElement } from '../elements/element';
-import { resolveStrokeColorForTheme } from '../rendering/draw_element';
+import {
+  getCodeBlockColors,
+  resolveStrokeColorForTheme,
+} from '../rendering/draw_element';
 import { followViewport, TEXT_EDITOR_Z_INDEX } from './editor_overlay';
 import type { Tool, ToolContext } from './tool';
 
@@ -429,13 +432,13 @@ export class TextTool implements Tool {
     ta.style.margin = '0';
     // The box drawCode paints (1 unit outline, 6 unit radius), so the editor
     // looks like the block it commits, as in Excalidraw's WYSIWYG editor.
-    ta.style.border = `${z}px solid rgba(255,255,255,0.15)`;
+    ta.style.border = `${z}px solid ${getCodeBlockColors().border}`;
     ta.style.borderRadius = `${6 * z}px`;
     ta.style.outline = 'none';
     ta.style.boxShadow = 'none';
     ta.style.resize = 'none';
     ta.style.overflow = 'hidden';
-    ta.style.background = 'rgba(0,0,0,0.55)';
+    ta.style.background = getCodeBlockColors().fill;
     ta.style.zIndex = TEXT_EDITOR_Z_INDEX;
     ta.style.whiteSpace = 'pre';
     ta.style.overflowWrap = 'normal';
@@ -566,7 +569,7 @@ export class TextTool implements Tool {
     ta.style.left = `${screenX + canvasRect.left}px`;
     ta.style.top = `${screenY + canvasRect.top}px`;
     ta.style.font = `${el.fontSize * viewport.zoom}px ${el.fontFamily}`;
-    ta.style.color = resolveStrokeColorForTheme(el.strokeColor);
+    ta.style.color = resolveStrokeColorForTheme(el.strokeColor, el.fillColor);
     ta.style.caretColor = 'var(--accent, #7c63d4)';
     ta.style.lineHeight = '1.2';
     ta.style.margin = '0';
@@ -589,9 +592,9 @@ export class TextTool implements Tool {
       ta.style.fontFamily = '"Courier New", monospace';
       // The canvas and the create editor set code lines 1.3 apart.
       ta.style.lineHeight = '1.3';
-      ta.style.background = 'rgba(0,0,0,0.55)';
+      ta.style.background = getCodeBlockColors().fill;
       // Chrome in world units, drawn like the block, as in createCodeTextarea.
-      ta.style.border = `${viewport.zoom}px solid rgba(255,255,255,0.15)`;
+      ta.style.border = `${viewport.zoom}px solid ${getCodeBlockColors().border}`;
       ta.style.borderRadius = `${6 * viewport.zoom}px`;
       ta.style.padding = `${10 * viewport.zoom}px`;
       ta.style.whiteSpace = 'pre';

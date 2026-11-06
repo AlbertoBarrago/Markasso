@@ -51,6 +51,7 @@ import {
   getLabelWrapWidth,
   getShapeTextBox,
 } from '../rendering/shape_geometry';
+import { getCanvasInk } from '../rendering/theme_cache';
 import { followViewport, TEXT_EDITOR_Z_INDEX } from '../tools/editor_overlay';
 import { EllipseTool } from '../tools/ellipse_tool';
 import { EraserTool, type SlashPoint } from '../tools/eraser_tool';
@@ -1041,6 +1042,8 @@ function drawSlashTrail(
   );
   ctx2d.lineCap = 'round';
   ctx2d.lineJoin = 'round';
+  // Black trail on a light canvas, white on a dark one.
+  const ink = getCanvasInk();
 
   for (let i = 1; i < trail.length; i++) {
     const p0 = trail[i - 1]!;
@@ -1051,8 +1054,8 @@ function drawSlashTrail(
 
     // Glow layer
     ctx2d.shadowBlur = 12 / viewport.zoom;
-    ctx2d.shadowColor = `rgba(255,255,255,${t * 0.8})`;
-    ctx2d.strokeStyle = `rgba(255,255,255,${t})`;
+    ctx2d.shadowColor = `rgba(${ink},${t * 0.8})`;
+    ctx2d.strokeStyle = `rgba(${ink},${t})`;
     ctx2d.lineWidth = (3 + t * 2) / viewport.zoom;
     ctx2d.beginPath();
     ctx2d.moveTo(p0.worldX, p0.worldY);
@@ -1089,7 +1092,8 @@ function labelEditorColor(
     | ShapeElement
     | StencilElement,
 ): string {
-  if (el.labelColor) return el.labelColor;
+  if (el.labelColor)
+    return resolveStrokeColorForTheme(el.labelColor, el.fillColor);
   const strokeColor = resolveStrokeColorForTheme(el.strokeColor);
   return el.type === 'stencil'
     ? strokeColor
@@ -1302,7 +1306,7 @@ function openArrowLabelEditor(
   ta.style.width = '160px';
   ta.style.minHeight = `${fontSize * viewport.zoom * 1.2}px`;
   ta.style.font = `${fontSize * viewport.zoom}px ${fontFamily}`;
-  ta.style.color = el.labelColor ?? resolveStrokeColorForTheme(el.strokeColor);
+  ta.style.color = resolveStrokeColorForTheme(el.labelColor ?? el.strokeColor);
   ta.style.caretColor = 'var(--accent, #7c63d4)';
   ta.style.textAlign = 'center';
   ta.style.lineHeight = '1.2';
@@ -1328,8 +1332,9 @@ function openArrowLabelEditor(
   const unsubscribe = history.subscribe((scene) => {
     const latest = scene.elements.find((item) => item.id === el.id);
     if (latest?.type === 'line' || latest?.type === 'arrow') {
-      ta.style.color =
-        latest.labelColor ?? resolveStrokeColorForTheme(latest.strokeColor);
+      ta.style.color = resolveStrokeColorForTheme(
+        latest.labelColor ?? latest.strokeColor,
+      );
     }
   });
 
