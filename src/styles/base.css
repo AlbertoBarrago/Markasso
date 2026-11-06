@@ -144,7 +144,7 @@ body.toolbar-placing * {
 /* Top-right: export */
 .tb-island-topright {
   position: fixed;
-  top: 12px;
+  top: 16px;
   right: 16px;
   z-index: 10;
   display: flex;
@@ -156,7 +156,7 @@ body.toolbar-placing * {
 /* Top-left: settings */
 .tb-island-topleft {
   position: fixed;
-  top: 12px;
+  top: 16px;
   left: 16px;
   z-index: 10;
   pointer-events: all;
@@ -446,24 +446,18 @@ body.ui-hidden #mobile-actions {
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
-#zoom-controls,
-#history-controls {
+/* Bottom-right corner: zoom controls, with the minimap stacked above. */
+#zoom-controls {
   position: fixed;
   bottom: 16px;
+  right: 16px;
   z-index: 10;
   display: none;
 }
-#zoom-controls {
-  left: 16px;
-}
-#history-controls {
-  right: 16px;
-}
-.show-zoom-controls #zoom-controls,
-.show-history-controls #history-controls {
+.show-zoom-controls #zoom-controls {
   display: flex;
 }
-.show-history-controls #minimap {
+.show-zoom-controls #minimap {
   bottom: 72px;
 }
 
