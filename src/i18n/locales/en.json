@@ -65,7 +65,6 @@
   "leaveLiveSession": "Leave live session",
   "liveLeft": "You left the live session. The board stays here as a copy.",
   "inviteAiAgent": "Invite AI agent",
-  "inviteAiAgentNeedsLive": "Start a live session first",
   "inviteAiAgentLocked": "With Markasso Cloud",
   "mcpInviteCopied": "Prompt copied: paste it into your AI agent",
   "insertImage": "Insert image",
@@ -411,5 +410,8 @@
   "markassoInvalidFile": "This file does not appear to be a valid .markasso file.",
   "markassoUnreadableFile": "The file could not be read. It may be corrupted.",
   "mermaidParseFailed": "The Mermaid diagram could not be parsed.",
-  "mermaidNoElements": "No elements could be created from this diagram."
+  "mermaidNoElements": "No elements could be created from this diagram.",
+  "peopleYou": "you",
+  "peopleOnlyYou": "People: only you here",
+  "peopleConnected": "People: {{count}} connected"
 }

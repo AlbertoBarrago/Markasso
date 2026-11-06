@@ -60,7 +60,6 @@
   "leaveLiveSession": "ライブセッションを退出",
   "liveLeft": "ライブセッションを退出しました。ボードはコピーとしてここに残ります。",
   "inviteAiAgent": "AIエージェントを招待",
-  "inviteAiAgentNeedsLive": "先にライブセッションを開始してください",
   "inviteAiAgentLocked": "Markasso Cloudで利用可能",
   "mcpInviteCopied": "プロンプトをコピーしました：AIエージェントに貼り付けてください",
   "insertImage": "画像を挿入",
@@ -411,5 +410,8 @@
   "markassoInvalidFile": "このファイルは有効な .markasso ファイルではないようです。",
   "markassoUnreadableFile": "ファイルを読み込めませんでした。破損している可能性があります。",
   "mermaidParseFailed": "Mermaid 図を解析できませんでした。",
-  "mermaidNoElements": "この図から要素を作成できませんでした。"
+  "mermaidNoElements": "この図から要素を作成できませんでした。",
+  "peopleYou": "あなた",
+  "peopleOnlyYou": "参加者：あなただけです",
+  "peopleConnected": "参加者：{{count}} 人が接続中"
 }

@@ -13,7 +13,6 @@ import {
   getLiveSessionUrl,
   joinLiveSession,
   leaveLiveSession,
-  onLivePeers,
   setLiveName,
 } from '../io/realtime';
 import { showImportError } from './import_error';
@@ -283,40 +282,27 @@ export function initToolbar(
     '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1" y="1" width="7" height="5" rx="1"/><rect x="12" y="14" width="7" height="5" rx="1"/><path d="M4.5 6v4h11v4M14 16l1.5-2 1.5 2"/></svg>';
   addMoreItem(mermaidIcon, t('importMermaid'), showMermaidDialog);
   addMoreItem(IC.importImg, t('insertImage'), openImagePicker);
-  const liveDivider = div('menu-divider');
-  liveDivider.setAttribute('role', 'separator');
-  moreRoot.appendChild(liveDivider);
+  // Live session controls sit in the top-right island (issue #102), where
+  // the name chip and People appear during a session, instead of this menu:
+  // starting a session and inviting an agent are frequent and about who is
+  // in the room. Leaving is in the People popover.
   const liveIcon =
     '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2"/><path d="M6.5 6.5a5 5 0 000 7M13.5 6.5a5 5 0 010 7M4 4a8.5 8.5 0 000 12M16 4a8.5 8.5 0 010 12"/></svg>';
-  const liveAction = addMoreItem(liveIcon, t('startLiveSession'), () => {
-    if (getLiveSessionUrl()) leaveLive();
-    else void startLiveSession();
-  });
-  liveAction.id = 'tb-start-live';
-  const liveLabel = liveAction.querySelector('.menu-item-label')!;
-  // One item toggles between starting and leaving. It follows whether this
-  // tab is in a session, not whether the socket is connected: during a
-  // reconnect the session still exists and can be left.
-  function refreshLiveAction(): void {
-    liveLabel.textContent = t(
-      getLiveSessionUrl() ? 'leaveLiveSession' : 'startLiveSession',
-    );
-    liveAction.removeAttribute('aria-disabled');
-  }
-  function leaveLive(): void {
-    if (!leaveLiveSession()) return;
-    document.getElementById('live-status-toast')?.remove();
-    setLiveUI(false);
-    showShareToast(true, '', t('liveLeft'));
-    refreshLiveAction();
-  }
-  onLiveReveal(refreshLiveAction);
-  onLiveHide(refreshLiveAction);
-  // Copies a prompt that makes an MCP-enabled agent join this room; enabled
-  // only while a live session is connected, the reverse of liveAction.
   const agentIcon =
     '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="12" height="9" rx="2"/><path d="M10 4v3M8 11h.01M12 11h.01M2 11v2M18 11v2"/></svg>';
-  const inviteAgentAction = addMoreItem(agentIcon, t('inviteAiAgent'), () => {
+  const liveIsland = div('tb-island tb-live-island');
+  const liveStartBtn = mkBtn(liveIcon, t('startLiveSession'));
+  liveStartBtn.id = 'tb-start-live';
+  liveStartBtn.addEventListener('click', () => {
+    if (!getLiveSessionUrl()) void startLiveSession();
+  });
+  // Copies a prompt that makes an MCP-enabled agent join this room. With the
+  // cloud on and no licence stored the room refuses agents
+  // (SessionRoom.awaitAgentAuth), so the button leads to the /cloud page and
+  // its label says why.
+  const inviteAgentBtn = mkBtn(agentIcon, t('inviteAiAgent'));
+  inviteAgentBtn.id = 'tb-invite-agent';
+  inviteAgentBtn.addEventListener('click', () => {
     if (inviteAgentLocked()) {
       window.open(cloudPageUrl(), '_blank', 'noopener');
       return;
@@ -328,15 +314,7 @@ export function initToolbar(
       showShareToast(copied, prompt, t('mcpInviteCopied')),
     );
   });
-  inviteAgentAction.id = 'tb-invite-agent';
-  // A greyed-out item alone does not say why: a note under the label (also
-  // exposed as title and aria-description) names what is missing. Outside a
-  // live session the item is disabled; inside one, when the cloud is on and
-  // no licence is stored, it stays clickable but leads to the /cloud page,
-  // since the room refuses agents without a licence (SessionRoom.awaitAgentAuth).
-  const inviteAgentNote = document.createElement('span');
-  inviteAgentNote.className = 'menu-item-note';
-  inviteAgentAction.querySelector('.menu-item-label')?.append(inviteAgentNote);
+  liveIsland.append(liveStartBtn, inviteAgentBtn);
   let liveActive = false;
   function inviteAgentLocked(): boolean {
     if (!CLOUD_ENABLED) return false;
@@ -346,35 +324,42 @@ export function initToolbar(
       return true;
     }
   }
-  function refreshInviteAgent(): void {
-    const note = !liveActive
-      ? t('inviteAiAgentNeedsLive')
-      : inviteAgentLocked()
-        ? t('inviteAiAgentLocked')
-        : '';
-    inviteAgentNote.textContent = note;
-    inviteAgentNote.hidden = !note;
-    if (liveActive) inviteAgentAction.removeAttribute('aria-disabled');
-    else inviteAgentAction.setAttribute('aria-disabled', 'true');
-    if (note) {
-      inviteAgentAction.title = note;
-      inviteAgentAction.setAttribute('aria-description', note);
-    } else {
-      inviteAgentAction.removeAttribute('title');
-      inviteAgentAction.removeAttribute('aria-description');
-    }
+  /**
+   * Start shows while this tab is in no session (a reconnecting session still
+   * counts as one); Invite shows once the session is connected. The island
+   * hides when neither applies, e.g. while a new session connects.
+   */
+  function refreshLiveControls(): void {
+    const inSession = !!getLiveSessionUrl();
+    liveStartBtn.style.display = inSession ? 'none' : '';
+    inviteAgentBtn.style.display = liveActive ? '' : 'none';
+    liveIsland.style.display = !inSession || liveActive ? '' : 'none';
+    const label = inviteAgentLocked()
+      ? `${t('inviteAiAgent')} (${t('inviteAiAgentLocked')})`
+      : t('inviteAiAgent');
+    inviteAgentBtn.title = label;
+    inviteAgentBtn.setAttribute('aria-label', label);
   }
-  refreshInviteAgent();
+  function leaveLive(): void {
+    if (!leaveLiveSession()) return;
+    document.getElementById('live-status-toast')?.remove();
+    setLiveUI(false);
+    showShareToast(true, '', t('liveLeft'));
+    refreshLiveControls();
+  }
   onLiveReveal(() => {
     liveActive = true;
-    refreshInviteAgent();
+    refreshLiveControls();
   });
   onLiveHide(() => {
     liveActive = false;
-    refreshInviteAgent();
+    refreshLiveControls();
   });
+  // A licence entered or removed changes what Invite does.
+  document.addEventListener('markasso-cloud-change', refreshLiveControls);
+  refreshLiveControls();
   async function startLiveSession(): Promise<void> {
-    liveAction.setAttribute('aria-disabled', 'true');
+    liveStartBtn.disabled = true;
     const roomId = generateRoomId();
     const url = buildLiveRoomUrl(roomId);
     const copied = await copyToClipboard(url);
@@ -388,7 +373,8 @@ export function initToolbar(
         showLiveStatusToast(connected);
       },
     });
-    refreshLiveAction();
+    liveStartBtn.disabled = false;
+    refreshLiveControls();
   }
 
   const menuItems = (): HTMLButtonElement[] =>
@@ -417,11 +403,6 @@ export function initToolbar(
     morePanel.classList.toggle('open', open);
     moreToggle.setAttribute('aria-expanded', String(open));
     moreToggle.classList.toggle('open', open);
-    // The licence may have been entered since the menu was last built.
-    if (open) {
-      refreshInviteAgent();
-      refreshLiveAction();
-    }
     if (open) {
       const popup = document.getElementById('mobile-tools-popup');
       if (popup) {
@@ -834,17 +815,37 @@ export function initToolbar(
     'z-index:1000',
     'backdrop-filter:blur(16px)',
   ].join(';');
-  initPeopleList(peoplePanel);
-  // Show the people button only while a live session is connected AND there is
-  // at least one other participant — otherwise it's just an empty dot. Hide the
-  // whole island so no empty box lingers in the toolbar.
-  onLivePeers((others) => {
-    peopleIsland.style.display = others.length > 0 ? '' : 'none';
+  // initPeopleList rewrites its container on every presence change, so the
+  // list gets its own box and Leave stays below it.
+  const peopleList = document.createElement('div');
+  peopleList.className = 'pp-list';
+  initPeopleList(peopleList);
+  const leaveDivider = div('menu-divider');
+  leaveDivider.setAttribute('role', 'separator');
+  const leaveBtn = document.createElement('button');
+  leaveBtn.type = 'button';
+  leaveBtn.className = 'pp-leave';
+  leaveBtn.setAttribute('role', 'menuitem');
+  leaveBtn.textContent = t('leaveLiveSession');
+  leaveBtn.addEventListener('click', () => {
+    closePeoplePanel();
+    leaveLive();
+  });
+  peoplePanel.append(peopleList, leaveDivider, leaveBtn);
+  // People is the way out of a session, so it shows for the whole session,
+  // even alone (the list then says only you are here).
+  onLiveReveal(() => {
+    peopleIsland.style.display = '';
   });
   onLiveHide(() => {
     peopleIsland.style.display = 'none';
+    closePeoplePanel();
   });
   let peoplePanelOpen = false;
+  function closePeoplePanel(): void {
+    peoplePanelOpen = false;
+    peoplePanel.style.display = 'none';
+  }
   peopleTrigger.addEventListener('click', (e) => {
     e.stopPropagation();
     peoplePanelOpen = !peoplePanelOpen;
@@ -858,7 +859,7 @@ export function initToolbar(
   });
   peopleIsland.append(peopleTrigger, peoplePanel);
 
-  topRight.append(peopleIsland, nameIsland);
+  topRight.append(liveIsland, peopleIsland, nameIsland);
   // Cloud boards start before the toolbar (main.ts) and park their status
   // button in a fixed fallback island at this same corner, where it would sit
   // on top of the live chips. Adopt it so the corner lays out as one row.

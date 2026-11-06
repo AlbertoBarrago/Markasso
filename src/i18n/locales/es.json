@@ -60,7 +60,6 @@
   "leaveLiveSession": "Salir de la sesión en directo",
   "liveLeft": "Has salido de la sesión en directo. La pizarra se queda aquí como copia.",
   "inviteAiAgent": "Invitar agente de IA",
-  "inviteAiAgentNeedsLive": "Primero inicia una sesión en directo",
   "inviteAiAgentLocked": "Con Markasso Cloud",
   "mcpInviteCopied": "Prompt copiado: pégalo en tu agente de IA",
   "insertImage": "Insertar imagen",
@@ -411,5 +410,8 @@
   "markassoInvalidFile": "Este archivo no parece un archivo .markasso válido.",
   "markassoUnreadableFile": "No se pudo leer el archivo. Puede estar dañado.",
   "mermaidParseFailed": "No se pudo interpretar el diagrama Mermaid.",
-  "mermaidNoElements": "No se pudieron crear elementos a partir de este diagrama."
+  "mermaidNoElements": "No se pudieron crear elementos a partir de este diagrama.",
+  "peopleYou": "tú",
+  "peopleOnlyYou": "Personas: solo estás tú",
+  "peopleConnected": "Personas: {{count}} conectadas"
 }

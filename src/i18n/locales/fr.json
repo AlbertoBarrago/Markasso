@@ -60,7 +60,6 @@
   "leaveLiveSession": "Quitter la session en direct",
   "liveLeft": "Vous avez quitté la session en direct. Le tableau reste ici comme copie.",
   "inviteAiAgent": "Inviter un agent IA",
-  "inviteAiAgentNeedsLive": "Démarrez d'abord une session en direct",
   "inviteAiAgentLocked": "Avec Markasso Cloud",
   "mcpInviteCopied": "Prompt copié : collez-le dans votre agent IA",
   "insertImage": "Insérer une image",
@@ -411,5 +410,8 @@
   "markassoInvalidFile": "Ce fichier ne semble pas être un fichier .markasso valide.",
   "markassoUnreadableFile": "Impossible de lire le fichier. Il est peut-être corrompu.",
   "mermaidParseFailed": "Impossible d'analyser le diagramme Mermaid.",
-  "mermaidNoElements": "Aucun élément n'a pu être créé à partir de ce diagramme."
+  "mermaidNoElements": "Aucun élément n'a pu être créé à partir de ce diagramme.",
+  "peopleYou": "vous",
+  "peopleOnlyYou": "Personnes : vous êtes seul ici",
+  "peopleConnected": "Personnes : {{count}} connectées"
 }

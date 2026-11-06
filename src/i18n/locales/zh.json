@@ -60,7 +60,6 @@
   "leaveLiveSession": "退出实时会话",
   "liveLeft": "你已退出实时会话。白板会作为副本保留在这里。",
   "inviteAiAgent": "邀请 AI 代理",
-  "inviteAiAgentNeedsLive": "请先开始实时会话",
   "inviteAiAgentLocked": "需要 Markasso Cloud",
   "mcpInviteCopied": "提示已复制：粘贴给你的 AI 代理",
   "insertImage": "插入图片",
@@ -411,5 +410,8 @@
   "markassoInvalidFile": "此文件似乎不是有效的 .markasso 文件。",
   "markassoUnreadableFile": "无法读取该文件，文件可能已损坏。",
   "mermaidParseFailed": "无法解析该 Mermaid 图表。",
-  "mermaidNoElements": "无法从此图表创建任何元素。"
+  "mermaidNoElements": "无法从此图表创建任何元素。",
+  "peopleYou": "你",
+  "peopleOnlyYou": "成员：只有你在这里",
+  "peopleConnected": "成员：已连接 {{count}} 人"
 }

@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { onLivePeers, type PeerInfo, setLiveName } from '../io/realtime';
 
 /**
@@ -19,7 +20,7 @@ export function initPeopleList(container: HTMLElement): () => void {
     if (isSelf) {
       const you = document.createElement('span');
       you.className = 'pp-you';
-      you.textContent = ' (you)';
+      you.textContent = ` (${t('peopleYou')})`;
       label.appendChild(you);
       row.classList.add('pp-self');
     }
@@ -34,8 +35,8 @@ export function initPeopleList(container: HTMLElement): () => void {
     title.className = 'pp-title';
     title.textContent =
       others.length === 0
-        ? 'People — only you here'
-        : `People — ${others.length} connected`;
+        ? t('peopleOnlyYou')
+        : t('peopleConnected').replace('{{count}}', String(others.length));
     container.appendChild(title);
 
     const selfRow = buildRow(self.name, self.color, true);
