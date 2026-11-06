@@ -287,6 +287,11 @@ body.toolbar-placing * {
   display: block;
 }
 
+/* The chip is shorter than a toolbar button: stretch its island to the
+   height of the other top-right islands so the row lines up. */
+.tb-island-topright > .tb-live-name-island {
+  align-self: stretch;
+}
 .tb-name-chip {
   display: flex;
   align-items: center;
@@ -372,6 +377,27 @@ body.toolbar-placing * {
   font-family: inherit;
   outline: none;
   box-sizing: border-box;
+}
+.pp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pp-leave {
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--alert);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.pp-leave:hover,
+.pp-leave:focus-visible {
+  background: var(--bg-hover);
 }
 .pp-mobile {
   border-top: 1px solid var(--island-border);
