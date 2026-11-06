@@ -20,7 +20,7 @@ Thank you to everyone who has contributed to Markasso.
 3. Commit your changes following [Conventional Commits](https://www.conventionalcommits.org/)
 4. Open a Pull Request against `main`
 
-Please keep PRs focused — one feature or fix per PR.
+Please keep PRs focused: one feature or fix per PR. Read [ARCHITECTURE.md](./ARCHITECTURE.md) first for the data flow and invariants.
 
 ---
 
