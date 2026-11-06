@@ -29,7 +29,7 @@
   /* 5.6:1 on #f5f5f5; the dark theme's amber is about 2:1 on light. */
   --warning: #8a6000;
   color-scheme: light;
-  --coffee: #db8a00;
+  --coffee: var(--warning);
 }
 /* ── Theme toggle (Light / Dark / Device) ─────────────────────────────────── */
 .menu-theme-toggle {
