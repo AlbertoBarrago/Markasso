@@ -26,6 +26,7 @@ import {
   createColorPicker,
   loadCustomColor,
   saveCustomColor,
+  strokeSwatchPreview,
   updateCustomColorButton,
 } from './color_picker';
 import { onLiveHide, onLiveReveal } from './live_name';
@@ -232,7 +233,7 @@ export function initMobileActionBar(
     const sw = document.createElement('button');
     sw.className = 'cp-color-swatch';
     sw.title = color;
-    sw.style.background = color;
+    sw.style.background = strokeSwatchPreview(color);
     sw.addEventListener('click', () =>
       history.dispatch({ type: 'APPLY_STYLE', strokeColor: color }),
     );
@@ -500,10 +501,10 @@ export function initMobileActionBar(
     input.value = getLiveName();
     input.setAttribute('aria-label', t('liveName'));
     input.style.cssText = [
-      'background:rgba(255,255,255,0.06)',
-      'border:1px solid rgba(255,255,255,0.2)',
+      'background:var(--bg-hover)',
+      'border:1px solid var(--input-border)',
       'border-radius:6px',
-      'color:#e7e7f2',
+      'color:var(--text)',
       'padding:4px 8px',
       'font-size:12px',
       'font-family:inherit',

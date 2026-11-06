@@ -103,7 +103,7 @@ export function updateCustomColorButton(
 ): void {
   if (color) {
     button.style.background = color;
-    button.style.border = '2px solid rgba(255,255,255,0.15)';
+    button.style.border = '2px solid var(--island-border)';
     button.textContent = '';
     button.title = color;
     button.classList.add('cp-color-more-filled');
@@ -330,4 +330,11 @@ function hslToHex(hue: number, saturation: number, lightness: number): string {
       .padStart(2, '0');
   };
   return `#${channel(1 / 3)}${channel(0)}${channel(-1 / 3)}`;
+}
+/**
+ * Stroke swatch background: the dark default ink follows the theme like the
+ * canvas does, so the light theme shows it black instead of near-white.
+ */
+export function strokeSwatchPreview(color: string): string {
+  return color.toLowerCase() === '#e2e2ef' ? 'var(--default-ink)' : color;
 }

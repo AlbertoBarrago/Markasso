@@ -15,7 +15,7 @@
 /* Fallback when the toolbar's top-right island is missing. */
 .cloud-status-island--floating {
   position: fixed;
-  top: 12px;
+  top: 16px;
   right: 16px;
   z-index: 10;
 }
@@ -126,8 +126,10 @@
   max-height: none;
   overflow: visible;
 }
+/* Older engines don't inherit custom properties into ::backdrop: the
+   fallback keeps the previous dark scrim there. */
 .app-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--scrim, rgba(0, 0, 0, 0.55));
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
@@ -142,7 +144,7 @@
   background: var(--bg-island);
   border: 1px solid var(--island-border);
   border-radius: 16px;
-  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--modal-shadow);
   font-family: inherit;
   animation: cd-in 0.2s ease both;
 }

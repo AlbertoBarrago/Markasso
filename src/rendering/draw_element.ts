@@ -55,10 +55,36 @@ export function contrastColor(fill: string, fallback: string): string {
   return luminance > 0.55 ? '#111111' : '#ffffff';
 }
 
-function resolveStrokeColorForTheme(strokeColor: string): string {
+const DARK_DEFAULT_STROKE = '#e2e2ef';
+const LIGHT_DEFAULT_STROKE = '#000000';
+
+/**
+ * Swaps each theme's default ink for the other theme's, so a drawing made in
+ * one theme stays readable in the other: the dark default (#e2e2ef) turns
+ * black on the light canvas, and black turns #e2e2ef on the dark one.
+ * Black is kept in the dark theme when it sits on the element's own fill
+ * (`fillColor`), where it is readable and most likely chosen on purpose.
+ */
+export function resolveStrokeColorForTheme(
+  strokeColor: string,
+  fillColor?: string,
+): string {
   if (typeof document === 'undefined') return strokeColor;
-  if (!getIsLightTheme()) return strokeColor;
-  return strokeColor.toLowerCase() === '#e2e2ef' ? '#000000' : strokeColor;
+  const c = strokeColor.toLowerCase();
+  if (getIsLightTheme()) {
+    return c === DARK_DEFAULT_STROKE ? LIGHT_DEFAULT_STROKE : strokeColor;
+  }
+  const onFill = !!fillColor && fillColor !== 'transparent';
+  return !onFill && (c === LIGHT_DEFAULT_STROKE || c === '#000')
+    ? DARK_DEFAULT_STROKE
+    : strokeColor;
+}
+
+/** Background and outline of a code block, tuned per theme. */
+export function getCodeBlockColors(): { fill: string; border: string } {
+  return typeof document !== 'undefined' && getIsLightTheme()
+    ? { fill: 'rgba(0,0,0,0.05)', border: 'rgba(0,0,0,0.15)' }
+    : { fill: 'rgba(0,0,0,0.55)', border: 'rgba(255,255,255,0.15)' };
 }
 
 /**
@@ -86,7 +112,7 @@ export function drawElement(
   editingShapeLabelId?: string | null,
 ): void {
   ctx.save();
-  const strokeColor = resolveStrokeColorForTheme(el.strokeColor);
+  const strokeColor = resolveStrokeColorForTheme(el.strokeColor, el.fillColor);
   ctx.globalAlpha = el.opacity;
   ctx.strokeStyle = strokeColor;
   ctx.lineWidth = el.strokeWidth;
@@ -151,7 +177,9 @@ export function drawElement(
           el.label,
           el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
           el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
-          el.labelColor ?? contrastColor(el.fillColor, strokeColor),
+          el.labelColor
+            ? resolveStrokeColorForTheme(el.labelColor, el.fillColor)
+            : contrastColor(el.fillColor, strokeColor),
         );
         ctx.restore();
       }
@@ -191,7 +219,9 @@ export function drawElement(
           el.label,
           el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
           el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
-          el.labelColor ?? contrastColor(el.fillColor, strokeColor),
+          el.labelColor
+            ? resolveStrokeColorForTheme(el.labelColor, el.fillColor)
+            : contrastColor(el.fillColor, strokeColor),
         );
         ctx.restore();
       }
@@ -220,14 +250,22 @@ export function drawElement(
           el.label,
           el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
           el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
-          el.labelColor ?? contrastColor(el.fillColor, strokeColor),
+          el.labelColor
+            ? resolveStrokeColorForTheme(el.labelColor, el.fillColor)
+            : contrastColor(el.fillColor, strokeColor),
         );
         ctx.restore();
       }
       break;
     }
     case 'stencil': {
-      drawStencil(ctx, el, strokeColor, editingShapeLabelId);
+      // The label hangs below the icon, off its fill: resolve without it.
+      drawStencil(
+        ctx,
+        el,
+        resolveStrokeColorForTheme(el.strokeColor),
+        editingShapeLabelId,
+      );
       break;
     }
     case 'ellipse': {
@@ -252,7 +290,9 @@ export function drawElement(
           el.label,
           el.labelFontSize ?? DEFAULT_SHAPE_LABEL_FONT_SIZE,
           el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
-          el.labelColor ?? contrastColor(el.fillColor, strokeColor),
+          el.labelColor
+            ? resolveStrokeColorForTheme(el.labelColor, el.fillColor)
+            : contrastColor(el.fillColor, strokeColor),
         );
         ctx.restore();
       }
@@ -770,7 +810,7 @@ export function drawConnectorLabels(
       el.label,
       el.labelFontSize ?? DEFAULT_CONNECTOR_LABEL_FONT_SIZE,
       el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY,
-      el.labelColor ?? resolveStrokeColorForTheme(el.strokeColor),
+      resolveStrokeColorForTheme(el.labelColor ?? el.strokeColor),
     );
     ctx.restore();
   }
@@ -805,7 +845,9 @@ function drawStencil(
     ctx.setLineDash([]);
     const fontFamily = el.labelFontFamily ?? DEFAULT_LABEL_FONT_FAMILY;
     ctx.font = `${fontSize}px ${fontFamily}`;
-    ctx.fillStyle = el.labelColor ?? strokeColor;
+    ctx.fillStyle = el.labelColor
+      ? resolveStrokeColorForTheme(el.labelColor)
+      : strokeColor;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     const lines = getStencilLabelLines(el);
@@ -1130,13 +1172,14 @@ function drawCode(
   textAlign: 'left' | 'center' | 'right' = 'left',
 ): void {
   const PAD = 10;
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  const chrome = getCodeBlockColors();
+  ctx.fillStyle = chrome.fill;
   ctx.beginPath();
   (
     ctx as CanvasRenderingContext2D & { roundRect: (...a: unknown[]) => void }
   ).roundRect(x, y, width, height, 6);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.strokeStyle = chrome.border;
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.font = `${fontSize}px ${fontFamily}`;

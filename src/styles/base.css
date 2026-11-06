@@ -1,7 +1,11 @@
 /* ── Reset & variables ─────────────────────────────────────────────── */
+/* Swatch preview of the default stroke color (see theme.css). */
+:root {
+  --default-ink: #e2e2ef;
+}
 :root {
   --accent: #c42059;
-  --accent-light: rgb(196, 32, 81, 0.2);
+  --accent-light: rgb(196, 32, 89, 0.2);
   --focus-ring: var(--accent);
   --alert: #fa0101;
 
@@ -20,6 +24,15 @@
   --text-muted: rgb(141 141 141);
   --radius: 8px;
   --coffee: #f59e0b;
+
+  /* Overlays: modal scrim, card chrome, scrollbars, warning text. */
+  --scrim: rgba(0, 0, 0, 0.5);
+  --modal-border: rgba(255, 255, 255, 0.08);
+  --modal-shadow:
+    0 8px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+  --warning: #f59e0b;
+  color-scheme: dark;
 }
 
 *,
@@ -148,7 +161,7 @@ body.toolbar-placing * {
 /* Top-right: export */
 .tb-island-topright {
   position: fixed;
-  top: 12px;
+  top: 16px;
   right: 16px;
   z-index: 10;
   display: flex;
@@ -160,7 +173,7 @@ body.toolbar-placing * {
 /* Top-left: settings */
 .tb-island-topleft {
   position: fixed;
-  top: 12px;
+  top: 16px;
   left: 16px;
   z-index: 10;
   pointer-events: all;
@@ -352,8 +365,8 @@ body.toolbar-placing * {
 }
 .pp-input {
   width: 100%;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--bg-hover);
+  border: 1px solid var(--input-border);
   border-radius: 6px;
   color: var(--text);
   padding: 5px 8px;
@@ -369,12 +382,12 @@ body.toolbar-placing * {
 }
 
 .tb-locked-indicator {
-  color: var(--warning, #f59e0b) !important;
+  color: var(--warning) !important;
   width: 28px !important;
 }
 .tb-locked-indicator:hover {
-  background: rgba(245, 158, 11, 0.12) !important;
-  color: var(--warning, #f59e0b) !important;
+  background: color-mix(in srgb, var(--warning) 12%, transparent) !important;
+  color: var(--warning) !important;
 }
 
 /* Subscript shortcut number */
@@ -444,24 +457,18 @@ body.ui-hidden #mobile-actions {
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
-#zoom-controls,
-#history-controls {
+/* Bottom-right corner: zoom controls, with the minimap stacked above. */
+#zoom-controls {
   position: fixed;
   bottom: 16px;
+  right: 16px;
   z-index: 10;
   display: none;
 }
-#zoom-controls {
-  left: 16px;
-}
-#history-controls {
-  right: 16px;
-}
-.show-zoom-controls #zoom-controls,
-.show-history-controls #history-controls {
+.show-zoom-controls #zoom-controls {
   display: flex;
 }
-.show-history-controls #minimap {
+.show-zoom-controls #minimap {
   bottom: 72px;
 }
 

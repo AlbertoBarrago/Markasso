@@ -3,6 +3,7 @@ import { getBundledIcon } from '../elements/stencils/packs';
 import { genericIconIdOf } from '../elements/stencils/registry';
 import type { History } from '../engine/history';
 import { t } from '../i18n';
+import { resolveStrokeColorForTheme } from '../rendering/draw_element';
 import { getElementBounds } from '../rendering/draw_selection';
 import { SHAPE_KIND_LABEL_KEYS, shapeKindIcon } from './shape_icons';
 import { GENERIC_ICON_LABEL_KEYS, genericIconSvg } from './stencil_icons';
@@ -133,7 +134,9 @@ export function initElementSearch(
             ? stencilSearchIcon(el)
             : (TYPE_ICONS[el.type] ?? '');
       const fillColor =
-        el.fillColor !== 'transparent' ? el.fillColor : el.strokeColor;
+        el.fillColor !== 'transparent'
+          ? el.fillColor
+          : resolveStrokeColorForTheme(el.strokeColor);
       const iconEl = document.createElement('span');
       iconEl.className = 'el-search-item-icon';
       iconEl.innerHTML = icon;

@@ -9,7 +9,7 @@ import {
 const STORAGE_KEY = 'markasso-toolbar-pos';
 const HINTS = '#hint-bar, #shortcuts-hint';
 const OBSTACLES =
-  '.tb-island-topleft, .tb-island-topright, #minimap, #zoom-controls, #history-controls';
+  '.tb-island-topleft, .tb-island-topright, #minimap, #zoom-controls';
 
 /** Docking supports dragging, click-to-place and keyboard navigation. */
 export function initToolbarDrag(

@@ -97,7 +97,7 @@
 }
 .cp-color-swatch.active {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(124, 99, 212, 0.3);
+  box-shadow: 0 0 0 2px var(--accent-light);
 }
 .cp-color-swatch-transparent {
   background:
@@ -217,7 +217,7 @@
 }
 .cp-popup-swatch.active {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(124, 99, 212, 0.35);
+  box-shadow: 0 0 0 2px var(--accent-light);
 }
 
 /* Shade label overlay (⇧1 … ⇧5) */
@@ -474,7 +474,7 @@
 }
 .cp-font-size-input:focus {
   border-color: var(--accent);
-  background: rgba(124, 99, 212, 0.12);
+  background: var(--accent-light);
 }
 /* remove spinners */
 .cp-font-size-input::-webkit-inner-spin-button,
