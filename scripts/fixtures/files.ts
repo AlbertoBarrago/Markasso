@@ -3,7 +3,7 @@
  *
  * - Web (`fn: validateMarkassoFile`): `validateMarkassoFile` is not exported
  *   from src/io/markasso.ts, so each file goes through its exported caller
- *   `importMarkasso` with stubbed browser globals (FileReader, window, alert,
+ *   `importMarkasso` with stubbed browser globals (FileReader, window,
  *   a fake History that captures the LOAD_SCENE). The file's own viewport is
  *   recomputed from the exported pieces it uses (`validateViewport`) and the
  *   generator checks that the reproduction matches what importMarkasso loaded.
@@ -82,7 +82,8 @@ export type WebOutcome =
 
 /** Runs importMarkasso on `text` with the browser globals it needs stubbed. */
 function webRead(text: string): {
-  alert: string | null;
+  /** i18n key importMarkasso passed to its onError callback, if any. */
+  error: string | null;
   loaded: Extract<Command, { type: 'LOAD_SCENE' }> | null;
   warnings: string[];
 } {
@@ -90,11 +91,10 @@ function webRead(text: string): {
   const saved = {
     FileReader: g.FileReader,
     window: g.window,
-    alert: g.alert,
     warn: console.warn,
   };
   const hadWindow = 'window' in g;
-  let alert: string | null = null;
+  let error: string | null = null;
   let loaded: Extract<Command, { type: 'LOAD_SCENE' }> | null = null;
   const warnings: string[] = [];
   class StubReader {
@@ -105,9 +105,6 @@ function webRead(text: string): {
   }
   g.FileReader = StubReader;
   g.window = WINDOW;
-  g.alert = (message: string) => {
-    alert = message;
-  };
   console.warn = (message: unknown) => warnings.push(String(message));
   const history = {
     dispatch(command: Command) {
@@ -118,28 +115,29 @@ function webRead(text: string): {
     },
   } as unknown as History;
   try {
-    importMarkasso({ fixtureText: text } as unknown as File, history);
+    importMarkasso({ fixtureText: text } as unknown as File, history, (key) => {
+      error = key;
+    });
   } finally {
     g.FileReader = saved.FileReader;
-    g.alert = saved.alert;
     if (hadWindow) g.window = saved.window;
     else delete g.window;
     console.warn = saved.warn;
   }
-  return { alert, loaded, warnings };
+  return { error, loaded, warnings };
 }
 
 export function webOutcome(text: string): WebOutcome {
-  const { alert, loaded, warnings } = webRead(text);
+  const { error, loaded, warnings } = webRead(text);
   if (!loaded) {
-    if (alert === null) return { accepted: false, reason: 'empty' };
-    if (alert.startsWith('Failed to read')) {
+    if (error === null) return { accepted: false, reason: 'empty' };
+    if (error === 'markassoUnreadableFile') {
       return { accepted: false, reason: 'unparseable' };
     }
-    if (alert.includes('does not appear to be a valid')) {
+    if (error === 'markassoInvalidFile') {
       return { accepted: false, reason: 'invalid' };
     }
-    throw new Error(`unexpected alert: ${alert}`);
+    throw new Error(`unexpected import error: ${error}`);
   }
   const { elements, viewport: loadViewport } = loaded as Extract<
     Command,
