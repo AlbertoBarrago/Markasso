@@ -5,7 +5,7 @@
 }
 :root {
   --accent: #c42059;
-  --accent-light: rgb(196, 32, 81, 0.2);
+  --accent-light: rgb(196, 32, 89, 0.2);
   --focus-ring: var(--accent);
   --alert: #fa0101;
 
@@ -23,6 +23,15 @@
   --false-white: #fffadf;
   --text-muted: rgb(141 141 141);
   --radius: 8px;
+
+  /* Overlays: modal scrim, card chrome, scrollbars, warning text. */
+  --scrim: rgba(0, 0, 0, 0.5);
+  --modal-border: rgba(255, 255, 255, 0.08);
+  --modal-shadow:
+    0 8px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+  --warning: #f59e0b;
+  color-scheme: dark;
 }
 
 *,
@@ -354,8 +363,8 @@ body.toolbar-placing * {
 }
 .pp-input {
   width: 100%;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--bg-hover);
+  border: 1px solid var(--input-border);
   border-radius: 6px;
   color: var(--text);
   padding: 5px 8px;
@@ -371,12 +380,12 @@ body.toolbar-placing * {
 }
 
 .tb-locked-indicator {
-  color: var(--warning, #f59e0b) !important;
+  color: var(--warning) !important;
   width: 28px !important;
 }
 .tb-locked-indicator:hover {
-  background: rgba(245, 158, 11, 0.12) !important;
-  color: var(--warning, #f59e0b) !important;
+  background: color-mix(in srgb, var(--warning) 12%, transparent) !important;
+  color: var(--warning) !important;
 }
 
 /* Subscript shortcut number */
