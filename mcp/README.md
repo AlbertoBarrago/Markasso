@@ -80,20 +80,22 @@ Bump `version` in `mcp/package.json`, add the entry to `mcp/CHANGELOG.md`, merge
 |---|---|
 | `diagram_new` | Start an empty diagram |
 | `diagram_open` | Open a `.markasso` file or a markasso.it share link |
-| `diagram_read` | Describe nodes (key, kind, label, position, size) and connections (with their ids) |
+| `diagram_read` | Describe nodes (key, kind, label, position, size), connections (with their ids) and layout warnings |
 | `diagram_add_nodes` | Add nodes by key: rectangle, ellipse, rhombus, text, flowchart symbols, icons, with an optional font size. Nodes without a size fit their label |
 | `diagram_connect` | Connect nodes by key: label and its font size, straight/elbow routing, arrowhead styles, dashed |
 | `diagram_update` | Change a node's label, color, font size, position or size |
 | `diagram_update_edge` | Change a connection's label, label font size, routing, heads, dash or color |
 | `diagram_disconnect` | Remove connections (by id or by from/to), keeping the nodes |
 | `diagram_remove` | Remove nodes and their connections |
-| `diagram_layout` | Arrange nodes in layers (top-to-bottom or left-to-right) |
+| `diagram_layout` | Arrange nodes in layers (top-to-bottom or left-to-right), then report layout warnings |
 | `icons_search` | Find generic architecture icons and Kubernetes icons |
 | `diagram_save` | Save as `.markasso` |
 | `diagram_export_svg` | Export an SVG image |
-| `diagram_export_png` | Render a PNG the agent can look at (optionally saved to a file) |
+| `diagram_export_png` | Render a PNG the agent can look at (optionally saved to a file), with layout warnings |
 | `diagram_share` | Publish and return a markasso.it link, with its expiry date |
 | `live_join` / `live_leave` | Draw on a live board in real time (link from ⋯ More tools → Start live session) |
+
+**Layout warnings.** `diagram_layout`, `diagram_read` and `diagram_export_png` check the diagram as it is drawn and list, by node key and connection id, what makes it hard to read: connections passing through a node, connection labels on top of a node or another label, crossing connections (with how many crossings) and overlapping nodes. Each kind comes with a hint, such as trying the other layout direction or elbow routing. A node drawn around others counts as a frame and is not reported. No warnings, no extra text.
 
 Vendor icon packs (AWS, Azure, Google Cloud) are not available to agents: they can't be redistributed, and in the app they are imported by each user into their own browser.
 

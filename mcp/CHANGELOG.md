@@ -6,6 +6,9 @@ All notable changes to `@markasso/mcp` are documented here. The MCP server is ve
 
 ## [Unreleased]
 
+### Added
+- **Layout warnings.** `diagram_layout`, `diagram_read` and `diagram_export_png` now report, by node key and connection id, connections drawn through a node, labels on top of a node or another label, crossing connections (with the count) and overlapping nodes, each with a hint on what to try. An agent that can't see the picture still knows when it is unclear. Nothing is added when the diagram is clear.
+
 ### Fixed
 - **Arrows no longer cross a node after a layout.** `diagram_layout` and `diagram_update` could leave a connector anchored to the wrong side of a moved node (its old center landing on the new border), so the arrow was drawn through it. Connector ends now face the other node again after every move or resize, and each `diagram_layout` or `diagram_update` call is a single undo step.
 

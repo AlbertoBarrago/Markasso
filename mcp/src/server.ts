@@ -19,6 +19,7 @@ import {
   loadShareLink,
   saveMarkassoFile,
 } from './storage';
+import { findWarnings, formatWarnings, warningsSuffix } from './warnings';
 
 /**
  * Markasso MCP server (stdio). One current diagram at a time, edited either
@@ -28,7 +29,7 @@ import {
 const SERVER_INSTRUCTIONS = `Markasso is a whiteboard for diagrams. Workflow:
 1. diagram_new (or diagram_open / live_join to work on an existing board).
 2. diagram_add_nodes with short keys, then diagram_connect by key.
-3. diagram_layout to arrange everything (don't compute coordinates yourself).
+3. diagram_layout to arrange everything (don't compute coordinates yourself). When it lists Warnings, fix them (each comes with a hint).
 4. diagram_export_png to look at the result (diagram_read for keys and connection ids); diagram_disconnect / diagram_update_edge to adjust connections.
 5. diagram_share for a link, or diagram_save / diagram_export_svg for files.
 Node kinds: rectangle, ellipse, rhombus, text, icon, and flowchart symbols (terminator = start/end, data = I/O, document, database, predefinedProcess, preparation, manualInput, delay). For architecture diagrams prefer kind "icon" (icons_search finds them).
@@ -199,7 +200,7 @@ server.registerTool(
   {
     title: 'Read diagram',
     description:
-      'Describe the current diagram: nodes (key, kind, label, position, size) and connections.',
+      'Describe the current diagram: nodes (key, kind, label, position, size), connections and layout warnings.',
     inputSchema: {},
     annotations: { readOnlyHint: true },
   },
@@ -207,7 +208,7 @@ server.registerTool(
     const peers = live?.connected
       ? `\nPeople in the room: ${live.otherPeers.map((p) => p.name).join(', ') || 'none'}`
       : '';
-    return `${describeDiagram(diagram)}${peers}`;
+    return `${describeDiagram(diagram)}${peers}${warningsSuffix(diagram)}`;
   }),
 );
 
@@ -352,7 +353,7 @@ server.registerTool(
   {
     title: 'Auto layout',
     description:
-      'Arrange nodes in layers following their connections (TB = top to bottom, LR = left to right). Use after adding nodes.',
+      'Arrange nodes in layers following their connections (TB = top to bottom, LR = left to right). Use after adding nodes. Reports layout warnings (connections through nodes, overlaps, crossings) when there are any.',
     inputSchema: {
       direction: z.enum(['TB', 'LR']).optional(),
       keys: z
@@ -371,7 +372,7 @@ server.registerTool(
     }) => {
       const count = diagram.layout(direction ?? 'TB', keys);
       if (count === 0) return 'Nothing to lay out.';
-      return `Arranged ${count} nodes (${direction ?? 'TB'}).${liveSuffix()}`;
+      return `Arranged ${count} nodes (${direction ?? 'TB'}).${warningsSuffix(diagram)}${liveSuffix()}`;
     },
   ),
 );
@@ -467,7 +468,7 @@ server.registerTool(
   {
     title: 'Export PNG',
     description:
-      'Render the diagram as a PNG image, returned so you can look at it, and optionally saved to a file.',
+      'Render the diagram as a PNG image, returned so you can look at it, and optionally saved to a file. Lists layout warnings (connections through nodes, overlaps, crossings) when there are any.',
     inputSchema: {
       path: z
         .string()
@@ -494,6 +495,10 @@ server.registerTool(
       if (!svg) return text('The diagram is empty: nothing to export.');
       const png = svgToPng(svg);
       if (path) await writeFile(path, png);
+      const notes = [
+        path ? `Saved PNG to ${path}.` : '',
+        formatWarnings(findWarnings(diagram)),
+      ].filter(Boolean);
       return {
         content: [
           {
@@ -501,9 +506,7 @@ server.registerTool(
             data: png.toString('base64'),
             mimeType: 'image/png',
           },
-          ...(path
-            ? [{ type: 'text' as const, text: `Saved PNG to ${path}.` }]
-            : []),
+          ...notes.map((note) => ({ type: 'text' as const, text: note })),
         ],
       };
     } catch (error) {
