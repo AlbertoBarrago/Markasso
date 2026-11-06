@@ -584,3 +584,104 @@ describe('font size', () => {
     expect(text).toMatch(/title -> plain "x" font 16px/);
   });
 });
+
+describe('unconnected text in layout', () => {
+  const LABELS: Record<string, string> = {
+    title: 'rex-canvas architecture',
+    subtitle: 'v0.1',
+    note: 'a connected note',
+    top: 'Agent',
+    l: 'Left',
+    r: 'Right',
+    w1: 'Wide one',
+    w2: 'Wide two',
+    w3: 'Wide three',
+    a: 'One',
+    b: 'Two',
+  };
+  /** Box of the node with this test key, found by its label (keys are private). */
+  const boxOf = (d: Diagram, key: string) => {
+    const text = LABELS[key]!;
+    const el = d.elements.find(
+      (e) =>
+        ('label' in e && e.label === text) ||
+        ('content' in e && e.content === text),
+    );
+    if (!el) throw new Error(`no node labelled ${text}`);
+    return getConnectorBox(el);
+  };
+
+  async function titled(): Promise<Diagram> {
+    const d = new Diagram();
+    await d.addNodes([
+      {
+        key: 'title',
+        kind: 'text',
+        label: 'rex-canvas architecture',
+        fontSize: 32,
+      },
+      { key: 'top', label: 'Agent' },
+      { key: 'l', label: 'Left' },
+      { key: 'r', label: 'Right' },
+      { key: 'w1', label: 'Wide one' },
+      { key: 'w2', label: 'Wide two' },
+      { key: 'w3', label: 'Wide three' },
+    ]);
+    d.connect([
+      { from: 'top', to: 'l' },
+      { from: 'top', to: 'r' },
+      { from: 'l', to: 'w1' },
+      { from: 'l', to: 'w2' },
+      { from: 'r', to: 'w3' },
+    ]);
+    return d;
+  }
+
+  for (const direction of ['TB', 'LR'] as const) {
+    it(`centers a title above the diagram instead of beside it (${direction})`, async () => {
+      const d = await titled();
+      expect(d.layout(direction)).toBe(7);
+      const nodes = ['top', 'l', 'r', 'w1', 'w2', 'w3'].map((k) => boxOf(d, k));
+      const left = Math.min(...nodes.map((b) => b.x));
+      const right = Math.max(...nodes.map((b) => b.x + b.w));
+      const top = Math.min(...nodes.map((b) => b.y));
+      const title = boxOf(d, 'title');
+      expect(title.x + title.w / 2).toBeCloseTo((left + right) / 2, 5);
+      expect(title.y + title.h).toBeLessThanOrEqual(top);
+    });
+  }
+
+  it('stacks several titles in creation order and leaves connected text alone', async () => {
+    const d = await titled();
+    await d.addNodes([
+      { key: 'subtitle', kind: 'text', label: 'v0.1' },
+      { key: 'note', kind: 'text', label: 'a connected note' },
+    ]);
+    d.connect([{ from: 'note', to: 'w3' }]);
+    d.layout('TB');
+    const title = boxOf(d, 'title');
+    const subtitle = boxOf(d, 'subtitle');
+    expect(subtitle.y).toBeGreaterThan(title.y + title.h);
+    expect(subtitle.y + subtitle.h).toBeLessThanOrEqual(boxOf(d, 'top').y);
+    // The connected text node is laid out like any other node, below the top.
+    expect(boxOf(d, 'note').y).toBeGreaterThan(boxOf(d, 'top').y);
+  });
+
+  it('lays out a board of only text nodes as before', async () => {
+    const d = new Diagram();
+    await d.addNodes([
+      { key: 'a', kind: 'text', label: 'One' },
+      { key: 'b', kind: 'text', label: 'Two' },
+    ]);
+    expect(d.layout('TB')).toBe(2);
+    expect(boxOf(d, 'a').y).toBe(boxOf(d, 'b').y);
+  });
+
+  it('is one undo step', async () => {
+    const d = await titled();
+    const before = d.elements;
+    d.layout('TB');
+    d.history.undo();
+    expect(d.elements).toEqual(before);
+  });
+});

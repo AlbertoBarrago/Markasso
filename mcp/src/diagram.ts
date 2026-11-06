@@ -152,6 +152,8 @@ const DEFAULT_SIZES: Readonly<Record<string, { w: number; h: number }>> = {
 
 /** Gap used when placing new nodes before an explicit layout. */
 const PLACEMENT_GAP = 60;
+/** Space below each unconnected text node (title) stacked above a layout. */
+const FLOATING_TEXT_GAP = 40;
 /** Size of a text node created without one. */
 export const TEXT_FONT_SIZE = 20;
 
@@ -720,14 +722,52 @@ export class Diagram {
       x: Math.min(...[...boxes.values()].map((b) => b.x)),
       y: Math.min(...[...boxes.values()].map((b) => b.y)),
     };
+    // A text node no connector touches (a title, a caption) would be its own
+    // component, which layeredLayout places side by side with the diagram:
+    // first on the left, pulling the picture off-center. Such nodes are kept
+    // out of the layout and stacked, centered, above the rest instead.
+    const linked = new Set(
+      this.elements.flatMap((el) =>
+        isConnector(el)
+          ? [el.startElementId, el.endElementId].filter(
+              (id): id is string => id !== undefined,
+            )
+          : [],
+      ),
+    );
+    const floating = nodes.filter(
+      (el) => el.type === 'text' && !linked.has(el.id),
+    );
+    const laid =
+      floating.length > 0 && floating.length < nodes.length
+        ? nodes.filter((el) => !floating.includes(el))
+        : nodes;
+    const above = laid === nodes ? [] : floating;
+    const stackHeight = above.reduce(
+      (sum, el) => sum + boxes.get(el.id)!.h + FLOATING_TEXT_GAP,
+      0,
+    );
     const positions = layeredLayout(
-      nodes.map((el) => {
+      laid.map((el) => {
         const b = boxes.get(el.id)!;
         return { id: el.id, width: b.w, height: b.h };
       }),
       edges,
-      { direction, origin },
+      { direction, origin: { x: origin.x, y: origin.y + stackHeight } },
     );
+    if (above.length > 0) {
+      const left = Math.min(...laid.map((el) => positions.get(el.id)!.x));
+      const right = Math.max(
+        ...laid.map((el) => positions.get(el.id)!.x + boxes.get(el.id)!.w),
+      );
+      const center = (left + right) / 2;
+      let y = origin.y;
+      for (const el of above) {
+        const b = boxes.get(el.id)!;
+        positions.set(el.id, { x: center - b.w / 2, y });
+        y += b.h + FLOATING_TEXT_GAP;
+      }
+    }
     this.moveNodes(positions);
     return positions.size;
   }
