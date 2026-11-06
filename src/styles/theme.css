@@ -257,6 +257,12 @@
   color: var(--accent);
 }
 
+/* Preview of the default stroke swatch (#e2e2ef): the canvas draws it black
+   in the light theme (resolveStrokeColorForTheme), so the swatch does too. */
+[data-theme="light"] {
+  --default-ink: #000000;
+}
+
 /* Welcome card */
 [data-theme="light"] .wl-card {
   border-color: rgba(169, 1, 27, 0.25);

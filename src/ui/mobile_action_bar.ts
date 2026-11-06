@@ -26,6 +26,7 @@ import {
   createColorPicker,
   loadCustomColor,
   saveCustomColor,
+  strokeSwatchPreview,
   updateCustomColorButton,
 } from './color_picker';
 import { onLiveHide, onLiveReveal } from './live_name';
@@ -232,7 +233,7 @@ export function initMobileActionBar(
     const sw = document.createElement('button');
     sw.className = 'cp-color-swatch';
     sw.title = color;
-    sw.style.background = color;
+    sw.style.background = strokeSwatchPreview(color);
     sw.addEventListener('click', () =>
       history.dispatch({ type: 'APPLY_STYLE', strokeColor: color }),
     );

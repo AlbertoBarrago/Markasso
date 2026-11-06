@@ -21,6 +21,7 @@ import {
   createColorPicker,
   loadCustomColor,
   saveCustomColor,
+  strokeSwatchPreview,
   updateCustomColorButton,
 } from './color_picker';
 import { SHAPE_KIND_LABEL_KEYS, shapeKindIcon } from './shape_icons';
@@ -241,7 +242,7 @@ export function initContextPanel(
     if (color === 'transparent') {
       sw.classList.add('cp-color-swatch-transparent');
     } else {
-      sw.style.background = color;
+      sw.style.background = strokeSwatchPreview(color);
     }
     sw.addEventListener('click', () => dispatchStrokeOrLabelColor(color));
     strokeSwatches.appendChild(sw);

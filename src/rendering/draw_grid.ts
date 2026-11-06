@@ -1,5 +1,6 @@
 import type { GridType } from '../core/app_state';
 import type { Viewport } from '../core/viewport';
+import { getCanvasInk } from './theme_cache';
 
 // Physical mm → CSS pixels at 96 DPI standard
 const PX_PER_MM = 96 / 25.4; // ≈ 3.7795
@@ -66,7 +67,7 @@ function drawDotGrid(
   const startY = Math.floor(top / step) * step;
   const r = Math.max(0.8, zoom * 0.6);
 
-  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.fillStyle = `rgba(${getCanvasInk()},0.12)`;
   ctx.beginPath();
   for (let wx = startX; wx < right; wx += step) {
     for (let wy = startY; wy < bottom; wy += step) {
@@ -97,7 +98,7 @@ function drawLineGrid(
   const startX = Math.floor(left / step) * step;
   const startY = Math.floor(top / step) * step;
 
-  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.strokeStyle = `rgba(${getCanvasInk()},0.07)`;
   ctx.lineWidth = 0.5;
   ctx.beginPath();
   for (let wx = startX; wx < right + step; wx += step) {
@@ -155,12 +156,12 @@ function drawMmGrid(
 
   // Only draw 1mm lines when they're at least 3px apart (avoid visual noise)
   if (screenMm1 >= 3) {
-    gridLines(mm1, 'rgba(255,255,255,0.04)', 0.4);
+    gridLines(mm1, `rgba(${getCanvasInk()},0.04)`, 0.4);
   }
   // 5mm lines when at least 2px apart
   if (mm5 * zoom >= 2) {
-    gridLines(mm5, 'rgba(255,255,255,0.09)', 0.5);
+    gridLines(mm5, `rgba(${getCanvasInk()},0.09)`, 0.5);
   }
   // 10mm lines always
-  gridLines(mm10, 'rgba(255,255,255,0.18)', 0.7);
+  gridLines(mm10, `rgba(${getCanvasInk()},0.18)`, 0.7);
 }

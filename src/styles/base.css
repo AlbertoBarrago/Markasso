@@ -1,4 +1,8 @@
 /* ── Reset & variables ─────────────────────────────────────────────── */
+/* Swatch preview of the default stroke color (see theme.css). */
+:root {
+  --default-ink: #e2e2ef;
+}
 :root {
   --accent: #c42059;
   --accent-light: rgb(196, 32, 81, 0.2);
