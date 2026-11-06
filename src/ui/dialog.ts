@@ -22,6 +22,8 @@ export interface DialogField {
   /** Accessible name, also the placeholder. */
   label: string;
   type?: 'text' | 'password';
+  /** Initial text, selected when the dialog opens (e.g. a name to rename). */
+  value?: string;
 }
 
 export interface DialogOptions {
@@ -81,6 +83,11 @@ export function dialog(options: DialogOptions): Promise<string | null> {
       input.placeholder = field.label;
       input.setAttribute('aria-label', field.label);
       input.autofocus = true;
+      if (field.value) {
+        input.value = field.value;
+        const typed = input;
+        requestAnimationFrame(() => typed.select());
+      }
       card.append(input);
     }
     if (options.link) {

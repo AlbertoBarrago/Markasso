@@ -10,8 +10,12 @@ import {
   cloudPageUrl,
   parseBoardUrl,
 } from '../io/cloud';
+import { listBoards, readBoardIndex, renameBoard } from '../io/cloud_index';
+import { deleteThumb, loadThumb, saveThumb } from '../io/cloud_thumbs';
 import { exportMarkasso } from '../io/markasso';
 import { getLiveSessionUrl } from '../io/realtime';
+import { renderSceneThumbnail } from '../rendering/export';
+import { type BoardAction, openBoardsPanel } from './cloud_boards_panel';
 import { RemoteCheckSchedule, remoteDecision } from './cloud_remote_check';
 import {
   type CloudPopoverAction,
@@ -30,6 +34,7 @@ import { copyToClipboard, showShareToast } from './share_actions';
 
 const ALL_CLOUD_ACTIONS = [
   'cloudSave',
+  'cloudBoards',
   'cloudReadLink',
   'cloudEditLink',
   'cloudMac',
@@ -44,7 +49,7 @@ export const CLOUD_ACTIONS = CLOUD_ENABLED ? ALL_CLOUD_ACTIONS : [];
  */
 export const CLOUD_GROUPS: readonly (readonly (typeof ALL_CLOUD_ACTIONS)[number][])[] =
   [
-    ['cloudSave'],
+    ['cloudSave', 'cloudBoards'],
     ['cloudMac'],
     ['cloudReadLink', 'cloudEditLink', 'cloudDuplicate'],
     ['cloudLicense', 'cloudSubscription'],
@@ -159,10 +164,41 @@ function createController(history: History) {
   const client = new CloudClient(localStorage, fetch, () => {
     document.dispatchEvent(new Event('markasso-cloud-change'));
     render();
+    if (client.state === 'saved' && client.id) scheduleThumb(client.id);
     if (client.state === 'conflict') void resolveConflict();
     if (client.error === 402) void license();
   });
   client.onActivity = () => render();
+  /**
+   * Refreshes the Boards panel thumbnail of the open board a few seconds
+   * after it settles, at most once per THUMB_INTERVAL: a thumbnail is a cache,
+   * never worth slowing down drawing.
+   */
+  const THUMB_DELAY = 3000;
+  const THUMB_INTERVAL = 30000;
+  let thumbTimer: ReturnType<typeof setTimeout> | undefined;
+  let thumbAt = 0;
+  let thumbId: string | null = null;
+  function scheduleThumb(id: string): void {
+    if (thumbTimer) clearTimeout(thumbTimer);
+    const wait =
+      thumbId === id
+        ? Math.max(THUMB_DELAY, thumbAt + THUMB_INTERVAL - Date.now())
+        : THUMB_DELAY;
+    thumbTimer = setTimeout(() => {
+      if (client.id !== id) return;
+      thumbId = id;
+      thumbAt = Date.now();
+      // Started inside a promise so a synchronous failure (no canvas
+      // support) lands in the same catch as the async ones.
+      void Promise.resolve()
+        .then(() => renderSceneThumbnail(history.present.elements))
+        .then((blob) => (blob ? saveThumb(id, blob) : deleteThumb(id)))
+        .catch(() => {
+          /* No IndexedDB (private mode) or no canvas: the panel shows a placeholder. */
+        });
+    }, wait);
+  }
   const currentStatus = () =>
     cloudStatus(
       openingFailed
@@ -589,12 +625,102 @@ function createController(history: History) {
     }
     document.dispatchEvent(new Event('markasso-cloud-change'));
   }
+  /**
+   * Turns the open cloud board into a local drawing: the scene stays on the
+   * canvas, unlinked from the cloud, at the app's root URL.
+   */
+  function leaveBoard(): void {
+    stopRemoteChecks();
+    client.detach();
+    opened = false;
+    history.readOnly = false;
+    load(history.present, true);
+    window.history.replaceState(null, '', '/');
+    render();
+    document.dispatchEvent(new Event('markasso-cloud-change'));
+  }
+  /** Runs a Boards panel action; see BoardsPanelSource.act. */
+  async function boardAction(
+    action: BoardAction,
+    item: { id: string; name: string },
+  ): Promise<'close' | 'refresh' | 'none'> {
+    const token = client.knownTokens()[item.id];
+    const links = boardLinks(location.origin, item.id, token);
+    const label = item.name || t('boardsUntitled');
+    switch (action) {
+      case 'open': {
+        if (opened && client.id === item.id) return 'close';
+        const url = token ? links.edit : links.read;
+        // A local drawing that is not on the cloud would be replaced: keep it
+        // and open the board in a new tab instead.
+        if (opened || history.present.elements.length === 0) {
+          location.assign(url);
+          return 'close';
+        }
+        window.open(url, '_blank', 'noopener');
+        return 'none';
+      }
+      case 'copyRead':
+      case 'copyEdit': {
+        const url = action === 'copyRead' ? links.read : links.edit;
+        showShareToast(await copyToClipboard(url), url);
+        return 'none';
+      }
+      case 'rename': {
+        const name = await appDialog({
+          kicker: t('cloudPageTitle'),
+          title: t('boardsRename'),
+          message: t('boardsRenameDetail'),
+          field: { label: t('boardsName'), value: item.name },
+          choices: [{ key: 'boardsRename', primary: true }],
+        });
+        if (name === null) return 'none';
+        renameBoard(localStorage, item.id, name);
+        return 'refresh';
+      }
+      case 'remove': {
+        const choice = await dialog({
+          title: t('boardsRemoveTitle').replace('{{name}}', label),
+          message: t('boardsRemoveDetail'),
+          choices: [{ key: 'boardsRemove', primary: true }],
+        });
+        if (choice !== 'boardsRemove') return 'none';
+        client.forget(item.id);
+        void deleteThumb(item.id).catch(() => {});
+        if (opened && client.id === item.id) leaveBoard();
+        return 'refresh';
+      }
+      case 'delete': {
+        const choice = await dialog({
+          title: t('boardsDeleteTitle').replace('{{name}}', label),
+          message: t('boardsDeleteDetail'),
+          choices: [{ key: 'boardsDelete', primary: true, danger: true }],
+        });
+        if (choice !== 'boardsDelete') return 'none';
+        try {
+          await client.deleteBoard(item.id);
+        } catch (error) {
+          await dialog(
+            errorDialog(error instanceof CloudError ? error.status : 503),
+          );
+          return 'none';
+        }
+        void deleteThumb(item.id).catch(() => {});
+        if (opened && thumbId === item.id) thumbId = null;
+        if (opened && client.id === item.id) leaveBoard();
+        return 'refresh';
+      }
+    }
+  }
   const api = {
     open,
     hasLicense: () => !!client.license,
     available(action: (typeof CLOUD_ACTIONS)[number]): boolean {
       if (action === 'cloudLicense' || action === 'cloudSubscription')
         return true;
+      // The panel lists boards this browser already knows: offered to
+      // subscribers, i.e. once a licence is stored.
+      if (action === 'cloudBoards') return !!client.license;
       if (creating) return false;
       // Creating or updating a cloud board needs a licence: without one the
       // action is hidden and the menu points to the licence and pricing.
@@ -628,14 +754,17 @@ function createController(history: History) {
         return;
       }
       if (action === 'cloudDuplicate') {
-        stopRemoteChecks();
-        client.detach();
-        opened = false;
-        history.readOnly = false;
-        load(history.present, true);
-        window.history.replaceState(null, '', '/');
-        render();
-        document.dispatchEvent(new Event('markasso-cloud-change'));
+        leaveBoard();
+        return;
+      }
+      if (action === 'cloudBoards') {
+        openBoardsPanel({
+          items: () =>
+            listBoards(readBoardIndex(localStorage), client.knownTokens()),
+          currentId: () => (opened ? client.id : null),
+          thumb: loadThumb,
+          act: boardAction,
+        });
         return;
       }
       if (!client.id) return;

@@ -107,6 +107,7 @@ describe.each([false, true])('cloud UI enabled=%s', (enabled) => {
     expect(menu.includes('id="menu-cloud-sep-2"')).toBe(enabled);
     const actions = [
       'cloudSave',
+      'cloudBoards',
       'cloudReadLink',
       'cloudEditLink',
       'cloudMac',
@@ -133,6 +134,7 @@ describe.each([false, true])('cloud UI enabled=%s', (enabled) => {
         ? [
             'cloudMenuNote',
             'cloudSave',
+            'cloudBoards',
             '',
             'cloudMac',
             '',

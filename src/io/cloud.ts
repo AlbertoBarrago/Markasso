@@ -1,6 +1,7 @@
 import type { Scene } from '../core/scene';
 import type { Viewport } from '../core/viewport';
 import type { Element } from '../elements/element';
+import { forgetBoard, touchBoard } from './cloud_index';
 import { validateElements, validateViewport } from './element_validation';
 
 /**
@@ -133,6 +134,45 @@ export class CloudClient {
       return 'unknown';
     }
   }
+  /** Edit tokens of the boards this browser created or opened with an edit link. */
+  knownTokens(): Record<string, string> {
+    return this.tokens();
+  }
+  /**
+   * Removes a board from this browser only: its edit token and its entry in
+   * the Boards panel. The board stays in the cloud for anyone with its link.
+   */
+  forget(id: string): void {
+    const tokens = this.tokens();
+    if (id in tokens) {
+      delete tokens[id];
+      try {
+        this.storage.setItem(TOKEN_KEY, JSON.stringify(tokens));
+      } catch {
+        /* A disabled storage has nothing to forget. */
+      }
+    }
+    forgetBoard(this.storage, id);
+  }
+  /**
+   * Deletes a board from the cloud with its stored edit token, then forgets
+   * it. A board already gone (404) is forgotten too. Throws CloudError on any
+   * other failure, including 401 when the token no longer matches. Deleting
+   * the open board is the caller's job to follow up (detach, new URL).
+   */
+  async deleteBoard(id: string): Promise<void> {
+    const token = this.tokens()[id];
+    if (!token) throw new CloudError(401);
+    try {
+      await this.send(`/api/board/${id}`, {
+        method: 'DELETE',
+        headers: { ...this.headers(), Authorization: `Bearer ${token}` },
+      });
+    } catch (error) {
+      if (!(error instanceof CloudError && error.status === 404)) throw error;
+    }
+    this.forget(id);
+  }
   private tokens(): Record<string, string> {
     try {
       const value: unknown = JSON.parse(
@@ -200,7 +240,8 @@ export class CloudClient {
       }
     }
     if (response.ok || response.status === 304) this.lastSyncedAt = Date.now();
-    if (response.status === 304) return null;
+    // 304 Not Modified and 204 No Content (a deleted board) carry no body.
+    if (response.status === 304 || response.status === 204) return null;
     if (!response.ok) {
       if (response.status === 409) {
         const data = (await response.json()) as { version?: number };
@@ -247,6 +288,7 @@ export class CloudClient {
       this.token = data.writeToken;
       this.version = data.version as number;
       this.remember();
+      touchBoard(this.storage, data.id, scene.elements, 'saved');
       this.notify('saved');
     } catch (error) {
       this.failed(error);
@@ -261,6 +303,7 @@ export class CloudClient {
     this.token = route.token ?? this.tokens()[route.id];
     const scene = await this.read();
     if (this.token) this.remember();
+    touchBoard(this.storage, route.id, scene.elements, 'opened');
     this.notify('saved');
     return scene;
   }
@@ -380,6 +423,7 @@ export class CloudClient {
       )
         throw new CloudError(503);
       this.version = data.version as number;
+      if (this.id) touchBoard(this.storage, this.id, scene.elements, 'saved');
       if (this.pending === scene) this.pending = null;
       this.notify(this.pending ? 'saving' : 'saved');
     } catch (error) {
